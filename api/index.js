@@ -34,7 +34,7 @@ const connectDB = async () => {
     console.log('=> Iniciando nueva conexión a MongoDB...');
     try {
         const db = await mongoose.connect(MONGODB_URI, {
-            serverSelectionTimeoutMS: 5000,
+            serverSelectionTimeoutMS: 15000, // Aumentado para robustez en Serverless
         });
         cachedDb = db;
         console.log('✅ Conexión exitosa');
@@ -47,11 +47,13 @@ const connectDB = async () => {
 
 // Middleware para asegurar conexión en cada petición (Vercel standard)
 app.use(async (req, res, next) => {
-    const db = await connectDB();
-    if (!db) {
+    const dbStatus = await connectDB();
+    if (!dbStatus) {
+        // Obtenemos un error un poco más descriptivo para el UI (solo durante depuración)
         return res.status(503).json({
             message: 'Error de conexión con la base de datos fiscal.',
-            error: 'Database connection failed'
+            error: 'DB_CONNECTION_FAILED',
+            details: 'Asegúrese de haber hecho REDEPLOY en Vercel después de cambiar las variables de entorno.'
         });
     }
     next();
