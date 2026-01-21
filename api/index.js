@@ -346,9 +346,10 @@ app.get('/api/rnc/:number', async (req, res) => {
         "101010101": "JUAN PEREZ",
         "131888444": "LEXIS BILL SOLUTIONS S.R.L.",
         "40222222222": "DRA. MARIA RODRIGUEZ (DEMO)",
-        "130851255": "ASOCIACION DE ESPECIALISTAS FISCALES"
+        "130851255": "ASOCIACION DE ESPECIALISTAS FISCALES",
+        "22301650929": "ASOCIACION PROFESIONAL DE SANTO DOMINGO"
     };
-    const name = mockDb[number] || "CONTRIBUYENTE ENCONTRADO";
+    const name = mockDb[number] || "CONTRIBUYENTE REGISTRADO";
     res.json({ valid: true, rnc: number, name, type: number.length === 9 ? 'JURIDICA' : 'FISICA' });
 });
 
@@ -366,7 +367,8 @@ app.post('/api/validate-rnc', async (req, res) => {
             "101010101": "JUAN PEREZ",
             "131888444": "LEXIS BILL SOLUTIONS S.R.L.",
             "40222222222": "DRA. MARIA RODRIGUEZ (DEMO)",
-            "130851255": "ASOCIACION DE ESPECIALISTAS FISCALES"
+            "130851255": "ASOCIACION DE ESPECIALISTAS FISCALES",
+            "22301650929": "ASOCIACION PROFESIONAL DE SANTO DOMINGO"
         };
 
         const name = mockDb[cleanRnc] || "CONTRIBUYENTE REGISTRADO";
