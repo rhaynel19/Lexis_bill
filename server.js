@@ -1,3 +1,5 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(process.cwd(), '.env.local') });
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');

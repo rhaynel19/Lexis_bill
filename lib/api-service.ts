@@ -1,7 +1,8 @@
 import { secureFetch } from "./secure-fetch";
 
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 const API_URL = (typeof window !== "undefined" && window.location.hostname !== "localhost")
-    ? "/api"
+    ? `${baseUrl}/api`
     : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api");
 
 export const api = {
