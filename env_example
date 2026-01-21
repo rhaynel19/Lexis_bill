@@ -1,0 +1,32 @@
+# Configuración del Servidor y Base de Datos
+PORT=3001
+NODE_ENV=development
+DATABASE_URL=postgres://user:password@localhost:5432/billig_db
+
+# Seguridad
+JWT_SECRET=tu_secreto_super_seguro_aqui
+CORS_ORIGIN=http://localhost:3000
+
+# Pasarelas de Pago (Integración Futura)
+# Azul
+AZUL_MERCHANT_ID=
+AZUL_API_KEY=
+AZUL_ENV=sandbox
+
+# Carnet
+CARNET_MERCHANT_ID=
+CARNET_API_KEY=
+
+# PayPal (Suscripciones)
+PAYPAL_CLIENT_ID=
+PAYPAL_CLIENT_SECRET=
+PAYPAL_MODE=sandbox
+
+# APIs Fiscales (DGII)
+# Alanube
+ALANUBE_API_KEY=
+ALANUBE_ENDPOINT=https://api.alanube.co/v1
+
+# FacturaDirecta
+FACTURA_DIRECTA_API_KEY=
+FACTURA_DIRECTA_ENDPOINT=
