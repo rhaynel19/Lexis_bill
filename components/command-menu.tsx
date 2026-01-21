@@ -38,13 +38,13 @@ export function CommandMenu() {
         { name: "Nueva Factura", icon: PlusCircle, href: "/nueva-factura", shortcut: "N" },
         { name: "Nueva Cotización", icon: FileText, href: "/nueva-cotizacion", shortcut: "C" },
         { name: "Ver Cotizaciones", icon: BookOpen, href: "/cotizaciones" },
-        { name: "Dashboard", icon: LayoutDashboard, href: "/" },
+        { name: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
         { name: "Mis Reportes DGII", icon: TrendingUp, href: "/reportes", shortcut: "R" },
         { name: "Mis Clientes", icon: Wallet, href: "/clientes" },
         { name: "Mis Pagos", icon: CreditCard, href: "/pagos", shortcut: "P" },
         { name: "Mi Perfil / Config", icon: Settings, href: "/configuracion" },
         { name: "Modo Contador", icon: ShieldCheck, href: "/contador" },
-        { name: "Ver Landing Page", icon: LayoutDashboard, href: "/landing" },
+        { name: "Ver Landing Page", icon: LayoutDashboard, href: "/" },
     ];
 
     const filteredActions = actions.filter(action =>

@@ -64,7 +64,7 @@ export default function LoginPage() {
             user.biometric = decision;
             localStorage.setItem("user", JSON.stringify(user));
         }
-        router.push("/");
+        router.push("/dashboard");
     };
 
     const startRecovery = (channel: "whatsapp" | "email") => {

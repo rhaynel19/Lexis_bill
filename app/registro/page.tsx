@@ -58,7 +58,7 @@ function RegisterForm() {
             }));
 
             // If Pro, maybe redirect to a success/payment mockup or just dashboard
-            router.push("/");
+            router.push("/dashboard");
         } catch (err: any) {
             setError(err.message || "Error al registrarse");
         } finally {

@@ -101,7 +101,7 @@ export function TrustFooter() {
                         <h5 className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] mb-4">Enlaces Rápidos</h5>
                         <ul className="space-y-2 text-[11px] text-slate-500 font-medium">
                             <li><Link href="/" className="hover:text-[#F9F6EE] transition-colors">Inicio</Link></li>
-                            <li><Link href="/landing#precio" className="hover:text-[#F9F6EE] transition-colors">Precios</Link></li>
+                            <li><Link href="/#precio" className="hover:text-[#F9F6EE] transition-colors">Precios</Link></li>
                             <li><a href="#" className="hover:text-[#F9F6EE] transition-colors">Soporte</a></li>
                         </ul>
                     </div>
