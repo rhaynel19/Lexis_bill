@@ -310,7 +310,12 @@ app.post('/api/auth/confirm-fiscal-name', verifyToken, async (req, res) => {
 app.get('/api/rnc/:number', async (req, res) => {
     const { number } = req.params;
     if (!validateTaxId(number)) return res.status(400).json({ valid: false, message: 'Documento Inválido' });
-    const mockDb = { "101010101": "JUAN PEREZ", "131888444": "LEXIS BILL SOLUTIONS S.R.L.", "40222222222": "DRA. MARIA RODRIGUEZ (DEMO)" };
+    const mockDb = {
+        "101010101": "JUAN PEREZ",
+        "131888444": "LEXIS BILL SOLUTIONS S.R.L.",
+        "40222222222": "DRA. MARIA RODRIGUEZ (DEMO)",
+        "130851255": "ASOCIACION DE ESPECIALISTAS FISCALES"
+    };
     const name = mockDb[number] || "CONTRIBUYENTE ENCONTRADO";
     res.json({ valid: true, rnc: number, name, type: number.length === 9 ? 'JURIDICA' : 'FISICA' });
 });
@@ -328,7 +333,8 @@ app.post('/api/validate-rnc', async (req, res) => {
         const mockDb = {
             "101010101": "JUAN PEREZ",
             "131888444": "LEXIS BILL SOLUTIONS S.R.L.",
-            "40222222222": "DRA. MARIA RODRIGUEZ (DEMO)"
+            "40222222222": "DRA. MARIA RODRIGUEZ (DEMO)",
+            "130851255": "ASOCIACION DE ESPECIALISTAS FISCALES"
         };
 
         const name = mockDb[cleanRnc] || "CONTRIBUYENTE REGISTRADO";
