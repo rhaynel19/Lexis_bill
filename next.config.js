@@ -22,10 +22,6 @@ const nextConfig = {
     typescript: {
         ignoreBuildErrors: true,
     },
-    // Fix for Turbopack/Webpack conflict in Next.js 15+
-    experimental: {
-        turbopack: {},
-    },
 }
 
 module.exports = withPWA(nextConfig)
