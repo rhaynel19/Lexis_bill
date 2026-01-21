@@ -190,15 +190,15 @@ function RegisterForm() {
                                     <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                     <Input
                                         placeholder="Sin guiones (9 o 11 dígitos)"
-                                        className={`pl-11 h-12 bg-slate-50 transition-all text-base ${rncStatus.valid === true ? 'border-emerald-300 bg-emerald-50/20' : 'border-slate-200'}`}
+                                        className={`pl-11 h-12 bg-slate-50 transition-all text-base ${rncStatus.valid === true ? 'border-emerald-300 bg-emerald-50/10' : 'border-slate-200'}`}
                                         value={form.rnc}
-                                        onChange={(e) => setForm({ ...form, rnc: e.target.value })}
+                                        onChange={(e) => setForm({ ...form, rnc: e.target.value.replace(/\D/g, '').slice(0, 11) })}
                                         required
                                     />
-                                    {rncStatus.loading && <div className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-3 h-3 border-2 border-[#D4AF37] border-t-transparent rounded-full" />}
-                                    {rncStatus.valid === true && <div className="mt-1 text-[10px] text-emerald-600 font-medium pl-1">✓ RNC: {rncStatus.name}</div>}
+                                    {rncStatus.loading && <div className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full" />}
+                                    {rncStatus.valid === true && <div className="mt-1 text-[10px] text-emerald-600 font-medium pl-1 animate-in fade-in slide-in-from-left-1">✓ {rncStatus.name}</div>}
                                 </div>
-                                <p className="text-[9px] text-slate-400 pt-1 pl-1 italic">"Usas tu propio RNC. Lexis Bill solo te ayuda a gestionarlo mejor."</p>
+                                <p className="text-[9px] text-slate-400 pt-1 pl-1 italic">"Lexis Bill verifica automáticamente tu RNC para tu seguridad."</p>
                             </div>
 
                             <div className="space-y-1.5">
@@ -261,7 +261,7 @@ function RegisterForm() {
                                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-7 text-lg shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98] rounded-xl"
                                 disabled={isLoading || !acceptedTerms}
                             >
-                                {isLoading ? "Creando Oficina..." : (plan === 'pro' ? 'Activar Plan Elite' : 'Empezar 15 Días Gratis')}
+                                {isLoading ? "Estamos verificando tu información..." : (plan === 'pro' ? 'Activar Plan Elite' : 'Empezar 15 Días Gratis')}
                             </Button>
 
                             <div className="pt-2 text-center">

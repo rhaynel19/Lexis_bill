@@ -1,6 +1,8 @@
 import { secureFetch } from "./secure-fetch";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"; // Default to local for dev
+const API_URL = (typeof window !== "undefined" && window.location.hostname !== "localhost")
+    ? "/api"
+    : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api");
 
 export const api = {
     // Auth

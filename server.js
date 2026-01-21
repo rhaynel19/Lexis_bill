@@ -17,19 +17,34 @@ if (!MONGODB_URI) {
     process.exit(1);
 }
 
-mongoose.connect(MONGODB_URI)
-    .then(() => console.log('✅ Conectado a MongoDB Atlas (LexisBill)'))
-    .catch(err => {
-        console.error('❌ Error de conexión MongoDB:', err);
-        process.exit(1);
-    });
+// Conexión Singleton para evitar fugas de memoria y saturación de clúster
+let isConnected = false;
 
-mongoose.connection.on('connected', () => {
-    console.log('Mongoose conectado al clúster.');
-});
+const connectDB = async () => {
+    if (isConnected) {
+        console.log('=> Usando conexión existente a MongoDB');
+        return;
+    }
+
+    try {
+        const db = await mongoose.connect(MONGODB_URI, {
+            serverSelectionTimeoutMS: 5000, // Timeout de 5s para fallar rápido si no hay red
+        });
+        isConnected = db.connections[0].readyState;
+        console.log('✅ Conectado a MongoDB Atlas (LexisBill)');
+    } catch (err) {
+        console.error('❌ Error crítico de conexión MongoDB:', err.message);
+        // En producción (Vercel/Lambda), no queremos hacer exit(1) siempre, pero en servidor fijo sí.
+        // Aquí lo dejamos listo para ambos entornos.
+    }
+};
+
+// Iniciar conexión inmediatamente al arrancar
+connectDB();
 
 mongoose.connection.on('error', (err) => {
     console.log('Mongoose error de conexión:', err);
+    isConnected = false;
 });
 
 // --- 2. MODELOS (SCHEMAS) ---
@@ -517,6 +532,17 @@ app.get('/api/payments/history', verifyToken, async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+});
+
+// --- Health Check for Production ---
+app.get('/api/health', async (req, res) => {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'UP' : 'DOWN';
+    res.json({
+        status: 'UP',
+        timestamp: new Date().toISOString(),
+        database: dbStatus,
+        environment: process.env.NODE_ENV || 'production'
+    });
 });
 
 const PORT = process.env.PORT || 3001;
