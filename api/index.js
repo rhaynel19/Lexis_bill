@@ -190,13 +190,16 @@ async function getNextNcf(userId, type, session) {
 
 function validateTaxId(id) {
     const str = id.replace(/[^\d]/g, '');
+    console.log(`[validateTaxId] Input: "${id}", Clean: "${str}", Length: ${str.length}`);
     if (str.length === 9) {
         let sum = 0;
         const weights = [7, 9, 8, 6, 5, 4, 3, 2];
         for (let i = 0; i < 8; i++) sum += parseInt(str[i]) * weights[i];
         let remainder = sum % 11;
         let digit = remainder === 0 ? 2 : (remainder === 1 ? 1 : 11 - remainder);
-        return digit === parseInt(str[8]);
+        const isValid = digit === parseInt(str[8]);
+        console.log(`[validateTaxId] 9-digits: Sum=${sum}, Remainder=${remainder}, ExpectedDigit=${digit}, ActualDigit=${str[8]}, Valid=${isValid}`);
+        return isValid;
     }
     if (str.length === 11) {
         let sum = 0;
@@ -207,7 +210,9 @@ function validateTaxId(id) {
             sum += prod;
         }
         let check = (10 - (sum % 10)) % 10;
-        return check === parseInt(str[10]);
+        const isValid = check === parseInt(str[10]);
+        console.log(`[validateTaxId] 11-digits: Sum=${sum}, CheckSum=${sum % 10}, ExpectedDigit=${check}, ActualDigit=${str[10]}, Valid=${isValid}`);
+        return isValid;
     }
     return false;
 }
@@ -474,3 +479,11 @@ app.get('/api/subscription/status', verifyToken, (req, res) => {
 
 // Final export for Vercel
 module.exports = app;
+
+// Local startup for 'node api/index.js'
+if (require.main === module) {
+    const PORT = process.env.PORT || 3001;
+    app.listen(PORT, () => {
+        console.log(`🚀 Lexis Bill Backend (Unified) running at http://localhost:${PORT}`);
+    });
+}

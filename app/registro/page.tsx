@@ -35,7 +35,7 @@ function RegisterForm() {
     const [error, setError] = useState("");
     const [showTerms, setShowTerms] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
-    const [rncStatus, setRncStatus] = useState<{ loading: boolean; valid: boolean | null; name?: string }>({
+    const [rncStatus, setRncStatus] = useState<{ loading: boolean; valid: boolean | null; name?: string; error?: string }>({
         loading: false,
         valid: null
     });
@@ -51,10 +51,15 @@ function RegisterForm() {
                     setRncStatus({
                         loading: false,
                         valid: data.valid,
-                        name: data.name
+                        name: data.name,
+                        error: data.valid ? undefined : "RNC no registrado o inválido."
                     });
-                } catch (err) {
-                    setRncStatus({ loading: false, valid: false }); // Show error message if API fails
+                } catch (err: any) {
+                    setRncStatus({
+                        loading: false,
+                        valid: false,
+                        error: "Problema de conexión con el servicio fiscal."
+                    });
                 }
             } else {
                 setRncStatus({ loading: false, valid: null });
@@ -215,7 +220,7 @@ function RegisterForm() {
                                     )}
                                     {rncStatus.valid === false && !rncStatus.loading && (
                                         <div className="mt-1 text-[10px] text-amber-600 font-medium pl-1 animate-in fade-in">
-                                            No pudimos validar este RNC. Revísalo con calma.
+                                            {rncStatus.error || "No pudimos validar este RNC. Revísalo con calma."}
                                         </div>
                                     )}
                                 </div>
