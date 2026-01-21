@@ -24,6 +24,18 @@ export const api = {
         });
     },
 
+    async confirmFiscalName(confirmedName: string) {
+        const token = localStorage.getItem("token");
+        return secureFetch<any>(`${API_URL}/auth/confirm-fiscal-name`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ confirmedName }),
+        });
+    },
+
     // RNC
     async validateRnc(number: string) {
         return secureFetch<any>(`${API_URL}/rnc/${number}`, {

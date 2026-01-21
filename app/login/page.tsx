@@ -41,6 +41,7 @@ export default function LoginPage() {
                 email: data.email,
                 role: data.profession,
                 rnc: data.rnc,
+                fiscalStatus: data.fiscalStatus,
                 biometric: false
             }));
 

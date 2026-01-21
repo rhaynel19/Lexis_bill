@@ -64,6 +64,11 @@ const userSchema = new mongoose.Schema({
     membershipLevel: { type: String, default: 'free' },
     subscriptionStatus: { type: String, enum: ['Activo', 'Bloqueado', 'Trial', 'Gracia'], default: 'Trial' },
     expiryDate: { type: Date, default: () => new Date(Date.now() + 15 * 24 * 60 * 60 * 1000) },
+
+    // Identidad Fiscal (Asistente Inteligente)
+    suggestedFiscalName: { type: String },
+    confirmedFiscalName: { type: String },
+
     paymentHistory: [{
         date: { type: Date, default: Date.now },
         amount: Number,
@@ -243,7 +248,9 @@ app.post('/api/auth/register', async (req, res) => {
         const newUser = new User({
             email, password: hashedPassword, name, rnc, profession,
             subscriptionStatus: status,
-            expiryDate: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000)
+            expiryDate: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
+            // Obtener sugerencia si el RNC fue validado en el frontend
+            suggestedFiscalName: req.body.suggestedName || ""
         });
         await newUser.save();
         res.status(201).json({ message: 'Usuario registrado exitosamente', plan: status });
@@ -260,7 +267,35 @@ app.post('/api/auth/login', async (req, res) => {
         const passwordIsValid = await bcrypt.compare(password, user.password);
         if (!passwordIsValid) return res.status(401).json({ message: 'Contraseña inválida' });
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret_key_lexis_placeholder', { expiresIn: 86400 });
-        res.status(200).json({ id: user._id, email: user.email, name: user.name, profession: user.profession, rnc: user.rnc, accessToken: token });
+        res.status(200).json({
+            id: user._id,
+            email: user.email,
+            name: user.name,
+            profession: user.profession,
+            rnc: user.rnc,
+            accessToken: token,
+            fiscalStatus: {
+                suggested: user.suggestedFiscalName,
+                confirmed: user.confirmedFiscalName
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/auth/confirm-fiscal-name', verifyToken, async (req, res) => {
+    try {
+        const { confirmedName } = req.body;
+        if (!confirmedName) return res.status(400).json({ message: 'Nombre confirmado requerido' });
+
+        const user = await User.findById(req.userId);
+        if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
+
+        user.confirmedFiscalName = confirmedName;
+        await user.save();
+
+        res.json({ success: true, confirmedName });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -336,6 +371,14 @@ app.get('/api/invoices', verifyToken, async (req, res) => {
 });
 
 app.post('/api/invoices', verifyToken, async (req, res) => {
+    // Bloqueo Inteligente: Requiere nombre fiscal confirmado
+    if (!req.user.confirmedFiscalName) {
+        return res.status(403).json({
+            message: 'Para emitir documentos fiscales, confirma tu nombre fiscal en el dashboard.',
+            code: 'FISCAL_NAME_REQUIRED'
+        });
+    }
+
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
@@ -355,6 +398,68 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/reports/summary', verifyToken, async (req, res) => {
+    try {
+        const { month, year } = req.query;
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0, 23, 59, 59);
+
+        const invoices = await Invoice.find({
+            userId: req.userId,
+            date: { $gte: startDate, $lte: endDate },
+            status: { $ne: 'cancelled' }
+        });
+
+        const totalFacturado = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+        const totalItbis = invoices.reduce((sum, inv) => sum + (inv.itbis || 0), 0);
+
+        res.json({
+            month,
+            year,
+            totalFacturado,
+            totalItbis,
+            invoiceCount: invoices.length,
+            confirmedName: req.user.confirmedFiscalName
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/reports/607', verifyToken, async (req, res) => {
+    // Bloqueo Inteligente
+    if (!req.user.confirmedFiscalName) {
+        return res.status(403).json({ message: 'Confirma tu nombre fiscal para generar reportes.' });
+    }
+
+    try {
+        const { month, year } = req.query;
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0, 23, 59, 59);
+
+        const invoices = await Invoice.find({
+            userId: req.userId,
+            date: { $gte: startDate, $lte: endDate },
+            status: { $ne: 'cancelled' }
+        });
+
+        // Generar formato TXT simplificado (Encabezado + Líneas)
+        let report = `607|${req.user.rnc}|${year}${month.toString().padStart(2, '0')}|${invoices.length}\n`;
+
+        invoices.forEach(inv => {
+            const fecha = new Date(inv.date).toISOString().slice(0, 10).replace(/-/g, '');
+            report += `${inv.clientRnc}|01|${inv.ncfSequence}||${fecha}||${inv.subtotal.toFixed(2)}|${inv.itbis.toFixed(2)}|||||||||\n`;
+        });
+
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Content-Disposition', `attachment; filename=607_${req.user.rnc}_${year}${month}.txt`);
+        res.send(report);
+
+    } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });

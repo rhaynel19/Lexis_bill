@@ -68,8 +68,16 @@ export default function NewInvoice() {
     useEffect(() => {
         // 0. Security Check
         const token = localStorage.getItem("token");
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+
         if (!token) {
             router.push("/login");
+            return;
+        }
+
+        if (!storedUser.fiscalStatus?.confirmed) {
+            toast.error("Para emitir facturas, primero confirma tu identidad fiscal en el dashboard.");
+            router.push("/dashboard");
             return;
         }
 

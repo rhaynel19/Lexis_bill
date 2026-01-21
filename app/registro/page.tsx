@@ -81,7 +81,7 @@ function RegisterForm() {
         setIsLoading(true);
 
         try {
-            await api.register({ ...form, plan });
+            await api.register({ ...form, plan, suggestedName: rncStatus.name });
 
             // Auto login after register
             const loginData = await api.login(form.email, form.password);
@@ -90,8 +90,11 @@ function RegisterForm() {
                 name: loginData.name,
                 email: loginData.email,
                 role: loginData.profession,
-                rnc: loginData.rnc
+                rnc: loginData.rnc,
+                fiscalStatus: loginData.fiscalStatus
             }));
+            // Note: biometric is not set during register currently in this snippet, 
+            // but following the login pattern is better for consistency.
 
             router.push("/dashboard");
         } catch (err: any) {

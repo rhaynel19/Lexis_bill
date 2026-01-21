@@ -33,6 +33,7 @@ import { Label } from "@/components/ui/label";
 import { CreditNoteModal } from "@/components/CreditNoteModal";
 import { FacturaTable } from "@/components/FacturaTable";
 import { TaxHealthWidget } from "@/components/TaxHealthWidget";
+import { FiscalNamePrompt } from "@/components/FiscalNamePrompt";
 
 // Interfaz para definir la estructura de una factura
 interface Invoice {
@@ -107,9 +108,10 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState<number[]>([0, 0, 0, 0]);
   const [monthLabels, setMonthLabels] = useState<string[]>([]);
 
-  // Estado para el Wizard de Configuración
+  // Estado para el Wizard de Configuración e Identidad Fiscal
   const [showSetup, setShowSetup] = useState(false);
   const [setupData, setSetupData] = useState({ rnc: "", exequatur: "", sequence: "E3100000001" });
+  const [fiscalState, setFiscalState] = useState<{ suggested: string; confirmed: string | null }>({ suggested: "", confirmed: null });
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -129,8 +131,16 @@ export default function Dashboard() {
           setShowSetup(true);
         }
 
-        // 2. Fetch subscription status first to handle blockage
+        // 2. Fetch subscription & fiscal status
         const { api } = await import("@/lib/api-service");
+
+        // Get user data from local storage to check fiscal status initially
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        setFiscalState({
+          suggested: storedUser.fiscalStatus?.suggested || "",
+          confirmed: storedUser.fiscalStatus?.confirmed || null
+        });
+
         const status = await api.getSubscriptionStatus().catch(() => null);
 
         if (status && (status.status === 'Bloqueado' || status.graceDaysRemaining < 0)) {
@@ -296,6 +306,27 @@ export default function Dashboard() {
             </Link>
           </div>
         </div>
+
+        {/* Prompt de Identidad Fiscal (Asistente Inteligente) */}
+        {!fiscalState.confirmed && fiscalState.suggested && (
+          <div className="mb-8 animate-in slide-in-from-top-4 duration-500">
+            <FiscalNamePrompt
+              initialSuggestedName={fiscalState.suggested}
+              onConfirmed={(name) => {
+                setFiscalState(prev => ({ ...prev, confirmed: name }));
+                // Update local storage - User Object
+                const user = JSON.parse(localStorage.getItem("user") || "{}");
+                user.fiscalStatus = { ...user.fiscalStatus, confirmed: name };
+                localStorage.setItem("user", JSON.stringify(user));
+
+                // Sync with appConfig for PDF generation consistency
+                const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
+                config.companyName = name;
+                localStorage.setItem("appConfig", JSON.stringify(config));
+              }}
+            />
+          </div>
+        )}
 
         {/* Premium Feature: Bolsillo Fiscal */}
         <div className="mb-8">

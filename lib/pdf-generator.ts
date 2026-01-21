@@ -87,9 +87,20 @@ export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<jsPD
 
     let yPosition = margin.top;
 
-    // Cargar configuración dinámica si existe
+    // Cargar configuración dinámica
     const storedConfig = localStorage.getItem("appConfig");
-    const appConfig = storedConfig ? JSON.parse(storedConfig) : APP_CONFIG.company;
+    const storedUser = localStorage.getItem("user");
+
+    const appConfig = storedConfig ? JSON.parse(storedConfig) : { ...APP_CONFIG.company };
+    const user = storedUser ? JSON.parse(storedUser) : null;
+
+    // Prioridad: Nombre Fiscal Confirmado > Nombre Configuración > Nombre Default
+    const companyName = user?.fiscalStatus?.confirmed || appConfig.companyName || appConfig.name || APP_CONFIG.company.name;
+    const companyRnc = user?.rnc || appConfig.rnc || APP_CONFIG.company.rnc;
+
+    appConfig.companyName = companyName;
+    appConfig.rnc = companyRnc;
+
     // Fallback if logo not uploaded
     const logo = appConfig.logo || null;
 
