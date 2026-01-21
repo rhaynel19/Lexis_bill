@@ -212,12 +212,12 @@ function RegisterForm() {
                                         <SelectTrigger className="w-full pl-11 h-12 bg-slate-50 border-slate-200 text-base focus:ring-blue-500 transition-shadow">
                                             <SelectValue placeholder="Selecciona tu área" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-white border-slate-200 shadow-xl z-[60]">
-                                            <SelectItem value="medico">Médico / Salud</SelectItem>
-                                            <SelectItem value="abogado">Abogado / Legal</SelectItem>
-                                            <SelectItem value="ingeniero">Ingeniero / Arquitecto</SelectItem>
-                                            <SelectItem value="tecnico">Técnico / Especialista</SelectItem>
-                                            <SelectItem value="general">Freelancer / General</SelectItem>
+                                        <SelectContent position="popper" className="bg-white border-slate-200 shadow-xl z-[100] min-w-[var(--radix-select-trigger-width)]">
+                                            <SelectItem value="medico" className="text-blue-950 font-medium py-3">Médico / Salud</SelectItem>
+                                            <SelectItem value="abogado" className="text-blue-950 font-medium py-3">Abogado / Legal</SelectItem>
+                                            <SelectItem value="ingeniero" className="text-blue-950 font-medium py-3">Ingeniero / Arquitecto</SelectItem>
+                                            <SelectItem value="tecnico" className="text-blue-950 font-medium py-3">Técnico / Especialista</SelectItem>
+                                            <SelectItem value="general" className="text-blue-950 font-medium py-3">Freelancer / General</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
