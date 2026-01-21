@@ -9,16 +9,18 @@ export function TrialHeaderBadge() {
     const [status, setStatus] = useState<any>(null);
 
     useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            setStatus("no-session");
+            return;
+        }
+
         api.getSubscriptionStatus()
             .then(data => setStatus(data))
-            .catch(() => { });
+            .catch(() => setStatus("error"));
     }, []);
 
-    if (!status) return (
-        <div className="text-sm font-medium text-primary bg-secondary/20 px-3 py-1 rounded-full hidden sm:block animate-pulse">
-            Cargando...
-        </div>
-    );
+    if (!status || status === "no-session" || status === "error") return null;
 
     if (status.subscriptionStatus === 'Trial') {
         return (
