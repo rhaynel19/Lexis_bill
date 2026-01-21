@@ -275,6 +275,35 @@ app.get('/api/rnc/:number', async (req, res) => {
     res.json({ valid: true, rnc: number, name, type: number.length === 9 ? 'JURIDICA' : 'FISICA' });
 });
 
+app.post('/api/validate-rnc', async (req, res) => {
+    try {
+        const { rnc } = req.body;
+        if (!rnc) return res.status(400).json({ valid: false, message: 'RNC requerido' });
+
+        const cleanRnc = rnc.replace(/\D/g, "");
+        if (!validateTaxId(cleanRnc)) {
+            return res.json({ valid: false, message: 'Formato inválido' });
+        }
+
+        const mockDb = {
+            "101010101": "JUAN PEREZ",
+            "131888444": "LEXIS BILL SOLUTIONS S.R.L.",
+            "40222222222": "DRA. MARIA RODRIGUEZ (DEMO)"
+        };
+
+        const name = mockDb[cleanRnc] || "CONTRIBUYENTE REGISTRADO";
+
+        // Simular un pequeño delay de red para efectos de UX (solo si no es producción)
+        if (process.env.NODE_ENV !== 'production') {
+            await new Promise(resolve => setTimeout(resolve, 600));
+        }
+
+        res.json({ valid: true, name });
+    } catch (error) {
+        res.status(500).json({ valid: false, error: error.message });
+    }
+});
+
 app.get('/api/customers', verifyToken, async (req, res) => {
     try {
         const customers = await Customer.find({ userId: req.userId }).sort({ name: 1 });

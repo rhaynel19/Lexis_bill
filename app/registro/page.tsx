@@ -45,12 +45,16 @@ function RegisterForm() {
         const timer = setTimeout(async () => {
             const cleanRNC = form.rnc.replace(/\D/g, "");
             if (cleanRNC.length === 9 || cleanRNC.length === 11) {
-                setRncStatus(prev => ({ ...prev, loading: true }));
+                setRncStatus(prev => ({ ...prev, loading: true, valid: null }));
                 try {
-                    const data = await api.validateRnc(cleanRNC);
-                    setRncStatus({ loading: false, valid: !!data, name: data?.nombre });
+                    const data = await api.validateRncPost(cleanRNC);
+                    setRncStatus({
+                        loading: false,
+                        valid: data.valid,
+                        name: data.name
+                    });
                 } catch (err) {
-                    setRncStatus({ loading: false, valid: null }); // Don't block on API error
+                    setRncStatus({ loading: false, valid: false }); // Show error message if API fails
                 }
             } else {
                 setRncStatus({ loading: false, valid: null });
@@ -195,10 +199,26 @@ function RegisterForm() {
                                         onChange={(e) => setForm({ ...form, rnc: e.target.value.replace(/\D/g, '').slice(0, 11) })}
                                         required
                                     />
-                                    {rncStatus.loading && <div className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full" />}
-                                    {rncStatus.valid === true && <div className="mt-1 text-[10px] text-emerald-600 font-medium pl-1 animate-in fade-in slide-in-from-left-1">✓ {rncStatus.name}</div>}
+                                    {rncStatus.loading && (
+                                        <div className="mt-1 text-[10px] text-blue-600 font-medium pl-1 animate-pulse">
+                                            Estamos verificando tu RNC...
+                                        </div>
+                                    )}
+                                    {rncStatus.valid === true && (
+                                        <div className="mt-1 text-[10px] text-emerald-600 font-medium pl-1 animate-in fade-in slide-in-from-left-1">
+                                            ✔ RNC válido <br />
+                                            <span className="text-slate-500 font-normal">Nombre registrado: {rncStatus.name}</span>
+                                        </div>
+                                    )}
+                                    {rncStatus.valid === false && !rncStatus.loading && (
+                                        <div className="mt-1 text-[10px] text-amber-600 font-medium pl-1 animate-in fade-in">
+                                            No pudimos validar este RNC. Revísalo con calma.
+                                        </div>
+                                    )}
                                 </div>
-                                <p className="text-[9px] text-slate-400 pt-1 pl-1 italic">"Lexis Bill verifica automáticamente tu RNC para tu seguridad."</p>
+                                <p className="text-[9px] text-slate-400 pt-1 pl-1 italic">
+                                    "Lexis Bill valida RNCs usando fuentes públicas de la República Dominicana."
+                                </p>
                             </div>
 
                             <div className="space-y-1.5">

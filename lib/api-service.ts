@@ -31,6 +31,15 @@ export const api = {
         });
     },
 
+    async validateRncPost(rnc: string) {
+        return secureFetch<any>(`${API_URL}/validate-rnc`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rnc }),
+            cacheKey: `rnc_post_${rnc}`
+        });
+    },
+
     // Invoices
     async createInvoice(data: any) {
         const token = localStorage.getItem("token");
