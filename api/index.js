@@ -25,9 +25,11 @@ const connectDB = async () => {
     }
 
     if (!MONGODB_URI) {
-        console.error('❌ MONGODB_URI no definido');
+        console.error('❌ MONGODB_URI no definido en process.env');
         return null;
     }
+
+    console.log('=> Intentando conectar a MongoDB Atlas con URI configurado...');
 
     console.log('=> Iniciando nueva conexión a MongoDB...');
     try {
