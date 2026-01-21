@@ -53,11 +53,11 @@ export default function LandingPage() {
             EL ÚNICO SISTEMA QUE HABLA DOMINICANO 🇩🇴
           </span>
           <h1 className="font-serif text-5xl md:text-8xl font-bold leading-tight mb-8 max-w-5xl mx-auto tracking-tight">
-            La distinción de un <br />
-            <span className="text-[#D4AF37]">negocio bien organizado.</span>
+            Tu talento merece orden, <br />
+            <span className="text-[#D4AF37]">tu tiempo merece paz.</span>
           </h1>
           <p className="text-xl md:text-2xl text-slate-300 max-w-3xl mx-auto mb-14 leading-relaxed font-light italic">
-            Diseñado para quienes valoran su tiempo. Una plataforma de facturación que entiende el mercado dominicano y eleva el estándar de tu práctica profesional. Comienza hoy sin tarjetas.
+            La asistencia de lujo para el profesional que factura con su RNC y desea delegar el caos. Lexis Bill organiza tus comprobantes autorizados y prepara tus reportes, hablando el único idioma que importa: el dominicano.
           </p>
           <div className="flex flex-col items-center gap-6">
             <Link href="/registro">
@@ -91,17 +91,78 @@ export default function LandingPage() {
               <div className="flex items-start gap-6 p-8 rounded-2xl bg-white/[0.02] border border-white/5">
                 <Zap className="w-7 h-7 text-[#D4AF37] stroke-[1px]" />
                 <div>
-                  <h4 className="font-serif text-xl font-bold mb-3">Automatización Real</h4>
-                  <p className="text-slate-400">Deja que el sistema trabaje mientras tú te enfocas en tus clientes.</p>
+                  <h4 className="font-serif text-xl font-bold mb-3">Tú mantienes el control</h4>
+                  <p className="text-slate-400">Tus comprobantes siguen siendo tuyos; nosotros te ayudamos a usarlos sin errores ni olvidos.</p>
                 </div>
               </div>
               <div className="flex items-start gap-6 p-8 rounded-2xl bg-white/[0.02] border border-white/5">
                 <ShieldCheck className="w-7 h-7 text-[#D4AF37] stroke-[1px]" />
                 <div>
-                  <h4 className="font-serif text-xl font-bold mb-3">Paz Mental</h4>
-                  <p className="text-slate-400">Cumplimiento total con la normativa vigente, sin esfuerzo.</p>
+                  <h4 className="font-serif text-xl font-bold mb-3">Previsión Inteligente</h4>
+                  <p className="text-slate-400">Preparamos todo para que cumplas con la DGII, sin que tengas que convertirte en contable.</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* New Section: ¿Es para mí? */}
+      <section className="py-24 bg-[#0A192F]">
+        <div className="container mx-auto px-6">
+          <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="font-serif text-4xl font-bold mb-8">¿Es Lexis Bill <br /><span className="text-[#D4AF37]">para mí?</span></h2>
+              <div className="space-y-6">
+                <div className="flex gap-4">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 mt-1">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <p className="text-slate-300"><strong>SÍ</strong>, si eres médico, abogado, ingeniero o técnico que factura servicios y ya tiene su RNC.</p>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 mt-1">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <p className="text-slate-300"><strong>SÍ</strong>, si buscas una forma elegante de enviar cotizaciones y facturas por WhatsApp.</p>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-6 h-6 rounded-full bg-red-500/10 flex items-center justify-center shrink-0 mt-1">
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                  </div>
+                  <p className="text-slate-400"><strong>NO</strong>, si buscas una contabilidad compleja de grandes corporaciones.</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-8 rounded-3xl bg-gradient-to-br from-white/5 to-transparent border border-white/10">
+              <h4 className="font-serif text-xl font-bold mb-4 text-[#D4AF37]">La realidad local</h4>
+              <p className="text-slate-400 leading-relaxed font-light">
+                Mientras otros sistemas usan lenguaje extraño, Lexis Bill entiende que tu prioridad es servir a tu cliente, no pelear con formularios electrónicos. Nosotros preparamos el camino para que la Facturación Electrónica sea un paso natural, no un trauma.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* New Section: Cómo Funciona */}
+      <section className="py-32 bg-[#081221] border-y border-[#D4AF37]/5">
+        <div className="container mx-auto px-6 text-center">
+          <h2 className="font-serif text-4xl md:text-5xl font-bold mb-20 text-[#F9F6EE]">Tranquilidad en <span className="text-[#D4AF37]">3 pasos.</span></h2>
+          <div className="grid md:grid-cols-3 gap-12">
+            <div className="space-y-6">
+              <div className="text-5xl font-serif text-[#D4AF37]/20 font-bold italic">01</div>
+              <h3 className="text-xl font-bold">Carga tus rangos</h3>
+              <p className="text-slate-400 font-light px-4">Sube los NCF que la DGII te aprobó una sola vez. Lexis Bill los organiza y te avisa antes de que se gasten.</p>
+            </div>
+            <div className="space-y-6">
+              <div className="text-5xl font-serif text-[#D4AF37]/20 font-bold italic">02</div>
+              <h3 className="text-xl font-bold">Prepara tu envío</h3>
+              <p className="text-slate-400 font-light px-4">Entra los datos de tu cliente. Validamos su RNC al instante para que no cometas errores de digitación.</p>
+            </div>
+            <div className="space-y-6">
+              <div className="text-5xl font-serif text-[#D4AF37]/20 font-bold italic">03</div>
+              <h3 className="text-xl font-bold">Delegar y Respirar</h3>
+              <p className="text-slate-400 font-light px-4">Envía por WhatsApp o email. Al final del mes, tus reportes 606 y 607 están listos para tu contador.</p>
             </div>
           </div>
         </div>
@@ -126,16 +187,16 @@ export default function LandingPage() {
               </div>
               <h3 className="font-serif text-2xl font-bold">Blindaje RNC</h3>
               <p className="text-slate-400 leading-relaxed text-lg">
-                Validación instantánea. Nunca vuelvas a emitir un documento con datos erróneos.
+                Validación instantánea con la DGII. Nunca vuelvas a emitir un documento con datos erróneos de tus clientes.
               </p>
             </div>
             <div className="text-center space-y-6 group cursor-default">
               <div className="w-20 h-20 bg-[#D4AF37]/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-[#D4AF37]/10 group-hover:bg-[#D4AF37]/20 group-hover:-translate-y-2 transition-all duration-500">
                 <Zap className="w-10 h-10 text-[#D4AF37] stroke-[1px] group-hover:opacity-80" />
               </div>
-              <h3 className="font-serif text-2xl font-bold">Cumplimiento Silencioso</h3>
+              <h3 className="font-serif text-2xl font-bold">Reportes en un Clic</h3>
               <p className="text-slate-400 leading-relaxed text-lg">
-                Tus reportes 606 y 607 se construyen solos mientras tú trabajas.
+                Le hacemos el trabajo fácil a tu contador. Tus TXT se construyen solos mientras tú trabajas.
               </p>
             </div>
             <div className="text-center space-y-6 group cursor-default">
@@ -167,12 +228,37 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* FAQ Section */}
+      <section className="py-32 bg-[#0A192F]">
+        <div className="container mx-auto px-6 max-w-4xl">
+          <h2 className="font-serif text-3xl md:text-5xl font-bold mb-16 text-center text-[#D4AF37]">Preguntas Frecuentes</h2>
+          <div className="space-y-8">
+            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+              <h4 className="font-bold text-lg mb-2">¿Lexis Bill emite mis comprobantes?</h4>
+              <p className="text-slate-400 text-sm">No. Tú mantienes el control total de tus rangos autorizados por la DGII. Nosotros somos el puente que los organiza para que los uses sin errores.</p>
+            </div>
+            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+              <h4 className="font-bold text-lg mb-2">¿Sustituye a mi contador?</h4>
+              <p className="text-slate-400 text-sm">Al contrario, lo harás muy feliz. Le entregas todo organizado en TXT listo para subir a la oficina virtual.</p>
+            </div>
+            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+              <h4 className="font-bold text-lg mb-2">¿Puedo usar mi rango de NCF actual?</h4>
+              <p className="text-slate-400 text-sm">Sí, el sistema está diseñado para que cargues tus comprobantes vigentes y continúes tu secuencia sin fricción.</p>
+            </div>
+            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+              <h4 className="font-bold text-lg mb-2">¿Es difícil de usar?</h4>
+              <p className="text-slate-400 text-sm">Está hecho para que lo uses desde el celular mientras te mueves. Si sabes enviar un WhatsApp, sabes usar Lexis Bill.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Section (La Invitación) */}
       <section id="precio" className="py-40 bg-gradient-to-b from-transparent to-[#081221]">
         <div className="container mx-auto px-6 text-center">
           <h2 className="font-serif text-4xl md:text-5xl font-bold mb-24 underline decoration-[#D4AF37]/30 underline-offset-8 italic">
-            15 días para enamorarte de tu <br className="hidden md:block" />
-            <span className="text-[#D4AF37]">nueva organización.</span>
+            15 días para recuperar tu <br className="hidden md:block" />
+            <span className="text-[#D4AF37]">tranquilidad fiscal.</span>
           </h2>
           <div className="max-w-md mx-auto relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-[#D4AF37] to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
@@ -231,7 +317,7 @@ export default function LandingPage() {
                 </ul>
                 <Link href="/registro" className="block pt-8 w-full">
                   <Button className="w-full min-h-[4rem] px-6 md:px-8 py-4 text-base md:text-lg bg-[#D4AF37] hover:bg-[#B8962E] text-[#0A192F] font-bold rounded-xl transition-all shadow-xl shadow-[#D4AF37]/10 flex items-center justify-center text-center whitespace-normal md:whitespace-nowrap leading-tight">
-                    Empezar mi Prueba de 15 Días GRATIS
+                    Comenzar mi Prueba sin Tarjetas
                   </Button>
                 </Link>
                 <p className="text-[11px] text-slate-500 mt-6 uppercase tracking-[0.2em] font-medium text-center">Sin contratos. Sin tarjetas iniciales. Sin fricción.</p>
