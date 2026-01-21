@@ -45,7 +45,13 @@ const connectDB = async () => {
 
 // Middleware para asegurar conexión en cada petición (Vercel standard)
 app.use(async (req, res, next) => {
-    await connectDB();
+    const db = await connectDB();
+    if (!db) {
+        return res.status(503).json({
+            message: 'Error de conexión con la base de datos fiscal.',
+            error: 'Database connection failed'
+        });
+    }
     next();
 });
 
@@ -246,6 +252,14 @@ app.post('/api/tickets', async (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { email, password, name, rnc, profession, plan } = req.body;
+        console.log(`[AUTH] Registering user: ${email}`);
+
+        // Verificar si el usuario ya existe antes de intentar guardar (más limpio que el catch de mongo)
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: 'Este correo ya está registrado.' });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 12);
         const expiryDays = plan === 'pro' ? 30 : 15;
         const status = plan === 'pro' ? 'Activo' : 'Trial';
@@ -254,24 +268,41 @@ app.post('/api/auth/register', async (req, res) => {
             email, password: hashedPassword, name, rnc, profession,
             subscriptionStatus: status,
             expiryDate: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
-            // Obtener sugerencia si el RNC fue validado en el frontend
             suggestedFiscalName: req.body.suggestedName || ""
         });
+
         await newUser.save();
+        console.log(`[AUTH] User created successfully: ${email}`);
         res.status(201).json({ message: 'Usuario registrado exitosamente', plan: status });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error(`[AUTH] Error in registration:`, error);
+        if (error.code === 11000) {
+            return res.status(400).json({ message: 'El correo o el RNC ya están registrados.' });
+        }
+        res.status(500).json({ message: 'Error interno al crear el usuario', error: error.message });
     }
 });
 
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
+        console.log(`[AUTH] Login attempt: ${email}`);
+
         const user = await User.findOne({ email });
-        if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
+        if (!user) {
+            console.warn(`[AUTH] Login failed: User not found (${email})`);
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
         const passwordIsValid = await bcrypt.compare(password, user.password);
-        if (!passwordIsValid) return res.status(401).json({ message: 'Contraseña inválida' });
+        if (!passwordIsValid) {
+            console.warn(`[AUTH] Login failed: Invalid password (${email})`);
+            return res.status(401).json({ message: 'Contraseña inválida' });
+        }
+
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret_key_lexis_placeholder', { expiresIn: 86400 });
+
+        console.log(`[AUTH] Login successful: ${email}`);
         res.status(200).json({
             id: user._id,
             email: user.email,
@@ -285,7 +316,8 @@ app.post('/api/auth/login', async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error(`[AUTH] Error in login:`, error);
+        res.status(500).json({ message: 'Error interno en el servidor', error: error.message });
     }
 });
 
