@@ -15,7 +15,7 @@ interface FetchOptions extends RequestInit {
  */
 export async function secureFetch<T>(url: string, options: FetchOptions = {}): Promise<T> {
     const {
-        timeout = 10000,
+        timeout = 30000,
         retries = 3,
         cacheKey,
         headers,
@@ -89,8 +89,9 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
 
             // Manejo de Timeout específico
             if (error.name === 'AbortError') {
+                error.message = "La conexión está tardando más de lo esperado. Por favor, verifica tu internet o reintenta.";
                 if (isLastAttempt) {
-                    toast.error("⏱️ La petición tardó demasiado. Verifique su conexión.");
+                    toast.error("⏱️ Tiempo de espera agotado. El servidor está tardando mucho en responder.");
 
                     // Fallback a caché en timeout final
                     if (cacheKey) {
