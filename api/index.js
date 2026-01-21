@@ -20,43 +20,38 @@ const MONGODB_URI = process.env.MONGODB_URI;
 let cachedDb = null;
 
 const connectDB = async () => {
-    if (cachedDb && mongoose.connection.readyState === 1) {
-        return cachedDb;
-    }
+    if (mongoose.connection.readyState === 1) return mongoose.connection;
 
     if (!MONGODB_URI) {
-        console.error('❌ MONGODB_URI no definido en process.env');
-        return null;
+        console.error('❌ MONGODB_URI no definido');
+        throw new Error('MONGODB_URI_MISSING');
     }
 
-    console.log('=> Intentando conectar a MongoDB Atlas con URI configurado...');
-
-    console.log('=> Iniciando nueva conexión a MongoDB...');
     try {
-        const db = await mongoose.connect(MONGODB_URI, {
-            serverSelectionTimeoutMS: 15000, // Aumentado para robustez en Serverless
+        console.log('=> Intentando conectar a MongoDB...');
+        return await mongoose.connect(MONGODB_URI, {
+            serverSelectionTimeoutMS: 15000,
+            dbName: 'lexis_bill' // Forzamos el nombre de la DB aquí también
         });
-        cachedDb = db;
-        console.log('✅ Conexión exitosa');
-        return db;
     } catch (err) {
-        console.error('❌ Error de conexión:', err.message);
-        return null;
+        console.error('❌ Error fatal de conexión:', err.message);
+        throw err;
     }
 };
 
 // Middleware para asegurar conexión en cada petición (Vercel standard)
 app.use(async (req, res, next) => {
-    const dbStatus = await connectDB();
-    if (!dbStatus) {
-        // Obtenemos un error un poco más descriptivo para el UI (solo durante depuración)
-        return res.status(503).json({
-            message: 'Error de conexión con la base de datos fiscal.',
-            error: 'DB_CONNECTION_FAILED',
-            details: 'Asegúrese de haber hecho REDEPLOY en Vercel después de cambiar las variables de entorno.'
+    try {
+        await connectDB();
+        next();
+    } catch (err) {
+        res.status(503).json({
+            message: 'Error de conexión fiscal.',
+            error: err.message,
+            code: err.name,
+            hint: 'Verifica el MONGODB_URI y el Network Access en Atlas'
         });
     }
-    next();
 });
 
 // --- 2. MODELOS ---
