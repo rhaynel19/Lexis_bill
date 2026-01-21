@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, ShieldCheck, Zap, Smartphone, ArrowRight, Menu } from "lucide-react";
 import Link from "next/link";
 
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
 export default function LandingPage() {
   const router = useRouter();
 
@@ -35,9 +37,32 @@ export default function LandingPage() {
               </Button>
             </Link>
           </div>
-          <Button variant="ghost" size="icon" className="md:hidden">
-            <Menu className="w-6 h-6" />
-          </Button>
+          {/* Mobile Menu */}
+          <div className="md:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-[#F9F6EE] hover:bg-[#D4AF37]/10">
+                  <Menu className="w-6 h-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="bg-[#0A192F] border-[#D4AF37]/20 text-[#F9F6EE] pt-20">
+                <div className="flex flex-col gap-8 text-center">
+                  <Link href="#beneficios" className="text-xl font-serif hover:text-[#D4AF37]">Beneficios</Link>
+                  <Link href="#precio" className="text-xl font-serif hover:text-[#D4AF37]">Precio</Link>
+                  <Link href="/login">
+                    <Button variant="outline" className="w-full text-[#D4AF37] border-[#D4AF37] py-6 rounded-xl">
+                      Entrar
+                    </Button>
+                  </Link>
+                  <Link href="/registro">
+                    <Button className="w-full bg-[#D4AF37] text-[#0A192F] font-bold py-6 rounded-xl shadow-lg shadow-[#D4AF37]/20">
+                      Crear Cuenta Gratis
+                    </Button>
+                  </Link>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </nav>
 
@@ -49,7 +74,7 @@ export default function LandingPage() {
         </div>
 
         <div className="container mx-auto px-6 text-center">
-          <span className="inline-block text-[#D4AF37] text-xs font-bold tracking-[0.3em] uppercase mb-8 animate-fade-in">
+          <span className="inline-block text-[#D4AF37] text-xs font-bold tracking-[0.3em] uppercase mb-8 animate-fade-in bg-[#D4AF37]/10 px-4 py-2 rounded-full border border-[#D4AF37]/20">
             EL ÚNICO SISTEMA QUE HABLA DOMINICANO 🇩🇴
           </span>
           <h1 className="font-serif text-5xl md:text-8xl font-bold leading-tight mb-8 max-w-5xl mx-auto tracking-tight">

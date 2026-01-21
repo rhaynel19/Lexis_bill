@@ -150,6 +150,21 @@
   body {
     @apply bg-background text-foreground;
   }
+  html {
+    scroll-behavior: smooth;
+  }
+  /* Mejorar touch targets en mobile */
+  input, button, select, [role="button"] {
+    @apply min-h-[44px];
+  }
+  @media (max-width: 640px) {
+    .container {
+      @apply px-4;
+    }
+    input, button {
+      @apply text-base; /* Evitar zoom en iOS */
+    }
+  }
 }
 
 /* Shimmer Animation */

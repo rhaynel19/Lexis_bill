@@ -6,8 +6,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "LEXIS BILL | Firma el futuro",
-  description: "Plataforma de gestión financiera para profesionales en República Dominicana",
+  title: "Lexis Bill | El orden que te deja tranquilo",
+  description: "El único sistema que habla dominicano 🇩🇴. La plataforma de facturación premium para el profesional independiente en República Dominicana.",
 };
 
 import { CommandMenu } from "@/components/command-menu";
@@ -41,7 +41,7 @@ export default function RootLayout({
                       <span className="text-[#D4AF37]">LEXIS</span> <span className="text-[#F9F6EE] font-light">BILL</span>
                     </h1>
                     <p className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-medium group-hover:text-[#D4AF37] transition-colors">
-                      Firma el futuro
+                      El orden que te deja tranquilo
                     </p>
                   </div>
                 </Link>

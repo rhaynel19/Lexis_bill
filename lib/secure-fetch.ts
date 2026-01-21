@@ -53,6 +53,11 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
                     "Accept": "application/json",
                 },
                 signal: controller.signal
+            }).catch(e => {
+                if (e.message === 'Failed to fetch') {
+                    throw new Error("Error de conexión: El servidor no responde.");
+                }
+                throw e;
             });
 
             clearTimeout(id);
