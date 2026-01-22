@@ -153,7 +153,7 @@ export function TaxHealthWidget() {
                                 <ArrowDown className="w-3 h-3 text-amber-500 mr-2" />
                                 ITBIS Deducible
                             </span>
-                            <span className="font-semibold text-amber-400">-{formatCurrency(taxData.paidItbis)}</span>
+                            <span className="font-semibold text-red-400">-{formatCurrency(taxData.paidItbis)}</span>
                         </div>
                         {/* Visual Bar vs Collected */}
                         <div className="w-full bg-slate-700 h-1 rounded-full overflow-hidden">

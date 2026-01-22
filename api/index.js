@@ -45,11 +45,12 @@ app.use(async (req, res, next) => {
         await connectDB();
         next();
     } catch (err) {
+        console.error('❌ Error fatal de conexión:', err.message);
         res.status(503).json({
-            message: 'Error de conexión fiscal.',
+            message: 'Error de conexión fiscal con la base de datos.',
             error: err.message,
             code: err.name,
-            hint: 'Verifica el MONGODB_URI y el Network Access en Atlas'
+            hint: 'Asegúrate de que el MONGODB_URI sea correcto y la IP esté permitida en Atlas.'
         });
     }
 });

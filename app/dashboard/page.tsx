@@ -19,6 +19,7 @@ import {
   Mail,
   Copy,
   AlertCircle,
+  AlertTriangle,
   Download,
   Share2,
   HelpCircle,
@@ -112,6 +113,9 @@ export default function Dashboard() {
   const [showSetup, setShowSetup] = useState(false);
   const [setupData, setSetupData] = useState({ rnc: "", exequatur: "", sequence: "E3100000001" });
   const [fiscalState, setFiscalState] = useState<{ suggested: string; confirmed: string | null }>({ suggested: "", confirmed: null });
+  const [isFiscalHealthy, setIsFiscalHealthy] = useState(true);
+  const [lowNcfType, setLowNcfType] = useState<string | null>(null);
+  const [profession, setProfession] = useState("general");
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -197,6 +201,24 @@ export default function Dashboard() {
           setChartData(last4MonthsData);
           setMonthLabels(labels);
         }
+
+
+        // Check NCF Health
+        try {
+          const ncfSettings = await api.getNcfSettings();
+          const lowSequence = ncfSettings.find((s: any) =>
+            (s.finalNumber - s.currentValue) < 10 && s.isActive
+          );
+          if (lowSequence) {
+            setIsFiscalHealthy(false);
+            setLowNcfType(lowSequence.type);
+          }
+        } catch (e) { console.error("NCF Settings Fetch Error:", e); }
+
+        // Load Profession
+        const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
+        if (config.profession) setProfession(config.profession);
+
       } catch (err: any) {
         console.error("Dashboard Load Error:", err);
         setError("Hubo un inconveniente técnico al cargar sus datos, nuestro equipo ha sido notificado.");
@@ -206,6 +228,15 @@ export default function Dashboard() {
     };
 
     loadDashboardData();
+
+    // Check for setup requirement from redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("setup") === "required") {
+      toast.error("⚠️ Identidad Fiscal Requerida", {
+        description: "Confirma tu nombre fiscal para poder emitir comprobantes válidos.",
+        duration: 5000
+      });
+    }
   }, []);
 
   const handleRefresh = () => {
@@ -297,9 +328,9 @@ export default function Dashboard() {
             </h2>
             <p className="text-slate-500 mt-1">Aquí está lo que está pasando con tu negocio hoy.</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 hidden md:flex">
             <Link href="/nueva-factura">
-              <Button className="bg-[#0A192F] hover:bg-slate-800 text-white shadow-lg shadow-blue-900/20 transition-all hover:scale-105">
+              <Button className="bg-[#D4AF37] hover:bg-[#B8962E] text-[#0A192F] font-bold shadow-lg shadow-amber-500/20 transition-all hover:scale-105">
                 <Plus className="w-4 h-4 mr-2" />
                 Nueva Factura
               </Button>
@@ -307,25 +338,67 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Prompt de Identidad Fiscal (Asistente Inteligente) */}
-        {!fiscalState.confirmed && fiscalState.suggested && (
-          <div className="mb-8 animate-in slide-in-from-top-4 duration-500">
-            <FiscalNamePrompt
-              initialSuggestedName={fiscalState.suggested}
-              onConfirmed={(name) => {
-                setFiscalState(prev => ({ ...prev, confirmed: name }));
-                // Update local storage - User Object
-                const user = JSON.parse(localStorage.getItem("user") || "{}");
-                user.fiscalStatus = { ...user.fiscalStatus, confirmed: name };
-                localStorage.setItem("user", JSON.stringify(user));
+        {/* Prompt de Identidad Fiscal o Bloqueo Informativo */}
+        {!fiscalState.confirmed ? (
+          fiscalState.suggested ? (
+            <div className="mb-8 animate-in slide-in-from-top-4 duration-500">
+              <FiscalNamePrompt
+                initialSuggestedName={fiscalState.suggested}
+                onConfirmed={(name) => {
+                  setFiscalState(prev => ({ ...prev, confirmed: name }));
+                  const user = JSON.parse(localStorage.getItem("user") || "{}");
+                  user.fiscalStatus = { ...user.fiscalStatus, confirmed: name };
+                  localStorage.setItem("user", JSON.stringify(user));
+                  const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
+                  config.companyName = name;
+                  localStorage.setItem("appConfig", JSON.stringify(config));
+                }}
+              />
+            </div>
+          ) : (
+            <Card className="mb-8 border-red-100 bg-red-50/50 shadow-lg border-l-4 border-l-red-500">
+              <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-start gap-4 text-center md:text-left">
+                  <div className="w-12 h-12 bg-red-100 text-red-600 rounded-xl flex items-center justify-center shrink-0">
+                    <AlertCircle className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-red-900 font-bold text-lg">Configuración Pendiente</h3>
+                    <p className="text-red-700 text-sm max-w-md">
+                      Para poder emitir facturas con valor fiscal, primero debes completar tu perfil y confirmar tu RNC en la sección de configuración.
+                    </p>
+                  </div>
+                </div>
+                <Link href="/configuracion" className="w-full md:w-auto">
+                  <Button className="w-full md:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-6 rounded-xl shadow-lg shadow-red-600/20 active:scale-95 transition-all">
+                    Configurar Perfil Fiscal
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )
+        ) : null}
 
-                // Sync with appConfig for PDF generation consistency
-                const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
-                config.companyName = name;
-                localStorage.setItem("appConfig", JSON.stringify(config));
-              }}
-            />
-          </div>
+        {/* Semáforo Fiscal (NCF Alerts) */}
+        {!isFiscalHealthy && (
+          <Card className="mb-8 border-amber-200 bg-amber-50 shadow-md animate-pulse">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-200 text-amber-700 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-amber-900 leading-none">¡Atención! Secuencias Bajas</h4>
+                  <p className="text-xs text-amber-700 mt-1">Te quedan menos de 10 números para e-CF tipo {lowNcfType}.</p>
+                </div>
+              </div>
+              <Link href="/configuracion">
+                <Button size="sm" variant="outline" className="border-amber-400 text-amber-700 hover:bg-amber-100 font-bold">
+                  Solicitar Más
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
         )}
 
         {/* Premium Feature: Bolsillo Fiscal */}
@@ -398,8 +471,8 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Botón de acción rápida */}
-        <div className="mb-10 text-right">
+        {/* Botón de acción rápida (Solo en Mobile) */}
+        <div className="mb-10 text-right md:hidden">
           <Link href="/nueva-factura">
             <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg shadow-secondary/20 px-8 py-6 text-lg rounded-xl transition-all hover:scale-105 active:scale-95 font-bold">
               <span className="mr-2 text-xl">✦</span> Nueva Factura

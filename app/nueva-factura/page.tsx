@@ -76,8 +76,7 @@ export default function NewInvoice() {
         }
 
         if (!storedUser.fiscalStatus?.confirmed) {
-            toast.error("Para emitir facturas, primero confirma tu identidad fiscal en el dashboard.");
-            router.push("/dashboard");
+            router.push("/dashboard?setup=required");
             return;
         }
 
@@ -132,6 +131,11 @@ export default function NewInvoice() {
                 } catch (e) { localStorage.removeItem("invoiceDraft"); }
             }
         }
+
+        // Load Profession and User Details from Config/User
+        const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
+        if (config.profession) setProfession(config.profession);
+        if (config.exequatur) setExequatur(config.exequatur);
     }, []);
 
     // Save Draft on Change
@@ -651,16 +655,32 @@ export default function NewInvoice() {
                                         <p className="text-xs text-red-500">{rncError}</p>
                                     )}
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="client-phone">Teléfono / WhatsApp (Opcional)</Label>
-                                    <Input
-                                        id="client-phone"
-                                        placeholder="Ej: 8095551234"
-                                        value={clientPhone}
-                                        onChange={(e) => setClientPhone(e.target.value)}
-                                    />
-                                </div>
                             </div>
+
+                            {/* Campos Específicos por Profesión */}
+                            {profession === "doctor" && (
+                                <div className="grid gap-4 md:grid-cols-2 p-4 bg-blue-50/50 rounded-xl border border-blue-100 animate-in fade-in slide-in-from-top-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="ars">ARS (Seguro Médico)</Label>
+                                        <Input id="ars" placeholder="Ej: Senasa, Humano..." value={ars} onChange={(e) => setArs(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="exequatur">Exequátur / Registro</Label>
+                                        <Input id="exequatur" value={exequatur} onChange={(e) => setExequatur(e.target.value)} />
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="space-y-2">
+                                <Label htmlFor="client-phone">Teléfono / WhatsApp (Opcional)</Label>
+                                <Input
+                                    id="client-phone"
+                                    placeholder="Ej: 8095551234"
+                                    value={clientPhone}
+                                    onChange={(e) => setClientPhone(e.target.value)}
+                                />
+                            </div>
+
                             <div className="flex items-center space-x-2 mt-2">
                                 <input
                                     type="checkbox"
@@ -1058,13 +1078,15 @@ export default function NewInvoice() {
             </form>
 
             {/* Loading Overlay */}
-            {isGenerating && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center z-50">
-                    <Loader2 className="h-16 w-16 text-white animate-spin mb-4" />
-                    <h2 className="text-white text-xl font-semibold">Generando comprobante fiscal en la nube...</h2>
-                    <p className="text-white/80 text-sm">Validando secuencia NCF y firmando documento</p>
-                </div>
-            )}
+            {
+                isGenerating && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+                        <Loader2 className="h-16 w-16 text-white animate-spin mb-4" />
+                        <h2 className="text-white text-xl font-semibold">Generando comprobante fiscal en la nube...</h2>
+                        <p className="text-white/80 text-sm">Validando secuencia NCF y firmando documento</p>
+                    </div>
+                )
+            }
 
             {/* Success Modal */}
             <Dialog open={showSuccessModal} onOpenChange={() => router.push('/')}>
@@ -1102,6 +1124,6 @@ export default function NewInvoice() {
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 }

@@ -18,6 +18,9 @@ export default function Configuration() {
         email: "",
         exequatur: "",
         website: "",
+        profession: "general", // general, doctor, lawyer, engineer
+        bankName: "",
+        bankAccount: "",
     });
 
     // Mock state for logos (in real app, use File List)
@@ -146,9 +149,38 @@ export default function Configuration() {
                             <Label htmlFor="phone">Teléfono / WhatsApp</Label>
                             <Input id="phone" value={config.phone} onChange={handleChange} placeholder="Ej: 809-555-0000" />
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="profession">Especialidad / Sector</Label>
+                            <select
+                                id="profession"
+                                value={config.profession}
+                                onChange={(e) => setConfig({ ...config, profession: e.target.value })}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <option value="general">Profesional General</option>
+                                <option value="doctor">Médico / Salud</option>
+                                <option value="lawyer">Abogado / Legal</option>
+                                <option value="engineer">Ingeniero / Arquitecto</option>
+                            </select>
+                        </div>
                         <div className="space-y-2 md:col-span-2">
                             <Label htmlFor="address">Dirección Física</Label>
                             <Input id="address" value={config.address} onChange={handleChange} placeholder="Ej: Av. Winston Churchill esq. 27 de Febrero, Torre Empresarial..." />
+                        </div>
+
+                        <div className="h-4 md:col-span-2"></div> {/* Added md:col-span-2 to ensure it takes full width in grid */}
+                        <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2"> {/* Added md:col-span-2 */}
+                            <div className="md:col-span-2 flex items-center gap-2 text-blue-800 font-bold text-sm">
+                                🏦 Información Bancaria (Para cobros por transferencia)
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="bankName">Banco</Label>
+                                <Input id="bankName" value={config.bankName} onChange={handleChange} placeholder="Ej: Banco Popular, Banreservas..." />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="bankAccount">Número de Cuenta</Label>
+                                <Input id="bankAccount" value={config.bankAccount} onChange={handleChange} placeholder="Ej: 771234567 (Corriente/Ahorros)" />
+                            </div>
                         </div>
                         <div className="space-y-2 md:col-span-2">
                             <Label htmlFor="email">Correo Electrónico (Visible en Factura)</Label>

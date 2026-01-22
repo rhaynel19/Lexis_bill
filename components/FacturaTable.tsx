@@ -231,7 +231,7 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
                                             {formatCurrency(inv.total)}
                                         </TableCell>
                                         <TableCell className="text-right pr-8">
-                                            <div className="flex justify-end gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex justify-end gap-2 opacity-100 md:opacity-100 group-hover:opacity-100 transition-opacity">
                                                 {/* Botón condicional principal */}
                                                 {(inv.status === "cancelled" || inv.status === "rechazada") ? (
                                                     <Button size="sm" variant="outline" className="h-8 border-red-200 text-red-600 hover:bg-red-50 text-xs px-2" onClick={() => handleClone(inv)}>

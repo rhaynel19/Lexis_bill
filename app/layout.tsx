@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 import { CommandMenu } from "@/components/command-menu";
-import { Plus } from "lucide-react";
+import { Plus, FileText, Settings, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 
 import { TrialHeaderBadge } from "@/components/TrialHeaderBadge";
@@ -60,10 +60,48 @@ export default function RootLayout({
             {/* Global Toaster */}
             <Toaster />
 
-            {/* Contenido principal */}
-            <main className="flex-grow">
-              {children}
-            </main>
+            {/* Main Content Area with Sidebar for Desktop */}
+            <div className="flex flex-1 overflow-hidden h-full">
+              {/* Desktop Sidebar */}
+              <aside className="hidden md:flex w-64 flex-col bg-[#0A192F] text-[#F9F6EE] border-r border-[#D4AF37]/10 sticky top-[73px] h-[calc(100vh-73px)]">
+                <nav className="flex-1 px-4 py-8 space-y-2">
+                  <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors group">
+                    <Plus className="w-5 h-5 text-[#D4AF37]" />
+                    <span className="font-medium">Dashboard</span>
+                  </Link>
+                  <Link href="/nueva-factura" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#D4AF37] text-[#0A192F] font-bold shadow-lg shadow-amber-500/20 hover:scale-[1.02] transition-all">
+                    <Plus className="w-5 h-5" />
+                    <span>Nueva Factura</span>
+                  </Link>
+                  <div className="pt-4 pb-2 px-4 text-[10px] text-slate-500 uppercase tracking-widest font-bold">Documentos</div>
+                  <Link href="/nueva-cotizacion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
+                    <FileText className="w-5 h-5 text-slate-400" />
+                    <span className="text-sm">Nueva Cotización</span>
+                  </Link>
+                  <Link href="/cotizaciones" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
+                    <LayoutDashboard className="w-5 h-5 text-slate-400" />
+                    <span className="text-sm">Ver Cotizaciones</span>
+                  </Link>
+                  <div className="pt-4 pb-2 px-4 text-[10px] text-slate-500 uppercase tracking-widest font-bold">Gestión</div>
+                  <Link href="/reportes" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
+                    <FileText className="w-5 h-5 text-slate-400" />
+                    <span className="text-sm">Reportes 606/607</span>
+                  </Link>
+                  <Link href="/configuracion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
+                    <Settings className="w-5 h-5 text-slate-400" />
+                    <span className="text-sm">Configuración</span>
+                  </Link>
+                </nav>
+                <div className="p-6 border-t border-[#D4AF37]/5 text-center">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest">Lexis Bill Pro</p>
+                </div>
+              </aside>
+
+              {/* Contenido principal */}
+              <main className="flex-grow overflow-y-auto">
+                {children}
+              </main>
+            </div>
 
             <SupportChat />
 
@@ -76,8 +114,29 @@ export default function RootLayout({
               </Link>
             </div>
 
+            {/* Mobile Bottom Navigation Bar */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0A192F] border-t border-[#D4AF37]/20 px-4 py-2 flex justify-around items-center z-40 shadow-[0_-2px_15px_rgba(0,0,0,0.3)]">
+              <Link href="/dashboard" className="flex flex-col items-center gap-1 text-slate-400 hover:text-[#D4AF37]">
+                <LayoutDashboard className="w-6 h-6" />
+                <span className="text-[10px] font-medium uppercase">Inicio</span>
+              </Link>
+              <Link href="/cotizaciones" className="flex flex-col items-center gap-1 text-slate-400 hover:text-[#D4AF37]">
+                <FileText className="w-6 h-6" />
+                <span className="text-[10px] font-medium uppercase">Cotiza</span>
+              </Link>
+              <div className="w-12"></div> {/* Space for FAB */}
+              <Link href="/reportes" className="flex flex-col items-center gap-1 text-slate-400 hover:text-[#D4AF37]">
+                <Plus className="w-6 h-6 rotate-45" />
+                <span className="text-[10px] font-medium uppercase">Fiscal</span>
+              </Link>
+              <Link href="/configuracion" className="flex flex-col items-center gap-1 text-slate-400 hover:text-[#D4AF37]">
+                <Settings className="w-6 h-6" />
+                <span className="text-[10px] font-medium uppercase">Perfil</span>
+              </Link>
+            </nav>
+
             {/* Footer */}
-            <footer className="border-t bg-white py-8 text-center text-sm text-gray-500">
+            <footer className="border-t bg-white py-8 pb-24 text-center text-sm text-gray-500 md:pb-8">
               <p>© 2026 LEXIS BILL. Todos los derechos reservados.</p>
             </footer>
           </div>
