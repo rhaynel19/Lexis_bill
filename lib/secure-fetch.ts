@@ -64,14 +64,16 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
 
             // Manejo de Errores HTTP
             if (!response.ok) {
-                // Si es un error 4xx (Cliente), no reintentar (probablemente no se arregle reintentando)
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.message || errorData.error || `Server Error: ${response.status}`;
+
+                // Si es un error 4xx (Cliente), no reintentar
                 if (response.status >= 400 && response.status < 500) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw { status: response.status, message: errorData.message || "Error en la petición" };
+                    throw { status: response.status, message: errorMessage };
                 }
 
-                // Si es 5xx (Servidor), lanzar error para activar el catch y reintentar
-                throw new Error(`Server Error: ${response.status}`);
+                // Si es 5xx (Servidor), lanzar error con el mensaje detallado
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();

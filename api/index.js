@@ -337,10 +337,23 @@ app.post('/api/auth/confirm-fiscal-name', verifyToken, async (req, res) => {
     }
 });
 
+app.get('/api/status', async (req, res) => {
+    res.json({
+        mongodb: mongoose.connection.readyState === 1 ? 'CONNECTED' : 'DISCONNECTED',
+        uri_exists: !!process.env.MONGODB_URI,
+        uri_format: process.env.MONGODB_URI ? (process.env.MONGODB_URI.startsWith('mongodb+srv') ? 'VALID_PREFIX' : 'INVALID_PREFIX') : 'MISSING',
+        version: '1.0.5',
+        timestamp: new Date().toISOString()
+    });
+});
+
 // Rest of endpoints (Invoices, Customers, etc.)
 app.get('/api/rnc/:number', async (req, res) => {
     const { number } = req.params;
-    if (!validateTaxId(number)) return res.status(400).json({ valid: false, message: 'Documento Inválido' });
+    const cleanNumber = number.replace(/\D/g, ""); // Limpiar espacios o caracteres invisibles
+
+    if (!validateTaxId(cleanNumber)) return res.status(400).json({ valid: false, message: 'Documento Inválido' });
+
     const mockDb = {
         "101010101": "JUAN PEREZ",
         "131888444": "LEXIS BILL SOLUTIONS S.R.L.",
@@ -348,8 +361,8 @@ app.get('/api/rnc/:number', async (req, res) => {
         "130851255": "ASOCIACION DE ESPECIALISTAS FISCALES",
         "22301650929": "ASOCIACION PROFESIONAL DE SANTO DOMINGO"
     };
-    const name = mockDb[number] || "CONTRIBUYENTE REGISTRADO";
-    res.json({ valid: true, rnc: number, name, type: number.length === 9 ? 'JURIDICA' : 'FISICA' });
+    const name = mockDb[cleanNumber] || "CONTRIBUYENTE REGISTRADO";
+    res.json({ valid: true, rnc: cleanNumber, name, type: cleanNumber.length === 9 ? 'JURIDICA' : 'FISICA' });
 });
 
 app.post('/api/validate-rnc', async (req, res) => {
