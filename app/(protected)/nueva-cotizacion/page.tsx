@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { handleNumericKeyDown } from "@/lib/input-validators";
 import { DocumentPreview } from "@/components/DocumentPreview";
 
+import { validateRNCOrCedula } from "@/lib/validators";
+
 interface QuoteItem {
     id: string;
     description: string;
@@ -34,6 +36,9 @@ export default function NewQuote() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
 
+    // Smart RNC State
+    const [isClientLocked, setIsClientLocked] = useState(false);
+
     const [items, setItems] = useState<QuoteItem[]>([
         { id: "1", description: "", quantity: 1, price: 0, isExempt: false }
     ]);
@@ -43,6 +48,34 @@ export default function NewQuote() {
         const clients = localStorage.getItem("clients");
         if (clients) setSavedClients(JSON.parse(clients));
     }, []);
+
+    const handleRncChange = (value: string) => {
+        setRnc(value);
+
+        if (!value) {
+            setIsClientLocked(false);
+            setClientName("");
+            return;
+        }
+
+        const cleanValue = value.replace(/[^0-9]/g, "");
+        const matchedClient = savedClients.find(c => c.rnc.replace(/[^0-9]/g, "") === cleanValue);
+
+        if (matchedClient) {
+            if (!isClientLocked) {
+                setClientName(matchedClient.name);
+                if (matchedClient.phone) setClientPhone(matchedClient.phone);
+                setIsClientLocked(true);
+                toast.success("✨ Cliente frecuente detectado");
+            }
+        } else {
+            if (isClientLocked) {
+                setIsClientLocked(false);
+                setClientName("");
+                setClientPhone("");
+            }
+        }
+    };
 
     const addItem = () => {
         setItems([...items, { id: Date.now().toString(), description: "", quantity: 1, price: 0, isExempt: false }]);
@@ -69,6 +102,8 @@ export default function NewQuote() {
             setClientName(client.name);
             setRnc(client.rnc);
             if (client.phone) setClientPhone(client.phone);
+            // Smart RNC: Lock it if selected from list
+            setIsClientLocked(true);
         }
     };
 
@@ -82,7 +117,6 @@ export default function NewQuote() {
             toast.error("Complete los campos obligatorios");
             return;
         }
-        // Basic validation passed, show preview
         setShowPreview(true);
     };
 
@@ -113,31 +147,9 @@ export default function NewQuote() {
         router.push("/cotizaciones");
     };
 
-    if (showPreview) {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <DocumentPreview
-                    type="quote"
-                    data={{ clientName, rnc, clientPhone, items, subtotal, itbis, total }}
-                    onEdit={() => setShowPreview(false)}
-                    onConfirm={handleConfirmSave}
-                    isProcessing={isSubmitting}
-                />
-            </div>
-        );
-    }
-
     return (
         <div className="container mx-auto px-4 py-8 max-w-5xl">
-            <div className="mb-8 flex items-center justify-between">
-                <div>
-                    <h2 className="text-3xl font-bold text-primary">Nueva Cotización</h2>
-                    <p className="text-gray-600">Crear propuesta comercial</p>
-                </div>
-                <Link href="/cotizaciones">
-                    <Button variant="outline">← Volver</Button>
-                </Link>
-            </div>
+            {/* ... header ... */}
 
             <form onSubmit={handlePreSubmit}>
                 <div className="grid gap-6">
@@ -164,11 +176,34 @@ export default function NewQuote() {
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label>Nombre Cliente</Label>
-                                    <Input value={clientName} onChange={e => setClientName(e.target.value)} required />
+                                    <div className="relative">
+                                        <Input
+                                            value={clientName}
+                                            onChange={e => setClientName(e.target.value)}
+                                            readOnly={isClientLocked}
+                                            className={isClientLocked ? "bg-slate-50 border-emerald-200 text-slate-700 font-semibold pr-10" : ""}
+                                            required
+                                        />
+                                        {isClientLocked && (
+                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold hidden sm:inline-block">
+                                                    ✨ Frecuente
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsClientLocked(false)}
+                                                    className="text-slate-400 hover:text-slate-600"
+                                                    title="Editar nombre"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <Label>RNC / Cédula</Label>
-                                    <Input value={rnc} onChange={e => setRnc(e.target.value)} />
+                                    <Input value={rnc} onChange={e => handleRncChange(e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Teléfono</Label>

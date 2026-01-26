@@ -49,7 +49,55 @@ export default function NewInvoice() {
     const [itbisRetentionRate, setItbisRetentionRate] = useState(0.30); // 30% por defecto
     const [showPreview, setShowPreview] = useState(false);
 
+    // Smart RNC States
+    const [isClientLocked, setIsClientLocked] = useState(false);
+
     const { profession, setProfession } = usePreferences();
+
+    // ... (Existing states) ...
+
+    // Validar RNC/Cédula en tiempo real y buscar en memoria
+    const handleRncChange = (value: string) => {
+        setRnc(value);
+
+        // Reset lock if cleared
+        if (!value) {
+            setIsClientLocked(false);
+            setClientName("");
+            setRncError("");
+            return;
+        }
+
+        // Smart Search (Local Memory)
+        const cleanValue = value.replace(/[^0-9]/g, "");
+        const matchedClient = savedClients.find(c => c.rnc.replace(/[^0-9]/g, "") === cleanValue);
+
+        if (matchedClient) {
+            if (!isClientLocked) {
+                setClientName(matchedClient.name);
+                if (matchedClient.phone) setClientPhone(matchedClient.phone);
+                setIsClientLocked(true);
+                toast.success("✨ Cliente frecuente detectado");
+
+                // Auto-configure type if Corporate
+                if (cleanValue.length === 9) setApplyRetentions(true);
+            }
+            setRncError(""); // Valid by definition if in DB
+        } else {
+            // Unlock if user modifies a locked RNC to something unknown
+            if (isClientLocked) {
+                setIsClientLocked(false);
+                setClientName("");
+                setClientPhone("");
+            }
+
+            // Regular Validation
+            if (cleanValue.length >= 9) {
+                const validation = validateRNCOrCedula(value);
+                setRncError(validation.isValid ? "" : (validation.error || ""));
+            }
+        }
+    };
 
     // Estados para lógica vertical (Profesiones)
     // const [profession, setProfession] = useState(""); // Managed by context now
@@ -241,6 +289,8 @@ export default function NewInvoice() {
             setClientName(client.name);
             setRnc(client.rnc);
             if (client.phone) setClientPhone(client.phone);
+            setIsClientLocked(true);
+            toast.success("✨ Cliente cargado");
         }
     };
 
@@ -364,22 +414,7 @@ export default function NewInvoice() {
         }).format(amount);
     };
 
-    // Validar RNC/Cédula en tiempo real
-    const handleRncChange = (value: string) => {
-        setRnc(value);
 
-        // Validar solo si hay contenido
-        if (value.trim()) {
-            const validation = validateRNCOrCedula(value);
-            if (!validation.isValid) {
-                setRncError(validation.error || "");
-            } else {
-                setRncError("");
-            }
-        } else {
-            setRncError("");
-        }
-    };
 
     // Auto-formatear RNC/Cédula al perder el foco y detectar tipo de persona
     const handleRncBlur = () => {
@@ -690,13 +725,32 @@ export default function NewInvoice() {
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="client-name">Nombre del Cliente *</Label>
-                                            <Input
-                                                id="client-name"
-                                                placeholder="Razón Social o Nombre"
-                                                value={clientName}
-                                                onChange={(e) => setClientName(e.target.value)}
-                                                required
-                                            />
+                                            <div className="relative">
+                                                <Input
+                                                    id="client-name"
+                                                    placeholder="Razón Social o Nombre"
+                                                    value={clientName}
+                                                    onChange={(e) => setClientName(e.target.value)}
+                                                    readOnly={isClientLocked}
+                                                    className={isClientLocked ? "bg-slate-50 border-emerald-200 text-slate-700 font-semibold pr-10" : ""}
+                                                    required
+                                                />
+                                                {isClientLocked && (
+                                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold hidden sm:inline-block">
+                                                            ✨ Frecuente
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setIsClientLocked(false)}
+                                                            className="text-slate-400 hover:text-slate-600"
+                                                            title="Editar nombre"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="client-rnc">RNC / Cédula *</Label>
