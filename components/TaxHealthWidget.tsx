@@ -3,8 +3,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowDown, ArrowUp, Info, ShieldCheck, AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ContextualHelp } from "@/components/ui/contextual-help";
+
+import { usePreferences } from "@/components/providers/PreferencesContext";
 
 export function TaxHealthWidget() {
+    const { mode } = usePreferences();
     const [taxData, setTaxData] = useState({
         collectedItbis: 0,
         paidItbis: 0,
@@ -88,6 +92,8 @@ export function TaxHealthWidget() {
         }).format(amount);
     };
 
+    if (mode === "simple") return null; // In simple mode, EmotionalStatusWidget replaces this complexity.
+
     return (
         <Card className="bg-gradient-to-br from-blue-950 to-slate-900 border-none text-white shadow-xl overflow-hidden relative">
             {/* Background Decor */}
@@ -102,8 +108,8 @@ export function TaxHealthWidget() {
                         </CardTitle>
                         <CardDescription className="text-slate-400">Salud impositiva del mes</CardDescription>
                     </div>
-                    <div title="Cálculo estimado del ITBIS a pagar basado en tus facturas y gastos.">
-                        <Info className="w-4 h-4 text-slate-500 hover:text-white transition-colors cursor-help" />
+                    <div className="flex items-center">
+                        <ContextualHelp text="Este cálculo es un estimado basado en tus facturas y gastos reportados. En 'Modo Simple' simplificamos los detalles." />
                     </div>
                 </div>
             </CardHeader>

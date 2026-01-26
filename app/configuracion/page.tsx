@@ -8,8 +8,12 @@ import { useState, useEffect } from "react";
 import { Save, Upload, Settings } from "lucide-react";
 import { SupportTicketForm } from "@/components/support-ticket-form";
 import { ComprobantesConfig } from "@/components/ComprobantesConfig";
+import { usePreferences } from "@/components/providers/PreferencesContext";
+import { toast } from "sonner";
 
 export default function Configuration() {
+    const { profession, setProfession } = usePreferences();
+
     const [config, setConfig] = useState({
         companyName: "",
         rnc: "",
@@ -18,7 +22,7 @@ export default function Configuration() {
         email: "",
         exequatur: "",
         website: "",
-        profession: "general", // general, doctor, lawyer, engineer
+        profession: "general", // general, medic, lawyer, technical, other
         bankName: "",
         bankAccount: "",
     });
@@ -31,21 +35,26 @@ export default function Configuration() {
         const stored = localStorage.getItem("appConfig");
         if (stored) {
             const data = JSON.parse(stored);
-            setConfig(data);
+            setConfig(prev => ({ ...prev, ...data }));
             if (data.logo) setLogoPreview(data.logo);
             if (data.seal) setSealPreview(data.seal);
-        } else {
-            // Load from default config sim
-            const user = localStorage.getItem("user");
-            if (user) {
-                const u = JSON.parse(user);
-                // Pre-fill if useful
-            }
+
+            // Sync local storage profession with context if different
+            // But prefer context if it's already set (handled by provider)
         }
-    }, []);
+
+        // Populate config from context if available and not set in local config logic
+        if (profession) {
+            setConfig(prev => ({ ...prev, profession }));
+        }
+    }, [profession]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setConfig({ ...config, [e.target.id]: e.target.value });
+    };
+
+    const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setConfig({ ...config, profession: e.target.value });
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'seal') => {
@@ -68,7 +77,11 @@ export default function Configuration() {
             seal: sealPreview
         };
         localStorage.setItem("appConfig", JSON.stringify(dataToSave));
-        alert("✅ Configuración guardada exitosamente. Sus facturas se actualizarán.");
+
+        // Update Context
+        setProfession(config.profession as any);
+
+        toast.success("✅ Configuración guardada exitosamente. Sus facturas se actualizarán.");
     };
 
     return (
@@ -154,13 +167,14 @@ export default function Configuration() {
                             <select
                                 id="profession"
                                 value={config.profession}
-                                onChange={(e) => setConfig({ ...config, profession: e.target.value })}
+                                onChange={handleSelectChange}
                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <option value="general">Profesional General</option>
-                                <option value="doctor">Médico / Salud</option>
+                                <option value="medic">Médico / Salud</option>
                                 <option value="lawyer">Abogado / Legal</option>
-                                <option value="engineer">Ingeniero / Arquitecto</option>
+                                <option value="technical">Ingeniero / Arquitecto / Técnico</option>
+                                <option value="other">Inmobiliaria / Consultor / Otro</option>
                             </select>
                         </div>
                         <div className="space-y-2 md:col-span-2">
@@ -168,8 +182,8 @@ export default function Configuration() {
                             <Input id="address" value={config.address} onChange={handleChange} placeholder="Ej: Av. Winston Churchill esq. 27 de Febrero, Torre Empresarial..." />
                         </div>
 
-                        <div className="h-4 md:col-span-2"></div> {/* Added md:col-span-2 to ensure it takes full width in grid */}
-                        <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2"> {/* Added md:col-span-2 */}
+                        <div className="h-4 md:col-span-2"></div>
+                        <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
                             <div className="md:col-span-2 flex items-center gap-2 text-blue-800 font-bold text-sm">
                                 🏦 Información Bancaria (Para cobros por transferencia)
                             </div>

@@ -35,6 +35,11 @@ import { CreditNoteModal } from "@/components/CreditNoteModal";
 import { FacturaTable } from "@/components/FacturaTable";
 import { TaxHealthWidget } from "@/components/TaxHealthWidget";
 import { FiscalNamePrompt } from "@/components/FiscalNamePrompt";
+import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
+import { EmotionalStatusWidget } from "@/components/dashboard/EmotionalStatusWidget";
+import { AIInsightWidget } from "@/components/dashboard/AIInsightWidget";
+
+import { usePreferences } from "@/components/providers/PreferencesContext";
 
 // Interfaz para definir la estructura de una factura
 interface Invoice {
@@ -102,6 +107,7 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const { mode, profession } = usePreferences();
   const [showCreditNote, setShowCreditNote] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
@@ -110,12 +116,10 @@ export default function Dashboard() {
   const [monthLabels, setMonthLabels] = useState<string[]>([]);
 
   // Estado para el Wizard de Configuración e Identidad Fiscal
-  const [showSetup, setShowSetup] = useState(false);
-  const [setupData, setSetupData] = useState({ rnc: "", exequatur: "", sequence: "E3100000001" });
   const [fiscalState, setFiscalState] = useState<{ suggested: string; confirmed: string | null }>({ suggested: "", confirmed: null });
   const [isFiscalHealthy, setIsFiscalHealthy] = useState(true);
   const [lowNcfType, setLowNcfType] = useState<string | null>(null);
-  const [profession, setProfession] = useState("general");
+  // Profession is now from context
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -131,9 +135,8 @@ export default function Dashboard() {
         }
 
         // 1. Check first login/config (still local for UI state)
-        if (!localStorage.getItem("appConfigured")) {
-          setShowSetup(true);
-        }
+        // Handled by OnboardingWizard now
+
 
         // 2. Fetch subscription & fiscal status
         const { api } = await import("@/lib/api-service");
@@ -214,10 +217,6 @@ export default function Dashboard() {
             setLowNcfType(lowSequence.type);
           }
         } catch (e) { console.error("NCF Settings Fetch Error:", e); }
-
-        // Load Profession
-        const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
-        if (config.profession) setProfession(config.profession);
 
       } catch (err: any) {
         console.error("Dashboard Load Error:", err);
@@ -338,6 +337,9 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* AI Insight (Phase 2) */}
+        <AIInsightWidget revenue={totalRevenue} pendingCount={pendingInvoices} />
+
         {/* Prompt de Identidad Fiscal o Bloqueo Informativo */}
         {!fiscalState.confirmed ? (
           fiscalState.suggested ? (
@@ -379,31 +381,15 @@ export default function Dashboard() {
           )
         ) : null}
 
-        {/* Semáforo Fiscal (NCF Alerts) */}
-        {!isFiscalHealthy && (
-          <Card className="mb-8 border-amber-200 bg-amber-50 shadow-md animate-pulse">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-200 text-amber-700 rounded-full flex items-center justify-center">
-                  <AlertTriangle className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-amber-900 leading-none">¡Atención! Secuencias Bajas</h4>
-                  <p className="text-xs text-amber-700 mt-1">Te quedan menos de 10 números para e-CF tipo {lowNcfType}.</p>
-                </div>
-              </div>
-              <Link href="/configuracion">
-                <Button size="sm" variant="outline" className="border-amber-400 text-amber-700 hover:bg-amber-100 font-bold">
-                  Solicitar Más
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Premium Feature: Bolsillo Fiscal */}
+        {/* Premium Feature: Bolsillo Fiscal (Advanced) / Emotional State (Simple) */}
         <div className="mb-8">
-          <TaxHealthWidget />
+          <EmotionalStatusWidget
+            ncfHealthy={isFiscalHealthy}
+            blockers={!fiscalState.confirmed ? ["Perfil Fiscal incompleto"] : []}
+          />
+          <div className="mt-4">
+            <TaxHealthWidget />
+          </div>
         </div>
 
         {/* Grid de tarjetas con estadísticas */}
@@ -425,7 +411,9 @@ export default function Dashboard() {
             <Card className="bg-primary text-primary-foreground border-none shadow-xl shadow-primary/20 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20"></div>
               <CardHeader className="pb-2">
-                <CardDescription className="text-primary-foreground/70 font-medium font-sans">Ingresos del Mes</CardDescription>
+                <CardDescription className="text-primary-foreground/70 font-medium font-sans">
+                  {mode === 'simple' ? "Cobrado este mes" : "Ingresos del Mes"}
+                </CardDescription>
                 <CardTitle className="text-4xl font-bold tracking-tight">
                   {formatCurrency(totalRevenue)}
                 </CardTitle>
@@ -437,26 +425,30 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Tarjeta: ITBIS Acumulado */}
-            <Card className="bg-white border text-foreground shadow-sm">
-              <CardHeader className="pb-2">
-                <CardDescription className="text-muted-foreground font-medium uppercase tracking-wider text-xs">ITBIS Acumulado</CardDescription>
-                <CardTitle className="text-3xl font-bold text-foreground">
-                  {formatCurrency(estimatedTaxes)}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground mt-4">
-                  <div className="w-2 h-2 rounded-full bg-secondary"></div>
-                  <p>Generado este mes</p>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Tarjeta: ITBIS Acumulado (Hidden in Simple Mode) */}
+            {mode !== 'simple' && (
+              <Card className="bg-white border text-foreground shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardDescription className="text-muted-foreground font-medium uppercase tracking-wider text-xs">ITBIS Acumulado</CardDescription>
+                  <CardTitle className="text-3xl font-bold text-foreground">
+                    {formatCurrency(estimatedTaxes)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground mt-4">
+                    <div className="w-2 h-2 rounded-full bg-secondary"></div>
+                    <p>Generado este mes</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Tarjeta: Facturas Pendientes */}
             <Card className="bg-white border text-foreground shadow-sm">
               <CardHeader className="pb-2">
-                <CardDescription className="text-muted-foreground font-medium uppercase tracking-wider text-xs">Facturas Pendientes</CardDescription>
+                <CardDescription className="text-muted-foreground font-medium uppercase tracking-wider text-xs">
+                  {mode === 'simple' ? "Te deben (Por cobrar)" : "Facturas Pendientes"}
+                </CardDescription>
                 <CardTitle className="text-3xl font-bold text-foreground">
                   {pendingInvoices}
                 </CardTitle>
@@ -507,61 +499,7 @@ export default function Dashboard() {
         />
 
       </div>
-      <Dialog open={showSetup} onOpenChange={() => { }}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>👋 ¡Bienvenido a LEXIS BILL!</DialogTitle>
-            <DialogDescription>
-              Configuremos su Oficina Fiscal en 3 simples pasos.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="rnc">RNC Personal o Empresarial</Label>
-              <Input
-                id="rnc"
-                placeholder="131-XXXXX-X"
-                value={setupData.rnc}
-                onChange={(e) => setSetupData({ ...setupData, rnc: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="exeq">Exequátur (Opcional)</Label>
-              <Input
-                id="exeq"
-                placeholder="1234-56"
-                value={setupData.exequatur}
-                onChange={(e) => setSetupData({ ...setupData, exequatur: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="seq">Secuencia Inicial (e-CF)</Label>
-              <Input
-                id="seq"
-                placeholder="E3100000001"
-                value={setupData.sequence}
-                onChange={(e) => setSetupData({ ...setupData, sequence: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => {
-              localStorage.setItem("appConfigured", "true");
-              // Update user to remove firstLogin flag loop if needed, essentially covered by appConfigured check though.
-              const user = localStorage.getItem("user");
-              if (user) {
-                const u = JSON.parse(user);
-                u.firstLogin = false;
-                localStorage.setItem("user", JSON.stringify(u));
-              }
-              setShowSetup(false);
-              toast.success("✅ Configuración guardada. ¡Listo para facturar!");
-            }}>
-              Guardar y Empezar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <OnboardingWizard />
 
       <CreditNoteModal
         isOpen={showCreditNote}

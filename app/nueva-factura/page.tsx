@@ -15,10 +15,16 @@ import { numberToText } from "@/lib/number-to-text";
 import { downloadInvoicePDF, previewInvoicePDF, type InvoiceData } from "@/lib/pdf-generator";
 import { getNextSequenceNumber } from "@/lib/config";
 import { getDominicanDate } from "@/lib/date-utils";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Search, Mic, Save, BookOpen, Loader2, CheckCircle, MessageCircle, UserPlus, FileText } from "lucide-react";
+import { Search, Mic, Save, BookOpen, Loader2, CheckCircle, MessageCircle, UserPlus, FileText, Eye, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { handleNumericKeyDown } from "@/lib/input-validators";
+import { InvoicePreview } from "@/components/invoice/InvoicePreview";
+import { usePreferences } from "@/components/providers/PreferencesContext";
+import { AIService } from "@/lib/ai-service-mock";
+import { ValidatorService } from "@/lib/validator-service";
+import { SuggestionWidget } from "@/components/ui/suggestion-widget";
 
 // Interfaz para definir la estructura de un ítem de factura
 interface InvoiceItem {
@@ -41,8 +47,10 @@ export default function NewInvoice() {
     const [applyRetentions, setApplyRetentions] = useState(false);
     const [itbisRetentionRate, setItbisRetentionRate] = useState(0.30); // 30% por defecto
 
+    const { profession, setProfession } = usePreferences();
+
     // Estados para lógica vertical (Profesiones)
-    const [profession, setProfession] = useState("");
+    // const [profession, setProfession] = useState(""); // Managed by context now
     const [ars, setArs] = useState(""); // Médicos
     const [exequatur, setExequatur] = useState(""); // Médicos
     const [projectDesc, setProjectDesc] = useState(""); // Ingenieros
@@ -134,7 +142,7 @@ export default function NewInvoice() {
 
         // Load Profession and User Details from Config/User
         const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
-        if (config.profession) setProfession(config.profession);
+        // Profession handled by Context now
         if (config.exequatur) setExequatur(config.exequatur);
     }, []);
 
@@ -239,6 +247,43 @@ export default function NewInvoice() {
         if (service) {
             updateItem(itemId, "description", service.name);
             updateItem(itemId, "price", service.price);
+        }
+    };
+
+    // AI Magic Input
+    const [magicCommand, setMagicCommand] = useState("");
+    const [isParsingAI, setIsParsingAI] = useState(false);
+
+    const handleMagicParse = async () => {
+        if (!magicCommand.trim()) return;
+        setIsParsingAI(true);
+        try {
+            const parsedItems = await AIService.parseInvoiceText(magicCommand);
+
+            // Map parsed items to InvoiceItem structure with ID
+            const newItems: InvoiceItem[] = parsedItems.map(p => ({
+                id: Date.now().toString() + Math.random().toString().slice(2),
+                description: p.description,
+                quantity: p.quantity,
+                price: p.price,
+                isExempt: invoiceType === "44"
+            }));
+
+            // If it's the first empty item, replace it, otherwise append
+            if (items.length === 1 && !items[0].description && items[0].price === 0) {
+                setItems(newItems);
+            } else {
+                setItems(prev => [...prev, ...newItems]);
+            }
+
+            setMagicCommand("");
+            toast.success(`✨ Agregados ${newItems.length} ítems mágicamente`);
+
+        } catch (e) {
+            console.error(e);
+            toast.error("No pude entender eso. Intenta ser más claro.");
+        } finally {
+            setIsParsingAI(false);
         }
     };
 
@@ -488,6 +533,22 @@ export default function NewInvoice() {
         }
     };
 
+
+    // Silent Validation Logic
+    const [suggestion, setSuggestion] = useState<string | null>(null);
+
+    useEffect(() => {
+        // Debounce validation slightly
+        const timer = setTimeout(() => {
+            let msg = ValidatorService.checkRNCFormat(rnc);
+            if (!msg) msg = ValidatorService.checkTypeConsistency(invoiceType, rnc);
+            if (!msg) msg = ValidatorService.checkPriceAnomalies(items);
+
+            setSuggestion(msg);
+        }, 800);
+        return () => clearTimeout(timer);
+    }, [rnc, invoiceType, items]);
+
     const handleWhatsAppShare = () => {
         const text = `Hola *${clientName}*! 🇩🇴\n\nAdjunto su Comprobante Fiscal *${lastInvoiceNCF}* por valor de *${formatCurrency(total)}*.\n\nGracias por preferirnos.`;
         let phone = clientPhone.replace(/[^\d]/g, '');
@@ -545,537 +606,608 @@ export default function NewInvoice() {
                 </Select>
             </div>
 
-            <form onSubmit={handleSubmit}>
-                <div className="space-y-6">
-                    {/* Información del Comprobante */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Información del Comprobante</CardTitle>
-                            <CardDescription>
-                                Selecciona el tipo de comprobante fiscal electrónico
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {/* Selector de Tipo de e-CF */}
-                            <div className="space-y-2">
-                                <Label htmlFor="invoice-type">Tipo de Comprobante (e-CF) *</Label>
-                                <Select value={invoiceType} onValueChange={setInvoiceType}>
-                                    <SelectTrigger id="invoice-type">
-                                        <SelectValue placeholder="Selecciona el tipo de comprobante" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="31">
-                                            31 - Factura de Crédito Fiscal
-                                        </SelectItem>
-                                        <SelectItem value="32">
-                                            32 - Factura de Consumo
-                                        </SelectItem>
-                                        <SelectItem value="33">
-                                            33 - Nota de Débito
-                                        </SelectItem>
-                                        <SelectItem value="34">
-                                            34 - Nota de Crédito
-                                        </SelectItem>
-                                        <SelectItem value="44">
-                                            44 - Regímenes Especiales (Ingresos Exentos)
-                                        </SelectItem>
-                                        <SelectItem value="45">
-                                            45 - Comprobante de Gastos Menores
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <p className="text-xs text-gray-500">
-                                    💡 Tipo 31 incluye retención de ISR del 10%
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Información del Cliente */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Información del Cliente</CardTitle>
-                            <CardDescription>
-                                Datos del cliente o empresa
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {/* Selector de Cliente Guardado */}
-                            {savedClients.length > 0 && (
-                                <div className="space-y-2 mb-4 p-4 bg-slate-50 rounded border border-slate-100">
-                                    <Label className="text-slate-500">📂 Clientes Frecuentes</Label>
-                                    <Select onValueChange={handleSelectClient}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar cliente guardado..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {savedClients.map((c, i) => (
-                                                <SelectItem key={i} value={c.rnc}>{c.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="client-name">Nombre del Cliente *</Label>
-                                    <Input
-                                        id="client-name"
-                                        placeholder="Razón Social o Nombre"
-                                        value={clientName}
-                                        onChange={(e) => setClientName(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="client-rnc">RNC / Cédula *</Label>
-                                    <div className="flex gap-2">
-                                        <Input
-                                            id="client-rnc"
-                                            placeholder="Ej: 131234567"
-                                            value={rnc}
-                                            onChange={(e) => handleRncChange(e.target.value)}
-                                            onBlur={handleRncBlur}
-                                            className={rncError ? "border-red-500 focus-visible:ring-red-500" : ""}
-                                            required
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="icon"
-                                            onClick={handleRNCSearch}
-                                            disabled={isSearchingRNC}
-                                            title="Buscar en DGII (Simulado)"
-                                        >
-                                            <Search className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                    {rncError && (
-                                        <p className="text-xs text-red-500">{rncError}</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Campos Específicos por Profesión */}
-                            {profession === "doctor" && (
-                                <div className="grid gap-4 md:grid-cols-2 p-4 bg-blue-50/50 rounded-xl border border-blue-100 animate-in fade-in slide-in-from-top-2">
+            <div className="grid lg:grid-cols-2 gap-8 items-start">
+                {/* Form Side */}
+                <div className="lg:col-span-1">
+                    <form onSubmit={handleSubmit}>
+                        <div className="space-y-6">
+                            {/* Información del Comprobante */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Información del Comprobante</CardTitle>
+                                    <CardDescription>
+                                        Selecciona el tipo de comprobante fiscal electrónico
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {/* Selector de Tipo de e-CF */}
                                     <div className="space-y-2">
-                                        <Label htmlFor="ars">ARS (Seguro Médico)</Label>
-                                        <Input id="ars" placeholder="Ej: Senasa, Humano..." value={ars} onChange={(e) => setArs(e.target.value)} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="exequatur">Exequátur / Registro</Label>
-                                        <Input id="exequatur" value={exequatur} onChange={(e) => setExequatur(e.target.value)} />
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="space-y-2">
-                                <Label htmlFor="client-phone">Teléfono / WhatsApp (Opcional)</Label>
-                                <Input
-                                    id="client-phone"
-                                    placeholder="Ej: 8095551234"
-                                    value={clientPhone}
-                                    onChange={(e) => setClientPhone(e.target.value)}
-                                />
-                            </div>
-
-                            <div className="flex items-center space-x-2 mt-2">
-                                <input
-                                    type="checkbox"
-                                    id="save-client"
-                                    checked={saveClient}
-                                    onChange={(e) => setSaveClient(e.target.checked)}
-                                    className="h-4 w-4 text-blue-600 rounded border-gray-300"
-                                />
-                                <Label htmlFor="save-client" className="text-sm font-normal text-gray-600 cursor-pointer">
-                                    Guardar en mi lista de clientes
-                                </Label>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Selector de Profesión / Vertical */}
-                    <Card className="border-l-4 border-l-purple-500">
-                        <CardHeader>
-                            <CardTitle>Perfil de Facturación</CardTitle>
-                            <CardDescription>
-                                Configura los campos específicos según tu actividad profesional
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="profession">Profesión / Actividad *</Label>
-                                <Select value={profession} onValueChange={setProfession}>
-                                    <SelectTrigger id="profession">
-                                        <SelectValue placeholder="Selecciona tu actividad" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="general">Servicios Generales / Venta</SelectItem>
-                                        <SelectItem value="medic">Médico / Salud</SelectItem>
-                                        <SelectItem value="lawyer">Abogado / Legal</SelectItem>
-                                        <SelectItem value="engineer">Ingeniero / Arquitecto</SelectItem>
-                                        <SelectItem value="real_estate">Inmobiliaria / Consultor</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Campos para Médicos */}
-                            {profession === "medic" && (
-                                <div className="grid gap-4 md:grid-cols-2 mt-4 p-4 bg-purple-50 rounded-lg">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="ars">ARS (Aseguradora)</Label>
-                                        <Select value={ars} onValueChange={setArs}>
-                                            <SelectTrigger id="ars">
-                                                <SelectValue placeholder="Selecciona ARS" />
+                                        <Label htmlFor="invoice-type">Tipo de Comprobante (e-CF) *</Label>
+                                        <Select value={invoiceType} onValueChange={setInvoiceType}>
+                                            <SelectTrigger id="invoice-type">
+                                                <SelectValue placeholder="Selecciona el tipo de comprobante" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="senasa">SeNaSa</SelectItem>
-                                                <SelectItem value="mapfre">Mapfre Salud</SelectItem>
-                                                <SelectItem value="humano">Primera ARS (Humano)</SelectItem>
-                                                <SelectItem value="universal">ARS Universal</SelectItem>
-                                                <SelectItem value="palic">ARS Palic</SelectItem>
-                                                <SelectItem value="other">Otras / Privado</SelectItem>
+                                                <SelectItem value="31">
+                                                    31 - Factura de Crédito Fiscal
+                                                </SelectItem>
+                                                <SelectItem value="32">
+                                                    32 - Factura de Consumo
+                                                </SelectItem>
+                                                <SelectItem value="33">
+                                                    33 - Nota de Débito
+                                                </SelectItem>
+                                                <SelectItem value="34">
+                                                    34 - Nota de Crédito
+                                                </SelectItem>
+                                                <SelectItem value="44">
+                                                    44 - Regímenes Especiales (Ingresos Exentos)
+                                                </SelectItem>
+                                                <SelectItem value="45">
+                                                    45 - Comprobante de Gastos Menores
+                                                </SelectItem>
                                             </SelectContent>
                                         </Select>
+                                        <p className="text-xs text-gray-500">
+                                            💡 Tipo 31 incluye retención de ISR del 10%
+                                        </p>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="exequatur">Exequátur / Autorización</Label>
-                                        <Input
-                                            id="exequatur"
-                                            placeholder="Ej: 1234-56"
-                                            value={exequatur}
-                                            onChange={(e) => setExequatur(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                            )}
+                                </CardContent>
+                            </Card>
 
-                            {/* Campos para Ingenieros */}
-                            {profession === "engineer" && (
-                                <div className="space-y-2 mt-4 p-4 bg-orange-50 rounded-lg">
-                                    <Label htmlFor="project-desc">Descripción de la Obra / Proyecto</Label>
-                                    <Input
-                                        id="project-desc"
-                                        placeholder="Ej: Remodelación Apartamento 4B, Torre Azul"
-                                        value={projectDesc}
-                                        onChange={(e) => setProjectDesc(e.target.value)}
-                                    />
-                                    <p className="text-xs text-gray-500">Se incluirá como referencia en la factura.</p>
-                                </div>
-                            )}
-
-                            {/* Campos para Inmobiliaria */}
-                            {profession === "real_estate" && (
-                                <div className="space-y-2 mt-4 p-4 bg-green-50 rounded-lg">
-                                    <Label htmlFor="property-ref">Referencia de Inmueble</Label>
-                                    <Input
-                                        id="property-ref"
-                                        placeholder="Ej: Apto. en Evaristo Morales, Ref. #4590"
-                                        value={propertyRef}
-                                        onChange={(e) => setPropertyRef(e.target.value)}
-                                    />
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Ítems de la Factura */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Ítems de la Factura</CardTitle>
-                            <CardDescription>
-                                Agrega los productos o servicios a facturar
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-[40%]">Descripción</TableHead>
-                                            <TableHead className="w-[15%]">Cantidad</TableHead>
-                                            <TableHead className="w-[20%]">Precio Unit.</TableHead>
-                                            <TableHead className="w-[20%]">Subtotal</TableHead>
-                                            <TableHead className="w-[5%]"></TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {items.map((item) => (
-                                            <Fragment key={item.id}>
-                                                <TableRow>
-                                                    {/* Descripción */}
-                                                    <TableCell>
-                                                        <div className="relative">
-                                                            <Input
-                                                                type="text"
-                                                                placeholder="Descripción..."
-                                                                value={item.description}
-                                                                onChange={(e) =>
-                                                                    updateItem(item.id, "description", e.target.value)
-                                                                }
-                                                                className="pr-8"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleVoiceDictation(item.id)}
-                                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
-                                                                title="Dictado por voz"
-                                                            >
-                                                                <Mic className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                        {savedServices.length > 0 && (
-                                                            <div className="mt-1">
-                                                                <Select onValueChange={(val) => handleSelectService(item.id, val)}>
-                                                                    <SelectTrigger className="h-6 text-xs border-0 bg-transparent text-blue-600 p-0 hover:underline shadow-none">
-                                                                        <SelectValue placeholder="✨ Cargar servicio..." />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {savedServices.map((s, i) => (
-                                                                            <SelectItem key={i} value={s.name}>{s.name} - ${s.price}</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-                                                        )}
-                                                    </TableCell>
-
-                                                    {/* Cantidad */}
-                                                    <TableCell>
-                                                        <Input
-                                                            type="number"
-                                                            min="1"
-                                                            value={item.quantity}
-                                                            onKeyDown={(e) => handleNumericKeyDown(e, false)}
-                                                            onChange={(e) =>
-                                                                updateItem(item.id, "quantity", parseInt(e.target.value) || 1)
-                                                            }
-                                                        />
-                                                    </TableCell>
-
-                                                    {/* Precio */}
-                                                    <TableCell>
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.01"
-                                                            placeholder="0.00"
-                                                            value={item.price}
-                                                            onKeyDown={(e) => handleNumericKeyDown(e, true)}
-                                                            onChange={(e) =>
-                                                                updateItem(item.id, "price", parseFloat(e.target.value) || 0)
-                                                            }
-                                                        />
-                                                    </TableCell>
-
-                                                    {/* Subtotal del ítem */}
-                                                    <TableCell className="font-semibold">
-                                                        {formatCurrency(item.quantity * item.price)}
-                                                    </TableCell>
-
-                                                    {/* Botón eliminar */}
-                                                    <TableCell>
-                                                        {items.length > 1 && (
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => removeItem(item.id)}
-                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                            >
-                                                                ✕
-                                                            </Button>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                                {/* Fila extra para opciones por ítem (Solo Abogados por ahora) */}
-                                                {profession === "lawyer" && (
-                                                    <TableRow className="border-0 bg-gray-50/50">
-                                                        <TableCell colSpan={5} className="pt-0 pb-2">
-                                                            <div className="flex items-center space-x-2 text-sm pl-2">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    id={`exempt-${item.id}`}
-                                                                    checked={item.isExempt || false}
-                                                                    onChange={(e) => updateItem(item.id, "isExempt", e.target.checked)}
-                                                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                                                />
-                                                                <Label htmlFor={`exempt-${item.id}`} className="font-normal text-gray-600">
-                                                                    Gasto Legal / Suplido (No Gravable)
-                                                                </Label>
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
-                                            </Fragment>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-
-                            {/* Botón para agregar más ítems */}
-                            <div className="mt-4">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={addItem}
-                                    className="w-full md:w-auto"
-                                >
-                                    ➕ Agregar Ítem
-                                </Button>
-                            </div>
-
-                            {/* Opciones de Retención */}
-                            <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                <div className="flex items-center space-x-2">
-                                    <input
-                                        type="checkbox"
-                                        id="apply-retentions"
-                                        checked={applyRetentions}
-                                        onChange={(e) => setApplyRetentions(e.target.checked)}
-                                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                    />
-                                    <Label htmlFor="apply-retentions" className="font-medium text-gray-900 cursor-pointer">
-                                        Aplicar Retenciones de Ley (Persona Jurídica)
-                                    </Label>
-                                </div>
-                                {applyRetentions && (
-                                    <div className="mt-3 ml-6 grid gap-4 grid-cols-1 md:grid-cols-2">
-                                        <div className="text-sm text-gray-600">
-                                            <span className="block font-medium text-gray-700">ISR (10%)</span>
-                                            Se retiene el 10% del subtotal por servicios profesionales.
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="itbis-ret-rate" className="text-xs">Tasa Retención ITBIS</Label>
-                                            <Select
-                                                value={itbisRetentionRate.toString()}
-                                                onValueChange={(val) => setItbisRetentionRate(parseFloat(val))}
-                                            >
-                                                <SelectTrigger id="itbis-ret-rate" className="h-8">
-                                                    <SelectValue />
+                            {/* Información del Cliente */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Información del Cliente</CardTitle>
+                                    <CardDescription>
+                                        Datos del cliente o empresa
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {/* Selector de Cliente Guardado */}
+                                    {savedClients.length > 0 && (
+                                        <div className="space-y-2 mb-4 p-4 bg-slate-50 rounded border border-slate-100">
+                                            <Label className="text-slate-500">📂 Clientes Frecuentes</Label>
+                                            <Select onValueChange={handleSelectClient}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Seleccionar cliente guardado..." />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="0.30">30% (Servicios Profesionales)</SelectItem>
-                                                    <SelectItem value="1.00">100% (Casos Especiales)</SelectItem>
+                                                    {savedClients.map((c, i) => (
+                                                        <SelectItem key={i} value={c.rnc}>{c.name}</SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
                                         </div>
+                                    )}
+
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="client-name">Nombre del Cliente *</Label>
+                                            <Input
+                                                id="client-name"
+                                                placeholder="Razón Social o Nombre"
+                                                value={clientName}
+                                                onChange={(e) => setClientName(e.target.value)}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="client-rnc">RNC / Cédula *</Label>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    id="client-rnc"
+                                                    placeholder="Ej: 131234567"
+                                                    value={rnc}
+                                                    onChange={(e) => handleRncChange(e.target.value)}
+                                                    onBlur={handleRncBlur}
+                                                    className={rncError ? "border-red-500 focus-visible:ring-red-500" : ""}
+                                                    required
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={handleRNCSearch}
+                                                    disabled={isSearchingRNC}
+                                                    title="Buscar en DGII (Simulado)"
+                                                >
+                                                    <Search className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                            {rncError && (
+                                                <p className="text-xs text-red-500">{rncError}</p>
+                                            )}
+                                        </div>
                                     </div>
-                                )}
+
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="client-phone">Teléfono / WhatsApp (Opcional)</Label>
+                                        <Input
+                                            id="client-phone"
+                                            placeholder="Ej: 8095551234"
+                                            value={clientPhone}
+                                            onChange={(e) => setClientPhone(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center space-x-2 mt-2">
+                                        <input
+                                            type="checkbox"
+                                            id="save-client"
+                                            checked={saveClient}
+                                            onChange={(e) => setSaveClient(e.target.checked)}
+                                            className="h-4 w-4 text-blue-600 rounded border-gray-300"
+                                        />
+                                        <Label htmlFor="save-client" className="text-sm font-normal text-gray-600 cursor-pointer">
+                                            Guardar en mi lista de clientes
+                                        </Label>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Selector de Profesión / Vertical */}
+                            <Card className="border-l-4 border-l-purple-500">
+                                <CardHeader>
+                                    <CardTitle>Perfil de Facturación</CardTitle>
+                                    <CardDescription>
+                                        Configura los campos específicos según tu actividad profesional
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="profession">Profesión / Actividad *</Label>
+                                        <Select value={profession} onValueChange={(val: any) => setProfession(val)}>
+                                            <SelectTrigger id="profession">
+                                                <SelectValue placeholder="Selecciona tu actividad" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="general">Servicios Generales / Venta</SelectItem>
+                                                <SelectItem value="medic">Médico / Salud</SelectItem>
+                                                <SelectItem value="lawyer">Abogado / Legal</SelectItem>
+                                                <SelectItem value="technical">Ingeniero / Arquitecto / Técnico</SelectItem>
+                                                <SelectItem value="other">Inmobiliaria / Consultor / Otro</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Campos para Médicos */}
+                                    {profession === "medic" && (
+                                        <div className="grid gap-4 md:grid-cols-2 mt-4 p-4 bg-purple-50 rounded-lg">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="ars">ARS (Aseguradora)</Label>
+                                                <Select value={ars} onValueChange={setArs}>
+                                                    <SelectTrigger id="ars">
+                                                        <SelectValue placeholder="Selecciona ARS" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="senasa">SeNaSa</SelectItem>
+                                                        <SelectItem value="mapfre">Mapfre Salud</SelectItem>
+                                                        <SelectItem value="humano">Primera ARS (Humano)</SelectItem>
+                                                        <SelectItem value="universal">ARS Universal</SelectItem>
+                                                        <SelectItem value="palic">ARS Palic</SelectItem>
+                                                        <SelectItem value="other">Otras / Privado</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="exequatur">Exequátur / Autorización</Label>
+                                                <Input
+                                                    id="exequatur"
+                                                    placeholder="Ej: 1234-56"
+                                                    value={exequatur}
+                                                    onChange={(e) => setExequatur(e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Campos para Ingenieros (Technical) */}
+                                    {profession === "technical" && (
+                                        <div className="space-y-2 mt-4 p-4 bg-orange-50 rounded-lg">
+                                            <Label htmlFor="project-desc">Descripción de la Obra / Proyecto</Label>
+                                            <Input
+                                                id="project-desc"
+                                                placeholder="Ej: Remodelación Apartamento 4B, Torre Azul"
+                                                value={projectDesc}
+                                                onChange={(e) => setProjectDesc(e.target.value)}
+                                            />
+                                            <p className="text-xs text-gray-500">Se incluirá como referencia en la factura.</p>
+                                        </div>
+                                    )}
+
+                                    {/* Campos para Inmobiliaria (Mapped to Other for now) */}
+                                    {profession === "other" && (
+                                        <div className="space-y-2 mt-4 p-4 bg-green-50 rounded-lg">
+                                            <Label htmlFor="property-ref">Referencia de Inmueble (Opcional)</Label>
+                                            <Input
+                                                id="property-ref"
+                                                placeholder="Ej: Apto. en Evaristo Morales, Ref. #4590"
+                                                value={propertyRef}
+                                                onChange={(e) => setPropertyRef(e.target.value)}
+                                            />
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* AI Magic Input */}
+                            <Card className="bg-gradient-to-r from-violet-500/5 to-fuchsia-500/5 border-violet-100">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-violet-700 flex items-center gap-2 text-lg">
+                                        <Sparkles className="w-5 h-5" />
+                                        Generador Mágico (AI)
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Describe lo que vendiste y deja que la IA llene los ítems por ti.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <Input
+                                                placeholder="Ej: Instalación de 2 cámaras por 3500 pesos..."
+                                                className="pr-10 border-violet-200 focus-visible:ring-violet-500"
+                                                value={magicCommand}
+                                                onChange={(e) => setMagicCommand(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        handleMagicParse();
+                                                    }
+                                                }}
+                                            />
+                                            <Mic className="w-4 h-4 text-slate-400 absolute right-3 top-3 cursor-pointer hover:text-violet-600" />
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            onClick={handleMagicParse}
+                                            disabled={isParsingAI || !magicCommand.trim()}
+                                            className="bg-violet-600 hover:bg-violet-700 text-white gap-2"
+                                        >
+                                            {isParsingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                                            {isParsingAI ? "Pensando..." : "Generar"}
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Ítems de la Factura */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Ítems de la Factura</CardTitle>
+                                    <CardDescription>
+                                        Agrega los productos o servicios a facturar
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="w-[40%]">Descripción</TableHead>
+                                                    <TableHead className="w-[15%]">Cantidad</TableHead>
+                                                    <TableHead className="w-[20%]">Precio Unit.</TableHead>
+                                                    <TableHead className="w-[20%]">Subtotal</TableHead>
+                                                    <TableHead className="w-[5%]"></TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {items.map((item) => (
+                                                    <Fragment key={item.id}>
+                                                        <TableRow>
+                                                            {/* Descripción */}
+                                                            <TableCell>
+                                                                <div className="relative">
+                                                                    <Input
+                                                                        type="text"
+                                                                        placeholder="Descripción..."
+                                                                        value={item.description}
+                                                                        onChange={(e) =>
+                                                                            updateItem(item.id, "description", e.target.value)
+                                                                        }
+                                                                        className="pr-8"
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleVoiceDictation(item.id)}
+                                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
+                                                                        title="Dictado por voz"
+                                                                    >
+                                                                        <Mic className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
+                                                                {savedServices.length > 0 && (
+                                                                    <div className="mt-1">
+                                                                        <Select onValueChange={(val) => handleSelectService(item.id, val)}>
+                                                                            <SelectTrigger className="h-6 text-xs border-0 bg-transparent text-blue-600 p-0 hover:underline shadow-none">
+                                                                                <SelectValue placeholder="✨ Cargar servicio..." />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent>
+                                                                                {savedServices.map((s, i) => (
+                                                                                    <SelectItem key={i} value={s.name}>{s.name} - ${s.price}</SelectItem>
+                                                                                ))}
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </div>
+                                                                )}
+                                                            </TableCell>
+
+                                                            {/* Cantidad */}
+                                                            <TableCell>
+                                                                <Input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    value={item.quantity}
+                                                                    onKeyDown={(e) => handleNumericKeyDown(e, false)}
+                                                                    onChange={(e) =>
+                                                                        updateItem(item.id, "quantity", parseInt(e.target.value) || 1)
+                                                                    }
+                                                                />
+                                                            </TableCell>
+
+                                                            {/* Precio */}
+                                                            <TableCell>
+                                                                <Input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    placeholder="0.00"
+                                                                    value={item.price}
+                                                                    onKeyDown={(e) => handleNumericKeyDown(e, true)}
+                                                                    onChange={(e) =>
+                                                                        updateItem(item.id, "price", parseFloat(e.target.value) || 0)
+                                                                    }
+                                                                />
+                                                            </TableCell>
+
+                                                            {/* Subtotal del ítem */}
+                                                            <TableCell className="font-semibold">
+                                                                {formatCurrency(item.quantity * item.price)}
+                                                            </TableCell>
+
+                                                            {/* Botón eliminar */}
+                                                            <TableCell>
+                                                                {items.length > 1 && (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => removeItem(item.id)}
+                                                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                    >
+                                                                        ✕
+                                                                    </Button>
+                                                                )}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        {/* Fila extra para opciones por ítem (Solo Abogados por ahora) */}
+                                                        {profession === "lawyer" && (
+                                                            <TableRow className="border-0 bg-gray-50/50">
+                                                                <TableCell colSpan={5} className="pt-0 pb-2">
+                                                                    <div className="flex items-center space-x-2 text-sm pl-2">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            id={`exempt-${item.id}`}
+                                                                            checked={item.isExempt || false}
+                                                                            onChange={(e) => updateItem(item.id, "isExempt", e.target.checked)}
+                                                                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                                        />
+                                                                        <Label htmlFor={`exempt-${item.id}`} className="font-normal text-gray-600">
+                                                                            Gasto Legal / Suplido (No Gravable)
+                                                                        </Label>
+                                                                    </div>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )}
+                                                    </Fragment>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+
+                                    {/* Botón para agregar más ítems */}
+                                    <div className="mt-4">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={addItem}
+                                            className="w-full md:w-auto"
+                                        >
+                                            ➕ Agregar Ítem
+                                        </Button>
+                                    </div>
+
+                                    {/* Opciones de Retención */}
+                                    <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                        <div className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                id="apply-retentions"
+                                                checked={applyRetentions}
+                                                onChange={(e) => setApplyRetentions(e.target.checked)}
+                                                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                            />
+                                            <Label htmlFor="apply-retentions" className="font-medium text-gray-900 cursor-pointer">
+                                                Aplicar Retenciones de Ley (Persona Jurídica)
+                                            </Label>
+                                        </div>
+                                        {applyRetentions && (
+                                            <div className="mt-3 ml-6 grid gap-4 grid-cols-1 md:grid-cols-2">
+                                                <div className="text-sm text-gray-600">
+                                                    <span className="block font-medium text-gray-700">ISR (10%)</span>
+                                                    Se retiene el 10% del subtotal por servicios profesionales.
+                                                </div>
+                                                <div>
+                                                    <Label htmlFor="itbis-ret-rate" className="text-xs">Tasa Retención ITBIS</Label>
+                                                    <Select
+                                                        value={itbisRetentionRate.toString()}
+                                                        onValueChange={(val) => setItbisRetentionRate(parseFloat(val))}
+                                                    >
+                                                        <SelectTrigger id="itbis-ret-rate" className="h-8">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="0.30">30% (Servicios Profesionales)</SelectItem>
+                                                            <SelectItem value="1.00">100% (Casos Especiales)</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Resumen de Totales */}
+                            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                                <CardHeader>
+                                    <CardTitle className="text-blue-900">Resumen de Totales</CardTitle>
+                                    <CardDescription className="text-blue-700">
+                                        Cálculos automáticos de impuestos y retenciones
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    {/* Subtotal */}
+                                    <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                                        <span className="text-gray-700 font-medium">Subtotal:</span>
+                                        <span className="text-xl font-semibold text-gray-900">
+                                            {formatCurrency(subtotal)}
+                                        </span>
+                                    </div>
+
+                                    {/* ITBIS */}
+                                    <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                                        <span className="text-gray-700 font-medium">
+                                            ITBIS (18%):
+                                            <span className="text-xs text-gray-500 ml-2">
+                                                💡 Impuesto automático
+                                            </span>
+                                        </span>
+                                        <span className="text-xl font-semibold text-green-700">
+                                            + {formatCurrency(itbis)}
+                                        </span>
+                                    </div>
+
+                                    {/* Retención ISR */}
+                                    {isrRetention > 0 && (
+                                        <div className="flex justify-between items-center py-2 border-b border-blue-200 text-red-600">
+                                            <span className="font-medium">
+                                                Retención ISR (10%):
+                                            </span>
+                                            <span className="text-xl font-semibold">
+                                                - {formatCurrency(isrRetention)}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Retención ITBIS */}
+                                    {itbisRetention > 0 && (
+                                        <div className="flex justify-between items-center py-2 border-b border-blue-200 text-red-600">
+                                            <span className="font-medium">
+                                                Retención ITBIS ({itbisRetentionRate * 100}%):
+                                            </span>
+                                            <span className="text-xl font-semibold">
+                                                - {formatCurrency(itbisRetention)}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Total Factura (Comprobante) */}
+                                    <div className="flex justify-between items-center py-2 border-b-2 border-blue-900 mt-2">
+                                        <span className="text-lg font-bold text-blue-900">Total Factura:</span>
+                                        <span className="text-lg font-bold text-blue-900">
+                                            {formatCurrency(total)}
+                                        </span>
+                                    </div>
+
+                                    {/* Total a Recibir (Neto) */}
+                                    <div className="flex justify-between items-center py-3 bg-green-500 text-white rounded-lg px-4 mt-4 shadow-lg">
+                                        <span className="text-lg font-bold">NETO A RECIBIR:</span>
+                                        <span className="text-2xl font-bold">
+                                            {formatCurrency(totalNeto)}
+                                        </span>
+                                    </div>
+
+                                    {/* Total en Letras */}
+                                    {total > 0 && (
+                                        <div className="mt-4 p-3 bg-white rounded-lg border border-blue-300">
+                                            <p className="text-xs text-gray-600 mb-1">Son:</p>
+                                            <p className="text-sm font-medium text-gray-900 italic">
+                                                {numberToText(total)}
+                                            </p>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Botones de Acción */}
+                            <div className="flex flex-col md:flex-row gap-4 justify-end">
+                                <Link href="/">
+                                    <Button type="button" variant="outline" className="w-full md:w-auto">
+                                        Cancelar
+                                    </Button>
+                                </Link>
+                                <Sheet>
+                                    <SheetTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="w-full md:w-auto border-blue-600 text-blue-600 hover:bg-blue-50 lg:hidden"
+                                        >
+                                            <Eye className="w-4 h-4 mr-2" />
+                                            Vista Previa
+                                        </Button>
+                                    </SheetTrigger>
+                                    <SheetContent side="bottom" className="h-[85vh] overflow-y-auto rounded-t-3xl p-0">
+                                        <div className="p-4 bg-slate-50 sticky top-0 z-10 border-b flex justify-between items-center">
+                                            <h3 className="font-bold text-lg">Vista Previa</h3>
+                                            <Button size="sm" onClick={handlePreviewPDF}>Descargar PDF</Button>
+                                        </div>
+                                        <div className="p-4">
+                                            <InvoicePreview data={{
+                                                invoiceType,
+                                                clientName,
+                                                rnc,
+                                                items,
+                                                subtotal,
+                                                itbis,
+                                                total,
+                                                date: new Date(),
+                                                ncf: lastInvoiceNCF
+                                            }} />
+                                        </div>
+                                    </SheetContent>
+                                </Sheet>
+                                <Button
+                                    type="submit"
+                                    size="lg"
+                                    className="w-full md:w-auto bg-blue-600 hover:bg-blue-700"
+                                    disabled={!!rncError || isSearchingRNC || isGenerating}
+                                >
+                                    {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isSearchingRNC ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "💾")} {isGenerating ? "Generando..." : "Guardar y Descargar PDF"}
+                                </Button>
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Resumen de Totales */}
-                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-                        <CardHeader>
-                            <CardTitle className="text-blue-900">Resumen de Totales</CardTitle>
-                            <CardDescription className="text-blue-700">
-                                Cálculos automáticos de impuestos y retenciones
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            {/* Subtotal */}
-                            <div className="flex justify-between items-center py-2 border-b border-blue-200">
-                                <span className="text-gray-700 font-medium">Subtotal:</span>
-                                <span className="text-xl font-semibold text-gray-900">
-                                    {formatCurrency(subtotal)}
-                                </span>
-                            </div>
-
-                            {/* ITBIS */}
-                            <div className="flex justify-between items-center py-2 border-b border-blue-200">
-                                <span className="text-gray-700 font-medium">
-                                    ITBIS (18%):
-                                    <span className="text-xs text-gray-500 ml-2">
-                                        💡 Impuesto automático
-                                    </span>
-                                </span>
-                                <span className="text-xl font-semibold text-green-700">
-                                    + {formatCurrency(itbis)}
-                                </span>
-                            </div>
-
-                            {/* Retención ISR */}
-                            {isrRetention > 0 && (
-                                <div className="flex justify-between items-center py-2 border-b border-blue-200 text-red-600">
-                                    <span className="font-medium">
-                                        Retención ISR (10%):
-                                    </span>
-                                    <span className="text-xl font-semibold">
-                                        - {formatCurrency(isrRetention)}
-                                    </span>
-                                </div>
-                            )}
-
-                            {/* Retención ITBIS */}
-                            {itbisRetention > 0 && (
-                                <div className="flex justify-between items-center py-2 border-b border-blue-200 text-red-600">
-                                    <span className="font-medium">
-                                        Retención ITBIS ({itbisRetentionRate * 100}%):
-                                    </span>
-                                    <span className="text-xl font-semibold">
-                                        - {formatCurrency(itbisRetention)}
-                                    </span>
-                                </div>
-                            )}
-
-                            {/* Total Factura (Comprobante) */}
-                            <div className="flex justify-between items-center py-2 border-b-2 border-blue-900 mt-2">
-                                <span className="text-lg font-bold text-blue-900">Total Factura:</span>
-                                <span className="text-lg font-bold text-blue-900">
-                                    {formatCurrency(total)}
-                                </span>
-                            </div>
-
-                            {/* Total a Recibir (Neto) */}
-                            <div className="flex justify-between items-center py-3 bg-green-500 text-white rounded-lg px-4 mt-4 shadow-lg">
-                                <span className="text-lg font-bold">NETO A RECIBIR:</span>
-                                <span className="text-2xl font-bold">
-                                    {formatCurrency(totalNeto)}
-                                </span>
-                            </div>
-
-                            {/* Total en Letras */}
-                            {total > 0 && (
-                                <div className="mt-4 p-3 bg-white rounded-lg border border-blue-300">
-                                    <p className="text-xs text-gray-600 mb-1">Son:</p>
-                                    <p className="text-sm font-medium text-gray-900 italic">
-                                        {numberToText(total)}
-                                    </p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Botones de Acción */}
-                    <div className="flex flex-col md:flex-row gap-4 justify-end">
-                        <Link href="/">
-                            <Button type="button" variant="outline" className="w-full md:w-auto">
-                                Cancelar
-                            </Button>
-                        </Link>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handlePreviewPDF}
-                            className="w-full md:w-auto border-blue-600 text-blue-600 hover:bg-blue-50"
-                        >
-                            👁️ Vista Previa PDF
-                        </Button>
-                        <Button
-                            type="submit"
-                            size="lg"
-                            className="w-full md:w-auto bg-blue-600 hover:bg-blue-700"
-                            disabled={!!rncError || isSearchingRNC || isGenerating}
-                        >
-                            {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isSearchingRNC ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "💾")} {isGenerating ? "Generando..." : "Guardar y Descargar PDF"}
-                        </Button>
-                    </div>
+                        </div>
+                    </form>
                 </div>
-            </form>
+
+                {/* Preview Side (Sticky) */}
+                <div className="hidden lg:block lg:col-span-1 sticky top-24 self-start">
+                    <InvoicePreview data={{
+                        invoiceType,
+                        clientName,
+                        rnc,
+                        items,
+                        subtotal,
+                        itbis,
+                        total,
+                        date: new Date(),
+                        ncf: lastInvoiceNCF
+                    }} />
+                </div>
+            </div>
 
             {/* Loading Overlay */}
             {
@@ -1124,6 +1256,8 @@ export default function NewInvoice() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            <SuggestionWidget message={suggestion} type="warning" />
         </div >
     );
 }
