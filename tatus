@@ -1,0 +1,10 @@
+[33mee15639[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m feat: mejoras UX, validaciones fiscales y ajustes de landing page
+[33m5bf46c8[m feat: Phase 7 Smart RNC Autocomplete & Memory
+[33mf645236[m feat: Phase 6 Professional Upgrade (Previews, Route Groups, Reports Share)
+[33m077e2b1[m feat: Complete modernization (AI, Dashboard fixes, UX audit)
+[33md16462a[m feat: strategic market enhancements and SaaS architecture audit fixes
+[33m9f26c56[m Critical Fix: Normalize RNC and add status endpoint
+[33m7b28872[m Debug: Expose raw Mongo errors
+[33m921578c[m Fix: DB timeout and error guidance
+[33m8c4153b[m Debug: Database connection logs
+[33mba35811[m Critical Fix: Map Association names and debug DB 503 error
