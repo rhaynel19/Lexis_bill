@@ -59,6 +59,16 @@ interface Invoice {
   status: "pending" | "paid" | "modified" | "cancelled";
   annulledBy?: string;
   modifiedNcf?: string;
+  sequenceNumber?: string;
+  subtotal?: number;
+}
+
+// Interfaz para configuración de NCF
+interface NcfSetting {
+  type: string;
+  finalNumber: number;
+  currentValue: number;
+  isActive: boolean;
 }
 
 // Componente simple de Gráfico de Línea SVG
@@ -181,7 +191,7 @@ export default function Dashboard() {
           setPendingInvoices(pending);
 
           // Contar clientes únicos (por RNC)
-          const uniqueClients = new Set(invoices.map((inv) => inv.rnc || (inv as any).clientRnc));
+          const uniqueClients = new Set(invoices.map((inv) => inv.rnc || inv.clientRnc || ""));
           setTotalClients(uniqueClients.size);
 
           // Obtener las 5 facturas más recientes
@@ -208,8 +218,8 @@ export default function Dashboard() {
 
         // Check NCF Health
         try {
-          const ncfSettings = await api.getNcfSettings();
-          const lowSequence = ncfSettings.find((s: any) =>
+          const ncfSettings = await api.getNcfSettings() as NcfSetting[];
+          const lowSequence = ncfSettings.find((s: NcfSetting) =>
             (s.finalNumber - s.currentValue) < 10 && s.isActive
           );
           if (lowSequence) {
@@ -218,7 +228,7 @@ export default function Dashboard() {
           }
         } catch (e) { console.error("NCF Settings Fetch Error:", e); }
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Dashboard Load Error:", err);
         setError("Hubo un inconveniente técnico al cargar sus datos, nuestro equipo ha sido notificado.");
       } finally {
@@ -270,7 +280,7 @@ export default function Dashboard() {
     const headers = ["RNC/Cédula", "Tipo Identificación", "NCF", "NCF Modificado", "Tipo Ingreso", "Fecha Comprobante", "Fecha Retención", "Monto Facturado", "ITBIS Facturado"];
 
     // Rows
-    const rows = invoices.map((inv: any) => [
+    const rows: string[][] = invoices.map((inv: Invoice) => [
       inv.rnc,
       "2", // RNC
       inv.sequenceNumber || inv.id,
@@ -284,7 +294,7 @@ export default function Dashboard() {
 
     const csvContent = "data:text/csv;charset=utf-8,"
       + headers.join(",") + "\n"
-      + rows.map((e: any[]) => e.join(",")).join("\n");
+      + rows.map((e: string[]) => e.join(",")).join("\n");
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -494,7 +504,7 @@ export default function Dashboard() {
         {/* Tabla de facturas recientes */}
         {/* Usando el nuevo componente refactorizado con lógica Luxury */}
         <FacturaTable
-          invoices={recentInvoices as any}
+          invoices={recentInvoices}
           onRefresh={handleRefresh}
         />
 

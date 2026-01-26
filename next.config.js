@@ -8,14 +8,11 @@ const withPWA = require('next-pwa')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: true,
-    webpack: (config) => {
-        // Asegurar compatibilidad con Webpack para next-pwa y otras utilidades
-        return config;
-    },
     // Forzamos salida estable para PWA
     images: {
         unoptimized: true,
     },
+    // Mantener temporalmente hasta corregir errores críticos
     eslint: {
         ignoreDuringBuilds: true,
     },

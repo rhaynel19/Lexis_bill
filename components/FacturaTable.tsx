@@ -3,13 +3,15 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { CheckCircle, Clock, AlertCircle, Share2, MessageCircle, Mail, Copy, Ban, Download, Pencil, Filter, Repeat } from "lucide-react";
+import { CheckCircle, Clock, AlertCircle, Share2, MessageCircle, Mail, Copy, Ban, Download, Pencil, Filter, Repeat, Eye } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InvoiceData, downloadInvoicePDF } from "@/lib/pdf-generator";
+import { DocumentViewer } from "@/components/DocumentViewer";
+import { generateInvoiceWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp-utils";
 
 // Definición de Interfaz (Debe coincidir con la del backend o api-service)
 export interface Invoice {
@@ -31,6 +33,12 @@ export interface Invoice {
     annulledBy?: string;
     modifiedNcf?: string;
     clientPhone?: string;
+    items?: Array<{
+        description: string;
+        quantity: number;
+        price: number;
+        isExempt?: boolean;
+    }>;
 }
 
 interface FacturaTableProps {
@@ -41,6 +49,9 @@ interface FacturaTableProps {
 export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
     const router = useRouter();
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+    const [isViewerOpen, setIsViewerOpen] = useState(false);
+    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
     // Filtrado de facturas
     const filteredInvoices = invoices.filter((inv) => {
@@ -59,14 +70,9 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
         }).format(amount);
     };
 
-    // Handlers
+    // Handlers (mantener compatibilidad con código existente)
     const handleWhatsApp = (inv: Invoice) => {
-        const message = `Hola *${inv.clientName}*! 🇩🇴\n\nLe envío su factura *${(inv.ncfSequence || inv.id).slice(-11)}* por valor de *${formatCurrency(inv.total)}*.\n\nSaludos.`;
-        let phone = inv.clientPhone ? inv.clientPhone.replace(/\D/g, '') : '';
-        if (phone.length === 10 && (phone.startsWith("809") || phone.startsWith("829") || phone.startsWith("849"))) {
-            phone = "1" + phone;
-        }
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+        handleSendWhatsApp(inv);
     };
 
     const handleEmail = (inv: Invoice) => {
@@ -80,37 +86,51 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
         router.push("/nueva-factura");
     };
 
-    const handleDownloadPDF = async (inv: Invoice) => {
+    const handleViewInvoice = (inv: Invoice) => {
+        setSelectedInvoice(inv);
+        setIsViewerOpen(true);
+    };
+
+    const handleDownloadPDF = async (inv?: Invoice) => {
+        const invoice = inv || selectedInvoice;
+        if (!invoice) return;
+
+        setIsGeneratingPDF(true);
         toast.info("📄 Generando comprobante...");
         try {
             // Preparar datos para el generador
             const invoiceData: InvoiceData = {
-                id: inv._id || inv.id,
-                sequenceNumber: inv.ncfSequence || inv.id, // Fallback ID if no sequence
-                type: inv.type, // Map type appropriately if needed
-                clientName: inv.clientName,
-                rnc: inv.rnc || inv.clientRnc || "",
-                date: inv.date,
-                items: [], // En listado a veces no tenemos los items, en ese caso el PDF saldrá sin items o se debería hacer fetch detail
-                // Nota: Si 'invoices' no tiene items, este PDF será incompleto.
-                // Idealmente el PDF se genera desde el detalle. 
-                // Por ahora, usamos los totales.
-                subtotal: inv.subtotal || (inv.total - (inv.itbis || 0)),
-                itbis: inv.itbis || 0,
-                isrRetention: inv.isrRetention || 0,
-                itbisRetention: inv.itbisRetention || 0,
-                total: inv.total
+                id: invoice._id || invoice.id,
+                sequenceNumber: invoice.ncfSequence || invoice.id,
+                type: invoice.type || "32",
+                clientName: invoice.clientName,
+                rnc: invoice.rnc || invoice.clientRnc || "",
+                date: invoice.date,
+                items: invoice.items || [],
+                subtotal: invoice.subtotal || (invoice.total - (invoice.itbis || 0)),
+                itbis: invoice.itbis || 0,
+                isrRetention: invoice.isrRetention || 0,
+                itbisRetention: invoice.itbisRetention || 0,
+                total: invoice.total
             };
-
-            // Si necesitamos items, y no están en la lista ligera, deberíamos advertir o llamar API invoice details
-            // Asumimos que para "Descargar Comprobante rápido" esto es aceptable o que 'invoices' trae payload completo.
 
             await downloadInvoicePDF(invoiceData);
             toast.success("✅ Comprobante descargado");
         } catch (e) {
             console.error("PDF Error:", e);
             toast.error("Error al generar PDF");
+        } finally {
+            setIsGeneratingPDF(false);
         }
+    };
+
+    const handleSendWhatsApp = (inv?: Invoice) => {
+        const invoice = inv || selectedInvoice;
+        if (!invoice) return;
+
+        const message = generateInvoiceWhatsAppMessage(invoice);
+        openWhatsApp(invoice.clientPhone, message);
+        toast.info("📲 Abriendo WhatsApp...");
     };
 
     const renderStatusBadge = (status: string) => {
@@ -150,6 +170,7 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
     };
 
     return (
+        <>
         <Card className="bg-white border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden mt-6">
             <CardHeader className="border-b border-slate-50 bg-slate-50/50 px-8 py-6">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4">
@@ -232,6 +253,17 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
                                         </TableCell>
                                         <TableCell className="text-right pr-8">
                                             <div className="flex justify-end gap-2 opacity-100 md:opacity-100 group-hover:opacity-100 transition-opacity">
+                                                {/* Botón Ver */}
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="ghost" 
+                                                    className="h-8 text-slate-600 hover:bg-slate-100" 
+                                                    title="Ver detalles"
+                                                    onClick={() => handleViewInvoice(inv)}
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </Button>
+
                                                 {/* Botón condicional principal */}
                                                 {(inv.status === "cancelled" || inv.status === "rechazada") ? (
                                                     <Button size="sm" variant="outline" className="h-8 border-red-200 text-red-600 hover:bg-red-50 text-xs px-2" onClick={() => handleClone(inv)}>
@@ -288,5 +320,20 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
                 )}
             </CardContent>
         </Card>
+
+        {/* Document Viewer Modal */}
+        <DocumentViewer
+            isOpen={isViewerOpen}
+            onClose={() => {
+                setIsViewerOpen(false);
+                setSelectedInvoice(null);
+            }}
+            document={selectedInvoice}
+            type="invoice"
+            onDownloadPDF={() => handleDownloadPDF()}
+            onSendWhatsApp={() => handleSendWhatsApp()}
+            isGeneratingPDF={isGeneratingPDF}
+        />
+        </>
     );
 }

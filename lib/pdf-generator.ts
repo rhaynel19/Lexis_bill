@@ -166,7 +166,11 @@ export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<jsPD
 
     doc.setFontSize(12);
     doc.setTextColor(...goldColor);
-    doc.text(`NCF: ${invoiceData.sequenceNumber}`, titleX, margin.top + 20, { align: "right" });
+    if (invoiceData.type === "quote") {
+        doc.text(`Número: ${invoiceData.sequenceNumber}`, titleX, margin.top + 20, { align: "right" });
+    } else {
+        doc.text(`NCF: ${invoiceData.sequenceNumber}`, titleX, margin.top + 20, { align: "right" });
+    }
 
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
@@ -363,4 +367,68 @@ export async function previewInvoicePDF(invoiceData: InvoiceData): Promise<void>
     const pdfBlob = pdf.output("blob");
     const pdfUrl = URL.createObjectURL(pdfBlob);
     window.open(pdfUrl, "_blank");
+}
+
+/**
+ * Interfaz para datos de cotización
+ */
+export interface QuoteData {
+    id: string;
+    clientName: string;
+    rnc: string;
+    date: string;
+    validUntil?: string;
+    items: Array<{
+        description: string;
+        quantity: number;
+        price: number;
+    }>;
+    subtotal: number;
+    itbis: number;
+    total: number;
+}
+
+/**
+ * Genera un PDF de cotización usando la misma función de factura
+ */
+export async function generateQuotePDF(quoteData: QuoteData): Promise<jsPDF> {
+    // Convertir QuoteData a InvoiceData para reutilizar la función existente
+    const invoiceData: InvoiceData = {
+        id: quoteData.id,
+        sequenceNumber: quoteData.id,
+        type: "quote",
+        clientName: quoteData.clientName,
+        rnc: quoteData.rnc,
+        date: quoteData.date,
+        items: quoteData.items,
+        subtotal: quoteData.subtotal,
+        itbis: quoteData.itbis,
+        isrRetention: 0,
+        itbisRetention: 0,
+        total: quoteData.total,
+    };
+
+    // Generar PDF y agregar fecha de validez si existe
+    const pdf = await generateInvoicePDF(invoiceData);
+    
+    // Si hay fecha de validez, agregarla al PDF
+    if (quoteData.validUntil) {
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const margin = APP_CONFIG.pdf.margins;
+        const formattedDate = formatDateDominican(new Date(quoteData.validUntil));
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(`Válida hasta: ${formattedDate}`, pageWidth - margin.right, margin.top + 32, { align: "right" });
+    }
+
+    return pdf;
+}
+
+/**
+ * Descarga el PDF de la cotización
+ */
+export async function downloadQuotePDF(quoteData: QuoteData): Promise<void> {
+    const pdf = await generateQuotePDF(quoteData);
+    const fileName = `Cotizacion_${quoteData.id}.pdf`;
+    pdf.save(fileName);
 }
