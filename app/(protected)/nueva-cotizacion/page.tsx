@@ -14,6 +14,7 @@ import { Loader2 } from "lucide-react";
 import { InvoiceData } from "@/lib/pdf-generator";
 import { toast } from "sonner";
 import { handleNumericKeyDown } from "@/lib/input-validators";
+import { DocumentPreview } from "@/components/DocumentPreview";
 
 interface QuoteItem {
     id: string;
@@ -31,6 +32,8 @@ export default function NewQuote() {
     const [clientPhone, setClientPhone] = useState("");
     const [validityDays, setValidityDays] = useState("15");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showPreview, setShowPreview] = useState(false);
+
     const [items, setItems] = useState<QuoteItem[]>([
         { id: "1", description: "", quantity: 1, price: 0, isExempt: false }
     ]);
@@ -73,14 +76,19 @@ export default function NewQuote() {
         return new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP" }).format(amount);
     };
 
-    const handleSubmit = async (e: FormEvent) => {
+    const handlePreSubmit = (e: FormEvent) => {
         e.preventDefault();
-        if (isSubmitting) return;
-
         if (!clientName || !items.length) {
             toast.error("Complete los campos obligatorios");
             return;
         }
+        // Basic validation passed, show preview
+        setShowPreview(true);
+    };
+
+    const handleConfirmSave = async () => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
 
         const quote = {
             id: `COT-${Date.now().toString().slice(-6)}`,
@@ -101,26 +109,23 @@ export default function NewQuote() {
         quotes.push(quote);
         localStorage.setItem("quotes", JSON.stringify(quotes));
 
-        // Generate PDF
-        const data: InvoiceData = {
-            id: quote.id, // Quote Type will be handled in PDF generator
-            sequenceNumber: "COTIZACIÓN", // Special label
-            type: "quote", // Custom type for logic
-            clientName,
-            rnc,
-            date: quote.date,
-            items: items.map(i => ({ ...i, price: i.price })),
-            subtotal,
-            itbis,
-            isrRetention: 0,
-            itbisRetention: 0,
-            total
-        };
-
-        toast.success("✅ Cotización creada exitosamente.");
-        setIsSubmitting(true); // Keep loading until redirect
+        toast.success("✅ Cotización guardada exitosamente.");
         router.push("/cotizaciones");
     };
+
+    if (showPreview) {
+        return (
+            <div className="container mx-auto px-4 py-8">
+                <DocumentPreview
+                    type="quote"
+                    data={{ clientName, rnc, clientPhone, items, subtotal, itbis, total }}
+                    onEdit={() => setShowPreview(false)}
+                    onConfirm={handleConfirmSave}
+                    isProcessing={isSubmitting}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -134,7 +139,7 @@ export default function NewQuote() {
                 </Link>
             </div>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handlePreSubmit}>
                 <div className="grid gap-6">
                     <Card>
                         <CardHeader>
@@ -278,8 +283,7 @@ export default function NewQuote() {
                             <Button variant="outline" type="button">Cancelar</Button>
                         </Link>
                         <Button type="submit" size="lg" className="bg-[#D4AF37] hover:bg-amber-600 text-white" disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isSubmitting ? "Guardando..." : "Guardar Cotización"}
+                            {isSubmitting ? "Procesando..." : "Siguiente: Vista Previa"}
                         </Button>
                     </div>
                 </div>

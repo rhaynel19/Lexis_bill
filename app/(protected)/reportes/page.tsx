@@ -202,7 +202,38 @@ export default function ReportsPage() {
                 })}
             </div>
 
-            <div className="mt-12 p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50 flex items-start gap-4">
+            {/* Accountant Share Section */}
+            <div className="mt-12 bg-slate-900 rounded-3xl p-8 md:p-12 relative overflow-hidden border border-[#D4AF37]/20">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[#D4AF37] blur-[120px] opacity-10 rounded-full pointer-events-none"></div>
+                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div className="space-y-4 max-w-xl">
+                        <Badge className="bg-[#D4AF37] text-[#0A192F] hover:bg-[#B8962E]">NUEVO</Badge>
+                        <h3 className="text-3xl font-serif font-bold text-white">
+                            Tu Contador, Feliz.
+                        </h3>
+                        <p className="text-slate-400 text-lg leading-relaxed">
+                            Envía los reportes 606 y 607 del mes de <span className="text-[#D4AF37] font-bold">{months[selectedMonth - 1]}</span> directamente a tu contable con un solo clic. Incluye resumen de ITBIS y Retenciones.
+                        </p>
+                    </div>
+                    <div className="flex flex-col gap-3 w-full md:w-auto">
+                        <Button
+                            size="lg"
+                            className="h-14 px-8 text-lg bg-white text-slate-900 hover:bg-slate-100 font-bold shadow-xl"
+                            onClick={() => {
+                                const subject = `Reportes Fiscales LexisBill - ${months[selectedMonth - 1]} ${selectedYear}`;
+                                const body = `Hola,\n\nAdjunto los enlaces para descargar los reportes fiscales del periodo ${months[selectedMonth - 1]} ${selectedYear}:\n\n- Reporte 606 (Compras): [Enlace]\n- Reporte 607 (Ventas): [Enlace]\n- Resumen ITBIS: RD$ ${summary?.itbis?.toLocaleString() || '0.00'}\n\nGenerado automáticamente por LexisBill.`;
+                                window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+                            }}
+                        >
+                            <TrendingUp className="w-5 h-5 mr-2 text-[#D4AF37]" />
+                            Enviar a Contador
+                        </Button>
+                        <p className="text-center text-xs text-slate-500 uppercase tracking-widest">Vía Email pre-redactado</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-8 p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50 flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0">
                     <Info className="w-5 h-5" />
                 </div>

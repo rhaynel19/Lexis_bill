@@ -25,6 +25,7 @@ import { usePreferences } from "@/components/providers/PreferencesContext";
 import { AIService } from "@/lib/ai-service-mock";
 import { ValidatorService } from "@/lib/validator-service";
 import { SuggestionWidget } from "@/components/ui/suggestion-widget";
+import { DocumentPreview } from "@/components/DocumentPreview";
 
 // Interfaz para definir la estructura de un ítem de factura
 interface InvoiceItem {
@@ -46,6 +47,7 @@ export default function NewInvoice() {
     const [rncError, setRncError] = useState("");
     const [applyRetentions, setApplyRetentions] = useState(false);
     const [itbisRetentionRate, setItbisRetentionRate] = useState(0.30); // 30% por defecto
+    const [showPreview, setShowPreview] = useState(false);
 
     const { profession, setProfession } = usePreferences();
 
@@ -436,42 +438,35 @@ export default function NewInvoice() {
         await previewInvoicePDF(invoiceData);
     };
 
-    // Función para manejar el envío del formulario
-    // Función para manejar el envío del formulario
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handlePreSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (isGenerating) return;
-        setIsGenerating(true);
-
         // Validar que todos los campos estén completos
         if (!invoiceType || !clientName || !rnc) {
             toast.error("Por favor completa todos los campos obligatorios");
-            setIsGenerating(false);
             return;
         }
 
+        const validItems = items.filter(
+            (item) => item.description && item.quantity > 0 && item.price > 0
+        );
+
+        if (validItems.length === 0) {
+            toast.error("Por favor agrega al menos un ítem válido a la factura");
+            return;
+        }
+        setShowPreview(true);
+    }
+
+    const handleConfirmSave = async () => {
+        if (isGenerating) return;
+        setIsGenerating(true);
+
         try {
-            // Get sequences from backend (Security: Don't trust client sequence if possible, 
-            // but for this hybrid app we might fetch it or let backend handle it. 
-            // Here we assume backend handles assignment OR we fetch valid one)
-            // For now, we proceed with the one we have or let backend override.
-
-            // NOTE: In production, the backend should assign the final NCF to avoid collisions.
-            // We'll mimic this by sending data and expecting backend to confirm/assign.
-
             const cleanClientName = clientName.trim();
             const cleanRnc = rnc.replace(/[^0-9]/g, "");
-
             const validItems = items.filter(
                 (item) => item.description && item.quantity > 0 && item.price > 0
             );
-
-            if (validItems.length === 0) {
-                toast.error("Por favor agrega al menos un ítem válido a la factura");
-                setIsGenerating(false);
-                return;
-            }
 
             const invoiceData = {
                 clientName: cleanClientName,
@@ -479,8 +474,6 @@ export default function NewInvoice() {
                 type: invoiceType,
                 items: validItems,
                 date: new Date().toISOString(),
-                // Backend will calculate totals to verify integrity
-                // But we send them for reference
                 subtotal,
                 itbis,
                 total,
@@ -528,7 +521,6 @@ export default function NewInvoice() {
             toast.error(`❌ Error al guardar factura: ${error.message || "Error desconocido"}`);
             setIsGenerating(false);
         } finally {
-            // setIsGenerating(false); // Mantener true si fue exitoso para evitar doble click mientras sale el modal o redirige
             if (!showSuccessModal) setIsGenerating(false);
         }
     };
@@ -570,6 +562,20 @@ export default function NewInvoice() {
         return types[type] || type;
     };
 
+    if (showPreview) {
+        return (
+            <div className="container mx-auto px-4 py-8">
+                <DocumentPreview
+                    type="invoice"
+                    data={{ clientName, rnc, clientPhone, items, subtotal, itbis, total, invoiceType }}
+                    onEdit={() => setShowPreview(false)}
+                    onConfirm={handleConfirmSave}
+                    isProcessing={isGenerating}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="container mx-auto px-4 py-8 max-w-5xl">
             {/* Encabezado */}
@@ -609,7 +615,7 @@ export default function NewInvoice() {
             <div className="grid lg:grid-cols-2 gap-8 items-start">
                 {/* Form Side */}
                 <div className="lg:col-span-1">
-                    <form onSubmit={handleSubmit}>
+                    <form onSubmit={handlePreSubmit}>
                         <div className="space-y-6">
                             {/* Información del Comprobante */}
                             <Card>
