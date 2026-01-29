@@ -36,7 +36,7 @@ export function generateQuoteWhatsAppMessage(quote: {
 
     const fromText = companyName ? ` de parte de *${companyName}*` : "";
 
-    return `Hola *${quote.clientName}*! 🇩🇴${fromText}\n\nEs un placer saludarle. Le envío formalmente su *propuesta comercial* con el número *${quote.id}* por valor de *${formatCurrency(quote.total)}*.\n\nQuedo a su disposición para cualquier consulta. ¡Feliz resto del día!`;
+    return `Hola *${quote.clientName}*! 🇩🇴${fromText}\n\nEs un placer saludarle. Le envío formalmente su *cotización* con el número *${quote.id}* por valor de *${formatCurrency(quote.total)}*.\n\nQuedo a su disposición para cualquier consulta. ¡Feliz resto del día!`;
 }
 
 /**
