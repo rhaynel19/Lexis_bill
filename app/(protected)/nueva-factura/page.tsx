@@ -445,7 +445,7 @@ export default function NewInvoice() {
         }
 
         const validItems = items.filter(
-            (item) => item.description && item.quantity > 0 && item.price > 0
+            (item) => item.description && Number(item.quantity) > 0 && Number(item.price) > 0
         );
 
         if (validItems.length === 0) {
@@ -1236,7 +1236,11 @@ export default function NewInvoice() {
                                                 invoiceType,
                                                 clientName,
                                                 rnc,
-                                                items,
+                                                items: items.map(i => ({
+                                                    description: i.description,
+                                                    quantity: i.quantity,
+                                                    price: i.price
+                                                })),
                                                 subtotal,
                                                 itbis,
                                                 total,
@@ -1265,7 +1269,11 @@ export default function NewInvoice() {
                         invoiceType,
                         clientName,
                         rnc,
-                        items,
+                        items: items.map(i => ({
+                            description: i.description,
+                            quantity: i.quantity,
+                            price: i.price
+                        })),
                         subtotal,
                         itbis,
                         total,

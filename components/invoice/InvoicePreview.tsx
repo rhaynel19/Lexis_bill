@@ -11,8 +11,8 @@ import { useState } from "react";
 
 interface InvoiceItem {
     description: string;
-    quantity: number;
-    price: number;
+    quantity: number | string;
+    price: number | string;
 }
 
 interface InvoicePreviewProps {
@@ -48,11 +48,12 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
     };
 
     // Format Helpers
-    const formatCurrency = (amount: number) => {
+    const formatCurrency = (amount: number | string) => {
+        const val = typeof amount === 'number' ? amount : (parseFloat(amount) || 0);
         return new Intl.NumberFormat("es-DO", {
             style: "currency",
             currency: "DOP",
-        }).format(amount);
+        }).format(val);
     };
 
     const getNcfLabel = (type: string) => {
@@ -155,7 +156,7 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
                                             <div className="text-xs text-muted-foreground">Cant: {item.quantity}</div>
                                         </div>
                                         <div className="font-mono font-medium text-foreground/90">
-                                            {formatCurrency(item.price * item.quantity)}
+                                            {formatCurrency(Number(item.price) * Number(item.quantity))}
                                         </div>
                                     </div>
                                 ))
