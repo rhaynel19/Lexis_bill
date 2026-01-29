@@ -7,15 +7,15 @@
  */
 export function formatPhoneForWhatsApp(phone: string | undefined): string {
     if (!phone) return "";
-    
+
     // Remover caracteres no numéricos
     let cleanPhone = phone.replace(/\D/g, "");
-    
+
     // Si tiene 10 dígitos y empieza con código de área dominicano, agregar 1
     if (cleanPhone.length === 10 && (cleanPhone.startsWith("809") || cleanPhone.startsWith("829") || cleanPhone.startsWith("849"))) {
         cleanPhone = "1" + cleanPhone;
     }
-    
+
     return cleanPhone;
 }
 
@@ -26,7 +26,7 @@ export function generateQuoteWhatsAppMessage(quote: {
     id: string;
     clientName: string;
     total: number;
-}): string {
+}, companyName?: string): string {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat("es-DO", {
             style: "currency",
@@ -34,7 +34,9 @@ export function generateQuoteWhatsAppMessage(quote: {
         }).format(amount);
     };
 
-    return `Hola *${quote.clientName}*! 🇩🇴\n\nLe envío su cotización *${quote.id}* por valor de *${formatCurrency(quote.total)}*.\n\nSaludos.`;
+    const fromText = companyName ? ` de parte de *${companyName}*` : "";
+
+    return `Hola *${quote.clientName}*! 🇩🇴${fromText}\n\nEs un placer saludarle. Le envío formalmente su *propuesta comercial* con el número *${quote.id}* por valor de *${formatCurrency(quote.total)}*.\n\nQuedo a su disposición para cualquier consulta. ¡Feliz resto del día!`;
 }
 
 /**
@@ -45,7 +47,7 @@ export function generateInvoiceWhatsAppMessage(invoice: {
     ncfSequence?: string;
     id: string;
     total: number;
-}): string {
+}, companyName?: string): string {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat("es-DO", {
             style: "currency",
@@ -53,9 +55,10 @@ export function generateInvoiceWhatsAppMessage(invoice: {
         }).format(amount);
     };
 
+    const fromText = companyName ? ` de parte de *${companyName}*` : "";
     const documentNumber = (invoice.ncfSequence || invoice.id).slice(-11);
-    
-    return `Hola *${invoice.clientName}*! 🇩🇴\n\nLe envío su factura *${documentNumber}* por valor de *${formatCurrency(invoice.total)}*.\n\nSaludos.`;
+
+    return `Hola *${invoice.clientName}*! 🇩🇴${fromText}\n\nLe envío su *recibo/comprobante fiscal* con numeración *${documentNumber}* por el monto de *${formatCurrency(invoice.total)}*. Muchas gracias por su confianza.\n\nQuedo atento ante cualquier duda. ¡Saludos!`;
 }
 
 /**

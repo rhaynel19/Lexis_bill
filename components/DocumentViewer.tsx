@@ -7,6 +7,7 @@ import { Download, MessageCircle, X, Pencil } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { generateQuoteWhatsAppMessage, generateInvoiceWhatsAppMessage } from "@/lib/whatsapp-utils";
 
 // Interfaz para cotizaciones
 export interface Quote {
@@ -333,7 +334,15 @@ export function DocumentViewer({
 
                         {onSendWhatsApp && (
                             <Button
-                                onClick={onSendWhatsApp}
+                                onClick={() => {
+                                    const message = type === "quote"
+                                        ? generateQuoteWhatsAppMessage(document as Quote, companyName)
+                                        : generateInvoiceWhatsAppMessage(document as Invoice, companyName);
+
+                                    const { openWhatsApp } = require("@/lib/whatsapp-utils");
+                                    openWhatsApp(document.clientPhone, message);
+                                    toast.info("📲 Abriendo WhatsApp...");
+                                }}
                                 variant="outline"
                                 className="col-span-1 h-12 text-success border-success/20 hover:bg-success/5 order-2 sm:order-2 font-bold flex items-center justify-center p-0 sm:px-4"
                                 title="WhatsApp"
