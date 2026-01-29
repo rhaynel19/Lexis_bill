@@ -89,23 +89,23 @@ export function DocumentViewer({
     // Obtener nombre de la empresa desde localStorage
     const getCompanyName = () => {
         if (typeof window === "undefined") return "Lexis Bill";
-        
+
         try {
             const storedConfig = localStorage.getItem("appConfig");
             const storedUser = localStorage.getItem("user");
-            
+
             if (storedUser) {
                 const user = JSON.parse(storedUser);
                 if (user?.fiscalStatus?.confirmed) {
                     return user.fiscalStatus.confirmed;
                 }
             }
-            
+
             if (storedConfig) {
                 const config = JSON.parse(storedConfig);
                 return config.companyName || "Lexis Bill";
             }
-            
+
             return "Lexis Bill";
         } catch {
             return "Lexis Bill";
@@ -114,7 +114,7 @@ export function DocumentViewer({
 
     const getCompanyRnc = () => {
         if (typeof window === "undefined") return "N/A";
-        
+
         try {
             const storedUser = localStorage.getItem("user");
             if (storedUser) {
@@ -129,16 +129,16 @@ export function DocumentViewer({
 
     const companyName = getCompanyName();
     const companyRnc = getCompanyRnc();
-    const documentNumber = type === "quote" 
-        ? (document as Quote).id 
+    const documentNumber = type === "quote"
+        ? (document as Quote).id
         : (document as Invoice).ncfSequence || (document as Invoice).id;
-    
+
     const documentDate = document.date;
     const clientName = document.clientName;
     const clientRnc = document.rnc || (document as Invoice).clientRnc || "";
-    
+
     // Calcular items y totales
-    const items = type === "quote" 
+    const items = type === "quote"
         ? (document as Quote).items.map(item => ({
             description: item.description,
             quantity: item.quantity,
@@ -151,20 +151,20 @@ export function DocumentViewer({
             price: item.price,
             subtotal: item.quantity * item.price
         })) || [];
-    
+
     const subtotal = type === "quote"
         ? (document as Quote).subtotal
         : (document as Invoice).subtotal || ((document as Invoice).total - ((document as Invoice).itbis || 0));
-    
+
     const itbis = type === "quote"
         ? (document as Quote).itbis
         : (document as Invoice).itbis || 0;
-    
+
     const total = document.total;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-4 md:p-6">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-bold">
                         {type === "quote" ? "Cotización" : "Factura"}
@@ -209,88 +209,91 @@ export function DocumentViewer({
                     </div>
 
                     {/* Tabla de Items */}
-                    <div className="border-t pt-4">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Descripción</TableHead>
-                                    <TableHead className="text-center">Cantidad</TableHead>
-                                    <TableHead className="text-right">Precio Unit.</TableHead>
-                                    <TableHead className="text-right">Subtotal</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {items.length === 0 ? (
+                    <div className="border-t pt-4 -mx-4 md:mx-0 overflow-x-auto">
+                        <div className="min-w-[600px] md:min-w-full px-4 md:px-0">
+                            <Table>
+                                <TableHeader>
                                     <TableRow>
-                                        <TableCell colSpan={4} className="text-center text-gray-500 py-4">
-                                            No hay items registrados
-                                        </TableCell>
+                                        <TableHead>Descripción</TableHead>
+                                        <TableHead className="text-center">Cantidad</TableHead>
+                                        <TableHead className="text-right">Precio Unit.</TableHead>
+                                        <TableHead className="text-right">Subtotal</TableHead>
                                     </TableRow>
-                                ) : (
-                                    items.map((item, index) => (
-                                        <TableRow key={index}>
-                                            <TableCell>{item.description || "Sin descripción"}</TableCell>
-                                            <TableCell className="text-center">{item.quantity}</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
-                                            <TableCell className="text-right font-medium">
-                                                {formatCurrency(item.quantity * item.price)}
+                                </TableHeader>
+                                <TableBody>
+                                    {items.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="text-center text-gray-500 py-4">
+                                                No hay items registrados
                                             </TableCell>
                                         </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
+                                    ) : (
+                                        items.map((item, index) => (
+                                            <TableRow key={index}>
+                                                <TableCell>{item.description || "Sin descripción"}</TableCell>
+                                                <TableCell className="text-center">{item.quantity}</TableCell>
+                                                <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
+                                                <TableCell className="text-right font-medium">
+                                                    {formatCurrency(item.quantity * item.price)}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
 
-                    {/* Totales */}
-                    <div className="border-t pt-4">
-                        <div className="flex justify-end">
-                            <div className="w-64 space-y-2">
-                                <div className="flex justify-between text-sm">
-                                    <span>Subtotal:</span>
-                                    <span className="font-medium">{formatCurrency(subtotal)}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span>ITBIS (18%):</span>
-                                    <span className="font-medium">{formatCurrency(itbis)}</span>
-                                </div>
-                                <div className="border-t pt-2 flex justify-between font-bold text-lg">
-                                    <span>Total:</span>
-                                    <span>{formatCurrency(total)}</span>
+                        {/* Totales */}
+                        <div className="border-t pt-4">
+                            <div className="flex justify-end">
+                                <div className="w-64 space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span>Subtotal:</span>
+                                        <span className="font-medium">{formatCurrency(subtotal)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span>ITBIS (18%):</span>
+                                        <span className="font-medium">{formatCurrency(itbis)}</span>
+                                    </div>
+                                    <div className="border-t pt-2 flex justify-between font-bold text-xl text-primary">
+                                        <span>Total:</span>
+                                        <span>{formatCurrency(total)}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Botones de Acción */}
-                    <div className="flex gap-3 justify-end border-t pt-4">
-                        <Button
-                            variant="outline"
-                            onClick={onClose}
-                        >
-                            <X className="w-4 h-4 mr-2" />
-                            Cerrar
-                        </Button>
-                        {onDownloadPDF && (
+                        {/* Botones de Acción */}
+                        <div className="flex flex-col sm:flex-row gap-3 justify-end border-t pt-4">
                             <Button
-                                onClick={onDownloadPDF}
-                                disabled={isGeneratingPDF}
-                                className="bg-[#D4AF37] hover:bg-[#B8962E] text-white"
-                            >
-                                <Download className="w-4 h-4 mr-2" />
-                                {isGeneratingPDF ? "Generando..." : "Descargar PDF"}
-                            </Button>
-                        )}
-                        {onSendWhatsApp && (
-                            <Button
-                                onClick={onSendWhatsApp}
                                 variant="outline"
-                                className="text-green-600 border-green-200 hover:bg-green-50"
+                                onClick={onClose}
+                                className="order-3 sm:order-1"
                             >
-                                <MessageCircle className="w-4 h-4 mr-2" />
-                                Enviar por WhatsApp
+                                <X className="w-4 h-4 mr-2" />
+                                Cerrar
                             </Button>
-                        )}
+                            {onDownloadPDF && (
+                                <Button
+                                    onClick={onDownloadPDF}
+                                    disabled={isGeneratingPDF}
+                                    className="bg-[#D4AF37] hover:bg-[#B8962E] text-white order-1 sm:order-2"
+                                >
+                                    <Download className="w-4 h-4 mr-2" />
+                                    {isGeneratingPDF ? "Generando..." : "Descargar PDF"}
+                                </Button>
+                            )}
+                            {onSendWhatsApp && (
+                                <Button
+                                    onClick={onSendWhatsApp}
+                                    variant="outline"
+                                    className="text-green-600 border-green-200 hover:bg-green-50 order-2 sm:order-3"
+                                >
+                                    <MessageCircle className="w-4 h-4 mr-2" />
+                                    Enviar WhatsApp
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </DialogContent>

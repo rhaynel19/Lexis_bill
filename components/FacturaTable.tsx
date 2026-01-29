@@ -171,169 +171,168 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
 
     return (
         <>
-        <Card className="bg-white border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden mt-6">
-            <CardHeader className="border-b border-slate-50 bg-slate-50/50 px-8 py-6">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div>
-                        <CardTitle className="text-xl font-bold text-slate-800">Transacciones Recientes</CardTitle>
-                        <CardDescription className="text-slate-500">Gestión de comprobantes fiscales</CardDescription>
-                    </div>
-                    <div className="flex gap-3 items-center">
-                        {/* Filter Dropdown */}
-                        <div className="flex items-center gap-2">
-                            <Filter className="w-4 h-4 text-slate-400" />
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[140px] h-9 text-sm">
-                                    <SelectValue placeholder="Estado" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todas</SelectItem>
-                                    <SelectItem value="recibida">Recibidas</SelectItem>
-                                    <SelectItem value="condicional">Condicionales</SelectItem>
-                                    <SelectItem value="rechazada">Rechazadas</SelectItem>
-                                </SelectContent>
-                            </Select>
+            <Card className="bg-white border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden mt-6">
+                <CardHeader className="border-b border-slate-50 bg-slate-50/50 px-8 py-6">
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div>
+                            <CardTitle className="text-xl font-bold text-slate-800">Transacciones Recientes</CardTitle>
+                            <CardDescription className="text-slate-500">Gestión de comprobantes fiscales</CardDescription>
                         </div>
-
-                        <Button variant="outline" onClick={() => router.push('/reportes')} className="text-emerald-600 border-emerald-200 hover:bg-emerald-50">
-                            <Download className="w-4 h-4 mr-2" />
-                            Reportes 606/607
-                        </Button>
-                    </div>
-                </div>
-            </CardHeader>
-            <CardContent className="p-0">
-                {filteredInvoices.length === 0 ? (
-                    <div className="text-center py-12 text-slate-400">
-                        <div className="flex justify-center mb-4">
-                            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center">
-                                <Filter className="w-8 h-8 text-slate-300" />
+                        <div className="flex gap-3 items-center">
+                            {/* Filter Dropdown */}
+                            <div className="flex items-center gap-2">
+                                <Filter className="w-4 h-4 text-slate-400" />
+                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                    <SelectTrigger className="w-[140px] h-9 text-sm">
+                                        <SelectValue placeholder="Estado" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todas</SelectItem>
+                                        <SelectItem value="recibida">Recibidas</SelectItem>
+                                        <SelectItem value="condicional">Condicionales</SelectItem>
+                                        <SelectItem value="rechazada">Rechazadas</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
+
+                            <Button variant="outline" onClick={() => router.push('/reportes')} className="text-emerald-600 border-emerald-200 hover:bg-emerald-50">
+                                <Download className="w-4 h-4 mr-2" />
+                                Reportes 606/607
+                            </Button>
                         </div>
-                        <p className="font-medium text-slate-600">No hay facturas en esta vista.</p>
-                        <p className="text-sm mt-1">Intenta cambiar el filtro o crea una nueva factura.</p>
                     </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader className="bg-slate-50">
-                                <TableRow>
-                                    <TableHead className="font-semibold text-slate-600 pl-8">Fecha</TableHead>
-                                    <TableHead className="font-semibold text-slate-600">Cliente</TableHead>
-                                    <TableHead className="font-semibold text-slate-600">NCF</TableHead>
-                                    <TableHead className="font-semibold text-slate-600 text-center">Estado</TableHead>
-                                    <TableHead className="text-right font-semibold text-slate-600">Total</TableHead>
-                                    <TableHead className="text-right font-semibold text-slate-600 pr-8">Acciones</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredInvoices.map((inv) => (
-                                    <TableRow key={inv.id} className="hover:bg-slate-50/80 transition-colors group">
-                                        <TableCell className="font-medium text-slate-700 pl-8">
-                                            {new Date(inv.date).toLocaleDateString("es-DO", { day: '2-digit', month: 'short' })}
-                                            <div className="text-[10px] text-slate-400">{new Date(inv.date).getFullYear()}</div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="font-semibold text-slate-900">{inv.clientName}</div>
-                                            <div className="text-xs text-slate-400 font-mono">{inv.rnc || inv.clientRnc}</div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="text-sm font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded inline-block">
-                                                {(inv.ncfSequence || inv.id).slice(-11)}
-                                            </div>
-                                            <div className="text-[10px] text-slate-400 mt-0.5 max-w-[120px] truncate" title={inv.type}>
-                                                {inv.type.split('-')[1]?.trim() || inv.type}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            {renderStatusBadge(inv.status)}
-                                        </TableCell>
-                                        <TableCell className="font-bold text-slate-800 text-right text-base">
-                                            {formatCurrency(inv.total)}
-                                        </TableCell>
-                                        <TableCell className="text-right pr-8">
-                                            <div className="flex justify-end gap-2 opacity-100 md:opacity-100 group-hover:opacity-100 transition-opacity">
-                                                {/* Botón Ver */}
-                                                <Button 
-                                                    size="sm" 
-                                                    variant="ghost" 
-                                                    className="h-8 text-slate-600 hover:bg-slate-100" 
-                                                    title="Ver detalles"
-                                                    onClick={() => handleViewInvoice(inv)}
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                </Button>
-
-                                                {/* Botón condicional principal */}
-                                                {(inv.status === "cancelled" || inv.status === "rechazada") ? (
-                                                    <Button size="sm" variant="outline" className="h-8 border-red-200 text-red-600 hover:bg-red-50 text-xs px-2" onClick={() => handleClone(inv)}>
-                                                        <Pencil className="w-3.5 h-3.5 mr-1" />
-                                                        Corregir
-                                                    </Button>
-                                                ) : (inv.status === "paid" || inv.status === "recibida") ? (
-                                                    <Button size="sm" variant="ghost" className="h-8 text-emerald-600 hover:bg-emerald-50" title="Descargar" onClick={() => handleDownloadPDF(inv)}>
-                                                        <Download className="w-4 h-4" />
-                                                    </Button>
-                                                ) : null}
-
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-100 rounded-full">
-                                                            <Share2 className="h-4 w-4 text-slate-500" />
+                </CardHeader>
+                <CardContent className="p-0">
+                    {filteredInvoices.length === 0 ? (
+                        <div className="text-center py-12 text-slate-400">
+                            <div className="flex justify-center mb-4">
+                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center">
+                                    <Filter className="w-8 h-8 text-slate-300" />
+                                </div>
+                            </div>
+                            <p className="font-medium text-slate-600">No hay facturas en esta vista.</p>
+                            <p className="text-sm mt-1">Intenta cambiar el filtro o crea una nueva factura.</p>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Desktop View */}
+                            <div className="hidden md:block">
+                                <Table>
+                                    <TableHeader className="bg-slate-50">
+                                        <TableRow>
+                                            <TableHead className="font-semibold text-slate-600 pl-8">Fecha</TableHead>
+                                            <TableHead className="font-semibold text-slate-600">Cliente</TableHead>
+                                            <TableHead className="font-semibold text-slate-600">NCF</TableHead>
+                                            <TableHead className="font-semibold text-slate-600 text-center">Estado</TableHead>
+                                            <TableHead className="text-right font-semibold text-slate-600">Total</TableHead>
+                                            <TableHead className="text-right font-semibold text-slate-600 pr-8">Acciones</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredInvoices.map((inv) => (
+                                            <TableRow key={inv.id} className="hover:bg-slate-50/80 transition-colors group">
+                                                <TableCell className="font-medium text-slate-700 pl-8">
+                                                    {new Date(inv.date).toLocaleDateString("es-DO", { day: '2-digit', month: 'short' })}
+                                                    <div className="text-[10px] text-slate-400">{new Date(inv.date).getFullYear()}</div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="font-semibold text-slate-900">{inv.clientName}</div>
+                                                    <div className="text-xs text-slate-400 font-mono">{inv.rnc || inv.clientRnc}</div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="text-sm font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded inline-block">
+                                                        {(inv.ncfSequence || inv.id).slice(-11)}
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-400 mt-0.5 max-w-[120px] truncate" title={inv.type}>
+                                                        {inv.type.split('-')[1]?.trim() || inv.type}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    {renderStatusBadge(inv.status)}
+                                                </TableCell>
+                                                <TableCell className="font-bold text-slate-800 text-right text-base">
+                                                    {formatCurrency(inv.total)}
+                                                </TableCell>
+                                                <TableCell className="text-right pr-8">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-8 w-8 p-0"
+                                                            onClick={() => handleViewInvoice(inv)}
+                                                        >
+                                                            <Eye className="w-4 h-4" />
                                                         </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-48">
-                                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onClick={() => handleWhatsApp(inv)}>
-                                                            <MessageCircle className="mr-2 h-4 w-4 text-emerald-600" />
-                                                            WhatsApp
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleEmail(inv)}>
-                                                            <Mail className="mr-2 h-4 w-4 text-blue-600" />
-                                                            Correo
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onClick={() => handleClone(inv)}>
-                                                            <Copy className="mr-2 h-4 w-4" />
-                                                            Duplicar
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => toast.success("Factura marcada como Recurrente (Iguala). El sistema generará el borrador el próximo mes.")}>
-                                                            <Repeat className="mr-2 h-4 w-4 text-amber-600" />
-                                                            Hacer Recurrente
-                                                        </DropdownMenuItem>
-                                                        {(inv.status !== 'cancelled' && inv.status !== 'rechazada') && (
-                                                            <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50">
-                                                                <Ban className="mr-2 h-4 w-4" />
-                                                                Anular
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                                                                    <Share2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem onClick={() => handleWhatsApp(inv)}>WhatsApp</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleDownloadPDF(inv)}>PDF</DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
 
-        {/* Document Viewer Modal */}
-        <DocumentViewer
-            isOpen={isViewerOpen}
-            onClose={() => {
-                setIsViewerOpen(false);
-                setSelectedInvoice(null);
-            }}
-            document={selectedInvoice}
-            type="invoice"
-            onDownloadPDF={() => handleDownloadPDF()}
-            onSendWhatsApp={() => handleSendWhatsApp()}
-            isGeneratingPDF={isGeneratingPDF}
-        />
+                            {/* Mobile View */}
+                            <div className="md:hidden divide-y divide-slate-100">
+                                {filteredInvoices.map((inv) => (
+                                    <div key={inv.id} className="p-4 space-y-3" onClick={() => handleViewInvoice(inv)}>
+                                        <div className="flex justify-between items-start">
+                                            <div className="space-y-1">
+                                                <p className="text-xs font-medium text-slate-500">
+                                                    {new Date(inv.date).toLocaleDateString("es-DO", { day: '2-digit', month: 'long', year: 'numeric' })}
+                                                </p>
+                                                <h3 className="font-bold text-slate-900">{inv.clientName}</h3>
+                                                <div className="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded inline-block">
+                                                    {(inv.ncfSequence || inv.id).slice(-11)}
+                                                </div>
+                                            </div>
+                                            <div className="text-right space-y-2">
+                                                <p className="font-bold text-primary text-lg">{formatCurrency(inv.total)}</p>
+                                                <div>{renderStatusBadge(inv.status)}</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 pt-2">
+                                            <Button variant="outline" size="sm" className="flex-1 h-9" onClick={(e) => { e.stopPropagation(); handleViewInvoice(inv); }}>
+                                                <Eye className="w-4 h-4 mr-2" /> Ver
+                                            </Button>
+                                            <Button variant="outline" size="sm" className="flex-1 h-9 text-green-600 border-green-200" onClick={(e) => { e.stopPropagation(); handleWhatsApp(inv); }}>
+                                                <MessageCircle className="w-4 h-4 mr-2" /> WhatsApp
+                                            </Button>
+                                            <Button variant="outline" size="sm" className="h-9 w-10 p-0" onClick={(e) => { e.stopPropagation(); handleDownloadPDF(inv); }}>
+                                                <Download className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Document Viewer Modal */}
+            <DocumentViewer
+                isOpen={isViewerOpen}
+                onClose={() => {
+                    setIsViewerOpen(false);
+                    setSelectedInvoice(null);
+                }}
+                document={selectedInvoice}
+                type="invoice"
+                onDownloadPDF={() => handleDownloadPDF()}
+                onSendWhatsApp={() => handleSendWhatsApp()}
+                isGeneratingPDF={isGeneratingPDF}
+            />
         </>
     );
 }

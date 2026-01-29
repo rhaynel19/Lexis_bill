@@ -24,7 +24,7 @@ export function DocumentPreview({ data, type, onEdit, onConfirm, isProcessing }:
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+        <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-10">
             {/* Action Bar */}
             <div className="flex flex-col md:flex-row justify-between items-center bg-slate-900 text-white p-4 rounded-xl shadow-2xl gap-4">
                 <div className="flex items-center gap-3">
@@ -47,19 +47,19 @@ export function DocumentPreview({ data, type, onEdit, onConfirm, isProcessing }:
             </div>
 
             {/* Document Paper Representation */}
-            <div className="bg-white p-8 md:p-12 rounded-xl shadow-xl border border-slate-200 min-h-[600px] relative overflow-hidden">
+            <div className="bg-white p-4 sm:p-8 md:p-12 rounded-xl shadow-xl border border-slate-200 min-h-[600px] relative overflow-hidden">
                 {/* Watermark */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none">
                     <h1 className="text-[120px] font-serif font-bold -rotate-45">LEXIS</h1>
                 </div>
 
                 {/* Header */}
-                <div className="flex justify-between items-start mb-12 relative z-10">
+                <div className="flex flex-col sm:flex-row justify-between items-start mb-12 relative z-10 gap-6">
                     <div>
-                        <h1 className="text-4xl font-serif font-bold text-slate-900 mb-2">{type === "invoice" ? "FACTURA" : "COTIZACIÓN"}</h1>
+                        <h1 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-2">{type === "invoice" ? "FACTURA" : "COTIZACIÓN"}</h1>
                         <p className="text-slate-500 text-sm uppercase tracking-widest">{type === "invoice" ? "E-CF (Borrador)" : "Propuesta Comercial"}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-left sm:text-right">
                         <h2 className="text-xl font-bold text-slate-800">{data.clientName}</h2>
                         <p className="text-slate-500 text-sm">{data.rnc}</p>
                         <p className="text-slate-500 text-sm">{new Date().toLocaleDateString("es-DO")}</p>
@@ -67,27 +67,29 @@ export function DocumentPreview({ data, type, onEdit, onConfirm, isProcessing }:
                 </div>
 
                 {/* Items */}
-                <div className="mt-12 relative z-10">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wider">
-                                <th className="py-3">Descripción</th>
-                                <th className="py-3 text-right">Cant</th>
-                                <th className="py-3 text-right">Precio</th>
-                                <th className="py-3 text-right">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {data.items.map((item: any, i: number) => (
-                                <tr key={i}>
-                                    <td className="py-4 text-slate-700 font-medium">{item.description}</td>
-                                    <td className="py-4 text-right text-slate-500">{item.quantity}</td>
-                                    <td className="py-4 text-right text-slate-500">{item.price.toLocaleString("es-DO", { minimumFractionDigits: 2 })}</td>
-                                    <td className="py-4 text-right text-slate-900 font-bold">{(item.quantity * item.price).toLocaleString("es-DO", { minimumFractionDigits: 2 })}</td>
+                <div className="mt-12 relative z-10 -mx-4 sm:mx-0 overflow-x-auto">
+                    <div className="min-w-[500px] sm:min-w-full px-4 sm:px-0">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wider">
+                                    <th className="py-3">Descripción</th>
+                                    <th className="py-3 text-right">Cant</th>
+                                    <th className="py-3 text-right">Precio</th>
+                                    <th className="py-3 text-right">Total</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {data.items.map((item: any, i: number) => (
+                                    <tr key={i}>
+                                        <td className="py-4 text-slate-700 font-medium">{item.description}</td>
+                                        <td className="py-4 text-right text-slate-500">{item.quantity}</td>
+                                        <td className="py-4 text-right text-slate-500">{item.price.toLocaleString("es-DO", { minimumFractionDigits: 2 })}</td>
+                                        <td className="py-4 text-right text-slate-900 font-bold">{(item.quantity * item.price).toLocaleString("es-DO", { minimumFractionDigits: 2 })}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 {/* Totals */}
@@ -101,7 +103,7 @@ export function DocumentPreview({ data, type, onEdit, onConfirm, isProcessing }:
                             <span>ITBIS (18%)</span>
                             <span>{data.itbis.toLocaleString("es-DO", { style: "currency", currency: "DOP" })}</span>
                         </div>
-                        <div className="border-t border-slate-200 pt-3 flex justify-between font-bold text-xl text-slate-900">
+                        <div className="border-t border-slate-200 pt-3 flex justify-between font-bold text-2xl text-primary">
                             <span>Total</span>
                             <span>{data.total.toLocaleString("es-DO", { style: "currency", currency: "DOP" })}</span>
                         </div>
