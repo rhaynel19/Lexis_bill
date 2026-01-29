@@ -45,63 +45,68 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  --color-success-foreground: var(--success-foreground);
+  --color-success: var(--success);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning: var(--warning);
+  --color-danger-foreground: var(--destructive-foreground);
+  --color-danger: var(--danger);
 }
 
 :root {
   --radius: 0.75rem;
 
-  /* Lighter, Luxury Backgrounds */
-  --background: oklch(0.985 0 0);
+  /* --- LIGHT THEME (Default) --- */
+  --bg-primary: oklch(0.985 0 0);
+  /* Pure Whiteish */
+  --bg-secondary: oklch(1 0 0);
   /* Pure White */
-  --foreground: oklch(0.145 0.02 240);
+  --text-primary: oklch(0.145 0.02 240);
   /* Oxford Blue Dark */
-
-  --card: oklch(1 0 0);
-  /* White */
-  --card-foreground: oklch(0.145 0.02 240);
-
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0.02 240);
-
-  /* Oxford Blue (Azul Profundo) */
-  --primary: oklch(0.25 0.05 260);
-  --primary-foreground: oklch(0.985 0 0);
-
-  /* Champagne Gold */
-  --secondary: oklch(0.85 0.1 85);
-  --secondary-foreground: oklch(0.25 0.05 260);
-
-  --muted: oklch(0.96 0.01 240);
-  --muted-foreground: oklch(0.556 0.02 240);
-
-  --accent: oklch(0.95 0.02 85);
-  /* Light Gold tint */
-  --accent-foreground: oklch(0.25 0.05 260);
-
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
+  --text-secondary: oklch(0.45 0.02 240);
+  /* Muted Slate */
 
   --border: oklch(0.922 0.01 240);
   --input: oklch(0.922 0.01 240);
   --ring: oklch(0.85 0.1 85);
   /* Gold Ring */
 
-  --chart-1: oklch(0.25 0.05 260);
+  --accent: oklch(0.25 0.05 260);
   /* Oxford Blue */
-  --chart-2: oklch(0.85 0.1 85);
-  /* Gold */
-  --chart-3: oklch(0.40 0.05 260);
-  /* Lighter Blue */
-  --chart-4: oklch(0.60 0.1 85);
-  /* Dark Gold */
-  --chart-5: oklch(0.80 0.1 85);
-  /* Pale Gold */
+  --accent-foreground: oklch(0.985 0 0);
+  --accent-muted: oklch(0.95 0.02 85);
+  /* Light Gold tint */
+
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-foreground);
+
+  --secondary: oklch(0.85 0.1 85);
+  /* Champagne Gold */
+  --secondary-foreground: oklch(0.25 0.05 260);
+
+  --muted: oklch(0.96 0.01 240);
+  --muted-foreground: var(--text-secondary);
+
+  --success: oklch(0.627 0.265 149.213);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.769 0.188 70.08);
+  --warning-foreground: oklch(0.20 0.05 70);
+  --danger: oklch(0.577 0.245 27.325);
+
+  --destructive: var(--danger);
+  --destructive-foreground: oklch(0.985 0 0);
+
+  /* Shadcn-like mappings for automatic utility compatibility */
+  --background: var(--bg-primary);
+  --foreground: var(--text-primary);
+  --card: var(--bg-secondary);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-secondary);
+  --popover-foreground: var(--text-primary);
 
   --sidebar: oklch(0.25 0.05 260);
-  /* Oxford Blue Sidebar */
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.85 0.1 85);
-  /* Gold Primary in Sidebar */
   --sidebar-primary-foreground: oklch(0.25 0.05 260);
   --sidebar-accent: oklch(0.30 0.05 260);
   --sidebar-accent-foreground: oklch(0.985 0 0);
@@ -109,58 +114,87 @@
   --sidebar-ring: oklch(0.85 0.1 85);
 }
 
-.dark {
-  /* Dark Luxury Mode */
-  --background: oklch(0.12 0.02 240);
-  /* Very Dark Blue */
-  --foreground: oklch(0.985 0 0);
+/* --- MIDNIGHT THEME (Dark Mode Real) --- */
+.dark,
+[data-theme="midnight"] {
+  --bg-primary: oklch(0.12 0.02 240);
+  /* Deep Blue-Grey */
+  --bg-secondary: oklch(0.16 0.02 240);
+  /* Slightly lighter */
+  --text-primary: oklch(0.95 0.01 240);
+  /* Off-white */
+  --text-secondary: oklch(0.70 0.02 240);
+  /* Muted Blue-Grey */
 
-  --card: oklch(0.18 0.03 240);
-  --card-foreground: oklch(0.985 0 0);
+  --border: oklch(0.25 0.03 240);
+  --input: oklch(0.25 0.03 240);
+  --ring: oklch(0.40 0.1 240);
 
-  --popover: oklch(0.18 0.03 240);
-  --popover-foreground: oklch(0.985 0 0);
-
-  --primary: oklch(0.85 0.1 85);
-  /* Gold Primary for Dark Mode */
-  --primary-foreground: oklch(0.145 0.02 240);
-
-  --secondary: oklch(0.30 0.05 260);
-  --secondary-foreground: oklch(0.985 0 0);
-
-  --muted: oklch(0.25 0.02 240);
-  --muted-foreground: oklch(0.708 0 0);
-
-  --accent: oklch(0.30 0.05 260);
+  --accent: oklch(0.40 0.15 240);
+  /* Royal Blue */
   --accent-foreground: oklch(0.985 0 0);
+  --accent-muted: oklch(0.20 0.05 240);
 
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-foreground);
 
-  --border: oklch(0.30 0.05 260);
-  --input: oklch(0.30 0.05 260);
+  --secondary: oklch(0.25 0.05 240);
+  --secondary-foreground: oklch(0.95 0.01 240);
+
+  --muted: oklch(0.20 0.03 240);
+  --muted-foreground: var(--text-secondary);
+
+  --sidebar: oklch(0.08 0.02 240);
+  --sidebar-foreground: oklch(0.95 0.01 240);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.15 0.03 240);
+  --sidebar-accent-foreground: oklch(0.95 0.01 240);
+
+  --success-foreground: oklch(0.95 0.01 240);
+  --warning-foreground: oklch(0.95 0.01 240);
+}
+
+/* --- LUXURY THEME (Premium Legal) --- */
+[data-theme="luxury"] {
+  --bg-primary: oklch(0.10 0.02 240);
+  /* Midnight Black-Blue */
+  --bg-secondary: oklch(0.05 0.01 240);
+  /* Darkest layer */
+  --text-primary: oklch(0.98 0.01 85);
+  /* Crisp white with gold hint */
+  --text-secondary: oklch(0.75 0.02 85);
+  /* Muted Gold-White */
+
+  --border: oklch(0.30 0.05 85);
+  /* Soft Gold Border */
+  --input: oklch(0.25 0.04 85);
   --ring: oklch(0.85 0.1 85);
+  /* Gold Ring focus */
 
-  --chart-1: oklch(0.85 0.1 85);
-  /* Gold */
-  --chart-2: oklch(0.30 0.05 260);
-  /* Blue */
-  --chart-3: oklch(0.80 0.1 85);
-  /* Pale Gold */
-  --chart-4: oklch(0.40 0.05 260);
-  /* Lighter Blue */
-  --chart-5: oklch(0.60 0.1 85);
-  /* Dark Gold */
+  --accent: oklch(0.85 0.1 85);
+  /* Champagne Gold */
+  --accent-foreground: oklch(0.15 0.03 260);
+  --accent-muted: oklch(0.25 0.05 85);
 
-  --sidebar: oklch(0.10 0.02 240);
-  /* Almost Black Blue */
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.85 0.1 85);
-  --sidebar-primary-foreground: oklch(0.145 0.02 240);
-  --sidebar-accent: oklch(0.18 0.03 240);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.25 0.02 240);
-  --sidebar-ring: oklch(0.85 0.1 85);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-foreground);
+
+  --secondary: oklch(0.20 0.03 240);
+  --secondary-foreground: var(--accent);
+
+  --muted: oklch(0.18 0.02 240);
+  --muted-foreground: oklch(0.60 0.05 85);
+
+  --sidebar: oklch(0.05 0.01 240);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: var(--bg-primary);
+  --sidebar-accent: oklch(0.15 0.03 85);
+  --sidebar-accent-foreground: var(--text-primary);
+
+  --success-foreground: var(--text-primary);
+  --warning-foreground: var(--text-primary);
 }
 
 @layer base {

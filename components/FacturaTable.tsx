@@ -140,17 +140,17 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
 
     return (
         <>
-            <Card className="bg-white border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden mt-6">
-                <CardHeader className="border-b border-slate-50 bg-slate-50/50 px-8 py-6">
+            <Card className="bg-card border-none shadow-xl shadow-accent/5 rounded-2xl overflow-hidden mt-6">
+                <CardHeader className="border-b border-border/10 bg-muted/50 px-8 py-6">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                         <div>
-                            <CardTitle className="text-xl font-bold text-slate-800">Transacciones Recientes</CardTitle>
-                            <CardDescription className="text-slate-500">Gestión de comprobantes fiscales</CardDescription>
+                            <CardTitle className="text-xl font-bold text-foreground">Transacciones Recientes</CardTitle>
+                            <CardDescription className="text-muted-foreground">Gestión de comprobantes fiscales</CardDescription>
                         </div>
                         <div className="flex gap-3 items-center">
                             {/* Filter Dropdown */}
                             <div className="flex items-center gap-2">
-                                <Filter className="w-4 h-4 text-slate-400" />
+                                <Filter className="w-4 h-4 text-muted-foreground" />
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                                     <SelectTrigger className="w-[140px] h-9 text-sm">
                                         <SelectValue placeholder="Estado" />
@@ -164,7 +164,7 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
                                 </Select>
                             </div>
 
-                            <Button variant="outline" onClick={() => router.push('/reportes')} className="text-emerald-600 border-emerald-200 hover:bg-emerald-50">
+                            <Button variant="outline" onClick={() => router.push('/reportes')} className="text-success border-success/20 hover:bg-success/10">
                                 <Download className="w-4 h-4 mr-2" />
                                 Reportes 606/607
                             </Button>
@@ -173,53 +173,53 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
                 </CardHeader>
                 <CardContent className="p-0">
                     {filteredInvoices.length === 0 ? (
-                        <div className="text-center py-12 text-slate-400">
+                        <div className="text-center py-12 text-muted-foreground">
                             <div className="flex justify-center mb-4">
-                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center">
-                                    <Filter className="w-8 h-8 text-slate-300" />
+                                <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center">
+                                    <Filter className="w-8 h-8 text-muted-foreground/50" />
                                 </div>
                             </div>
-                            <p className="font-medium text-slate-600">No hay facturas en esta vista.</p>
-                            <p className="text-sm mt-1">Intenta cambiar el filtro o crea una nueva factura.</p>
+                            <p className="font-medium text-foreground">No hay facturas en esta vista.</p>
+                            <p className="text-sm mt-1 text-muted-foreground">Intenta cambiar el filtro o crea una nueva factura.</p>
                         </div>
                     ) : (
                         <>
                             {/* Desktop View */}
                             <div className="hidden md:block">
                                 <Table>
-                                    <TableHeader className="bg-slate-50">
-                                        <TableRow>
-                                            <TableHead className="font-semibold text-slate-600 pl-8">Fecha</TableHead>
-                                            <TableHead className="font-semibold text-slate-600">Cliente</TableHead>
-                                            <TableHead className="font-semibold text-slate-600">NCF</TableHead>
-                                            <TableHead className="font-semibold text-slate-600 text-center">Estado</TableHead>
-                                            <TableHead className="text-right font-semibold text-slate-600">Total</TableHead>
-                                            <TableHead className="text-right font-semibold text-slate-600 pr-8">Acciones</TableHead>
+                                    <TableHeader className="bg-muted/50">
+                                        <TableRow className="border-border/10">
+                                            <TableHead className="font-semibold text-muted-foreground pl-8">Fecha</TableHead>
+                                            <TableHead className="font-semibold text-muted-foreground">Cliente</TableHead>
+                                            <TableHead className="font-semibold text-muted-foreground">NCF</TableHead>
+                                            <TableHead className="font-semibold text-muted-foreground text-center">Estado</TableHead>
+                                            <TableHead className="text-right font-semibold text-muted-foreground">Total</TableHead>
+                                            <TableHead className="text-right font-semibold text-muted-foreground pr-8">Acciones</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {filteredInvoices.map((inv) => (
-                                            <TableRow key={inv.id} className="hover:bg-slate-50/80 transition-colors group">
-                                                <TableCell className="font-medium text-slate-700 pl-8">
+                                            <TableRow key={inv.id} className="hover:bg-muted/50 border-border/10 transition-colors group">
+                                                <TableCell className="font-medium text-foreground pl-8">
                                                     {new Date(inv.date).toLocaleDateString("es-DO", { day: '2-digit', month: 'short' })}
-                                                    <div className="text-[10px] text-slate-400">{new Date(inv.date).getFullYear()}</div>
+                                                    <div className="text-[10px] text-muted-foreground">{new Date(inv.date).getFullYear()}</div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="font-semibold text-slate-900">{inv.clientName}</div>
-                                                    <div className="text-xs text-slate-400 font-mono">{inv.rnc || inv.clientRnc}</div>
+                                                    <div className="font-semibold text-foreground">{inv.clientName}</div>
+                                                    <div className="text-xs text-muted-foreground font-mono">{inv.rnc || inv.clientRnc}</div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="text-sm font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded inline-block">
+                                                    <div className="text-sm font-mono text-foreground bg-accent/10 px-2 py-1 rounded inline-block">
                                                         {(inv.ncfSequence || inv.id).slice(-11)}
                                                     </div>
-                                                    <div className="text-[10px] text-slate-400 mt-0.5 max-w-[120px] truncate" title={inv.type}>
+                                                    <div className="text-[10px] text-muted-foreground mt-0.5 max-w-[120px] truncate" title={inv.type}>
                                                         {inv.type.split('-')[1]?.trim() || inv.type}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     {renderStatusBadge(inv.status)}
                                                 </TableCell>
-                                                <TableCell className="font-bold text-slate-800 text-right text-base">
+                                                <TableCell className="font-bold text-foreground text-right text-base">
                                                     {formatCurrency(inv.total)}
                                                 </TableCell>
                                                 <TableCell className="text-right pr-8">
@@ -252,35 +252,35 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
                             </div>
 
                             {/* Mobile View */}
-                            <div className="md:hidden divide-y divide-slate-100">
+                            <div className="md:hidden divide-y divide-border/10">
                                 {filteredInvoices.map((inv) => (
-                                    <div key={inv.id} className="p-5 space-y-4 bg-white hover:bg-slate-50 active:bg-slate-100 transition-colors" onClick={() => handleViewInvoice(inv)}>
+                                    <div key={inv.id} className="p-5 space-y-4 bg-card hover:bg-muted/30 active:bg-muted/50 transition-colors" onClick={() => handleViewInvoice(inv)}>
                                         <div className="flex justify-between items-start">
                                             <div className="space-y-1.5">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] font-mono text-slate-400 font-bold bg-slate-100 px-2 py-0.5 rounded uppercase">
+                                                    <span className="text-[10px] font-mono text-muted-foreground font-bold bg-accent/10 px-2 py-0.5 rounded uppercase">
                                                         No. {(inv.ncfSequence || inv.id).slice(-11)}
                                                     </span>
                                                     <StatusBadge status={inv.status} />
                                                 </div>
-                                                <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                                                    <User className="w-3.5 h-3.5 text-slate-400" />
+                                                <h3 className="font-bold text-foreground flex items-center gap-2">
+                                                    <User className="w-3.5 h-3.5 text-muted-foreground" />
                                                     {inv.clientName}
                                                 </h3>
-                                                <p className="text-[10px] text-slate-500 font-medium">
+                                                <p className="text-[10px] text-muted-foreground font-medium">
                                                     {new Date(inv.date).toLocaleDateString("es-DO", { day: '2-digit', month: 'long', year: 'numeric' })}
                                                 </p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="font-black text-indigo-700 text-xl tracking-tighter">{formatCurrency(inv.total)}</p>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Total DOP</p>
+                                                <p className="font-black text-accent text-xl tracking-tighter">{formatCurrency(inv.total)}</p>
+                                                <p className="text-[10px] text-muted-foreground font-bold uppercase mt-1">Total DOP</p>
                                             </div>
                                         </div>
                                         <div className="flex gap-2 pt-2">
                                             <Button variant="outline" size="sm" className="flex-1 h-9" onClick={(e) => { e.stopPropagation(); handleViewInvoice(inv); }}>
                                                 <Eye className="w-4 h-4 mr-2" /> Ver
                                             </Button>
-                                            <Button variant="outline" size="sm" className="flex-1 h-9 text-green-600 border-green-200" onClick={(e) => { e.stopPropagation(); handleWhatsApp(inv); }}>
+                                            <Button variant="outline" size="sm" className="flex-1 h-9 text-success border-success/20" onClick={(e) => { e.stopPropagation(); handleWhatsApp(inv); }}>
                                                 <MessageCircle className="w-4 h-4 mr-2" /> WhatsApp
                                             </Button>
                                             <Button variant="outline" size="sm" className="h-9 w-10 p-0" onClick={(e) => { e.stopPropagation(); handleDownloadPDF(inv); }}>

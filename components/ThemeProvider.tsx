@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "dark" | "light" | "system";
+type Theme = "light" | "midnight" | "luxury" | "system";
 
 interface ThemeProviderProps {
     children: React.ReactNode;
@@ -25,12 +25,13 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 export function ThemeProvider({
     children,
     defaultTheme = "system",
-    storageKey = "vite-ui-theme",
+    storageKey = "lexis-theme",
     ...props
 }: ThemeProviderProps) {
     const [theme, setTheme] = useState<Theme>(() => {
         if (typeof window !== "undefined") {
-            return (localStorage.getItem(storageKey) as Theme) || defaultTheme;
+            const savedTheme = localStorage.getItem(storageKey) as Theme;
+            return savedTheme || defaultTheme;
         }
         return defaultTheme;
     });
@@ -38,19 +39,25 @@ export function ThemeProvider({
     useEffect(() => {
         const root = window.document.documentElement;
 
-        root.classList.remove("light", "dark");
+        // Remove old theme classes and attributes
+        root.classList.remove("light", "dark", "midnight", "luxury");
+        root.removeAttribute("data-theme");
+
+        let themeToApply = theme;
 
         if (theme === "system") {
-            const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-                .matches
-                ? "dark"
-                : "light";
-
-            root.classList.add(systemTheme);
-            return;
+            const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+            themeToApply = isDark ? "midnight" : "light";
         }
 
-        root.classList.add(theme);
+        // Apply theme as class and data-theme attribute
+        root.classList.add(themeToApply);
+        root.setAttribute("data-theme", themeToApply);
+
+        // Map 'midnight' and 'luxury' to 'dark' class for tailwind 'dark:' utility support
+        if (themeToApply === "midnight" || themeToApply === "luxury") {
+            root.classList.add("dark");
+        }
     }, [theme]);
 
     const value = {

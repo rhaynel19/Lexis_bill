@@ -44,24 +44,24 @@ export default function ProtectedLayout({
 
     if (isLoading) {
         return (
-            <div className="h-screen w-full bg-[#0A192F] flex items-center justify-center">
+            <div className="h-screen w-full bg-background flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-[#D4AF37] border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-[#D4AF37] font-serif tracking-widest uppercase text-xs">Verificando Credenciales...</p>
+                    <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-accent font-serif tracking-widest uppercase text-xs">Verificando Credenciales...</p>
                 </div>
             </div>
         );
     }
     return (
         <div className="flex flex-col h-screen bg-background text-foreground transition-colors duration-300">
-            <div className="flex-none border-b border-[#D4AF37]/20 bg-[#0A192F] shadow-lg sticky top-0 z-50 transition-colors duration-300">
+            <div className="flex-none border-b border-border/20 bg-secondary shadow-lg sticky top-0 z-50 transition-colors duration-300">
                 <div className="container mx-auto px-4 py-4 flex justify-between items-center">
                     <Link href="/dashboard">
                         <div className="group">
                             <h1 className="text-2xl font-extrabold tracking-tight cursor-pointer transition-transform group-hover:scale-105">
-                                <span className="text-[#D4AF37]">LEXIS</span> <span className="text-[#F9F6EE] font-light">BILL</span>
+                                <span className="text-accent">LEXIS</span> <span className="text-foreground font-light">BILL</span>
                             </h1>
-                            <p className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-medium group-hover:text-[#D4AF37] transition-colors">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-medium group-hover:text-accent transition-colors">
                                 El orden que te deja tranquilo
                             </p>
                         </div>
@@ -74,13 +74,13 @@ export default function ProtectedLayout({
                         {/* Mobile Menu Trigger */}
                         <Sheet>
                             <SheetTrigger asChild>
-                                <Button variant="ghost" size="icon" className="md:hidden text-white hover:bg-white/10">
+                                <Button variant="ghost" size="icon" className="md:hidden text-foreground hover:bg-foreground/10">
                                     <Menu className="w-6 h-6" />
                                 </Button>
                             </SheetTrigger>
-                            <SheetContent side="left" className="bg-[#0A192F] text-[#F9F6EE] border-r border-[#D4AF37]/20 p-0 w-72 flex flex-col">
-                                <SheetHeader className="p-6 border-b border-[#D4AF37]/10 flex-none">
-                                    <SheetTitle className="text-[#D4AF37] text-left uppercase tracking-tighter font-black">LEXIS BILL</SheetTitle>
+                            <SheetContent side="left" className="bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-0 w-72 flex flex-col">
+                                <SheetHeader className="p-6 border-b border-sidebar-border/50 flex-none">
+                                    <SheetTitle className="text-sidebar-primary text-left uppercase tracking-tighter font-black">LEXIS BILL</SheetTitle>
                                 </SheetHeader>
                                 <nav className="flex-1 overflow-y-auto p-4">
                                     <SidebarLinks isMobile onLogout={handleLogout} />
@@ -98,17 +98,17 @@ export default function ProtectedLayout({
 
             <div className="flex flex-1 overflow-hidden h-full">
                 {/* Desktop Sidebar */}
-                <aside className="hidden md:flex w-64 flex-col bg-[#0A192F] text-[#F9F6EE] border-r border-[#D4AF37]/10 h-full overflow-y-auto">
+                <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border h-full overflow-y-auto">
                     <nav className="flex-1 px-4 py-8 flex flex-col">
                         <SidebarLinks onLogout={handleLogout} />
                     </nav>
-                    <div className="p-6 border-t border-[#D4AF37]/5 text-center">
-                        <p className="text-[10px] text-slate-500 uppercase tracking-widest">Lexis Bill Pro</p>
+                    <div className="p-6 border-t border-sidebar-border/50 text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Lexis Bill Pro</p>
                     </div>
                 </aside>
 
                 {/* Contenido principal */}
-                <main className="flex-grow overflow-y-auto bg-slate-50">
+                <main className="flex-grow overflow-y-auto bg-background">
                     {children}
                 </main>
             </div>
@@ -126,21 +126,21 @@ export default function ProtectedLayout({
             </div>
 
             {/* Mobile Bottom Navigation Bar */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0A192F] border-t border-[#D4AF37]/20 px-4 py-2 flex justify-around items-center z-40 shadow-[0_-2px_15px_rgba(0,0,0,0.3)]">
-                <Link href="/dashboard" className="flex flex-col items-center gap-1 text-slate-400 hover:text-[#D4AF37]">
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-secondary border-t border-border/20 px-4 py-2 flex justify-around items-center z-40 shadow-[0_-2px_15px_rgba(0,0,0,0.3)]">
+                <Link href="/dashboard" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-accent">
                     <LayoutDashboard className="w-6 h-6" />
                     <span className="text-[10px] font-medium uppercase">Inicio</span>
                 </Link>
-                <Link href="/cotizaciones" className="flex flex-col items-center gap-1 text-slate-400 hover:text-[#D4AF37]">
+                <Link href="/cotizaciones" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-accent">
                     <FileText className="w-6 h-6" />
                     <span className="text-[10px] font-medium uppercase">Cotiza</span>
                 </Link>
                 <div className="w-12"></div> {/* Space for FAB */}
-                <Link href="/reportes" className="flex flex-col items-center gap-1 text-slate-400 hover:text-[#D4AF37]">
+                <Link href="/reportes" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-accent">
                     <Plus className="w-6 h-6 rotate-45" />
                     <span className="text-[10px] font-medium uppercase">Fiscal</span>
                 </Link>
-                <Link href="/configuracion" className="flex flex-col items-center gap-1 text-slate-400 hover:text-[#D4AF37]">
+                <Link href="/configuracion" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-accent">
                     <Settings className="w-6 h-6" />
                     <span className="text-[10px] font-medium uppercase">Perfil</span>
                 </Link>
@@ -153,30 +153,30 @@ function SidebarLinks({ isMobile = false, onLogout }: { isMobile?: boolean, onLo
     return (
         <div className="flex flex-col h-full justify-between">
             <div className="space-y-2">
-                <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors group">
-                    <LayoutDashboard className="w-5 h-5 text-[#D4AF37]" />
+                <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-primary/10 transition-colors group">
+                    <LayoutDashboard className="w-5 h-5 text-sidebar-primary" />
                     <span className="font-medium">Dashboard</span>
                 </Link>
-                <Link href="/nueva-factura" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#D4AF37] text-[#0A192F] font-bold shadow-lg shadow-amber-500/20 hover:scale-[1.02] transition-all">
+                <Link href="/nueva-factura" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold shadow-lg shadow-sidebar-primary/20 hover:scale-[1.02] transition-all">
                     <Plus className="w-5 h-5" />
                     <span>Nueva Factura</span>
                 </Link>
-                <div className="pt-4 pb-2 px-4 text-[10px] text-slate-500 uppercase tracking-widest font-bold border-t border-[#D4AF37]/5 mt-2">Documentos</div>
-                <Link href="/nueva-cotizacion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
-                    <FileText className="w-5 h-5 text-slate-400" />
+                <div className="pt-4 pb-2 px-4 text-[10px] text-sidebar-foreground/50 uppercase tracking-widest font-bold border-t border-sidebar-border/30 mt-2">Documentos</div>
+                <Link href="/nueva-cotizacion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                    <FileText className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Nueva Cotización</span>
                 </Link>
-                <Link href="/cotizaciones" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
-                    <FileText className="w-5 h-5 text-slate-400" />
+                <Link href="/cotizaciones" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                    <FileText className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Ver Cotizaciones</span>
                 </Link>
-                <div className="pt-4 pb-2 px-4 text-[10px] text-slate-500 uppercase tracking-widest font-bold border-t border-[#D4AF37]/5 mt-2">Gestión</div>
-                <Link href="/reportes" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
-                    <Download className="w-5 h-5 text-slate-400" />
+                <div className="pt-4 pb-2 px-4 text-[10px] text-sidebar-foreground/50 uppercase tracking-widest font-bold border-t border-sidebar-border/30 mt-2">Gestión</div>
+                <Link href="/reportes" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                    <Download className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Reportes 606/607</span>
                 </Link>
-                <Link href="/configuracion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
-                    <Settings className="w-5 h-5 text-slate-400" />
+                <Link href="/configuracion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                    <Settings className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Configuración</span>
                 </Link>
             </div>
@@ -185,7 +185,7 @@ function SidebarLinks({ isMobile = false, onLogout }: { isMobile?: boolean, onLo
                 <div className="mt-auto pt-8">
                     <button
                         onClick={onLogout}
-                        className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-colors border-t border-[#D4AF37]/5"
+                        className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors border-t border-border/10"
                     >
                         <LogOut className="w-5 h-5" />
                         <span className="text-sm font-medium">Cerrar Sesión</span>

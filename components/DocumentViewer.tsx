@@ -186,16 +186,16 @@ export function DocumentViewer({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl h-[95vh] md:h-[90vh] p-0 flex flex-col overflow-hidden bg-white border-none shadow-2xl">
+            <DialogContent className="max-w-4xl h-[95vh] md:h-[90vh] p-0 flex flex-col overflow-hidden bg-background border-border/20 shadow-2xl">
                 {/* Header Fijo */}
-                <div className="p-6 border-b bg-white flex-shrink-0 z-20">
+                <div className="p-6 border-b border-border/10 bg-secondary flex-shrink-0 z-20">
                     <div className="flex justify-between items-center">
                         <div>
-                            <DialogTitle className="text-xl md:text-2xl font-serif font-black text-slate-900 flex items-center gap-3">
+                            <DialogTitle className="text-xl md:text-2xl font-serif font-black text-foreground flex items-center gap-3">
                                 {type === "quote" ? "Cotización" : "Factura"}
                                 <StatusBadge status={document.status || (type === "quote" ? "borrador" : "emitida")} />
                             </DialogTitle>
-                            <DialogDescription className="text-slate-500 mt-1 font-medium">
+                            <DialogDescription className="text-muted-foreground mt-1 font-medium">
                                 No. {documentNumber} • {type === "quote" ? "Propuesta comercial" : "Comprobante fiscal"}
                             </DialogDescription>
                         </div>
@@ -203,7 +203,7 @@ export function DocumentViewer({
                             variant="ghost"
                             size="icon"
                             onClick={onClose}
-                            className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full h-10 w-10 transition-colors"
+                            className="text-muted-foreground hover:text-foreground hover:bg-accent/10 rounded-full h-10 w-10 transition-colors"
                         >
                             <X className="w-5 h-5" />
                         </Button>
@@ -211,35 +211,35 @@ export function DocumentViewer({
                 </div>
 
                 {/* Body con Scroll */}
-                <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-12 bg-white">
+                <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-12 bg-background">
                     {/* Sección 1: Encabezado del Documento (Empresa y Cliente) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                         <div className="space-y-4">
                             <div>
-                                <h4 className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Emisor</h4>
-                                <h3 className="text-xl font-bold text-slate-800 leading-tight">{companyName}</h3>
-                                <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">
-                                    <span className="font-semibold text-slate-400">RNC:</span> {companyRnc}
+                                <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Emisor</h4>
+                                <h3 className="text-xl font-bold text-foreground leading-tight">{companyName}</h3>
+                                <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
+                                    <span className="font-semibold text-muted-foreground/60">RNC:</span> {companyRnc}
                                 </p>
                             </div>
                             <div className="pt-2">
-                                <h4 className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Fecha de Emisión</h4>
-                                <p className="text-slate-800 font-medium">{formatDate(documentDate)}</p>
+                                <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Fecha de Emisión</h4>
+                                <p className="text-foreground font-medium">{formatDate(documentDate)}</p>
                             </div>
                         </div>
 
-                        <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                        <div className="space-y-4 bg-secondary p-6 rounded-2xl border border-border/50">
                             <div>
-                                <h4 className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Cliente</h4>
-                                <h3 className="text-lg font-bold text-slate-800">{clientName}</h3>
-                                <p className="text-sm text-slate-600 mt-1 flex items-center gap-2">
-                                    <span className="font-semibold text-slate-400">RNC/Cédula:</span> {clientRnc}
+                                <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Cliente</h4>
+                                <h3 className="text-lg font-bold text-foreground">{clientName}</h3>
+                                <p className="text-sm text-foreground/80 mt-1 flex items-center gap-2">
+                                    <span className="font-semibold text-muted-foreground/60">RNC/Cédula:</span> {clientRnc}
                                 </p>
                             </div>
                             {type === "quote" && (document as Quote).validUntil && (
-                                <div className="pt-2 border-t border-slate-200">
-                                    <h4 className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Válida hasta</h4>
-                                    <p className="text-slate-700 font-medium">{formatDate((document as Quote).validUntil!)}</p>
+                                <div className="pt-2 border-t border-border/10">
+                                    <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Válida hasta</h4>
+                                    <p className="text-foreground/80 font-medium">{formatDate((document as Quote).validUntil!)}</p>
                                 </div>
                             )}
                         </div>
@@ -247,32 +247,32 @@ export function DocumentViewer({
 
                     {/* Tabla de Items */}
                     <div className="space-y-4">
-                        <h4 className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Detalle de Productos / Servicios</h4>
-                        <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Detalle de Productos / Servicios</h4>
+                        <div className="border border-border/30 rounded-xl overflow-hidden shadow-sm">
                             <div className="overflow-x-auto">
                                 <Table>
-                                    <TableHeader className="bg-slate-50">
-                                        <TableRow className="hover:bg-transparent">
-                                            <TableHead className="text-slate-600 font-bold py-4">Descripción</TableHead>
-                                            <TableHead className="text-center text-slate-600 font-bold py-4">Cant.</TableHead>
-                                            <TableHead className="text-right text-slate-600 font-bold py-4">Precio Unit.</TableHead>
-                                            <TableHead className="text-right text-slate-600 font-bold py-4">Subtotal</TableHead>
+                                    <TableHeader className="bg-muted/50">
+                                        <TableRow className="hover:bg-transparent border-border/10">
+                                            <TableHead className="text-foreground font-bold py-4">Descripción</TableHead>
+                                            <TableHead className="text-center text-foreground font-bold py-4">Cant.</TableHead>
+                                            <TableHead className="text-right text-foreground font-bold py-4">Precio Unit.</TableHead>
+                                            <TableHead className="text-right text-foreground font-bold py-4">Subtotal</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {items.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={4} className="text-center text-slate-400 py-10 italic">
+                                                <TableCell colSpan={4} className="text-center text-muted-foreground py-10 italic">
                                                     No hay conceptos registrados en este documento
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
                                             items.map((item, index) => (
-                                                <TableRow key={index} className="border-b border-slate-100 last:border-0">
-                                                    <TableCell className="py-4 text-slate-800 font-medium">{item.description || "Sin descripción"}</TableCell>
-                                                    <TableCell className="text-center py-4 text-slate-600">{item.quantity}</TableCell>
-                                                    <TableCell className="text-right py-4 text-slate-600">{formatCurrency(item.price)}</TableCell>
-                                                    <TableCell className="text-right py-4 text-slate-900 font-bold">
+                                                <TableRow key={index} className="border-b border-border/5 last:border-0">
+                                                    <TableCell className="py-4 text-foreground font-medium">{item.description || "Sin descripción"}</TableCell>
+                                                    <TableCell className="text-center py-4 text-muted-foreground">{item.quantity}</TableCell>
+                                                    <TableCell className="text-right py-4 text-muted-foreground">{formatCurrency(item.price)}</TableCell>
+                                                    <TableCell className="text-right py-4 text-foreground font-bold">
                                                         {formatCurrency(item.quantity * item.price)}
                                                     </TableCell>
                                                 </TableRow>
@@ -286,21 +286,21 @@ export function DocumentViewer({
                 </div>
 
                 {/* Footer Fijo con Totales y Botones */}
-                <div className="flex-shrink-0 bg-white border-t-2 border-slate-100 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
+                <div className="flex-shrink-0 bg-secondary border-t border-border/30 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
                     {/* Bloque de Totales */}
-                    <div className="bg-slate-50 px-6 py-4 md:px-10 border-b border-slate-100">
+                    <div className="bg-muted/30 px-6 py-4 md:px-10 border-b border-border/10">
                         <div className="flex flex-col items-end space-y-2">
-                            <div className="flex justify-between w-full md:w-80 text-sm text-slate-500">
+                            <div className="flex justify-between w-full md:w-80 text-sm text-muted-foreground">
                                 <span className="font-medium lowercase">Subtotal Gravado</span>
-                                <span className="font-bold text-slate-700">{formatCurrency(subtotal)}</span>
+                                <span className="font-bold text-foreground">{formatCurrency(subtotal)}</span>
                             </div>
-                            <div className="flex justify-between w-full md:w-80 text-sm text-slate-500">
+                            <div className="flex justify-between w-full md:w-80 text-sm text-muted-foreground">
                                 <span className="font-medium lowercase">ITBIS (18%)</span>
-                                <span className="font-bold text-slate-700">{formatCurrency(itbis)}</span>
+                                <span className="font-bold text-foreground">{formatCurrency(itbis)}</span>
                             </div>
-                            <div className="flex justify-between items-center w-full md:w-80 pt-2 mt-2 border-t-2 border-slate-200">
-                                <span className="text-slate-600 font-black uppercase tracking-tighter">Total General</span>
-                                <span className="text-3xl md:text-4xl font-black text-indigo-700 tracking-tight drop-shadow-sm">
+                            <div className="flex justify-between items-center w-full md:w-80 pt-2 mt-2 border-t border-border/20">
+                                <span className="text-foreground font-black uppercase tracking-tighter">Total General</span>
+                                <span className="text-3xl md:text-4xl font-black text-accent tracking-tight drop-shadow-sm">
                                     {formatCurrency(total)}
                                 </span>
                             </div>
@@ -308,11 +308,11 @@ export function DocumentViewer({
                     </div>
 
                     {/* Botones de Acción */}
-                    <div className="p-4 md:p-6 bg-white flex grid grid-cols-4 sm:flex gap-2 sm:gap-3 justify-end items-center">
+                    <div className="p-4 md:p-6 bg-secondary flex grid grid-cols-4 sm:flex gap-2 sm:gap-3 justify-end items-center">
                         <Button
                             variant="outline"
                             onClick={onClose}
-                            className="col-span-1 h-12 order-4 sm:order-1 border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 flex items-center justify-center p-0 sm:px-4"
+                            className="col-span-1 h-12 order-4 sm:order-1 border-border/40 text-muted-foreground hover:bg-muted/20 hover:text-foreground flex items-center justify-center p-0 sm:px-4"
                             title="Cerrar"
                         >
                             <X className="w-5 h-5 sm:hidden" />
@@ -323,7 +323,7 @@ export function DocumentViewer({
                             <Button
                                 variant="outline"
                                 onClick={handleEdit}
-                                className="col-span-1 h-12 order-3 sm:order-2 border-blue-200 text-blue-600 hover:bg-blue-50 font-bold flex items-center justify-center p-0 sm:px-4"
+                                className="col-span-1 h-12 order-3 sm:order-2 border-accent/20 text-accent hover:bg-accent/5 font-bold flex items-center justify-center p-0 sm:px-4"
                                 title="Editar"
                             >
                                 <Pencil className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
@@ -335,7 +335,7 @@ export function DocumentViewer({
                             <Button
                                 onClick={onSendWhatsApp}
                                 variant="outline"
-                                className="col-span-1 h-12 text-emerald-600 border-emerald-200 hover:bg-emerald-50 order-2 sm:order-2 font-bold flex items-center justify-center p-0 sm:px-4"
+                                className="col-span-1 h-12 text-success border-success/20 hover:bg-success/5 order-2 sm:order-2 font-bold flex items-center justify-center p-0 sm:px-4"
                                 title="WhatsApp"
                             >
                                 <MessageCircle className="w-6 h-6 sm:w-5 sm:h-5 sm:mr-2" />
@@ -347,7 +347,7 @@ export function DocumentViewer({
                             <Button
                                 onClick={onDownloadPDF}
                                 disabled={isGeneratingPDF}
-                                className="col-span-1 sm:col-span-auto h-12 bg-indigo-600 hover:bg-indigo-700 text-white order-1 sm:order-3 font-bold shadow-lg shadow-indigo-200 flex items-center justify-center p-0 sm:px-8"
+                                className="col-span-1 sm:col-span-auto h-12 bg-primary hover:bg-primary/90 text-primary-foreground order-1 sm:order-3 font-bold shadow-lg shadow-primary/20 flex items-center justify-center p-0 sm:px-8"
                                 title="Descargar PDF"
                             >
                                 <Download className="w-6 h-6 sm:w-5 sm:h-5 sm:mr-2" />

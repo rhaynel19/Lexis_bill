@@ -616,8 +616,8 @@ export default function NewInvoice() {
             {/* Encabezado */}
             <div className="mb-8 flex items-center justify-between">
                 <div>
-                    <h2 className="text-3xl font-bold text-primary">Nueva Factura</h2>
-                    <p className="text-gray-600">Crear comprobante fiscal electrónico (e-CF)</p>
+                    <h2 className="text-3xl font-bold text-accent">Nueva Factura</h2>
+                    <p className="text-muted-foreground">Crear comprobante fiscal electrónico (e-CF)</p>
                 </div>
                 <Link href="/">
                     <Button variant="outline">← Volver</Button>
@@ -629,7 +629,7 @@ export default function NewInvoice() {
                 <Button variant="secondary" size="sm" onClick={handleSaveTemplate} className="gap-2">
                     <Save className="h-4 w-4" /> Guardar como Plantilla
                 </Button>
-                <div className="h-8 w-[1px] bg-slate-200 mx-2"></div>
+                <div className="h-8 w-[1px] bg-border mx-2"></div>
                 {/* Loader Mock */}
                 <Select onValueChange={(val) => {
                     const templates = JSON.parse(localStorage.getItem("invoiceTemplates") || "[]");
@@ -689,7 +689,7 @@ export default function NewInvoice() {
                                                 </SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <p className="text-xs text-gray-500">
+                                        <p className="text-xs text-muted-foreground">
                                             💡 Tipo 31 incluye retención de ISR del 10%
                                         </p>
                                     </div>
@@ -707,8 +707,8 @@ export default function NewInvoice() {
                                 <CardContent className="space-y-4">
                                     {/* Selector de Cliente Guardado */}
                                     {savedClients.length > 0 && (
-                                        <div className="space-y-2 mb-4 p-4 bg-slate-50 rounded border border-slate-100">
-                                            <Label className="text-slate-500">📂 Clientes Frecuentes</Label>
+                                        <div className="space-y-2 mb-4 p-4 bg-muted/30 rounded border border-border/10">
+                                            <Label className="text-muted-foreground">📂 Clientes Frecuentes</Label>
                                             <Select onValueChange={handleSelectClient}>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="Seleccionar cliente guardado..." />
@@ -732,18 +732,18 @@ export default function NewInvoice() {
                                                     value={clientName}
                                                     onChange={(e) => setClientName(e.target.value)}
                                                     readOnly={isClientLocked}
-                                                    className={isClientLocked ? "bg-slate-50 border-emerald-200 text-slate-700 font-semibold pr-10" : ""}
+                                                    className={isClientLocked ? "bg-muted/50 border-success/30 text-foreground font-semibold pr-10" : ""}
                                                     required
                                                 />
                                                 {isClientLocked && (
                                                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold hidden sm:inline-block">
+                                                        <span className="text-[10px] bg-success/20 text-success px-2 py-0.5 rounded-full font-bold hidden sm:inline-block">
                                                             ✨ Frecuente
                                                         </span>
                                                         <button
                                                             type="button"
                                                             onClick={() => setIsClientLocked(false)}
-                                                            className="text-slate-400 hover:text-slate-600"
+                                                            className="text-muted-foreground hover:text-foreground"
                                                             title="Editar nombre"
                                                         >
                                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -761,7 +761,7 @@ export default function NewInvoice() {
                                                     value={rnc}
                                                     onChange={(e) => handleRncChange(e.target.value)}
                                                     onBlur={handleRncBlur}
-                                                    className={rncError ? "border-red-500 focus-visible:ring-red-500" : ""}
+                                                    className={rncError ? "border-destructive focus-visible:ring-destructive" : ""}
                                                     required
                                                 />
                                                 <Button
@@ -776,7 +776,7 @@ export default function NewInvoice() {
                                                 </Button>
                                             </div>
                                             {rncError && (
-                                                <p className="text-xs text-red-500">{rncError}</p>
+                                                <p className="text-xs text-destructive">{rncError}</p>
                                             )}
                                         </div>
                                     </div>
@@ -798,9 +798,9 @@ export default function NewInvoice() {
                                             id="save-client"
                                             checked={saveClient}
                                             onChange={(e) => setSaveClient(e.target.checked)}
-                                            className="h-4 w-4 text-blue-600 rounded border-gray-300"
+                                            className="h-4 w-4 text-accent rounded border-border/30"
                                         />
-                                        <Label htmlFor="save-client" className="text-sm font-normal text-gray-600 cursor-pointer">
+                                        <Label htmlFor="save-client" className="text-sm font-normal text-muted-foreground cursor-pointer">
                                             Guardar en mi lista de clientes
                                         </Label>
                                     </div>
@@ -808,7 +808,7 @@ export default function NewInvoice() {
                             </Card>
 
                             {/* Selector de Profesión / Vertical */}
-                            <Card className="border-l-4 border-l-purple-500">
+                            <Card className="border-l-4 border-l-accent">
                                 <CardHeader>
                                     <CardTitle>Perfil de Facturación</CardTitle>
                                     <CardDescription>
@@ -834,7 +834,7 @@ export default function NewInvoice() {
 
                                     {/* Campos para Médicos */}
                                     {profession === "medic" && (
-                                        <div className="grid gap-4 md:grid-cols-2 mt-4 p-4 bg-purple-50 rounded-lg">
+                                        <div className="grid gap-4 md:grid-cols-2 mt-4 p-4 bg-accent/5 rounded-lg border border-accent/10">
                                             <div className="space-y-2">
                                                 <Label htmlFor="ars">ARS (Aseguradora)</Label>
                                                 <Select value={ars} onValueChange={setArs}>
@@ -865,7 +865,7 @@ export default function NewInvoice() {
 
                                     {/* Campos para Ingenieros (Technical) */}
                                     {profession === "technical" && (
-                                        <div className="space-y-2 mt-4 p-4 bg-orange-50 rounded-lg">
+                                        <div className="space-y-2 mt-4 p-4 bg-secondary/50 rounded-lg border border-border/10">
                                             <Label htmlFor="project-desc">Descripción de la Obra / Proyecto</Label>
                                             <Input
                                                 id="project-desc"
@@ -873,13 +873,13 @@ export default function NewInvoice() {
                                                 value={projectDesc}
                                                 onChange={(e) => setProjectDesc(e.target.value)}
                                             />
-                                            <p className="text-xs text-gray-500">Se incluirá como referencia en la factura.</p>
+                                            <p className="text-xs text-muted-foreground">Se incluirá como referencia en la factura.</p>
                                         </div>
                                     )}
 
                                     {/* Campos para Inmobiliaria (Mapped to Other for now) */}
                                     {profession === "other" && (
-                                        <div className="space-y-2 mt-4 p-4 bg-green-50 rounded-lg">
+                                        <div className="space-y-2 mt-4 p-4 bg-secondary/50 rounded-lg border border-border/10">
                                             <Label htmlFor="property-ref">Referencia de Inmueble (Opcional)</Label>
                                             <Input
                                                 id="property-ref"
@@ -893,9 +893,9 @@ export default function NewInvoice() {
                             </Card>
 
                             {/* AI Magic Input */}
-                            <Card className="bg-gradient-to-r from-violet-500/5 to-fuchsia-500/5 border-violet-100">
+                            <Card className="bg-gradient-to-r from-accent/5 to-primary/5 border-accent/10">
                                 <CardHeader className="pb-3">
-                                    <CardTitle className="text-violet-700 flex items-center gap-2 text-lg">
+                                    <CardTitle className="text-accent flex items-center gap-2 text-lg">
                                         <Sparkles className="w-5 h-5" />
                                         Generador Mágico (AI)
                                     </CardTitle>
@@ -908,7 +908,7 @@ export default function NewInvoice() {
                                         <div className="relative flex-1">
                                             <Input
                                                 placeholder="Ej: Instalación de 2 cámaras por 3500 pesos..."
-                                                className="pr-10 border-violet-200 focus-visible:ring-violet-500"
+                                                className="pr-10 border-accent/20 focus-visible:ring-accent"
                                                 value={magicCommand}
                                                 onChange={(e) => setMagicCommand(e.target.value)}
                                                 onKeyDown={(e) => {
@@ -924,7 +924,7 @@ export default function NewInvoice() {
                                             type="button"
                                             onClick={handleMagicParse}
                                             disabled={isParsingAI || !magicCommand.trim()}
-                                            className="bg-violet-600 hover:bg-violet-700 text-white gap-2"
+                                            className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2"
                                         >
                                             {isParsingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                                             {isParsingAI ? "Pensando..." : "Generar"}
@@ -972,7 +972,7 @@ export default function NewInvoice() {
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => handleVoiceDictation(item.id)}
-                                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
+                                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-accent transition-colors"
                                                                         title="Dictado por voz"
                                                                     >
                                                                         <Mic className="w-4 h-4" />
@@ -981,7 +981,7 @@ export default function NewInvoice() {
                                                                 {savedServices.length > 0 && (
                                                                     <div className="mt-1">
                                                                         <Select onValueChange={(val) => handleSelectService(item.id, val)}>
-                                                                            <SelectTrigger className="h-6 text-xs border-0 bg-transparent text-blue-600 p-0 hover:underline shadow-none">
+                                                                            <SelectTrigger className="h-6 text-xs border-0 bg-transparent text-accent p-0 hover:underline shadow-none">
                                                                                 <SelectValue placeholder="✨ Cargar servicio..." />
                                                                             </SelectTrigger>
                                                                             <SelectContent>
@@ -1035,7 +1035,7 @@ export default function NewInvoice() {
                                                                         variant="ghost"
                                                                         size="sm"
                                                                         onClick={() => removeItem(item.id)}
-                                                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                                                     >
                                                                         ✕
                                                                     </Button>
@@ -1044,7 +1044,7 @@ export default function NewInvoice() {
                                                         </TableRow>
                                                         {/* Fila extra para opciones por ítem (Solo Abogados por ahora) */}
                                                         {profession === "lawyer" && (
-                                                            <TableRow className="border-0 bg-gray-50/50">
+                                                            <TableRow className="border-0 bg-muted/20">
                                                                 <TableCell colSpan={5} className="pt-0 pb-2">
                                                                     <div className="flex items-center space-x-2 text-sm pl-2">
                                                                         <input
@@ -1052,9 +1052,9 @@ export default function NewInvoice() {
                                                                             id={`exempt-${item.id}`}
                                                                             checked={item.isExempt || false}
                                                                             onChange={(e) => updateItem(item.id, "isExempt", e.target.checked)}
-                                                                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                                            className="rounded border-border/30 text-accent focus:ring-accent"
                                                                         />
-                                                                        <Label htmlFor={`exempt-${item.id}`} className="font-normal text-gray-600">
+                                                                        <Label htmlFor={`exempt-${item.id}`} className="font-normal text-muted-foreground">
                                                                             Gasto Legal / Suplido (No Gravable)
                                                                         </Label>
                                                                     </div>
@@ -1080,23 +1080,23 @@ export default function NewInvoice() {
                                     </div>
 
                                     {/* Opciones de Retención */}
-                                    <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div className="mt-8 p-4 bg-muted/30 rounded-lg border border-border/10">
                                         <div className="flex items-center space-x-2">
                                             <input
                                                 type="checkbox"
                                                 id="apply-retentions"
                                                 checked={applyRetentions}
                                                 onChange={(e) => setApplyRetentions(e.target.checked)}
-                                                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                                className="h-4 w-4 text-accent rounded border-border/30 focus:ring-accent"
                                             />
-                                            <Label htmlFor="apply-retentions" className="font-medium text-gray-900 cursor-pointer">
+                                            <Label htmlFor="apply-retentions" className="font-medium text-foreground cursor-pointer">
                                                 Aplicar Retenciones de Ley (Persona Jurídica)
                                             </Label>
                                         </div>
                                         {applyRetentions && (
                                             <div className="mt-3 ml-6 grid gap-4 grid-cols-1 md:grid-cols-2">
-                                                <div className="text-sm text-gray-600">
-                                                    <span className="block font-medium text-gray-700">ISR (10%)</span>
+                                                <div className="text-sm text-muted-foreground">
+                                                    <span className="block font-medium text-foreground">ISR (10%)</span>
                                                     Se retiene el 10% del subtotal por servicios profesionales.
                                                 </div>
                                                 <div>
@@ -1121,7 +1121,7 @@ export default function NewInvoice() {
                             </Card>
 
                             {/* Resumen de Totales */}
-                            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                            <Card className="bg-gradient-to-br from-accent/5 to-primary/5 border-accent/20">
                                 <CardHeader>
                                     <CardTitle className="text-blue-900">Resumen de Totales</CardTitle>
                                     <CardDescription className="text-blue-700">
@@ -1130,29 +1130,29 @@ export default function NewInvoice() {
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     {/* Subtotal */}
-                                    <div className="flex justify-between items-center py-2 border-b border-blue-200">
-                                        <span className="text-gray-700 font-medium">Subtotal:</span>
-                                        <span className="text-xl font-semibold text-gray-900">
+                                    <div className="flex justify-between items-center py-2 border-b border-border/10">
+                                        <span className="text-muted-foreground font-medium">Subtotal:</span>
+                                        <span className="text-xl font-semibold text-foreground">
                                             {formatCurrency(subtotal)}
                                         </span>
                                     </div>
 
                                     {/* ITBIS */}
-                                    <div className="flex justify-between items-center py-2 border-b border-blue-200">
-                                        <span className="text-gray-700 font-medium">
+                                    <div className="flex justify-between items-center py-2 border-b border-border/10">
+                                        <span className="text-muted-foreground font-medium">
                                             ITBIS (18%):
-                                            <span className="text-xs text-gray-500 ml-2">
+                                            <span className="text-xs text-muted-foreground/50 ml-2">
                                                 💡 Impuesto automático
                                             </span>
                                         </span>
-                                        <span className="text-xl font-semibold text-green-700">
+                                        <span className="text-xl font-semibold text-success">
                                             + {formatCurrency(itbis)}
                                         </span>
                                     </div>
 
                                     {/* Retención ISR */}
                                     {isrRetention > 0 && (
-                                        <div className="flex justify-between items-center py-2 border-b border-blue-200 text-red-600">
+                                        <div className="flex justify-between items-center py-2 border-b border-border/10 text-destructive">
                                             <span className="font-medium">
                                                 Retención ISR (10%):
                                             </span>
@@ -1164,7 +1164,7 @@ export default function NewInvoice() {
 
                                     {/* Retención ITBIS */}
                                     {itbisRetention > 0 && (
-                                        <div className="flex justify-between items-center py-2 border-b border-blue-200 text-red-600">
+                                        <div className="flex justify-between items-center py-2 border-b border-border/10 text-destructive">
                                             <span className="font-medium">
                                                 Retención ITBIS ({itbisRetentionRate * 100}%):
                                             </span>
@@ -1175,15 +1175,15 @@ export default function NewInvoice() {
                                     )}
 
                                     {/* Total Factura (Comprobante) */}
-                                    <div className="flex justify-between items-center py-2 border-b-2 border-blue-900 mt-2">
-                                        <span className="text-lg font-bold text-blue-900">Total Factura:</span>
-                                        <span className="text-lg font-bold text-blue-900">
+                                    <div className="flex justify-between items-center py-2 border-b-2 border-accent mt-2">
+                                        <span className="text-lg font-bold text-accent">Total Factura:</span>
+                                        <span className="text-lg font-bold text-accent">
                                             {formatCurrency(total)}
                                         </span>
                                     </div>
 
                                     {/* Total a Recibir (Neto) */}
-                                    <div className="flex justify-between items-center py-3 bg-green-500 text-white rounded-lg px-4 mt-4 shadow-lg">
+                                    <div className="flex justify-between items-center py-3 bg-success text-success-foreground rounded-lg px-4 mt-4 shadow-lg">
                                         <span className="text-lg font-bold">NETO A RECIBIR:</span>
                                         <span className="text-2xl font-bold">
                                             {formatCurrency(totalNeto)}
@@ -1192,9 +1192,9 @@ export default function NewInvoice() {
 
                                     {/* Total en Letras */}
                                     {total > 0 && (
-                                        <div className="mt-4 p-3 bg-white rounded-lg border border-blue-300">
-                                            <p className="text-xs text-gray-600 mb-1">Son:</p>
-                                            <p className="text-sm font-medium text-gray-900 italic">
+                                        <div className="mt-4 p-3 bg-background rounded-lg border border-accent/30">
+                                            <p className="text-xs text-muted-foreground mb-1">Son:</p>
+                                            <p className="text-sm font-medium text-foreground italic">
                                                 {numberToText(total)}
                                             </p>
                                         </div>
@@ -1214,16 +1214,16 @@ export default function NewInvoice() {
                                         <Button
                                             type="button"
                                             variant="outline"
-                                            className="w-full md:w-auto border-blue-600 text-blue-600 hover:bg-blue-50 lg:hidden"
+                                            className="w-full md:w-auto border-accent/30 text-accent hover:bg-accent/10 lg:hidden"
                                         >
                                             <Eye className="w-4 h-4 mr-2" />
                                             Vista Previa
                                         </Button>
                                     </SheetTrigger>
-                                    <SheetContent side="bottom" className="h-[85vh] overflow-y-auto rounded-t-3xl p-0">
-                                        <div className="p-4 bg-slate-50 sticky top-0 z-10 border-b flex justify-between items-center">
-                                            <h3 className="font-bold text-lg">Vista Previa</h3>
-                                            <Button size="sm" onClick={handlePreviewPDF}>Descargar PDF</Button>
+                                    <SheetContent side="bottom" className="h-[85vh] overflow-y-auto rounded-t-3xl p-0 bg-background border-t border-border/20">
+                                        <div className="p-4 bg-secondary sticky top-0 z-10 border-b border-border/10 flex justify-between items-center">
+                                            <h3 className="font-bold text-lg text-foreground">Vista Previa</h3>
+                                            <Button size="sm" onClick={handlePreviewPDF} className="bg-primary text-primary-foreground">Descargar PDF</Button>
                                         </div>
                                         <div className="p-4">
                                             <InvoicePreview data={{
@@ -1243,7 +1243,7 @@ export default function NewInvoice() {
                                 <Button
                                     type="submit"
                                     size="lg"
-                                    className="w-full md:w-auto bg-blue-600 hover:bg-blue-700"
+                                    className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground"
                                     disabled={!!rncError || isSearchingRNC || isGenerating}
                                 >
                                     {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isSearchingRNC ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "💾")} {isGenerating ? "Generando..." : "Guardar y Descargar PDF"}
@@ -1282,13 +1282,13 @@ export default function NewInvoice() {
 
             {/* Success Modal */}
             <Dialog open={showSuccessModal} onOpenChange={() => router.push('/')}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md bg-background border-border/20">
                     <DialogHeader>
-                        <div className="mx-auto bg-green-100 p-3 rounded-full mb-4">
-                            <CheckCircle className="h-10 w-10 text-green-600" />
+                        <div className="mx-auto bg-success/10 p-3 rounded-full mb-4">
+                            <CheckCircle className="h-10 w-10 text-success" />
                         </div>
-                        <DialogTitle className="text-center text-xl">¡Factura Emitida Exitosamente!</DialogTitle>
-                        <DialogDescription className="text-center text-lg font-mono text-slate-900 font-bold mt-2">
+                        <DialogTitle className="text-center text-xl text-foreground">¡Factura Emitida Exitosamente!</DialogTitle>
+                        <DialogDescription className="text-center text-lg font-mono text-foreground font-bold mt-2">
                             {lastInvoiceNCF}
                         </DialogDescription>
                         <DialogDescription className="text-center">
