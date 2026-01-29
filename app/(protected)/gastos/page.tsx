@@ -25,7 +25,6 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
     DialogDescription,
     DialogFooter
 } from "@/components/ui/dialog";
@@ -205,12 +204,13 @@ export default function GastosPage() {
                     </div>
 
                     <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) resetForm(); }}>
-                        <DialogTrigger asChild>
-                            <Button className="w-full sm:w-auto bg-primary text-primary-foreground h-12 px-10 font-bold shadow-lg shadow-primary/20 hover:scale-[1.05] transition-all">
-                                <Plus className="w-5 h-5 mr-2" />
-                                Registrar Gasto
-                            </Button>
-                        </DialogTrigger>
+                        <Button
+                            className="w-full sm:w-auto bg-primary text-primary-foreground h-12 px-10 font-bold shadow-lg shadow-primary/20 hover:scale-[1.05] transition-all"
+                            onClick={() => setIsAddOpen(true)}
+                        >
+                            <Plus className="w-5 h-5 mr-2" />
+                            Registrar Gasto
+                        </Button>
                         <DialogContent className="max-w-md bg-background border-border/20 shadow-2xl">
                             <DialogHeader>
                                 <DialogTitle className="text-2xl font-serif">Registrar Gasto</DialogTitle>
