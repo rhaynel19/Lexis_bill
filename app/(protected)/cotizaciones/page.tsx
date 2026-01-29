@@ -122,17 +122,18 @@ export default function Quotes() {
                             ) : (
                                 quotes.map((q) => (
                                     <TableRow key={q.id} className="hover:bg-slate-50/50 border-b border-slate-50 last:border-0 transition-colors">
-                                        <TableCell className="font-mono text-xs text-slate-500 font-bold">{q.id}</TableCell>
+                                        <TableCell className="font-mono text-xs text-slate-500 dark:text-slate-400 font-bold">{q.id}</TableCell>
                                         <TableCell>
                                             <div>
-                                                <p className="font-bold text-slate-800">{q.clientName}</p>
-                                                <p className="text-[10px] text-slate-400 font-mono uppercase">{q.rnc}</p>
+                                                <p className="font-bold text-slate-800 dark:text-slate-200">{q.clientName}</p>
+                                                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono uppercase">{q.rnc}</p>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-sm text-slate-600 font-medium">{new Date(q.date).toLocaleDateString("es-DO")}</TableCell>
-                                        <TableCell className="font-black text-slate-900">
+                                        <TableCell className="text-sm text-slate-600 dark:text-slate-400 font-medium">{new Date(q.date).toLocaleDateString("es-DO")}</TableCell>
+                                        <TableCell className="font-black text-slate-900 dark:text-white">
                                             {new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP" }).format(q.total)}
                                         </TableCell>
+
                                         <TableCell className="text-center">
                                             <StatusBadge status={q.status || "borrador"} />
                                         </TableCell>

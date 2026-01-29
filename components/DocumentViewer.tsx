@@ -203,7 +203,7 @@ export function DocumentViewer({
                             variant="ghost"
                             size="icon"
                             onClick={onClose}
-                            className="text-slate-400 hover:text-slate-600 rounded-full"
+                            className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full h-10 w-10 transition-colors"
                         >
                             <X className="w-5 h-5" />
                         </Button>
@@ -308,23 +308,26 @@ export function DocumentViewer({
                     </div>
 
                     {/* Botones de Acción */}
-                    <div className="p-4 md:p-6 bg-white flex flex-col sm:flex-row gap-3 justify-end items-center">
+                    <div className="p-4 md:p-6 bg-white flex grid grid-cols-4 sm:flex gap-2 sm:gap-3 justify-end items-center">
                         <Button
                             variant="outline"
                             onClick={onClose}
-                            className="w-full sm:w-auto h-12 order-4 sm:order-1 border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                            className="col-span-1 h-12 order-4 sm:order-1 border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 flex items-center justify-center p-0 sm:px-4"
+                            title="Cerrar"
                         >
-                            Cerrar
+                            <X className="w-5 h-5 sm:hidden" />
+                            <span className="hidden sm:inline">Cerrar</span>
                         </Button>
 
                         {type === "quote" && (
                             <Button
                                 variant="outline"
                                 onClick={handleEdit}
-                                className="w-full sm:w-auto h-12 order-3 sm:order-2 border-blue-200 text-blue-600 hover:bg-blue-50 font-bold"
+                                className="col-span-1 h-12 order-3 sm:order-2 border-blue-200 text-blue-600 hover:bg-blue-50 font-bold flex items-center justify-center p-0 sm:px-4"
+                                title="Editar"
                             >
-                                <Pencil className="w-4 h-4 mr-2" />
-                                Editar
+                                <Pencil className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Editar</span>
                             </Button>
                         )}
 
@@ -332,10 +335,11 @@ export function DocumentViewer({
                             <Button
                                 onClick={onSendWhatsApp}
                                 variant="outline"
-                                className="w-full sm:w-auto h-12 text-emerald-600 border-emerald-200 hover:bg-emerald-50 order-2 sm:order-2 font-bold"
+                                className="col-span-1 h-12 text-emerald-600 border-emerald-200 hover:bg-emerald-50 order-2 sm:order-2 font-bold flex items-center justify-center p-0 sm:px-4"
+                                title="WhatsApp"
                             >
-                                <MessageCircle className="w-5 h-5 mr-2" />
-                                WhatsApp
+                                <MessageCircle className="w-6 h-6 sm:w-5 sm:h-5 sm:mr-2" />
+                                <span className="hidden sm:inline">WhatsApp</span>
                             </Button>
                         )}
 
@@ -343,13 +347,16 @@ export function DocumentViewer({
                             <Button
                                 onClick={onDownloadPDF}
                                 disabled={isGeneratingPDF}
-                                className="w-full sm:w-auto h-12 bg-indigo-600 hover:bg-indigo-700 text-white order-1 sm:order-3 font-bold shadow-lg shadow-indigo-200 px-8"
+                                className="col-span-1 sm:col-span-auto h-12 bg-indigo-600 hover:bg-indigo-700 text-white order-1 sm:order-3 font-bold shadow-lg shadow-indigo-200 flex items-center justify-center p-0 sm:px-8"
+                                title="Descargar PDF"
                             >
-                                <Download className="w-5 h-5 mr-2" />
-                                {isGeneratingPDF ? "Preparando..." : "Descargar PDF"}
+                                <Download className="w-6 h-6 sm:w-5 sm:h-5 sm:mr-2" />
+                                <span className="hidden sm:inline">{isGeneratingPDF ? "..." : "PDF"}</span>
+                                <span className="hidden md:inline ml-1">{!isGeneratingPDF && "Descargar PDF"}</span>
                             </Button>
                         )}
                     </div>
+
                 </div>
             </DialogContent>
         </Dialog>
