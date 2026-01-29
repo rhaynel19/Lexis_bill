@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { handleNumericKeyDown } from "@/lib/input-validators";
 import { DocumentPreview } from "@/components/DocumentPreview";
 import { validateRNCOrCedula } from "@/lib/validators";
+import { Suspense } from "react";
 
 interface QuoteItem {
     id: string;
@@ -25,7 +26,7 @@ interface QuoteItem {
     isExempt?: boolean;
 }
 
-export default function NewQuote() {
+function NewQuoteForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const editId = searchParams.get("edit");
@@ -49,25 +50,36 @@ export default function NewQuote() {
     // Cargar datos si estamos en modo edición
     useEffect(() => {
         if (editId) {
-            const stored = localStorage.getItem("quotes");
-            if (stored) {
-                const quotes = JSON.parse(stored);
-                const toEdit = quotes.find((q: any) => q.id === editId);
-                if (toEdit) {
-                    setClientName(toEdit.clientName);
-                    setRnc(toEdit.rnc);
-                    setClientPhone(toEdit.clientPhone || "");
-                    setItems(toEdit.items);
-                    setStatus(toEdit.status || "editada");
-                    // Detectar validez
-                    if (toEdit.validUntil && toEdit.date) {
-                        const diffTime = Math.abs(new Date(toEdit.validUntil).getTime() - new Date(toEdit.date).getTime());
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                        setValidityDays(diffDays.toString());
+            try {
+                const stored = localStorage.getItem("quotes");
+                if (stored) {
+                    const quotes = JSON.parse(stored);
+                    const toEdit = quotes.find((q: any) => q.id === editId);
+                    if (toEdit) {
+                        setClientName(toEdit.clientName || "");
+                        setRnc(toEdit.rnc || "");
+                        setClientPhone(toEdit.clientPhone || "");
+                        if (Array.isArray(toEdit.items)) {
+                            setItems(toEdit.items);
+                        }
+                        setStatus(toEdit.status || "editada");
+                        // Detectar validez
+                        if (toEdit.validUntil && toEdit.date) {
+                            const date1 = new Date(toEdit.validUntil).getTime();
+                            const date2 = new Date(toEdit.date).getTime();
+                            if (!isNaN(date1) && !isNaN(date2)) {
+                                const diffTime = Math.abs(date1 - date2);
+                                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                                setValidityDays(diffDays.toString());
+                            }
+                        }
+                        setIsClientLocked(true);
+                        toast.info(`Editando cotización ${editId}`);
                     }
-                    setIsClientLocked(true);
-                    toast.info(`Editando cotización ${editId}`);
                 }
+            } catch (error) {
+                console.error("Error loading quote for edit:", error);
+                toast.error("Error al cargar la cotización para editar");
             }
         }
     }, [editId]);
@@ -460,6 +472,18 @@ export default function NewQuote() {
                 }}
             />
         </div>
+    );
+}
+
+export default function NewQuote() {
+    return (
+        <Suspense fallback={
+            <div className="flex h-screen items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+            </div>
+        }>
+            <NewQuoteForm />
+        </Suspense>
     );
 }
 
