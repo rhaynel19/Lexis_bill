@@ -232,40 +232,43 @@ export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<jsPD
     yPosition = (doc as any).lastAutoTable.finalY + 10;
 
     // ===== RESUMEN DE TOTALES =====
-    const summaryX = pageWidth - margin.right - 70;
-    const summaryLabelX = summaryX - 50;
+    // Ajustamos para que los totales estén alineados a la derecha de la página
+    const summaryX = pageWidth - margin.right;
+    const summaryLabelX = summaryX - 60; // 60mm de espacio para el valor
 
     doc.setFontSize(APP_CONFIG.pdf.fontSize.normal);
     doc.setFont("helvetica", "normal");
 
     // Subtotal
-    doc.text("Subtotal:", summaryLabelX, yPosition);
+    doc.text("Subtotal:", summaryLabelX - 5, yPosition); // Un pequeño ajuste extra para el label
     doc.text(formatCurrency(invoiceData.subtotal), summaryX, yPosition, { align: "right" });
     yPosition += 6;
 
     // ITBIS
-    doc.text("ITBIS (18%):", summaryLabelX, yPosition);
+    doc.text("ITBIS (18%):", summaryLabelX - 5, yPosition);
     doc.text(formatCurrency(invoiceData.itbis), summaryX, yPosition, { align: "right" });
     yPosition += 6;
 
     // Retención ISR (si aplica)
     if (invoiceData.isrRetention > 0) {
-        doc.text("Retención ISR (10%):", summaryLabelX, yPosition);
+        doc.text("Retención ISR (10%):", summaryLabelX - 5, yPosition);
         doc.text(`-${formatCurrency(invoiceData.isrRetention)}`, summaryX, yPosition, { align: "right" });
         yPosition += 6;
     }
 
-    // Línea separadora
-    doc.setLineWidth(0.3);
-    doc.line(summaryLabelX, yPosition, summaryX, yPosition);
-    yPosition += 6;
+    // Línea separadora superior del total
+    doc.setLineWidth(0.5);
+    doc.setDrawColor(...goldColor);
+    doc.line(summaryLabelX - 10, yPosition, summaryX, yPosition);
+    yPosition += 8;
 
     // Total Invoice (Subtotal + ITBIS)
     doc.setFont("helvetica", "bold");
     doc.setFontSize(APP_CONFIG.pdf.fontSize.subtitle);
-    doc.text("TOTAL FACTURA:", summaryLabelX, yPosition);
+    doc.setTextColor(...blueColor); // Azul fuerte para el total
+    doc.text("TOTAL FACTURA:", summaryLabelX - 15, yPosition);
     doc.text(formatCurrency(invoiceData.total), summaryX, yPosition, { align: "right" });
-    yPosition += 6;
+    yPosition += 8;
 
     // Retenciones
     doc.setFont("helvetica", "normal");
@@ -282,26 +285,27 @@ export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<jsPD
         yPosition += 6;
 
         if (isrRetention > 0) {
-            doc.text("Retención ISR (10%):", summaryLabelX, yPosition);
+            doc.text("Retención ISR (10%):", summaryLabelX - 5, yPosition);
             doc.text(`-${formatCurrency(isrRetention)}`, summaryX, yPosition, { align: "right" });
             yPosition += 6;
         }
 
         if (itbisRetention > 0) {
-            doc.text("Retención ITBIS:", summaryLabelX, yPosition);
+            doc.text("Retención ITBIS:", summaryLabelX - 5, yPosition);
             doc.text(`-${formatCurrency(itbisRetention)}`, summaryX, yPosition, { align: "right" });
             yPosition += 6;
         }
 
         // Net Payable
         doc.setLineWidth(0.3);
-        doc.line(summaryLabelX, yPosition, summaryX, yPosition);
+        doc.line(summaryLabelX - 10, yPosition, summaryX, yPosition);
         yPosition += 6;
 
         const netPayable = invoiceData.total - isrRetention - itbisRetention;
         doc.setFont("helvetica", "bold");
         doc.setFontSize(APP_CONFIG.pdf.fontSize.subtitle);
-        doc.text("NETO A PAGAR:", summaryLabelX, yPosition);
+        doc.setTextColor(...blueColor);
+        doc.text("NETO A PAGAR:", summaryLabelX - 15, yPosition);
         doc.text(formatCurrency(netPayable), summaryX, yPosition, { align: "right" });
         yPosition += 10;
     } else {
@@ -410,7 +414,7 @@ export async function generateQuotePDF(quoteData: QuoteData): Promise<jsPDF> {
 
     // Generar PDF y agregar fecha de validez si existe
     const pdf = await generateInvoicePDF(invoiceData);
-    
+
     // Si hay fecha de validez, agregarla al PDF
     if (quoteData.validUntil) {
         const pageWidth = pdf.internal.pageSize.getWidth();
