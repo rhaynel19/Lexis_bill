@@ -21,8 +21,8 @@ import { Suspense } from "react";
 interface QuoteItem {
     id: string;
     description: string;
-    quantity: number;
-    price: number;
+    quantity: number | string;
+    price: number | string;
     isExempt?: boolean;
 }
 
@@ -131,8 +131,8 @@ function NewQuoteForm() {
         setItems(items.map((item) => item.id === id ? { ...item, [field]: value } : item));
     };
 
-    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-    const taxableSubtotal = items.reduce((sum, item) => item.isExempt ? sum : sum + (item.quantity * item.price), 0);
+    const subtotal = items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.price)), 0);
+    const taxableSubtotal = items.reduce((sum, item) => item.isExempt ? sum : sum + (Number(item.quantity) * Number(item.price)), 0);
     const itbis = taxableSubtotal * 0.18;
     const total = subtotal + itbis;
 
@@ -177,7 +177,7 @@ function NewQuoteForm() {
             return;
         }
 
-        const emptyPrice = items.some(item => item.price <= 0 && item.description.trim());
+        const emptyPrice = items.some(item => Number(item.price) <= 0 && item.description.trim());
         if (emptyPrice) {
             toast.warning("Hay ítems con precio RD$0.00. ¿Desea continuar?");
         }
@@ -195,7 +195,13 @@ function NewQuoteForm() {
                 clientName: clientName.trim(),
                 rnc: rnc.replace(/-/g, ""),
                 clientPhone,
-                items: items.filter(item => item.description.trim() !== ""),
+                items: items
+                    .filter(item => item.description.trim() !== "")
+                    .map(item => ({
+                        ...item,
+                        quantity: Number(item.quantity) || 1,
+                        price: Number(item.price) || 0
+                    })),
                 subtotal,
                 itbis,
                 total,
@@ -360,7 +366,7 @@ function NewQuoteForm() {
                                                         min="1"
                                                         value={item.quantity}
                                                         onKeyDown={(e: any) => handleNumericKeyDown(e, false)}
-                                                        onChange={e => updateItem(item.id, "quantity", parseInt(e.target.value) || 1)}
+                                                        onChange={e => updateItem(item.id, "quantity", e.target.value)}
                                                         className="text-center h-10"
                                                     />
                                                 </TableCell>
@@ -370,7 +376,7 @@ function NewQuoteForm() {
                                                         min="0"
                                                         value={item.price}
                                                         onKeyDown={(e: any) => handleNumericKeyDown(e, true)}
-                                                        onChange={e => updateItem(item.id, "price", parseFloat(e.target.value) || 0)}
+                                                        onChange={e => updateItem(item.id, "price", e.target.value)}
                                                         className="text-right h-10"
                                                     />
                                                 </TableCell>
@@ -385,7 +391,7 @@ function NewQuoteForm() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="font-black text-right text-slate-900">
-                                                    {formatCurrency(item.quantity * item.price)}
+                                                    {formatCurrency(Number(item.quantity) * Number(item.price))}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     {items.length > 1 && (
