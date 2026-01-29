@@ -8,14 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
 import { useState, useEffect, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getDominicanDate } from "@/lib/date-utils";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Eye } from "lucide-react";
 import { InvoiceData } from "@/lib/pdf-generator";
 import { toast } from "sonner";
 import { handleNumericKeyDown } from "@/lib/input-validators";
 import { DocumentPreview } from "@/components/DocumentPreview";
-
 import { validateRNCOrCedula } from "@/lib/validators";
 
 interface QuoteItem {
@@ -28,6 +27,8 @@ interface QuoteItem {
 
 export default function NewQuote() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const editId = searchParams.get("edit");
 
     const [clientName, setClientName] = useState("");
     const [rnc, setRnc] = useState("");
@@ -35,6 +36,7 @@ export default function NewQuote() {
     const [validityDays, setValidityDays] = useState("15");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
+    const [status, setStatus] = useState("borrador");
 
     // Smart RNC State
     const [isClientLocked, setIsClientLocked] = useState(false);
@@ -43,6 +45,32 @@ export default function NewQuote() {
         { id: "1", description: "", quantity: 1, price: 0, isExempt: false }
     ]);
     const [savedClients, setSavedClients] = useState<any[]>([]);
+
+    // Cargar datos si estamos en modo edición
+    useEffect(() => {
+        if (editId) {
+            const stored = localStorage.getItem("quotes");
+            if (stored) {
+                const quotes = JSON.parse(stored);
+                const toEdit = quotes.find((q: any) => q.id === editId);
+                if (toEdit) {
+                    setClientName(toEdit.clientName);
+                    setRnc(toEdit.rnc);
+                    setClientPhone(toEdit.clientPhone || "");
+                    setItems(toEdit.items);
+                    setStatus(toEdit.status || "editada");
+                    // Detectar validez
+                    if (toEdit.validUntil && toEdit.date) {
+                        const diffTime = Math.abs(new Date(toEdit.validUntil).getTime() - new Date(toEdit.date).getTime());
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        setValidityDays(diffDays.toString());
+                    }
+                    setIsClientLocked(true);
+                    toast.info(`Editando cotización ${editId}`);
+                }
+            }
+        }
+    }, [editId]);
 
     useEffect(() => {
         const clients = localStorage.getItem("clients");
@@ -102,7 +130,6 @@ export default function NewQuote() {
             setClientName(client.name);
             setRnc(client.rnc);
             if (client.phone) setClientPhone(client.phone);
-            // Smart RNC: Lock it if selected from list
             setIsClientLocked(true);
         }
     };
@@ -113,10 +140,36 @@ export default function NewQuote() {
 
     const handlePreSubmit = (e: FormEvent) => {
         e.preventDefault();
-        if (!clientName || !items.length) {
-            toast.error("Complete los campos obligatorios");
+
+        // --- VALIDACIONES INTELIGENTES ---
+        if (!clientName.trim()) {
+            toast.error("El nombre del cliente es obligatorio");
             return;
         }
+
+        if (rnc) {
+            const rncValid = validateRNCOrCedula(rnc);
+            if (!rncValid.isValid) {
+                toast.error(rncValid.error);
+                return;
+            }
+        }
+
+        if (items.length === 0 || items.every(item => !item.description.trim())) {
+            toast.error("Debe agregar al menos un ítem con descripción");
+            return;
+        }
+
+        if (total <= 0) {
+            toast.error("El total de la cotización debe ser mayor a cero");
+            return;
+        }
+
+        const emptyPrice = items.some(item => item.price <= 0 && item.description.trim());
+        if (emptyPrice) {
+            toast.warning("Hay ítems con precio RD$0.00. ¿Desea continuar?");
+        }
+
         setShowPreview(true);
     };
 
@@ -124,45 +177,73 @@ export default function NewQuote() {
         if (isSubmitting) return;
         setIsSubmitting(true);
 
-        const quote = {
-            id: `COT-${Date.now().toString().slice(-6)}`,
-            clientName,
-            rnc,
-            clientPhone,
-            items,
-            subtotal,
-            itbis,
-            total,
-            date: getDominicanDate(),
-            validUntil: new Date(Date.now() + parseInt(validityDays) * 24 * 60 * 60 * 1000).toISOString(),
-            status: "open"
-        };
+        try {
+            const quoteData = {
+                id: editId || `COT-${Date.now().toString().slice(-6)}`,
+                clientName: clientName.trim(),
+                rnc: rnc.replace(/-/g, ""),
+                clientPhone,
+                items: items.filter(item => item.description.trim() !== ""),
+                subtotal,
+                itbis,
+                total,
+                date: editId ? undefined : getDominicanDate(), // Mantener fecha original si es edición
+                validUntil: new Date(Date.now() + parseInt(validityDays) * 24 * 60 * 60 * 1000).toISOString(),
+                status: editId ? "editada" : "borrador"
+            };
 
-        const existing = localStorage.getItem("quotes");
-        const quotes = existing ? JSON.parse(existing) : [];
-        quotes.push(quote);
-        localStorage.setItem("quotes", JSON.stringify(quotes));
+            const existing = localStorage.getItem("quotes");
+            let quotes = existing ? JSON.parse(existing) : [];
 
-        toast.success("✅ Cotización guardada exitosamente.");
-        router.push("/cotizaciones");
+            if (editId) {
+                // Actualizar existente
+                quotes = quotes.map((q: any) => q.id === editId ? { ...q, ...quoteData, date: q.date } : q);
+            } else {
+                // Crear nueva
+                quotes.push(quoteData);
+            }
+
+            localStorage.setItem("quotes", JSON.stringify(quotes));
+            toast.success(editId ? "✅ Cotización actualizada" : "✅ Cotización guardada");
+            router.push("/cotizaciones");
+        } catch (error) {
+            toast.error("Error al guardar la cotización");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-5xl">
-            {/* ... header ... */}
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
+                    <h1 className="text-3xl font-black text-slate-900 font-serif lowercase tracking-tighter">
+                        {editId ? `editando ${editId}` : "nueva cotización"}
+                    </h1>
+                    <p className="text-slate-500 font-medium">Cree una propuesta profesional para su cliente</p>
+                </div>
+                <Link href="/cotizaciones">
+                    <Button variant="ghost" className="text-slate-400 hover:text-slate-600 px-0 md:px-4">
+                        <ArrowLeft className="w-4 h-4 mr-2" /> Volver al listado
+                    </Button>
+                </Link>
+            </div>
 
             <form onSubmit={handlePreSubmit}>
                 <div className="grid gap-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Cliente</CardTitle>
+                    <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
+                        <CardHeader className="bg-slate-50 border-b border-slate-100">
+                            <CardTitle className="text-lg font-bold text-slate-800">Información del Cliente</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            {savedClients.length > 0 && (
-                                <div className="space-y-2 mb-4 p-4 bg-slate-50 rounded border border-slate-100">
-                                    <Label className="text-slate-500">📂 Clientes Frecuentes</Label>
+                        <CardContent className="space-y-6 pt-6">
+                            {savedClients.length > 0 && !editId && (
+                                <div className="space-y-2 mb-4 p-4 bg-indigo-50/30 rounded-xl border border-indigo-100/50">
+                                    <Label className="text-indigo-600 font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                                        <Loader2 className="w-3 h-3 animate-pulse" /> Sugerencia: Clientes Frecuentes
+                                    </Label>
                                     <Select onValueChange={handleSelectClient}>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="bg-white border-indigo-200 focus:ring-indigo-500 h-11">
                                             <SelectValue placeholder="Seleccionar cliente guardado..." />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -173,52 +254,59 @@ export default function NewQuote() {
                                     </Select>
                                 </div>
                             )}
-                            <div className="grid gap-4 md:grid-cols-2">
+                            <div className="grid gap-6 md:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label>Nombre Cliente</Label>
+                                    <Label className="font-bold text-slate-700">Nombre del Cliente <span className="text-red-500">*</span></Label>
                                     <div className="relative">
                                         <Input
                                             value={clientName}
                                             onChange={e => setClientName(e.target.value)}
                                             readOnly={isClientLocked}
-                                            className={isClientLocked ? "bg-slate-50 border-emerald-200 text-slate-700 font-semibold pr-10" : ""}
+                                            placeholder="Nombre completo o razón social"
+                                            className={isClientLocked ? "bg-emerald-50/30 border-emerald-200 text-slate-700 font-bold pr-10 h-11" : "h-11"}
                                             required
                                         />
                                         {isClientLocked && (
-                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold hidden sm:inline-block">
-                                                    ✨ Frecuente
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsClientLocked(false)}
-                                                    className="text-slate-400 hover:text-slate-600"
-                                                    title="Editar nombre"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                                </button>
-                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsClientLocked(false)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
+                                                title="Editar nombre"
+                                            >
+                                                <ArrowLeft className="w-4 h-4 rotate-180" />
+                                            </button>
                                         )}
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>RNC / Cédula</Label>
-                                    <Input value={rnc} onChange={e => handleRncChange(e.target.value)} />
+                                    <Label className="font-bold text-slate-700">RNC / Cédula</Label>
+                                    <Input
+                                        value={rnc}
+                                        onChange={e => handleRncChange(e.target.value)}
+                                        placeholder="Ej: 131234567"
+                                        className="h-11 font-mono"
+                                    />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Teléfono</Label>
-                                    <Input value={clientPhone} onChange={e => setClientPhone(e.target.value)} />
+                                    <Label className="font-bold text-slate-700">Teléfono (WhatsApp)</Label>
+                                    <Input
+                                        value={clientPhone}
+                                        onChange={e => setClientPhone(e.target.value)}
+                                        placeholder="Ej: 8095551234"
+                                        className="h-11"
+                                    />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Validez de Oferta (Días)</Label>
+                                    <Label className="font-bold text-slate-700">Validez de Oferta</Label>
                                     <Select value={validityDays} onValueChange={setValidityDays}>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="h-11">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="7">7 Días</SelectItem>
                                             <SelectItem value="15">15 Días</SelectItem>
                                             <SelectItem value="30">30 Días</SelectItem>
+                                            <SelectItem value="60">60 Días</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -226,29 +314,32 @@ export default function NewQuote() {
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardHeader><CardTitle>Servicios / Productos</CardTitle></CardHeader>
-                        <CardContent>
-                            <div className="overflow-x-auto">
+                    <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
+                        <CardHeader className="bg-slate-50 border-b border-slate-100">
+                            <CardTitle className="text-lg font-bold text-slate-800">Conceptos de la Propuesta</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                            <div className="overflow-x-auto -mx-6 px-6 md:mx-0 md:px-0">
                                 <Table>
                                     <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-[40%]">Descripción</TableHead>
-                                            <TableHead className="w-[15%]">Cant.</TableHead>
-                                            <TableHead className="w-[20%]">Precio</TableHead>
-                                            <TableHead className="w-[10%] text-center">Exento</TableHead>
-                                            <TableHead className="w-[15%]">Total</TableHead>
-                                            <TableHead></TableHead>
+                                        <TableRow className="bg-slate-50/50 hover:bg-transparent">
+                                            <TableHead className="w-[45%] font-bold text-slate-700">Descripción</TableHead>
+                                            <TableHead className="w-[10%] text-center font-bold text-slate-700">Cant.</TableHead>
+                                            <TableHead className="w-[20%] text-right font-bold text-slate-700">Precio</TableHead>
+                                            <TableHead className="w-[10%] text-center font-bold text-slate-700">ITBIS</TableHead>
+                                            <TableHead className="w-[15%] text-right font-bold text-slate-700">Total</TableHead>
+                                            <TableHead className="w-[50px]"></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {items.map(item => (
-                                            <TableRow key={item.id}>
+                                            <TableRow key={item.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/30">
                                                 <TableCell>
                                                     <Input
                                                         value={item.description}
                                                         onChange={e => updateItem(item.id, "description", e.target.value)}
-                                                        placeholder="Descripción del servicio..."
+                                                        placeholder="Nombre del servicio o producto..."
+                                                        className="border-none bg-transparent shadow-none px-0 focus-visible:ring-0 font-medium text-slate-800 h-10"
                                                     />
                                                 </TableCell>
                                                 <TableCell>
@@ -258,6 +349,7 @@ export default function NewQuote() {
                                                         value={item.quantity}
                                                         onKeyDown={(e: any) => handleNumericKeyDown(e, false)}
                                                         onChange={e => updateItem(item.id, "quantity", parseInt(e.target.value) || 1)}
+                                                        className="text-center h-10"
                                                     />
                                                 </TableCell>
                                                 <TableCell>
@@ -267,22 +359,32 @@ export default function NewQuote() {
                                                         value={item.price}
                                                         onKeyDown={(e: any) => handleNumericKeyDown(e, true)}
                                                         onChange={e => updateItem(item.id, "price", parseFloat(e.target.value) || 0)}
+                                                        className="text-right h-10"
                                                     />
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={item.isExempt}
-                                                        onChange={e => updateItem(item.id, "isExempt", e.target.checked)}
-                                                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                    />
+                                                    <div className="flex items-center justify-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!item.isExempt}
+                                                            onChange={e => updateItem(item.id, "isExempt", !e.target.checked)}
+                                                            className="w-4 h-4 text-indigo-600 rounded-md border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                                                        />
+                                                    </div>
                                                 </TableCell>
-                                                <TableCell className="font-bold">
+                                                <TableCell className="font-black text-right text-slate-900">
                                                     {formatCurrency(item.quantity * item.price)}
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="text-right">
                                                     {items.length > 1 && (
-                                                        <Button variant="ghost" size="sm" onClick={() => removeItem(item.id)} className="text-red-500">✕</Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => removeItem(item.id)}
+                                                            className="text-slate-300 hover:text-red-500 w-8 h-8"
+                                                        >
+                                                            ✕
+                                                        </Button>
                                                     )}
                                                 </TableCell>
                                             </TableRow>
@@ -290,39 +392,74 @@ export default function NewQuote() {
                                     </TableBody>
                                 </Table>
                             </div>
-                            <Button type="button" variant="outline" size="sm" onClick={addItem} className="mt-4">
-                                + Agregar Ítem
+
+                            <Button type="button" variant="outline" size="sm" onClick={addItem} className="mt-6 border-dashed border-2 border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/50 w-full font-bold">
+                                + Agregar otro ítem
                             </Button>
 
-                            <div className="flex justify-end mt-4 text-right">
-                                <div className="space-y-1">
-                                    <div className="flex justify-between w-48 text-sm">
+                            <div className="flex justify-end mt-10">
+                                <div className="bg-slate-50 p-6 rounded-2xl w-full md:w-80 space-y-3 border border-slate-100">
+                                    <div className="flex justify-between items-center text-sm font-medium text-slate-500">
                                         <span>Subtotal:</span>
-                                        <span>{formatCurrency(subtotal)}</span>
+                                        <span className="font-bold text-slate-800">{formatCurrency(subtotal)}</span>
                                     </div>
-                                    <div className="flex justify-between w-48 text-sm text-gray-500">
+                                    <div className="flex justify-between items-center text-sm font-medium text-slate-500">
                                         <span>ITBIS (18%):</span>
-                                        <span>{formatCurrency(itbis)}</span>
+                                        <span className="font-bold text-slate-800">{formatCurrency(itbis)}</span>
                                     </div>
-                                    <div className="flex justify-between w-48 font-bold text-lg border-t pt-2">
-                                        <span>Total:</span>
-                                        <span className="text-blue-600">{formatCurrency(total)}</span>
+                                    <div className="flex justify-between items-center font-black text-xl border-t-2 border-slate-200 pt-3 mt-3">
+                                        <span className="text-slate-900 uppercase tracking-tighter">Total:</span>
+                                        <span className="text-indigo-700 drop-shadow-sm">{formatCurrency(total)}</span>
                                     </div>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <div className="flex justify-end gap-2">
-                        <Link href="/cotizaciones">
-                            <Button variant="outline" type="button">Cancelar</Button>
+                    <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                        <Link href="/cotizaciones" className="w-full sm:w-auto">
+                            <Button variant="outline" type="button" className="w-full h-12 text-slate-500 font-bold px-8">Cancelar</Button>
                         </Link>
-                        <Button type="submit" size="lg" className="bg-[#D4AF37] hover:bg-amber-600 text-white" disabled={isSubmitting}>
-                            {isSubmitting ? "Procesando..." : "Siguiente: Vista Previa"}
+                        <Button
+                            type="submit"
+                            size="lg"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 px-10 shadow-lg shadow-indigo-100 w-full sm:w-auto"
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? (
+                                <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Procesando...</>
+                            ) : (
+                                <><Eye className="w-5 h-5 mr-2" /> Previsualizar Propuesta</>
+                            )}
                         </Button>
                     </div>
                 </div>
             </form>
+
+            <DocumentPreview
+                isOpen={showPreview}
+                onClose={() => setShowPreview(false)}
+                onEdit={() => setShowPreview(false)}
+                onConfirm={handleConfirmSave}
+                isProcessing={isSubmitting}
+                type="quote"
+                data={{
+                    id: editId || "",
+                    sequenceNumber: editId || "BORRADOR",
+                    type: "quote",
+                    clientName,
+                    rnc,
+                    clientPhone,
+                    date: getDominicanDate(),
+                    items: items.filter(item => item.description.trim() !== ""),
+                    subtotal,
+                    itbis,
+                    isrRetention: 0,
+                    total,
+                    validUntil: new Date(Date.now() + parseInt(validityDays) * 24 * 60 * 60 * 1000).toISOString()
+                }}
+            />
         </div>
     );
 }
+

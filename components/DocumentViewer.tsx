@@ -3,7 +3,10 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, MessageCircle, X } from "lucide-react";
+import { Download, MessageCircle, X, Pencil } from "lucide-react";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 // Interfaz para cotizaciones
 export interface Quote {
@@ -48,6 +51,7 @@ export interface Invoice {
     clientPhone?: string;
     isrRetention?: number;
     itbisRetention?: number;
+    status?: string;
 }
 
 interface DocumentViewerProps {
@@ -58,6 +62,7 @@ interface DocumentViewerProps {
     onDownloadPDF?: () => void;
     onSendWhatsApp?: () => void;
     isGeneratingPDF?: boolean;
+    onEdit?: () => void; // Optional if not provided manually
 }
 
 export function DocumentViewer({
@@ -67,9 +72,26 @@ export function DocumentViewer({
     type,
     onDownloadPDF,
     onSendWhatsApp,
-    isGeneratingPDF = false
+    isGeneratingPDF = false,
+    onEdit
 }: DocumentViewerProps) {
+    const router = useRouter();
     if (!document) return null;
+
+    const handleEdit = () => {
+        if (onEdit) {
+            onEdit();
+        } else {
+            // Default behavior if no custom handler
+            if (type === "quote") {
+                router.push(`/nueva-cotizacion?edit=${document.id}`);
+            } else {
+                // For invoices, edit might be a different flow, but we can enable it later
+                toast.info("Función de edición de facturas estará disponible pronto.");
+            }
+        }
+        onClose();
+    };
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat("es-DO", {
@@ -169,14 +191,12 @@ export function DocumentViewer({
                 <div className="p-6 border-b bg-white flex-shrink-0 z-20">
                     <div className="flex justify-between items-center">
                         <div>
-                            <DialogTitle className="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
+                            <DialogTitle className="text-xl md:text-2xl font-serif font-black text-slate-900 flex items-center gap-3">
                                 {type === "quote" ? "Cotización" : "Factura"}
-                                <span className="text-sm font-normal text-slate-400 border px-2 py-0.5 rounded-full">
-                                    {documentNumber}
-                                </span>
+                                <StatusBadge status={document.status || (type === "quote" ? "borrador" : "emitida")} />
                             </DialogTitle>
-                            <DialogDescription className="text-slate-500 mt-1">
-                                {type === "quote" ? "Propuesta comercial para cliente" : "Comprobante fiscal de transacción"}
+                            <DialogDescription className="text-slate-500 mt-1 font-medium">
+                                No. {documentNumber} • {type === "quote" ? "Propuesta comercial" : "Comprobante fiscal"}
                             </DialogDescription>
                         </div>
                         <Button
@@ -279,8 +299,8 @@ export function DocumentViewer({
                                 <span className="font-bold text-slate-700">{formatCurrency(itbis)}</span>
                             </div>
                             <div className="flex justify-between items-center w-full md:w-80 pt-2 mt-2 border-t-2 border-slate-200">
-                                <span className="text-slate-500 font-bold uppercase tracking-tighter">Total General</span>
-                                <span className="text-2xl md:text-3xl font-black text-indigo-700 tracking-tight">
+                                <span className="text-slate-600 font-black uppercase tracking-tighter">Total General</span>
+                                <span className="text-3xl md:text-4xl font-black text-indigo-700 tracking-tight drop-shadow-sm">
                                     {formatCurrency(total)}
                                 </span>
                             </div>
@@ -292,11 +312,21 @@ export function DocumentViewer({
                         <Button
                             variant="outline"
                             onClick={onClose}
-                            className="w-full sm:w-auto h-12 order-3 sm:order-1 border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                            className="w-full sm:w-auto h-12 order-4 sm:order-1 border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                         >
-                            <X className="w-4 h-4 mr-2" />
                             Cerrar
                         </Button>
+
+                        {type === "quote" && (
+                            <Button
+                                variant="outline"
+                                onClick={handleEdit}
+                                className="w-full sm:w-auto h-12 order-3 sm:order-2 border-blue-200 text-blue-600 hover:bg-blue-50 font-bold"
+                            >
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Editar
+                            </Button>
+                        )}
 
                         {onSendWhatsApp && (
                             <Button

@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Download, Edit2, Share2, CheckCircle, FileText } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 interface DocumentPreviewProps {
     data: any; // Invoice or Quote Data
@@ -11,20 +13,25 @@ interface DocumentPreviewProps {
     onEdit: () => void;
     onConfirm: () => void;
     isProcessing?: boolean;
+    isOpen?: boolean;
+    onClose?: () => void;
 }
 
-export function DocumentPreview({ data, type, onEdit, onConfirm, isProcessing }: DocumentPreviewProps) {
-
-    const handleWhatsApp = () => {
-        const title = type === "invoice" ? "Factura" : "Cotización";
-        const message = `Hola ${data.clientName}, adjunto su ${title} por valor de RD$${data.total.toLocaleString('es-DO')}.`;
-        const phone = data.clientPhone ? data.clientPhone.replace(/\D/g, '') : '';
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-        toast.info("WhatsApp abierto. Recuerda adjuntar el PDF si lo descargaste.");
+export function DocumentPreview({
+    data,
+    type,
+    onEdit,
+    onConfirm,
+    isProcessing,
+    isOpen = false,
+    onClose
+}: DocumentPreviewProps) {
+    const handleClose = () => {
+        if (onClose) onClose();
     };
 
-    return (
-        <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-10">
+    const content = (
+        <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-10 overflow-y-auto max-h-full px-1">
             {/* Action Bar */}
             <div className="flex flex-col md:flex-row justify-between items-center bg-slate-900 text-white p-4 rounded-xl shadow-2xl gap-4">
                 <div className="flex items-center gap-3">
@@ -113,7 +120,7 @@ export function DocumentPreview({ data, type, onEdit, onConfirm, isProcessing }:
 
             {/* Quick Actions (Beneath Preview) */}
             <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1 border-slate-200 hover:border-green-500 hover:bg-green-50 hover:text-green-700 transition-all" onClick={handleWhatsApp}>
+                <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1 border-slate-200 hover:border-green-500 hover:bg-green-50 hover:text-green-700 transition-all">
                     <Share2 className="w-5 h-5" />
                     <span className="text-xs font-bold uppercase">Enviar WhatsApp</span>
                 </Button>
@@ -124,4 +131,18 @@ export function DocumentPreview({ data, type, onEdit, onConfirm, isProcessing }:
             </div>
         </div>
     );
+
+    if (onClose) {
+        return (
+            <Dialog open={isOpen} onOpenChange={handleClose}>
+                <DialogContent className="max-w-5xl h-[95vh] p-0 md:p-6 overflow-hidden bg-slate-100/50 border-none shadow-2xl flex flex-col justify-center items-center">
+                    <div className="w-full h-full overflow-y-auto py-6 px-2 md:px-0">
+                        {content}
+                    </div>
+                </DialogContent>
+            </Dialog>
+        );
+    }
+
+    return content;
 }

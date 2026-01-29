@@ -3,7 +3,8 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { CheckCircle, Clock, AlertCircle, Share2, MessageCircle, Mail, Copy, Ban, Download, Pencil, Filter, Repeat, Eye } from "lucide-react";
+import { CheckCircle, Clock, AlertCircle, Share2, MessageCircle, Mail, Copy, Ban, Download, Pencil, Filter, Repeat, Eye, CreditCard, User } from "lucide-react";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -134,39 +135,7 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
     };
 
     const renderStatusBadge = (status: string) => {
-        const normalized = status.toLowerCase();
-
-        if (normalized === "paid" || normalized === "recibida") {
-            return (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-sm">
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    Recibida
-                </span>
-            );
-        }
-        if (normalized === "cancelled" || normalized === "rechazada") {
-            return (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-100 shadow-sm">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    Rechazada
-                </span>
-            );
-        }
-        if (normalized === "pending" || normalized === "condicional") {
-            return (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100 shadow-sm">
-                    <Clock className="w-3.5 h-3.5" />
-                    Condicional
-                </span>
-            );
-        }
-
-        // Default Fallback
-        return (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                {status}
-            </span>
-        );
+        return <StatusBadge status={status} />;
     };
 
     return (
@@ -285,20 +254,26 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
                             {/* Mobile View */}
                             <div className="md:hidden divide-y divide-slate-100">
                                 {filteredInvoices.map((inv) => (
-                                    <div key={inv.id} className="p-4 space-y-3" onClick={() => handleViewInvoice(inv)}>
+                                    <div key={inv.id} className="p-5 space-y-4 bg-white hover:bg-slate-50 active:bg-slate-100 transition-colors" onClick={() => handleViewInvoice(inv)}>
                                         <div className="flex justify-between items-start">
-                                            <div className="space-y-1">
-                                                <p className="text-xs font-medium text-slate-500">
+                                            <div className="space-y-1.5">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-mono text-slate-400 font-bold bg-slate-100 px-2 py-0.5 rounded uppercase">
+                                                        No. {(inv.ncfSequence || inv.id).slice(-11)}
+                                                    </span>
+                                                    <StatusBadge status={inv.status} />
+                                                </div>
+                                                <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                                                    <User className="w-3.5 h-3.5 text-slate-400" />
+                                                    {inv.clientName}
+                                                </h3>
+                                                <p className="text-[10px] text-slate-500 font-medium">
                                                     {new Date(inv.date).toLocaleDateString("es-DO", { day: '2-digit', month: 'long', year: 'numeric' })}
                                                 </p>
-                                                <h3 className="font-bold text-slate-900">{inv.clientName}</h3>
-                                                <div className="text-xs font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded inline-block">
-                                                    {(inv.ncfSequence || inv.id).slice(-11)}
-                                                </div>
                                             </div>
-                                            <div className="text-right space-y-2">
-                                                <p className="font-bold text-primary text-lg">{formatCurrency(inv.total)}</p>
-                                                <div>{renderStatusBadge(inv.status)}</div>
+                                            <div className="text-right">
+                                                <p className="font-black text-indigo-700 text-xl tracking-tighter">{formatCurrency(inv.total)}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Total DOP</p>
                                             </div>
                                         </div>
                                         <div className="flex gap-2 pt-2">
