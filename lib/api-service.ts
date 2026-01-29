@@ -166,6 +166,11 @@ export const api = {
         return `${API_URL}/reports/607?month=${month}&year=${year}&token=${token}`;
     },
 
+    getReport606Url(month: number, year: number) {
+        const token = localStorage.getItem("token");
+        return `${API_URL}/reports/606?month=${month}&year=${year}&token=${token}`;
+    },
+
     // Subscription & Payments
     async getSubscriptionStatus() {
         const token = localStorage.getItem("token");

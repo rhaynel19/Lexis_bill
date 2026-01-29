@@ -472,17 +472,39 @@ app.get('/api/reports/summary', verifyToken, async (req, res) => {
             status: { $ne: 'cancelled' }
         });
 
-        const totalFacturado = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
-        const totalItbis = invoices.reduce((sum, inv) => sum + (inv.itbis || 0), 0);
+        // Calculamos el subtotal real (sin impuestos)
+        const subtotal = invoices.reduce((sum, inv) => sum + (inv.subtotal || 0), 0);
+        const itbis = invoices.reduce((sum, inv) => sum + (inv.itbis || 0), 0);
+        const total = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
 
         res.json({
             month,
             year,
-            totalFacturado,
-            totalItbis,
-            invoiceCount: invoices.length,
+            subtotal,
+            itbis,
+            total,
+            count: invoices.length,
             confirmedName: req.user.confirmedFiscalName
         });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/reports/606', verifyToken, async (req, res) => {
+    // Reporte de Compras (606) - Placeholder hasta implementar módulo de gastos
+    if (!req.user.confirmedFiscalName) {
+        return res.status(403).json({ message: 'Confirma tu nombre fiscal para generar reportes.' });
+    }
+
+    try {
+        const { month, year } = req.query;
+        // Por ahora generamos un reporte vacío con el formato correcto
+        let report = `606|${req.user.rnc}|${year}${month.toString().padStart(2, '0')}|0\n`;
+
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Content-Disposition', `attachment; filename=606_${req.user.rnc}_${year}${month}.txt`);
+        res.send(report);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
