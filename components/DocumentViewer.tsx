@@ -164,136 +164,161 @@ export function DocumentViewer({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-4 md:p-6">
-                <DialogHeader>
-                    <DialogTitle className="text-2xl font-bold">
-                        {type === "quote" ? "Cotización" : "Factura"}
-                    </DialogTitle>
-                    <DialogDescription>
-                        Documento {documentNumber}
-                    </DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-6 py-4">
-                    {/* Información de la Empresa */}
-                    <div className="border-b pb-4">
-                        <h3 className="font-bold text-lg mb-2">{companyName}</h3>
-                        <p className="text-sm text-gray-600">RNC: {companyRnc}</p>
+            <DialogContent className="max-w-4xl h-[95vh] md:h-[90vh] p-0 flex flex-col overflow-hidden bg-white border-none shadow-2xl">
+                {/* Header Fijo */}
+                <div className="p-6 border-b bg-white flex-shrink-0 z-20">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <DialogTitle className="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
+                                {type === "quote" ? "Cotización" : "Factura"}
+                                <span className="text-sm font-normal text-slate-400 border px-2 py-0.5 rounded-full">
+                                    {documentNumber}
+                                </span>
+                            </DialogTitle>
+                            <DialogDescription className="text-slate-500 mt-1">
+                                {type === "quote" ? "Propuesta comercial para cliente" : "Comprobante fiscal de transacción"}
+                            </DialogDescription>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={onClose}
+                            className="text-slate-400 hover:text-slate-600 rounded-full"
+                        >
+                            <X className="w-5 h-5" />
+                        </Button>
                     </div>
+                </div>
 
-                    {/* Información del Documento */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <p className="text-sm font-semibold text-gray-700 mb-1">
-                                {type === "quote" ? "Número de Cotización" : "NCF"}
-                            </p>
-                            <p className="text-sm">{documentNumber}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm font-semibold text-gray-700 mb-1">Fecha</p>
-                            <p className="text-sm">{formatDate(documentDate)}</p>
-                        </div>
-                        {type === "quote" && (document as Quote).validUntil && (
+                {/* Body con Scroll */}
+                <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-12 bg-white">
+                    {/* Sección 1: Encabezado del Documento (Empresa y Cliente) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                        <div className="space-y-4">
                             <div>
-                                <p className="text-sm font-semibold text-gray-700 mb-1">Válida hasta</p>
-                                <p className="text-sm">{formatDate((document as Quote).validUntil!)}</p>
+                                <h4 className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Emisor</h4>
+                                <h3 className="text-xl font-bold text-slate-800 leading-tight">{companyName}</h3>
+                                <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">
+                                    <span className="font-semibold text-slate-400">RNC:</span> {companyRnc}
+                                </p>
                             </div>
-                        )}
-                    </div>
+                            <div className="pt-2">
+                                <h4 className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Fecha de Emisión</h4>
+                                <p className="text-slate-800 font-medium">{formatDate(documentDate)}</p>
+                            </div>
+                        </div>
 
-                    {/* Información del Cliente */}
-                    <div className="border-t pt-4">
-                        <h4 className="font-semibold mb-2">Cliente</h4>
-                        <p className="text-sm"><strong>Nombre:</strong> {clientName}</p>
-                        <p className="text-sm"><strong>RNC/Cédula:</strong> {clientRnc}</p>
+                        <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                            <div>
+                                <h4 className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Cliente</h4>
+                                <h3 className="text-lg font-bold text-slate-800">{clientName}</h3>
+                                <p className="text-sm text-slate-600 mt-1 flex items-center gap-2">
+                                    <span className="font-semibold text-slate-400">RNC/Cédula:</span> {clientRnc}
+                                </p>
+                            </div>
+                            {type === "quote" && (document as Quote).validUntil && (
+                                <div className="pt-2 border-t border-slate-200">
+                                    <h4 className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Válida hasta</h4>
+                                    <p className="text-slate-700 font-medium">{formatDate((document as Quote).validUntil!)}</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Tabla de Items */}
-                    <div className="border-t pt-4 -mx-4 md:mx-0 overflow-x-auto">
-                        <div className="min-w-[600px] md:min-w-full px-4 md:px-0">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Descripción</TableHead>
-                                        <TableHead className="text-center">Cantidad</TableHead>
-                                        <TableHead className="text-right">Precio Unit.</TableHead>
-                                        <TableHead className="text-right">Subtotal</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {items.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={4} className="text-center text-gray-500 py-4">
-                                                No hay items registrados
-                                            </TableCell>
+                    <div className="space-y-4">
+                        <h4 className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Detalle de Productos / Servicios</h4>
+                        <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader className="bg-slate-50">
+                                        <TableRow className="hover:bg-transparent">
+                                            <TableHead className="text-slate-600 font-bold py-4">Descripción</TableHead>
+                                            <TableHead className="text-center text-slate-600 font-bold py-4">Cant.</TableHead>
+                                            <TableHead className="text-right text-slate-600 font-bold py-4">Precio Unit.</TableHead>
+                                            <TableHead className="text-right text-slate-600 font-bold py-4">Subtotal</TableHead>
                                         </TableRow>
-                                    ) : (
-                                        items.map((item, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell>{item.description || "Sin descripción"}</TableCell>
-                                                <TableCell className="text-center">{item.quantity}</TableCell>
-                                                <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
-                                                <TableCell className="text-right font-medium">
-                                                    {formatCurrency(item.quantity * item.price)}
+                                    </TableHeader>
+                                    <TableBody>
+                                        {items.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="text-center text-slate-400 py-10 italic">
+                                                    No hay conceptos registrados en este documento
                                                 </TableCell>
                                             </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-
-                        {/* Totales */}
-                        <div className="border-t pt-4">
-                            <div className="flex justify-end">
-                                <div className="w-64 space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                        <span>Subtotal:</span>
-                                        <span className="font-medium">{formatCurrency(subtotal)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span>ITBIS (18%):</span>
-                                        <span className="font-medium">{formatCurrency(itbis)}</span>
-                                    </div>
-                                    <div className="border-t pt-2 flex justify-between font-bold text-xl text-primary">
-                                        <span>Total:</span>
-                                        <span>{formatCurrency(total)}</span>
-                                    </div>
-                                </div>
+                                        ) : (
+                                            items.map((item, index) => (
+                                                <TableRow key={index} className="border-b border-slate-100 last:border-0">
+                                                    <TableCell className="py-4 text-slate-800 font-medium">{item.description || "Sin descripción"}</TableCell>
+                                                    <TableCell className="text-center py-4 text-slate-600">{item.quantity}</TableCell>
+                                                    <TableCell className="text-right py-4 text-slate-600">{formatCurrency(item.price)}</TableCell>
+                                                    <TableCell className="text-right py-4 text-slate-900 font-bold">
+                                                        {formatCurrency(item.quantity * item.price)}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        {/* Botones de Acción */}
-                        <div className="flex flex-col sm:flex-row gap-3 justify-end border-t pt-4">
-                            <Button
-                                variant="outline"
-                                onClick={onClose}
-                                className="order-3 sm:order-1"
-                            >
-                                <X className="w-4 h-4 mr-2" />
-                                Cerrar
-                            </Button>
-                            {onDownloadPDF && (
-                                <Button
-                                    onClick={onDownloadPDF}
-                                    disabled={isGeneratingPDF}
-                                    className="bg-[#D4AF37] hover:bg-[#B8962E] text-white order-1 sm:order-2"
-                                >
-                                    <Download className="w-4 h-4 mr-2" />
-                                    {isGeneratingPDF ? "Generando..." : "Descargar PDF"}
-                                </Button>
-                            )}
-                            {onSendWhatsApp && (
-                                <Button
-                                    onClick={onSendWhatsApp}
-                                    variant="outline"
-                                    className="text-green-600 border-green-200 hover:bg-green-50 order-2 sm:order-3"
-                                >
-                                    <MessageCircle className="w-4 h-4 mr-2" />
-                                    Enviar WhatsApp
-                                </Button>
-                            )}
+                {/* Footer Fijo con Totales y Botones */}
+                <div className="flex-shrink-0 bg-white border-t-2 border-slate-100 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
+                    {/* Bloque de Totales */}
+                    <div className="bg-slate-50 px-6 py-4 md:px-10 border-b border-slate-100">
+                        <div className="flex flex-col items-end space-y-2">
+                            <div className="flex justify-between w-full md:w-80 text-sm text-slate-500">
+                                <span className="font-medium lowercase">Subtotal Gravado</span>
+                                <span className="font-bold text-slate-700">{formatCurrency(subtotal)}</span>
+                            </div>
+                            <div className="flex justify-between w-full md:w-80 text-sm text-slate-500">
+                                <span className="font-medium lowercase">ITBIS (18%)</span>
+                                <span className="font-bold text-slate-700">{formatCurrency(itbis)}</span>
+                            </div>
+                            <div className="flex justify-between items-center w-full md:w-80 pt-2 mt-2 border-t-2 border-slate-200">
+                                <span className="text-slate-500 font-bold uppercase tracking-tighter">Total General</span>
+                                <span className="text-2xl md:text-3xl font-black text-indigo-700 tracking-tight">
+                                    {formatCurrency(total)}
+                                </span>
+                            </div>
                         </div>
+                    </div>
+
+                    {/* Botones de Acción */}
+                    <div className="p-4 md:p-6 bg-white flex flex-col sm:flex-row gap-3 justify-end items-center">
+                        <Button
+                            variant="outline"
+                            onClick={onClose}
+                            className="w-full sm:w-auto h-12 order-3 sm:order-1 border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                        >
+                            <X className="w-4 h-4 mr-2" />
+                            Cerrar
+                        </Button>
+
+                        {onSendWhatsApp && (
+                            <Button
+                                onClick={onSendWhatsApp}
+                                variant="outline"
+                                className="w-full sm:w-auto h-12 text-emerald-600 border-emerald-200 hover:bg-emerald-50 order-2 sm:order-2 font-bold"
+                            >
+                                <MessageCircle className="w-5 h-5 mr-2" />
+                                WhatsApp
+                            </Button>
+                        )}
+
+                        {onDownloadPDF && (
+                            <Button
+                                onClick={onDownloadPDF}
+                                disabled={isGeneratingPDF}
+                                className="w-full sm:w-auto h-12 bg-indigo-600 hover:bg-indigo-700 text-white order-1 sm:order-3 font-bold shadow-lg shadow-indigo-200 px-8"
+                            >
+                                <Download className="w-5 h-5 mr-2" />
+                                {isGeneratingPDF ? "Preparando..." : "Descargar PDF"}
+                            </Button>
+                        )}
                     </div>
                 </div>
             </DialogContent>
