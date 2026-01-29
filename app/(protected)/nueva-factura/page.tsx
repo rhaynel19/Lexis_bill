@@ -31,8 +31,8 @@ import { DocumentPreview } from "@/components/DocumentPreview";
 interface InvoiceItem {
     id: string;
     description: string;
-    quantity: number;
-    price: number;
+    quantity: number | string;
+    price: number | string;
     isExempt?: boolean; // Para gastos no gravables (Abogados)
 }
 
@@ -377,12 +377,16 @@ export default function NewInvoice() {
 
     // Calcular el subtotal (suma de todos los ítems)
     const subtotal = items.reduce((sum, item) => {
-        return sum + (item.quantity * item.price);
+        const qty = typeof item.quantity === 'string' ? (parseFloat(item.quantity) || 0) : item.quantity;
+        const price = typeof item.price === 'string' ? (parseFloat(item.price) || 0) : item.price;
+        return sum + (qty * price);
     }, 0);
 
     // Calcular Base Imponible (ítems no exentos)
     const taxableSubtotal = items.reduce((sum, item) => {
-        return item.isExempt ? sum : sum + (item.quantity * item.price);
+        const qty = typeof item.quantity === 'string' ? (parseFloat(item.quantity) || 0) : item.quantity;
+        const price = typeof item.price === 'string' ? (parseFloat(item.price) || 0) : item.price;
+        return item.isExempt ? sum : sum + (qty * price);
     }, 0);
 
     // Calcular ITBIS (18% de la base imponible)
@@ -460,8 +464,8 @@ export default function NewInvoice() {
             date: getDominicanDate(),
             items: validItems.map(item => ({
                 description: item.description,
-                quantity: item.quantity,
-                price: item.price,
+                quantity: Number(item.quantity),
+                price: Number(item.price),
             })),
             subtotal,
             itbis,
@@ -482,7 +486,7 @@ export default function NewInvoice() {
         }
 
         const validItems = items.filter(
-            (item) => item.description && item.quantity > 0 && item.price > 0
+            (item) => item.description && Number(item.quantity) > 0 && Number(item.price) > 0
         );
 
         if (validItems.length === 0) {
@@ -500,7 +504,7 @@ export default function NewInvoice() {
             const cleanClientName = clientName.trim();
             const cleanRnc = rnc.replace(/[^0-9]/g, "");
             const validItems = items.filter(
-                (item) => item.description && item.quantity > 0 && item.price > 0
+                (item) => item.description && Number(item.quantity) > 0 && Number(item.price) > 0
             );
 
             const invoiceData = {
@@ -529,8 +533,8 @@ export default function NewInvoice() {
                 date: getDominicanDate(),
                 items: validItems.map((item) => ({
                     description: item.description,
-                    quantity: item.quantity,
-                    price: item.price,
+                    quantity: Number(item.quantity),
+                    price: Number(item.price),
                 })),
                 subtotal,
                 itbis,
@@ -1000,9 +1004,10 @@ export default function NewInvoice() {
                                                                     type="number"
                                                                     min="1"
                                                                     value={item.quantity}
+                                                                    onFocus={(e) => e.target.select()}
                                                                     onKeyDown={(e) => handleNumericKeyDown(e, false)}
                                                                     onChange={(e) =>
-                                                                        updateItem(item.id, "quantity", parseInt(e.target.value) || 1)
+                                                                        updateItem(item.id, "quantity", e.target.value)
                                                                     }
                                                                 />
                                                             </TableCell>
@@ -1015,16 +1020,17 @@ export default function NewInvoice() {
                                                                     step="0.01"
                                                                     placeholder="0.00"
                                                                     value={item.price}
+                                                                    onFocus={(e) => e.target.select()}
                                                                     onKeyDown={(e) => handleNumericKeyDown(e, true)}
                                                                     onChange={(e) =>
-                                                                        updateItem(item.id, "price", parseFloat(e.target.value) || 0)
+                                                                        updateItem(item.id, "price", e.target.value)
                                                                     }
                                                                 />
                                                             </TableCell>
 
                                                             {/* Subtotal del ítem */}
-                                                            <TableCell className="font-semibold">
-                                                                {formatCurrency(item.quantity * item.price)}
+                                                            <TableCell className="font-semibold text-foreground">
+                                                                {formatCurrency(Number(item.quantity) * Number(item.price))}
                                                             </TableCell>
 
                                                             {/* Botón eliminar */}
@@ -1123,8 +1129,8 @@ export default function NewInvoice() {
                             {/* Resumen de Totales */}
                             <Card className="bg-gradient-to-br from-accent/5 to-primary/5 border-accent/20">
                                 <CardHeader>
-                                    <CardTitle className="text-blue-900">Resumen de Totales</CardTitle>
-                                    <CardDescription className="text-blue-700">
+                                    <CardTitle className="text-foreground">Resumen de Totales</CardTitle>
+                                    <CardDescription className="text-muted-foreground">
                                         Cálculos automáticos de impuestos y retenciones
                                     </CardDescription>
                                 </CardHeader>
