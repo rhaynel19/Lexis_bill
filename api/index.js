@@ -136,12 +136,26 @@ const supportTicketSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+const expenseSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    supplierName: { type: String, required: true },
+    supplierRnc: { type: String, required: true },
+    ncf: { type: String, required: true },
+    amount: { type: Number, required: true },
+    itbis: { type: Number, default: 0 },
+    category: { type: String, required: true }, // DGII Expense Codes (01-11)
+    date: { type: Date, default: Date.now },
+    imageUrl: { type: String },
+    createdAt: { type: Date, default: Date.now }
+});
+
 // Avoid "OverwriteModelError" in serverless environments
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const NCFSettings = mongoose.models.NCFSettings || mongoose.model('NCFSettings', ncfSettingsSchema);
 const Invoice = mongoose.models.Invoice || mongoose.model('Invoice', invoiceSchema);
 const Customer = mongoose.models.Customer || mongoose.model('Customer', customerSchema);
 const SupportTicket = mongoose.models.SupportTicket || mongoose.model('SupportTicket', supportTicketSchema);
+const Expense = mongoose.models.Expense || mongoose.model('Expense', expenseSchema);
 
 // --- 3. MIDDLEWARE ---
 const verifyToken = (req, res, next) => {
@@ -539,6 +553,77 @@ app.get('/api/reports/607', verifyToken, async (req, res) => {
         res.setHeader('Content-Disposition', `attachment; filename=607_${req.user.rnc}_${year}${month}.txt`);
         res.send(report);
 
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- GESTIÓN DE GASTOS (606) ---
+app.get('/api/expenses', verifyToken, async (req, res) => {
+    try {
+        const expenses = await Expense.find({ userId: req.userId }).sort({ date: -1 });
+        res.json(expenses);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/expenses', verifyToken, async (req, res) => {
+    try {
+        const { supplierName, supplierRnc, ncf, amount, itbis, category, date } = req.body;
+        const newExpense = new Expense({
+            userId: req.userId,
+            supplierName,
+            supplierRnc,
+            ncf,
+            amount,
+            itbis: itbis || 0,
+            category,
+            date: date || new Date()
+        });
+        await newExpense.save();
+        res.status(201).json(newExpense);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/expenses/:id', verifyToken, async (req, res) => {
+    try {
+        await Expense.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+        res.json({ message: 'Gasto eliminado' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/reports/606', verifyToken, async (req, res) => {
+    try {
+        const { month, year } = req.query;
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0, 23, 59, 59);
+
+        const expenses = await Expense.find({
+            userId: req.userId,
+            date: { $gte: startDate, $lte: endDate }
+        });
+
+        // Formato 606: RNC|Periodo|CantidadRegistros
+        // Registro: RNC/Cedula|TipoId|TipoGasto|NCF|NCFModificado|Fecha|FechaPago|MontoServicios|MontoBienes|TotalMonto|ITBIS|...
+        let report = `606|${req.user.rnc}|${year}${month.toString().padStart(2, '0')}|${expenses.length}\n`;
+
+        expenses.forEach(exp => {
+            const fecha = new Date(exp.date).toISOString().slice(0, 10).replace(/-/g, '');
+            const rncLimpiado = exp.supplierRnc.replace(/[^0-9]/g, '');
+            const tipoId = rncLimpiado.length === 9 ? '1' : '2'; // 1=RNC, 2=Cedula
+
+            // Simplificado para Lexis Bill inicial:
+            report += `${rncLimpiado}|${tipoId}|${exp.category}|${exp.ncf}||${fecha}||${exp.amount.toFixed(2)}|0.00|${exp.amount.toFixed(2)}|${exp.itbis.toFixed(2)}|||||||||\n`;
+        });
+
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Content-Disposition', `attachment; filename=606_${req.user.rnc}_${year}${month}.txt`);
+        res.send(report);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

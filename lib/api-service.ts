@@ -171,6 +171,34 @@ export const api = {
         return `${API_URL}/reports/606?month=${month}&year=${year}&token=${token}`;
     },
 
+    // Expenses (606)
+    async getExpenses() {
+        const token = localStorage.getItem("token");
+        return secureFetch<any[]>(`${API_URL}/expenses`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+    },
+
+    async saveExpense(expenseData: any) {
+        const token = localStorage.getItem("token");
+        return secureFetch<any>(`${API_URL}/expenses`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(expenseData)
+        });
+    },
+
+    async deleteExpense(id: string) {
+        const token = localStorage.getItem("token");
+        return secureFetch<any>(`${API_URL}/expenses/${id}`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+    },
+
     // Subscription & Payments
     async getSubscriptionStatus() {
         const token = localStorage.getItem("token");

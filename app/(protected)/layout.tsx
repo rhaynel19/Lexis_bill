@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CommandMenu } from "@/components/command-menu";
-import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut } from "lucide-react";
+import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TrialHeaderBadge } from "@/components/TrialHeaderBadge";
@@ -171,9 +171,13 @@ function SidebarLinks({ isMobile = false, onLogout }: { isMobile?: boolean, onLo
                     <span className="text-sm">Ver Cotizaciones</span>
                 </Link>
                 <div className="pt-4 pb-2 px-4 text-[10px] text-sidebar-foreground/50 uppercase tracking-widest font-bold border-t border-sidebar-border/30 mt-2">Gestión</div>
+                <Link href="/gastos" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                    <Receipt className="w-5 h-5 text-sidebar-foreground/60" />
+                    <span className="text-sm">Gastos (606)</span>
+                </Link>
                 <Link href="/reportes" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
                     <Download className="w-5 h-5 text-sidebar-foreground/60" />
-                    <span className="text-sm">Reportes 606/607</span>
+                    <span className="text-sm">Reportes Fiscales</span>
                 </Link>
                 <Link href="/configuracion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
                     <Settings className="w-5 h-5 text-sidebar-foreground/60" />

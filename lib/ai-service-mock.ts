@@ -78,5 +78,23 @@ export const AIService = {
                 resolve(items);
             }, 800); // Simulate network delay
         });
+    },
+
+    // Mock OCR Extraction for Expenses
+    extractExpenseData: (file: File): Promise<{ supplierName: string, supplierRnc: string, ncf: string, amount: number, itbis: number, category: string }> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                // Mock scanning logic: Randomly pick from a list of simulated results
+                const mockResults = [
+                    { supplierName: "Altice Dominicana", supplierRnc: "101001614", ncf: "B0100000123", amount: 2450.00, itbis: 441.00, category: "02" },
+                    { supplierName: "Edesur Dominicana", supplierRnc: "101783561", ncf: "B0100009874", amount: 1200.00, itbis: 0, category: "02" },
+                    { supplierName: "Supermercados Bravo", supplierRnc: "101657890", ncf: "B0100045621", amount: 3500.50, itbis: 630.09, category: "01" },
+                    { supplierName: "Ferreteria Americana", supplierRnc: "101002345", ncf: "B0100022334", amount: 500.00, itbis: 90.00, category: "05" }
+                ];
+
+                const result = mockResults[Math.floor(Math.random() * mockResults.length)];
+                resolve(result);
+            }, 2000); // Wait 2s to feel like "scanning"
+        });
     }
 };
