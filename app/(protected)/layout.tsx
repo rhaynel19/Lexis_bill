@@ -1,17 +1,57 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { CommandMenu } from "@/components/command-menu";
-import { Plus, FileText, Settings, LayoutDashboard, Download, Menu } from "lucide-react";
+import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TrialHeaderBadge } from "@/components/TrialHeaderBadge";
 import { SupportChat } from "@/components/support-chat";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { toast } from "sonner";
 
 export default function ProtectedLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    const router = useRouter();
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            router.push("/login");
+        } else {
+            setIsLoading(false);
+        }
+    }, [router]);
+
+    const handleLogout = () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        // Clear caches from api-service if any
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith("cache_")) {
+                localStorage.removeItem(key);
+            }
+        });
+        toast.success("Sesión cerrada correctamente");
+        router.push("/");
+    };
+
+    if (isLoading) {
+        return (
+            <div className="h-screen w-full bg-[#0A192F] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-[#D4AF37] border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-[#D4AF37] font-serif tracking-widest uppercase text-xs">Verificando Credenciales...</p>
+                </div>
+            </div>
+        );
+    }
     return (
         <div className="flex flex-col h-screen bg-background text-foreground transition-colors duration-300">
             <div className="flex-none border-b border-[#D4AF37]/20 bg-[#0A192F] shadow-lg sticky top-0 z-50 transition-colors duration-300">
@@ -38,12 +78,12 @@ export default function ProtectedLayout({
                                     <Menu className="w-6 h-6" />
                                 </Button>
                             </SheetTrigger>
-                            <SheetContent side="left" className="bg-[#0A192F] text-[#F9F6EE] border-r border-[#D4AF37]/20 p-0 w-72">
-                                <SheetHeader className="p-6 border-b border-[#D4AF37]/10">
-                                    <SheetTitle className="text-[#D4AF37] text-left">LEXIS BILL</SheetTitle>
+                            <SheetContent side="left" className="bg-[#0A192F] text-[#F9F6EE] border-r border-[#D4AF37]/20 p-0 w-72 flex flex-col">
+                                <SheetHeader className="p-6 border-b border-[#D4AF37]/10 flex-none">
+                                    <SheetTitle className="text-[#D4AF37] text-left uppercase tracking-tighter font-black">LEXIS BILL</SheetTitle>
                                 </SheetHeader>
-                                <nav className="flex flex-col gap-2 p-4">
-                                    <SidebarLinks isMobile />
+                                <nav className="flex-1 overflow-y-auto p-4">
+                                    <SidebarLinks isMobile onLogout={handleLogout} />
                                 </nav>
                             </SheetContent>
                         </Sheet>
@@ -59,8 +99,8 @@ export default function ProtectedLayout({
             <div className="flex flex-1 overflow-hidden h-full">
                 {/* Desktop Sidebar */}
                 <aside className="hidden md:flex w-64 flex-col bg-[#0A192F] text-[#F9F6EE] border-r border-[#D4AF37]/10 h-full overflow-y-auto">
-                    <nav className="flex-1 px-4 py-8 space-y-2">
-                        <SidebarLinks />
+                    <nav className="flex-1 px-4 py-8 flex flex-col">
+                        <SidebarLinks onLogout={handleLogout} />
                     </nav>
                     <div className="p-6 border-t border-[#D4AF37]/5 text-center">
                         <p className="text-[10px] text-slate-500 uppercase tracking-widest">Lexis Bill Pro</p>
@@ -109,35 +149,49 @@ export default function ProtectedLayout({
     );
 }
 
-function SidebarLinks({ isMobile = false }) {
+function SidebarLinks({ isMobile = false, onLogout }: { isMobile?: boolean, onLogout?: () => void }) {
     return (
-        <>
-            <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors group">
-                <LayoutDashboard className="w-5 h-5 text-[#D4AF37]" />
-                <span className="font-medium">Dashboard</span>
-            </Link>
-            <Link href="/nueva-factura" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#D4AF37] text-[#0A192F] font-bold shadow-lg shadow-amber-500/20 hover:scale-[1.02] transition-all">
-                <Plus className="w-5 h-5" />
-                <span>Nueva Factura</span>
-            </Link>
-            <div className="pt-4 pb-2 px-4 text-[10px] text-slate-500 uppercase tracking-widest font-bold border-t border-[#D4AF37]/5 mt-2">Documentos</div>
-            <Link href="/nueva-cotizacion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
-                <FileText className="w-5 h-5 text-slate-400" />
-                <span className="text-sm">Nueva Cotización</span>
-            </Link>
-            <Link href="/cotizaciones" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
-                <FileText className="w-5 h-5 text-slate-400" />
-                <span className="text-sm">Ver Cotizaciones</span>
-            </Link>
-            <div className="pt-4 pb-2 px-4 text-[10px] text-slate-500 uppercase tracking-widest font-bold border-t border-[#D4AF37]/5 mt-2">Gestión</div>
-            <Link href="/reportes" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
-                <Download className="w-5 h-5 text-slate-400" />
-                <span className="text-sm">Reportes 606/607</span>
-            </Link>
-            <Link href="/configuracion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
-                <Settings className="w-5 h-5 text-slate-400" />
-                <span className="text-sm">Configuración</span>
-            </Link>
-        </>
+        <div className="flex flex-col h-full justify-between">
+            <div className="space-y-2">
+                <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors group">
+                    <LayoutDashboard className="w-5 h-5 text-[#D4AF37]" />
+                    <span className="font-medium">Dashboard</span>
+                </Link>
+                <Link href="/nueva-factura" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#D4AF37] text-[#0A192F] font-bold shadow-lg shadow-amber-500/20 hover:scale-[1.02] transition-all">
+                    <Plus className="w-5 h-5" />
+                    <span>Nueva Factura</span>
+                </Link>
+                <div className="pt-4 pb-2 px-4 text-[10px] text-slate-500 uppercase tracking-widest font-bold border-t border-[#D4AF37]/5 mt-2">Documentos</div>
+                <Link href="/nueva-cotizacion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
+                    <FileText className="w-5 h-5 text-slate-400" />
+                    <span className="text-sm">Nueva Cotización</span>
+                </Link>
+                <Link href="/cotizaciones" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
+                    <FileText className="w-5 h-5 text-slate-400" />
+                    <span className="text-sm">Ver Cotizaciones</span>
+                </Link>
+                <div className="pt-4 pb-2 px-4 text-[10px] text-slate-500 uppercase tracking-widest font-bold border-t border-[#D4AF37]/5 mt-2">Gestión</div>
+                <Link href="/reportes" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
+                    <Download className="w-5 h-5 text-slate-400" />
+                    <span className="text-sm">Reportes 606/607</span>
+                </Link>
+                <Link href="/configuracion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#D4AF37]/10 transition-colors">
+                    <Settings className="w-5 h-5 text-slate-400" />
+                    <span className="text-sm">Configuración</span>
+                </Link>
+            </div>
+
+            {onLogout && (
+                <div className="mt-auto pt-8">
+                    <button
+                        onClick={onLogout}
+                        className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-colors border-t border-[#D4AF37]/5"
+                    >
+                        <LogOut className="w-5 h-5" />
+                        <span className="text-sm font-medium">Cerrar Sesión</span>
+                    </button>
+                </div>
+            )}
+        </div>
     );
 }

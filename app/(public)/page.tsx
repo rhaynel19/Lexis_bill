@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,13 +11,12 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export default function LandingPage() {
   const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      router.push("/dashboard");
-    }
-  }, [router]);
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    setIsLoggedIn(!!token);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0A192F] text-[#F9F6EE] font-sans selection:bg-[#D4AF37]/30">
@@ -31,11 +30,19 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-8">
             <Link href="#beneficios" className="text-sm font-medium hover:text-[#D4AF37] transition-colors">Beneficios</Link>
             <Link href="#precio" className="text-sm font-medium hover:text-[#D4AF37] transition-colors">Precio</Link>
-            <Link href="/login">
-              <Button variant="outline" className="text-[#D4AF37] border-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#0A192F] transition-all text-xs font-bold uppercase tracking-widest px-6 rounded-md shadow-none bg-transparent">
-                Entrar
-              </Button>
-            </Link>
+            {isLoggedIn ? (
+              <Link href="/dashboard">
+                <Button className="bg-[#D4AF37] text-[#0A192F] hover:bg-[#B8962E] transition-all text-sm font-bold uppercase tracking-widest px-8 rounded-md shadow-lg shadow-[#D4AF37]/20">
+                  Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/login">
+                <Button variant="outline" className="text-[#D4AF37] border-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#0A192F] transition-all text-xs font-bold uppercase tracking-widest px-6 rounded-md shadow-none bg-transparent">
+                  Entrar
+                </Button>
+              </Link>
+            )}
           </div>
           {/* Mobile Menu */}
           <div className="md:hidden">
@@ -49,16 +56,26 @@ export default function LandingPage() {
                 <div className="flex flex-col gap-8 text-center">
                   <Link href="#beneficios" className="text-xl font-serif hover:text-[#D4AF37]">Beneficios</Link>
                   <Link href="#precio" className="text-xl font-serif hover:text-[#D4AF37]">Precio</Link>
-                  <Link href="/login">
-                    <Button variant="outline" className="w-full text-[#D4AF37] border-[#D4AF37] py-6 rounded-xl">
-                      Entrar
-                    </Button>
-                  </Link>
-                  <Link href="/registro">
-                    <Button className="w-full bg-[#D4AF37] text-[#0A192F] font-bold py-6 rounded-xl shadow-lg shadow-[#D4AF37]/20">
-                      Crear Cuenta Gratis
-                    </Button>
-                  </Link>
+                  {isLoggedIn ? (
+                    <Link href="/dashboard">
+                      <Button className="w-full bg-[#D4AF37] text-[#0A192F] font-bold py-6 rounded-xl shadow-lg shadow-[#D4AF37]/20 text-xl">
+                        Ir al Dashboard
+                      </Button>
+                    </Link>
+                  ) : (
+                    <>
+                      <Link href="/login">
+                        <Button variant="outline" className="w-full text-[#D4AF37] border-[#D4AF37] py-6 rounded-xl">
+                          Entrar
+                        </Button>
+                      </Link>
+                      <Link href="/registro">
+                        <Button className="w-full bg-[#D4AF37] text-[#0A192F] font-bold py-6 rounded-xl shadow-lg shadow-[#D4AF37]/20">
+                          Crear Cuenta Gratis
+                        </Button>
+                      </Link>
+                    </>
+                  )}
                 </div>
               </SheetContent>
             </Sheet>
