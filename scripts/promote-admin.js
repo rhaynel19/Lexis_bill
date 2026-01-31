@@ -2,8 +2,12 @@
  * Promueve un usuario a admin por email.
  * Uso: node scripts/promote-admin.js usuario@ejemplo.com
  */
-require('dotenv').config({ path: require('path').resolve(process.cwd(), '.env.local') });
-require('dotenv').config();
+const path = require('path');
+const projectRoot = path.resolve(__dirname, '..');
+
+// Cargar .env desde la raíz del proyecto (funciona aunque ejecutes desde otra carpeta)
+require('dotenv').config({ path: path.join(projectRoot, '.env.local') });
+require('dotenv').config({ path: path.join(projectRoot, '.env') });
 
 const mongoose = require('mongoose');
 const email = process.argv[2];
@@ -15,7 +19,15 @@ if (!email) {
 
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
-    console.error('MONGODB_URI no definido');
+    console.error('');
+    console.error('❌ MONGODB_URI no definido.');
+    console.error('');
+    console.error('Solución: Crea o edita .env.local en la raíz del proyecto y agrega:');
+    console.error('');
+    console.error('  MONGODB_URI=mongodb+srv://usuario:password@cluster.mongodb.net/lexis_bill');
+    console.error('');
+    console.error('(Usa la misma URL de MongoDB que tu API.)');
+    console.error('');
     process.exit(1);
 }
 

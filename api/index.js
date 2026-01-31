@@ -252,6 +252,16 @@ const Expense = mongoose.models.Expense || mongoose.model('Expense', expenseSche
 const Quote = mongoose.models.Quote || mongoose.model('Quote', quoteSchema);
 
 function getUserSubscription(user) {
+    // Usuario oficial/admin: acceso total siempre (plan Pro, sin bloqueos)
+    if (user?.role === 'admin') {
+        return {
+            plan: 'pro',
+            status: 'active',
+            paymentMethod: null,
+            startDate: user.createdAt,
+            endDate: null
+        };
+    }
     const sub = user.subscription || {};
     const plan = sub.plan || user.membershipLevel || 'free';
     let status = sub.status;
@@ -286,7 +296,8 @@ const verifyToken = (req, res, next) => {
             const now = new Date();
             const endDate = sub.endDate ? new Date(sub.endDate) : user.expiryDate ? new Date(user.expiryDate) : null;
 
-            if (sub.status === 'expired' && endDate) {
+            // Admin: no se bloquea nunca
+            if (user.role !== 'admin' && sub.status === 'expired' && endDate) {
                 const gracePeriodLimit = new Date(endDate);
                 gracePeriodLimit.setDate(gracePeriodLimit.getDate() + 5);
                 if (now > gracePeriodLimit) {

@@ -6,6 +6,7 @@
     "dev": "next dev",
     "dev:backend": "node api/index.js",
     "dev:all": "concurrently \"next dev\" \"node api/index.js\"",
+    "promote-admin": "node scripts/promote-admin.js",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint"
