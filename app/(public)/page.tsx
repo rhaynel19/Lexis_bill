@@ -315,7 +315,7 @@ export default function LandingPage() {
                 <div className="flex flex-col items-center gap-2">
                   <div className="flex items-end gap-1">
                     <span className="text-6xl font-bold text-[#F9F6EE]">RD$950</span>
-                    <span className="text-slate-500 mb-2">/mes</span>
+                    <span className="text-[#D4AF37] text-2xl font-semibold mb-2 align-bottom">/mes</span>
                   </div>
                   <p className="text-sm text-slate-400 italic">Si no simplifica tu vida, no pagas nada.</p>
                 </div>

@@ -123,6 +123,7 @@ const paymentRequestSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     plan: { type: String, enum: ['free', 'pro', 'premium'], required: true },
     paymentMethod: { type: String, enum: ['transferencia', 'paypal'], required: true },
+    comprobanteImage: { type: String }, // base64 data URL del comprobante (obligatorio para transferencia)
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     requestedAt: { type: Date, default: Date.now },
     processedAt: { type: Date },
@@ -600,12 +601,18 @@ app.get('/api/membership/payment-info', (req, res) => {
 
 app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
     try {
-        const { plan, paymentMethod } = req.body;
+        const { plan, paymentMethod, comprobanteImage } = req.body;
         if (!plan || !['pro', 'premium'].includes(plan)) {
             return res.status(400).json({ message: 'Plan inválido. Elige Pro o Premium.' });
         }
         if (!paymentMethod || !['transferencia', 'paypal'].includes(paymentMethod)) {
             return res.status(400).json({ message: 'Método de pago inválido. Elige Transferencia o PayPal.' });
+        }
+
+        if (paymentMethod === 'transferencia') {
+            if (!comprobanteImage || !comprobanteImage.startsWith('data:image/')) {
+                return res.status(400).json({ message: 'Debes subir el comprobante de transferencia para continuar.' });
+            }
         }
 
         const existing = await PaymentRequest.findOne({ userId: req.userId, status: 'pending' });
@@ -617,6 +624,7 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
             userId: req.userId,
             plan,
             paymentMethod,
+            comprobanteImage: paymentMethod === 'transferencia' ? comprobanteImage : undefined,
             status: 'pending'
         });
         await pr.save();
@@ -650,6 +658,7 @@ app.get('/api/admin/pending-payments', verifyToken, verifyAdmin, async (req, res
             userEmail: p.userId?.email,
             plan: p.plan,
             paymentMethod: p.paymentMethod,
+            comprobanteImage: p.comprobanteImage,
             requestedAt: p.requestedAt
         })));
     } catch (e) {

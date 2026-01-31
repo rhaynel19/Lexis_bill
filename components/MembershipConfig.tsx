@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { CreditCard, Building2, Loader2, CheckCircle2 } from "lucide-react";
+import { CreditCard, Building2, Loader2, CheckCircle2, Upload, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ export function MembershipConfig() {
     const [subscription, setSubscription] = useState<any>(null);
     const [selectedPlan, setSelectedPlan] = useState<string>("pro");
     const [selectedMethod, setSelectedMethod] = useState<"transferencia" | "paypal">("transferencia");
+    const [comprobante, setComprobante] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -48,11 +49,16 @@ export function MembershipConfig() {
             toast.info("El plan Free ya está incluido.");
             return;
         }
+        if (selectedMethod === "transferencia" && !comprobante) {
+            toast.error("Debes subir el comprobante de transferencia para continuar.");
+            return;
+        }
         setIsSubmitting(true);
         try {
             const { api } = await import("@/lib/api-service");
-            await api.requestMembershipPayment(selectedPlan, selectedMethod);
+            await api.requestMembershipPayment(selectedPlan, selectedMethod, selectedMethod === "transferencia" ? comprobante || undefined : undefined);
             toast.success("Tu solicitud fue registrada. Tu membresía será activada una vez validemos el pago.");
+            setComprobante(null);
             const status = await api.getSubscriptionStatus();
             setSubscription(status);
         } catch (e: any) {
@@ -61,6 +67,8 @@ export function MembershipConfig() {
             setIsSubmitting(false);
         }
     };
+
+    const canSubmit = selectedMethod === "paypal" || (selectedMethod === "transferencia" && !!comprobante);
 
     const statusInfo = subscription?.status ? STATUS_LABELS[subscription.status] || STATUS_LABELS.pending : STATUS_LABELS.active;
     const paidPlans = plans.filter((p: any) => p.price > 0);
@@ -152,7 +160,7 @@ export function MembershipConfig() {
                                         type="radio"
                                         name="method"
                                         checked={selectedMethod === "transferencia"}
-                                        onChange={() => setSelectedMethod("transferencia")}
+                                        onChange={() => { setSelectedMethod("transferencia"); setComprobante(null); }}
                                         className="accent-amber-600"
                                     />
                                     <span>🏦 Transferencia bancaria</span>
@@ -162,7 +170,7 @@ export function MembershipConfig() {
                                         type="radio"
                                         name="method"
                                         checked={selectedMethod === "paypal"}
-                                        onChange={() => setSelectedMethod("paypal")}
+                                        onChange={() => { setSelectedMethod("paypal"); setComprobante(null); }}
                                         className="accent-amber-600"
                                     />
                                     <span>💲 PayPal</span>
@@ -171,14 +179,53 @@ export function MembershipConfig() {
                         </div>
 
                         {selectedMethod === "transferencia" && paymentInfo && (
-                            <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-2">
+                            <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-4">
                                 <p className="font-medium text-slate-700 flex items-center gap-2">
                                     <Building2 className="w-4 h-4" /> Datos para transferencia
                                 </p>
                                 <p className="text-sm"><strong>Banco:</strong> {paymentInfo.bankName}</p>
                                 <p className="text-sm font-mono"><strong>Cuenta:</strong> {paymentInfo.bankAccount}</p>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    Realiza la transferencia y haz clic en &quot;He realizado el pago&quot;.
+                                <div className="space-y-2">
+                                    <Label className="text-slate-700">Comprobante de pago *</Label>
+                                    <p className="text-xs text-muted-foreground">Sube una captura de pantalla o foto del comprobante.</p>
+                                    {!comprobante ? (
+                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-amber-300 rounded-xl cursor-pointer bg-amber-50/50 hover:bg-amber-50 transition-colors">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file && file.size <= 5 * 1024 * 1024) {
+                                                        const reader = new FileReader();
+                                                        reader.onload = () => setComprobante(reader.result as string);
+                                                        reader.readAsDataURL(file);
+                                                    } else if (file) {
+                                                        toast.error("La imagen no debe superar 5 MB.");
+                                                    }
+                                                }}
+                                            />
+                                            <Upload className="w-8 h-8 text-amber-600 mb-2" />
+                                            <span className="text-sm font-medium text-amber-700">Haz clic para subir</span>
+                                            <span className="text-xs text-slate-500">PNG, JPG (máx. 5 MB)</span>
+                                        </label>
+                                    ) : (
+                                        <div className="relative inline-block">
+                                            <img src={comprobante} alt="Comprobante" className="max-h-40 rounded-lg border border-slate-200 object-contain" />
+                                            <button
+                                                type="button"
+                                                onClick={() => setComprobante(null)}
+                                                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                                                aria-label="Quitar comprobante"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                            <p className="text-xs text-green-600 mt-1 font-medium">✓ Comprobante cargado</p>
+                                        </div>
+                                    )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Debes subir el comprobante antes de continuar.
                                 </p>
                             </div>
                         )}
@@ -197,8 +244,8 @@ export function MembershipConfig() {
 
                         <Button
                             onClick={handleRequestPayment}
-                            disabled={isSubmitting || hasPending}
-                            className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                            disabled={isSubmitting || hasPending || !canSubmit}
+                            className="w-full bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isSubmitting ? (
                                 <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>

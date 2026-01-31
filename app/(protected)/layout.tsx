@@ -93,6 +93,14 @@ export default function ProtectedLayout({
                     </Link>
 
                     <div className="flex items-center gap-2 sm:gap-4">
+                        {userFromApi?.role === "admin" && (
+                            <Link href="/admin">
+                                <Button variant="outline" size="sm" className="gap-2 border-amber-500/50 text-amber-600 hover:bg-amber-500/20 hover:text-amber-500 font-semibold">
+                                    <ShieldAlert className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Admin</span>
+                                </Button>
+                            </Link>
+                        )}
                         <TrialHeaderBadge />
                         <ThemeToggle />
 

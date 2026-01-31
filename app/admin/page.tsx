@@ -10,7 +10,8 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
-import { CreditCard, Check, X, Loader2, RefreshCw, AlertCircle } from "lucide-react";
+import { CreditCard, Check, X, Loader2, RefreshCw, AlertCircle, ImageIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -19,6 +20,7 @@ export default function AdminPagosPendientes() {
     const [payments, setPayments] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
+    const [comprobanteView, setComprobanteView] = useState<string | null>(null);
 
     const fetchPayments = async () => {
         try {
@@ -139,7 +141,19 @@ export default function AdminPagosPendientes() {
                                             <span className="font-medium capitalize">{p.plan}</span>
                                         </TableCell>
                                         <TableCell>
-                                            <span className="capitalize">{p.paymentMethod}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="capitalize">{p.paymentMethod}</span>
+                                                {p.paymentMethod === "transferencia" && p.comprobanteImage && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="h-7 text-xs"
+                                                        onClick={() => setComprobanteView(p.comprobanteImage)}
+                                                    >
+                                                        <ImageIcon className="w-3 h-3 mr-1" /> Ver
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-muted-foreground text-sm">
                                             {formatDate(p.requestedAt)}
@@ -184,6 +198,19 @@ export default function AdminPagosPendientes() {
                     )}
                 </CardContent>
             </Card>
+
+            <Dialog open={!!comprobanteView} onOpenChange={() => setComprobanteView(null)}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Comprobante de transferencia</DialogTitle>
+                    </DialogHeader>
+                    {comprobanteView && (
+                        <div className="overflow-auto max-h-[70vh]">
+                            <img src={comprobanteView} alt="Comprobante" className="w-full rounded-lg border" />
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
