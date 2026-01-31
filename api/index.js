@@ -396,6 +396,15 @@ app.post('/api/auth/login', async (req, res) => {
 
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret_key_lexis_placeholder', { expiresIn: 86400 });
 
+        // Cookie HttpOnly para que el middleware permita acceso a rutas protegidas
+        res.cookie('lexis_auth', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 86400 * 1000, // 24h en ms
+            path: '/'
+        });
+
         console.log(`[AUTH] Login successful: ${email}`);
         res.status(200).json({
             id: user._id,
