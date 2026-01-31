@@ -25,9 +25,9 @@ export default function Configuration() {
         profession: "general", // general, medic, lawyer, technical, other
         bankName: "",
         bankAccount: "",
+        hasElectronicBilling: false,
     });
 
-    // Mock state for logos (in real app, use File List)
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [sealPreview, setSealPreview] = useState<string | null>(null);
 
@@ -38,12 +38,8 @@ export default function Configuration() {
             setConfig(prev => ({ ...prev, ...data }));
             if (data.logo) setLogoPreview(data.logo);
             if (data.seal) setSealPreview(data.seal);
-
-            // Sync local storage profession with context if different
-            // But prefer context if it's already set (handled by provider)
         }
 
-        // Populate config from context if available and not set in local config logic
         if (profession) {
             setConfig(prev => ({ ...prev, profession }));
         }
@@ -70,97 +66,145 @@ export default function Configuration() {
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const dataToSave = {
             ...config,
             logo: logoPreview,
             seal: sealPreview
         };
         localStorage.setItem("appConfig", JSON.stringify(dataToSave));
-
-        // Update Context
         setProfession(config.profession as any);
 
-        toast.success("✅ Configuración guardada exitosamente. Sus facturas se actualizarán.");
+        try {
+            const { api } = await import("@/lib/api-service");
+            await api.updateProfile({
+                name: config.companyName,
+                profession: config.profession,
+                address: config.address,
+                phone: config.phone,
+                exequatur: config.exequatur,
+                hasElectronicBilling: config.hasElectronicBilling,
+                logo: logoPreview,
+                digitalSeal: sealPreview
+            });
+            toast.success("✅ Configuración guardada exitosamente en la nube y localmente.");
+        } catch (error) {
+            console.error("Error saving to cloud:", error);
+            toast.warning("⚠️ Guardado localmente, pero hubo un error al sincronizar con la nube.");
+        }
     };
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
-            <h1 className="text-3xl font-bold text-primary mb-2">Mi Oficina Fiscal</h1>
-            <p className="text-gray-500 mb-8">Personalice la apariencia de sus documentos y datos fiscales.</p>
+        <div className="container mx-auto px-4 py-6 md:py-8 max-w-5xl">
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-primary mb-2">Mi Oficina Fiscal</h1>
+                <p className="text-gray-500">Personalice la apariencia de sus documentos y datos fiscales.</p>
+            </div>
 
-            <div className="grid gap-6">
-                <Card>
+            <div className="grid gap-8">
+                {/* Identidad Visual Section */}
+                <Card className="border-none shadow-lg bg-white/50 backdrop-blur-sm overflow-hidden">
                     <CardHeader>
-                        <CardTitle>Identidad Visual</CardTitle>
+                        <CardTitle className="text-xl">Identidad Visual</CardTitle>
                         <CardDescription>Estos elementos aparecerán en el encabezado de sus facturas.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <div className="grid md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Logo Upload */}
-                            <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
-                                <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'logo')} />
-                                {logoPreview ? (
-                                    <div className="relative w-full h-32 mb-2">
-                                        <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
-                                        <Button variant="ghost" size="sm" className="absolute top-0 right-0 bg-white/80" onClick={(e) => { e.stopPropagation(); setLogoPreview(null) }}>✕</Button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-3">
-                                            <Upload className="w-6 h-6" />
+                            <div className="space-y-3">
+                                <Label className="text-slate-600">Logo de Empresa</Label>
+                                <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer relative min-h-[160px]">
+                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'logo')} />
+                                    {logoPreview ? (
+                                        <div className="relative w-full h-32">
+                                            <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
+                                            <Button variant="ghost" size="sm" className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-white shadow-md border" onClick={(e) => { e.stopPropagation(); setLogoPreview(null) }}>✕</Button>
                                         </div>
-                                        <h3 className="font-medium text-slate-900">Subir Logo</h3>
-                                        <p className="text-xs text-slate-500 mt-1">PNG, JPG (Recomendado 400x150px)</p>
-                                    </>
-                                )}
+                                    ) : (
+                                        <>
+                                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-3">
+                                                <Upload className="w-6 h-6" />
+                                            </div>
+                                            <h3 className="font-medium text-slate-900">Subir Logo</h3>
+                                            <p className="text-xs text-slate-500 mt-1">PNG, JPG (Recomendado 400x150px)</p>
+                                        </>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Digital Seal Upload */}
-                            <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
-                                <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'seal')} />
-                                {sealPreview ? (
-                                    <div className="relative w-full h-32 mb-2">
-                                        <img src={sealPreview} alt="Sello" className="w-full h-full object-contain" />
-                                        <Button variant="ghost" size="sm" className="absolute top-0 right-0 bg-white/80" onClick={(e) => { e.stopPropagation(); setSealPreview(null) }}>✕</Button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 mb-3">
-                                            <Upload className="w-6 h-6" />
+                            {/* Seal Upload */}
+                            <div className="space-y-3">
+                                <Label className="text-slate-600">Sello Digital / Firma</Label>
+                                <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer relative min-h-[160px]">
+                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'seal')} />
+                                    {sealPreview ? (
+                                        <div className="relative w-full h-32">
+                                            <img src={sealPreview} alt="Sello" className="w-full h-full object-contain" />
+                                            <Button variant="ghost" size="sm" className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-white shadow-md border" onClick={(e) => { e.stopPropagation(); setSealPreview(null) }}>✕</Button>
                                         </div>
-                                        <h3 className="font-medium text-slate-900">Subir Sello Digital</h3>
-                                        <p className="text-xs text-slate-500 mt-1">Firma escaneada o sello (Transparente)</p>
-                                    </>
-                                )}
+                                    ) : (
+                                        <>
+                                            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 mb-3">
+                                                <Upload className="w-6 h-6" />
+                                            </div>
+                                            <h3 className="font-medium text-slate-900">Subir Sello</h3>
+                                            <p className="text-xs text-slate-500 mt-1">Sello o firma escaneada (Transparente)</p>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* --- NUEVO: Gestión de Comprobantes --- */}
+                {/* NCF Configuration Section */}
                 <ComprobantesConfig />
 
-                <Card>
+                {/* Preferencias de Facturación */}
+                <Card className="border-none shadow-lg bg-indigo-50/50 backdrop-blur-sm border-indigo-100 italic">
                     <CardHeader>
-                        <CardTitle>Datos Fiscales y de Contacto</CardTitle>
+                        <CardTitle className="text-xl text-indigo-900 flex items-center gap-2">
+                            <Settings className="w-5 h-5" /> Preferencias de Facturación
+                        </CardTitle>
+                        <CardDescription>Configure cómo Lexis Bill automatiza sus comprobantes.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid gap-4 md:grid-cols-2">
+                    <CardContent className="space-y-6">
+                        <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-indigo-100 shadow-sm">
+                            <div className="space-y-0.5">
+                                <Label className="text-base font-bold text-slate-800">Facturación Electrónica Activa</Label>
+                                <p className="text-sm text-slate-500">Lexis Bill sugerirá Serie E (E31, E32...) en lugar de Serie B.</p>
+                            </div>
+                            <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-200 cursor-pointer transition-colors duration-200 focus:outline-none"
+                                onClick={() => setConfig({ ...config, hasElectronicBilling: !config.hasElectronicBilling })}
+                                style={{ backgroundColor: config.hasElectronicBilling ? '#4F46E5' : '#E2E8F0' }}>
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${config.hasElectronicBilling ? 'translate-x-6' : 'translate-x-1'}`} />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Fiscal & Contact Info Section */}
+                <Card className="border-none shadow-lg bg-white/50 backdrop-blur-sm">
+                    <CardHeader>
+                        <CardTitle className="text-xl">Datos Fiscales y de Contacto</CardTitle>
+                        <CardDescription>Información legal que aparecerá en sus comprobantes.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-6 md:grid-cols-2">
                         <div className="space-y-2">
                             <Label htmlFor="companyName">Nombre Comercial / Profesional</Label>
-                            <Input id="companyName" value={config.companyName} onChange={handleChange} placeholder="Ej: Dr. Juan Pérez" />
+                            <Input id="companyName" value={config.companyName} onChange={handleChange} placeholder="Ej: Dr. Juan Pérez" className="bg-white" />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="rnc">RNC / Cédula</Label>
-                            <Input id="rnc" value={config.rnc} onChange={handleChange} placeholder="Ej: 131-XXXXX-X" />
+                            <Input id="rnc" value={config.rnc} onChange={handleChange} placeholder="Ej: 131-XXXXX-X" className="bg-white" />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="exequatur">Exequátur / Colegiatura (Opcional)</Label>
-                            <Input id="exequatur" value={config.exequatur} onChange={handleChange} placeholder="Ej: 1234-56" />
+                            <Input id="exequatur" value={config.exequatur} onChange={handleChange} placeholder="Ej: 1234-56" className="bg-white" />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="phone">Teléfono / WhatsApp</Label>
-                            <Input id="phone" value={config.phone} onChange={handleChange} placeholder="Ej: 809-555-0000" />
+                            <Input id="phone" value={config.phone} onChange={handleChange} placeholder="Ej: 809-555-0000" className="bg-white" />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="profession">Especialidad / Sector</Label>
@@ -168,7 +212,7 @@ export default function Configuration() {
                                 id="profession"
                                 value={config.profession}
                                 onChange={handleSelectChange}
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <option value="general">Profesional General</option>
                                 <option value="medic">Médico / Salud</option>
@@ -179,39 +223,43 @@ export default function Configuration() {
                         </div>
                         <div className="space-y-2 md:col-span-2">
                             <Label htmlFor="address">Dirección Física</Label>
-                            <Input id="address" value={config.address} onChange={handleChange} placeholder="Ej: Av. Winston Churchill esq. 27 de Febrero, Torre Empresarial..." />
+                            <Input id="address" value={config.address} onChange={handleChange} placeholder="Ej: Av. Winston Churchill esq. 27 de Febrero..." className="bg-white" />
                         </div>
 
-                        <div className="h-4 md:col-span-2"></div>
-                        <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
-                            <div className="md:col-span-2 flex items-center gap-2 text-blue-800 font-bold text-sm">
-                                🏦 Información Bancaria (Para cobros por transferencia)
+                        {/* Bank Info */}
+                        <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2 mt-2">
+                            <div className="md:col-span-2 flex items-center gap-2 text-blue-900 font-bold text-sm mb-1">
+                                <span className="text-lg">🏦</span> Información Bancaria (Para transferencias)
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="bankName">Banco</Label>
-                                <Input id="bankName" value={config.bankName} onChange={handleChange} placeholder="Ej: Banco Popular, Banreservas..." />
+                                <Input id="bankName" value={config.bankName} onChange={handleChange} placeholder="Ej: Banco Popular..." className="bg-white border-blue-100" />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="bankAccount">Número de Cuenta</Label>
-                                <Input id="bankAccount" value={config.bankAccount} onChange={handleChange} placeholder="Ej: 771234567 (Corriente/Ahorros)" />
+                                <Input id="bankAccount" value={config.bankAccount} onChange={handleChange} placeholder="Ej: 771234567" className="bg-white border-blue-100" />
                             </div>
                         </div>
+
                         <div className="space-y-2 md:col-span-2">
                             <Label htmlFor="email">Correo Electrónico (Visible en Factura)</Label>
-                            <Input id="email" value={config.email} onChange={handleChange} placeholder="contacto@sudominio.com" />
+                            <Input id="email" value={config.email} onChange={handleChange} placeholder="contacto@sudominio.com" className="bg-white" />
                         </div>
                     </CardContent>
                 </Card>
 
-                <div className="flex justify-end mb-8">
-                    <Button size="lg" onClick={handleSave} className="bg-[#D4AF37] hover:bg-amber-600 text-white gap-2">
+                {/* Save Button Container */}
+                <div className="flex justify-end pt-4 pb-12">
+                    <Button size="lg" onClick={handleSave} className="bg-[#D4AF37] hover:bg-amber-600 text-white gap-2 px-8 h-12 rounded-xl shadow-lg transition-all transform hover:scale-105 active:scale-95">
                         <Save className="w-5 h-5" /> Guardar Cambios
                     </Button>
                 </div>
             </div>
 
             {/* Support Section */}
-            <SupportTicketForm />
+            <div className="mt-12 pt-12 border-t">
+                <SupportTicketForm />
+            </div>
         </div>
     );
 }

@@ -96,12 +96,17 @@ export function getNextSequenceNumber(type: string): string {
  */
 export function getInvoiceTypeName(type: string): string {
     const types: { [key: string]: string } = {
-        "31": "Factura de Crédito Fiscal",
-        "32": "Factura de Consumo",
-        "33": "Nota de Débito",
-        "34": "Nota de Crédito",
-        "44": "e-CF 44 - Regímenes Especiales (Ingresos)",
-        "45": "e-CF 45 - Gastos Menores",
+        "01": "Factura de Crédito Fiscal",
+        "02": "Factura de Consumo",
+        "04": "Nota de Crédito",
+        "14": "Factura de Regímenes Especiales",
+        "15": "Factura Gubernamental",
+        "31": "Factura de Crédito Fiscal Electrónica",
+        "32": "Factura de Consumo Electrónica",
+        "33": "Nota de Débito Electrónica",
+        "34": "Nota de Crédito Electrónica",
+        "44": "e-CF Regímenes Especiales",
+        "45": "e-CF Gubernamental",
     };
     return types[type] || type;
 }

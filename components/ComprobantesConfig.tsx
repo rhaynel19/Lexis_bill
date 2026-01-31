@@ -17,6 +17,7 @@ export function ComprobantesConfig() {
 
     const [newBatch, setNewBatch] = useState({
         type: "31",
+        sequenceType: "electronic",
         initialNumber: 1,
         finalNumber: 100,
         expiryDate: "2026-12-31"
@@ -61,17 +62,49 @@ export function ComprobantesConfig() {
                 </CardHeader>
                 <CardContent className="p-6 space-y-6">
                     {/* Formulario para Nuevo Lote */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
                         <div className="space-y-2">
-                            <Label>Tipo de e-CF</Label>
+                            <Label>Modo de Facturación</Label>
+                            <Select
+                                value={newBatch.sequenceType}
+                                onValueChange={(v) => {
+                                    const defaultType = v === "electronic" ? "31" : "01";
+                                    setNewBatch({ ...newBatch, sequenceType: v, type: defaultType });
+                                }}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="electronic">Factura Electrónica (E)</SelectItem>
+                                    <SelectItem value="traditional">Tradicional (B)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Tipo de Comprobante</Label>
                             <Select value={newBatch.type} onValueChange={(v) => setNewBatch({ ...newBatch, type: v })}>
                                 <SelectTrigger>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="31">31 - Crédito Fiscal</SelectItem>
-                                    <SelectItem value="32">32 - Consumo</SelectItem>
-                                    <SelectItem value="34">34 - Nota de Crédito</SelectItem>
+                                    {newBatch.sequenceType === "electronic" ? (
+                                        <>
+                                            <SelectItem value="31">E31 - Crédito Fiscal</SelectItem>
+                                            <SelectItem value="32">E32 - Consumo</SelectItem>
+                                            <SelectItem value="34">E34 - Nota de Crédito</SelectItem>
+                                            <SelectItem value="44">E44 - Regímenes Especiales</SelectItem>
+                                            <SelectItem value="45">E45 - Gubernamentales</SelectItem>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <SelectItem value="01">B01 - Crédito Fiscal</SelectItem>
+                                            <SelectItem value="02">B02 - Consumo</SelectItem>
+                                            <SelectItem value="04">B04 - Nota de Crédito</SelectItem>
+                                            <SelectItem value="14">B14 - Regímenes Especiales</SelectItem>
+                                            <SelectItem value="15">B15 - Gubernamentales</SelectItem>
+                                        </>
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -111,9 +144,11 @@ export function ComprobantesConfig() {
                                 ) : batches.map((batch, i) => {
                                     const available = batch.finalNumber - batch.currentValue;
                                     const isLow = available < 10;
+                                    const isElectronic = batch.sequenceType === "electronic" || batch.series === "E";
+                                    const label = isElectronic ? `e-CF ${batch.type}` : `B${batch.type}`;
                                     return (
                                         <TableRow key={i} className={isLow ? "bg-red-50/30" : ""}>
-                                            <TableCell className="font-medium text-slate-700">e-CF {batch.type}</TableCell>
+                                            <TableCell className="font-medium text-slate-700">{label}</TableCell>
                                             <TableCell className="text-slate-500">{batch.initialNumber} - {batch.finalNumber}</TableCell>
                                             <TableCell className="text-slate-700 font-bold">{batch.currentValue}</TableCell>
                                             <TableCell>

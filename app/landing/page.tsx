@@ -173,7 +173,7 @@ export default function LandingPage() {
                                 <CardTitle className="font-serif text-[#D4AF37] text-3xl mb-4">Plan Élite</CardTitle>
                                 <div className="flex flex-col items-center gap-2">
                                     <div className="flex items-end gap-1">
-                                        <span className="text-6xl font-bold text-[#F9F6EE]">RD$950</span>
+                                        <span className="text-5xl md:text-6xl font-bold text-[#F9F6EE]">RD$950</span>
                                         <span className="text-slate-500 mb-2">/mes</span>
                                     </div>
                                     <p className="text-sm text-slate-400 italic">Si no simplifica tu vida, no pagas nada.</p>
@@ -217,7 +217,7 @@ export default function LandingPage() {
                                     </li>
                                 </ul>
                                 <Link href="/registro" className="block pt-8 w-full">
-                                    <Button className="w-full min-h-[4rem] px-6 md:px-8 py-4 text-base md:text-lg bg-[#D4AF37] hover:bg-[#B8962E] text-[#0A192F] font-bold rounded-xl transition-all shadow-xl shadow-[#D4AF37]/10 flex items-center justify-center text-center whitespace-normal md:whitespace-nowrap leading-tight">
+                                    <Button className="w-full min-h-[4rem] px-6 md:px-8 py-4 text-base md:text-lg bg-[#D4AF37] hover:bg-[#B8962E] text-[#0A192F] font-bold rounded-xl transition-all shadow-xl shadow-[#D4AF37]/10 flex items-center justify-center text-center whitespace-normal md:whitespace-nowrap leading-snug">
                                         Empezar mi Prueba de 15 Días GRATIS
                                     </Button>
                                 </Link>
@@ -258,7 +258,7 @@ export default function LandingPage() {
                             </div>
                         </div>
                     </div>
-                    <div className="pt-8 border-t border-white/5 flex flex-col md:row justify-between items-center gap-4 text-[10px] text-slate-500 uppercase tracking-widest">
+                    <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-slate-500 uppercase tracking-widest">
                         <p>© {new Date().getFullYear()} Lexis Bill. Todos los derechos reservados.</p>
                         <div className="flex gap-8">
                             <Link href="/terminos" className="hover:text-[#D4AF37]">Términos</Link>

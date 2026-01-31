@@ -75,6 +75,9 @@ const userSchema = new mongoose.Schema({
     suggestedFiscalName: { type: String },
     confirmedFiscalName: { type: String },
 
+    // Preferencias de Facturación
+    hasElectronicBilling: { type: Boolean, default: false },
+
     paymentHistory: [{
         date: { type: Date, default: Date.now },
         amount: Number,
@@ -87,6 +90,7 @@ const ncfSettingsSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     type: { type: String, required: true },
     series: { type: String, default: 'E' },
+    sequenceType: { type: String, enum: ['electronic', 'traditional'], default: 'electronic' },
     initialNumber: { type: Number, required: true },
     finalNumber: { type: Number, required: true },
     currentValue: { type: Number, required: true },
@@ -204,7 +208,9 @@ async function getNextNcf(userId, type, session) {
 
     if (!activeBatch) return null;
 
-    const paddedSeq = activeBatch.currentValue.toString().padStart(10, '0');
+    const isElectronic = activeBatch.series === 'E';
+    const padding = isElectronic ? 10 : 8;
+    const paddedSeq = activeBatch.currentValue.toString().padStart(padding, '0');
     return `${activeBatch.series}${type}${paddedSeq}`;
 }
 
@@ -352,6 +358,36 @@ app.post('/api/auth/confirm-fiscal-name', verifyToken, async (req, res) => {
     }
 });
 
+app.post('/api/auth/profile', verifyToken, async (req, res) => {
+    try {
+        const updates = req.body;
+        const allowedUpdates = [
+            'name', 'profession', 'logo', 'digitalSeal', 'exequatur',
+            'address', 'phone', 'hasElectronicBilling'
+        ];
+
+        const user = await User.findById(req.userId);
+        if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
+
+        allowedUpdates.forEach(field => {
+            if (updates[field] !== undefined) {
+                user[field] = updates[field];
+            }
+        });
+
+        await user.save();
+        res.json({
+            success: true, user: {
+                name: user.name,
+                email: user.email,
+                hasElectronicBilling: user.hasElectronicBilling
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.get('/api/status', async (req, res) => {
     res.json({
         mongodb: mongoose.connection.readyState === 1 ? 'CONNECTED' : 'DISCONNECTED',
@@ -408,6 +444,48 @@ app.post('/api/validate-rnc', async (req, res) => {
         res.json({ valid: true, name });
     } catch (error) {
         res.status(500).json({ valid: false, error: error.message });
+    }
+});
+
+// --- GESTIÓN DE COMPROBANTES (NCF) ---
+app.get('/api/ncf-settings', verifyToken, async (req, res) => {
+    try {
+        const settings = await NCFSettings.find({ userId: req.userId }).sort({ type: 1 });
+        res.json(settings);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/ncf-settings', verifyToken, async (req, res) => {
+    try {
+        const { type, sequenceType, initialNumber, finalNumber, expiryDate } = req.body;
+
+        // Determinar serie basada en sequenceType
+        const series = sequenceType === 'traditional' ? 'B' : 'E';
+
+        // Desactivar lotes anteriores del mismo tipo y serie
+        await NCFSettings.updateMany(
+            { userId: req.userId, type, series, isActive: true },
+            { isActive: false }
+        );
+
+        const newSetting = new NCFSettings({
+            userId: req.userId,
+            type,
+            series,
+            sequenceType: sequenceType || 'electronic',
+            initialNumber,
+            finalNumber,
+            currentValue: initialNumber,
+            expiryDate: new Date(expiryDate),
+            isActive: true
+        });
+
+        await newSetting.save();
+        res.status(201).json(newSetting);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 

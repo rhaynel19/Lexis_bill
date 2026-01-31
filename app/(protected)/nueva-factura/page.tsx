@@ -81,6 +81,9 @@ export default function NewInvoice() {
 
                 // Auto-configure type if Corporate
                 if (cleanValue.length === 9) setApplyRetentions(true);
+
+                // Smart NCF Suggestion
+                suggestNCF(cleanValue, matchedClient.name);
             }
             setRncError(""); // Valid by definition if in DB
         } else {
@@ -95,7 +98,45 @@ export default function NewInvoice() {
             if (cleanValue.length >= 9) {
                 const validation = validateRNCOrCedula(value);
                 setRncError(validation.isValid ? "" : (validation.error || ""));
+
+                // Smart NCF Suggestion for new RNC
+                if (validation.isValid) {
+                    suggestNCF(cleanValue, clientName);
+                }
             }
+        }
+    };
+
+    // Smart NCF Logic
+    const suggestNCF = (rncValue: string, name: string) => {
+        const cleanRnc = rncValue.replace(/[^0-9]/g, "");
+        const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
+        const hasElectronic = config.hasElectronicBilling || false;
+
+        let clientType = "consumer";
+        if (cleanRnc.length === 9) clientType = "business";
+
+        // Government check
+        if (cleanRnc.startsWith("4") || name.toLowerCase().includes("ministerio") || name.toLowerCase().includes("ayuntamiento") || name.toLowerCase().includes("gobierno")) {
+            clientType = "government";
+        }
+
+        let suggested = "02"; // Default B02
+        if (hasElectronic) {
+            if (clientType === "business") suggested = "31";
+            else if (clientType === "consumer") suggested = "32";
+            else if (clientType === "government") suggested = "45";
+        } else {
+            if (clientType === "business") suggested = "01";
+            else if (clientType === "consumer") suggested = "02";
+            else if (clientType === "government") suggested = "15";
+        }
+
+        if (suggested !== invoiceType) {
+            setInvoiceType(suggested);
+            toast.info(`💡 Sugerencia: ${getInvoiceTypeName(suggested)}`, {
+                description: `Detectado como ${clientType === "business" ? "Empresa" : clientType === "government" ? "Gobierno" : "Consumidor"}`,
+            });
         }
     };
 
@@ -206,15 +247,13 @@ export default function NewInvoice() {
 
     useEffect(() => {
         // Lógica automática al cambiar tipo de comprobante
-        if (invoiceType === "44") {
-            // E44: Todo Exento
+        if (invoiceType === "44" || invoiceType === "14") {
+            // Regímenes Especiales: Todo Exento
             setItems(prevItems => prevItems.map(item => ({ ...item, isExempt: true })));
-            toast.info("ℹ️ E44 seleccionado: Se ha marcado todo como EXENTO de ITBIS automáticamente.");
-        } else if (invoiceType === "45") {
-            // E45: Gastos Menores
-            setClientName("Proveedor Informal / Gastos Menores");
-            setRnc("000000000"); // RNC Genérico o dejar vacío si el validador lo permite
-            toast.info("ℹ️ E45 seleccionado: Modo simplificado para gastos menores.");
+            toast.info(`ℹ️ ${invoiceType === "14" ? "B14" : "E44"} seleccionado: Se ha marcado todo como EXENTO de ITBIS automáticamente.`);
+        } else if (invoiceType === "45" || invoiceType === "15") {
+            // Gubernamentales
+            toast.info(`ℹ️ ${invoiceType === "15" ? "B15" : "E45"} seleccionado: Configuración para instituciones gubernamentales.`);
         }
     }, [invoiceType]);
 
@@ -272,6 +311,9 @@ export default function NewInvoice() {
                 setClientName(result.name);
                 // Auto-set type based on RNC type
                 if (result.type === "JURIDICA") setApplyRetentions(true);
+
+                // Smart NCF Suggestion
+                suggestNCF(rnc, result.name);
             } else {
                 setRncError("Contribuyente no encontrado o RNC inválido");
             }
@@ -291,6 +333,9 @@ export default function NewInvoice() {
             if (client.phone) setClientPhone(client.phone);
             setIsClientLocked(true);
             toast.success("✨ Cliente cargado");
+
+            // Smart NCF Suggestion
+            suggestNCF(client.rnc, client.name);
         }
     };
 
@@ -593,10 +638,17 @@ export default function NewInvoice() {
     // Función auxiliar para obtener el nombre del tipo de comprobante
     const getInvoiceTypeName = (type: string) => {
         const types: { [key: string]: string } = {
+            "01": "B01 - Crédito Fiscal",
+            "02": "B02 - Consumo",
+            "04": "B04 - Nota de Crédito",
+            "14": "B14 - Regímenes Especiales",
+            "15": "B15 - Gubernamental",
             "31": "e-CF 31 - Crédito Fiscal",
             "32": "e-CF 32 - Consumo",
             "33": "e-CF 33 - Nota de Débito",
             "34": "e-CF 34 - Nota de Crédito",
+            "44": "e-CF 44 - Regímenes Especiales",
+            "45": "e-CF 45 - Gubernamental",
         };
         return types[type] || type;
     };
@@ -673,24 +725,20 @@ export default function NewInvoice() {
                                                 <SelectValue placeholder="Selecciona el tipo de comprobante" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="31">
-                                                    31 - Factura de Crédito Fiscal
-                                                </SelectItem>
-                                                <SelectItem value="32">
-                                                    32 - Factura de Consumo
-                                                </SelectItem>
-                                                <SelectItem value="33">
-                                                    33 - Nota de Débito
-                                                </SelectItem>
-                                                <SelectItem value="34">
-                                                    34 - Nota de Crédito
-                                                </SelectItem>
-                                                <SelectItem value="44">
-                                                    44 - Regímenes Especiales (Ingresos Exentos)
-                                                </SelectItem>
-                                                <SelectItem value="45">
-                                                    45 - Comprobante de Gastos Menores
-                                                </SelectItem>
+                                                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/30">Comprobantes Tradicionales (B)</div>
+                                                <SelectItem value="01">01 - Crédito Fiscal</SelectItem>
+                                                <SelectItem value="02">02 - Consumo</SelectItem>
+                                                <SelectItem value="04">04 - Nota de Crédito</SelectItem>
+                                                <SelectItem value="14">14 - Regímenes Especiales</SelectItem>
+                                                <SelectItem value="15">15 - Gubernamental</SelectItem>
+
+                                                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/30 mt-2">Comprobantes Electrónicos (E)</div>
+                                                <SelectItem value="31">31 - Crédito Fiscal</SelectItem>
+                                                <SelectItem value="32">32 - Consumo</SelectItem>
+                                                <SelectItem value="33">33 - Nota de Débito</SelectItem>
+                                                <SelectItem value="34">34 - Nota de Crédito</SelectItem>
+                                                <SelectItem value="44">44 - Regímenes Especiales</SelectItem>
+                                                <SelectItem value="45">45 - Gubernamental</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <p className="text-xs text-muted-foreground">

@@ -35,6 +35,18 @@ export const api = {
         });
     },
 
+    async updateProfile(data: any) {
+        const token = localStorage.getItem("token");
+        return secureFetch<any>(`${API_URL}/auth/profile`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(data),
+        });
+    },
+
     // RNC
     async validateRnc(number: string) {
         return secureFetch<any>(`${API_URL}/rnc/${number}`, {

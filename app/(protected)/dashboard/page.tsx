@@ -330,12 +330,12 @@ export default function Dashboard() {
         <TrialBanner />
         <SubscriptionAlert />
         {/* Título del Dashboard */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-1">
           <div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+            <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
               Bienvenido, {APP_CONFIG.company.name}
             </h2>
-            <p className="text-slate-500 mt-1">Aquí está lo que está pasando con tu negocio hoy.</p>
+            <p className="text-sm md:text-base text-slate-500 mt-1">Aquí está lo que está pasando con tu negocio hoy.</p>
           </div>
           <div className="flex gap-3 hidden md:flex">
             <Link href="/nueva-factura">
@@ -421,10 +421,10 @@ export default function Dashboard() {
             <Card className="bg-primary text-primary-foreground border-none shadow-xl shadow-primary/20 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20"></div>
               <CardHeader className="pb-2">
-                <CardDescription className="text-primary-foreground/70 font-medium font-sans">
+                <CardDescription className="text-primary-foreground/70 font-medium font-sans text-xs md:text-sm">
                   {mode === 'simple' ? "Cobrado este mes" : "Ingresos del Mes"}
                 </CardDescription>
-                <CardTitle className="text-4xl font-bold tracking-tight">
+                <CardTitle className="text-3xl md:text-4xl font-bold tracking-tight">
                   {formatCurrency(totalRevenue)}
                 </CardTitle>
               </CardHeader>
@@ -484,18 +484,18 @@ export default function Dashboard() {
 
         {/* Alerta de Vencimiento NCF */}
         <div className="mt-6">
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r shadow-sm flex items-start justify-between">
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r shadow-sm flex flex-col md:flex-row items-center md:items-start justify-between gap-4">
             <div className="flex gap-3">
               <AlertCircle className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
               <div>
-                <h3 className="font-bold text-red-800">Atención: Secuencia de Facturas por Vencer</h3>
-                <p className="text-sm text-red-700 mt-1">
-                  Le quedan <strong>8 comprobantes</strong> válidos tipo B01 (Crédito Fiscal).
+                <h3 className="font-bold text-red-800 text-sm md:text-base">Secuencia de Facturas por Vencer</h3>
+                <p className="text-xs md:text-sm text-red-700 mt-1">
+                  Le quedan <strong>8 comprobantes</strong> válidos tipo B01.
                   Su secuencia vence el <strong>30/06/2026</strong>.
                 </p>
               </div>
             </div>
-            <Button size="sm" variant="outline" className="text-red-700 border-red-200 hover:bg-red-100">
+            <Button size="sm" variant="outline" className="w-full md:w-auto text-red-700 border-red-200 hover:bg-red-100">
               Solicitar Nuevos
             </Button>
           </div>

@@ -319,24 +319,29 @@ export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<jsPD
     doc.text(`Son: ${totalEnLetras}`, margin.left, yPosition);
     yPosition += 15;
 
-    // ===== CÓDIGO QR =====
-    try {
-        const qrDataURL = await generateQRCode(invoiceData);
-        if (qrDataURL) {
-            // Posicionar QR en la esquina inferior derecha
-            const qrSize = 40;
-            const qrX = pageWidth - margin.right - qrSize;
-            const qrY = pageHeight - margin.bottom - qrSize - 15;
+    // ===== CÓDIGO QR (Solo para Facturas) =====
+    if (invoiceData.type !== "quote") {
+        try {
+            const qrDataURL = await generateQRCode(invoiceData);
+            if (qrDataURL) {
+                // Posicionar QR en la esquina inferior derecha
+                const qrSize = 40;
+                const qrX = pageWidth - margin.right - qrSize;
+                const qrY = pageHeight - margin.bottom - qrSize - 15;
 
-            doc.addImage(qrDataURL, "PNG", qrX, qrY, qrSize, qrSize);
+                doc.addImage(qrDataURL, "PNG", qrX, qrY, qrSize, qrSize);
 
-            // Texto debajo del QR
-            doc.setFontSize(APP_CONFIG.pdf.fontSize.small);
-            doc.setFont("helvetica", "normal");
-            doc.text("Código de Validación DGII", qrX + qrSize / 2, qrY + qrSize + 5, { align: "center" });
+                // Texto debajo del QR
+                doc.setFontSize(APP_CONFIG.pdf.fontSize.small);
+                doc.setFont("helvetica", "normal");
+                const qrLabel = invoiceData.sequenceNumber.startsWith("E")
+                    ? "Código de Validación DGII"
+                    : "Código QR de Validación";
+                doc.text(qrLabel, qrX + qrSize / 2, qrY + qrSize + 5, { align: "center" });
+            }
+        } catch (error) {
+            console.error("Error agregando QR al PDF:", error);
         }
-    } catch (error) {
-        console.error("Error agregando QR al PDF:", error);
     }
 
     // ===== PIE DE PÁGINA =====
@@ -344,8 +349,13 @@ export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<jsPD
     doc.setFontSize(APP_CONFIG.pdf.fontSize.small);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(APP_CONFIG.pdf.colors.secondary[0], APP_CONFIG.pdf.colors.secondary[1], APP_CONFIG.pdf.colors.secondary[2]);
+    const isElectronic = invoiceData.sequenceNumber.startsWith("E");
+    const footerText = invoiceData.type === "quote"
+        ? "ESTE DOCUMENTO NO TIENE VALOR FISCAL"
+        : `Este documento es una representación impresa de un Comprobante Fiscal ${isElectronic ? "Electrónico" : ""}`;
+
     doc.text(
-        "Este documento es una representación impresa de un Comprobante Fiscal Electrónico",
+        footerText,
         pageWidth / 2,
         footerY,
         { align: "center" }

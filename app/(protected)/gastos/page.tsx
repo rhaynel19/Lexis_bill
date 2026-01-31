@@ -38,8 +38,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-service";
 import { AIService } from "@/lib/ai-service-mock";
+import { DGIIQRParser } from "@/lib/qr-parser";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import jsQR from "jsqr";
+import { ZoomIn, ZoomOut, Maximize2, Layers } from "lucide-react";
 
 const EXPENSE_CATEGORIES = [
     { id: "01", name: "Gastos de Personal" },
@@ -72,6 +75,10 @@ export default function GastosPage() {
         category: "02",
         date: new Date().toISOString().split('T')[0]
     });
+
+    const [scannedImage, setScannedImage] = useState<string | null>(null);
+    const [zoom, setZoom] = useState(1);
+    const [extraPhotos, setExtraPhotos] = useState<string[]>([]);
 
     useEffect(() => {
         loadExpenses();
@@ -127,6 +134,34 @@ export default function GastosPage() {
         if (!file) return;
 
         setIsScanning(true);
+        setScannedImage(URL.createObjectURL(file));
+
+        // 1. Try QR Scanning first
+        try {
+            const qrResult = await scanForQR(file);
+            if (qrResult) {
+                const parsed = DGIIQRParser.parseURL(qrResult);
+                if (parsed) {
+                    setFormData({
+                        supplierName: "Detectado por QR",
+                        supplierRnc: parsed.supplierRnc,
+                        ncf: parsed.ncf,
+                        amount: parsed.amount,
+                        itbis: parsed.itbis,
+                        category: "02",
+                        date: parsed.date ? parsed.date.split('-').reverse().join('-') : new Date().toISOString().split('T')[0]
+                    });
+                    setIsAddOpen(true);
+                    toast.success("✨ Factura electrónica detectada por QR");
+                    setIsScanning(false);
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn("QR Scanning failed, falling back to IA OCR");
+        }
+
+        // 2. Fallback to IA OCR
         toast.info("Escaneando factura con IA...");
 
         try {
@@ -147,6 +182,44 @@ export default function GastosPage() {
             setIsAddOpen(true);
         } finally {
             setIsScanning(false);
+        }
+    };
+
+    const scanForQR = (file: File): Promise<string | null> => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    const context = canvas.getContext("2d");
+                    if (!context) return resolve(null);
+
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    context.drawImage(img, 0, 0);
+
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                    if (code) {
+                        resolve(code.data);
+                    } else {
+                        resolve(null);
+                    }
+                };
+                img.src = e.target?.result as string;
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleAddExtraPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            setExtraPhotos(prev => [...prev, url]);
+            toast.success("Foto adicional añadida");
         }
     };
 
@@ -199,7 +272,7 @@ export default function GastosPage() {
                             disabled={isScanning}
                         >
                             {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <ScanLine className="w-5 h-5" />}
-                            Escaneo IA
+                            Escaneo IA / QR
                         </Button>
                     </div>
 
@@ -211,7 +284,7 @@ export default function GastosPage() {
                             <Plus className="w-5 h-5 mr-2" />
                             Registrar Gasto
                         </Button>
-                        <DialogContent className="max-w-md bg-background border-border/20 shadow-2xl">
+                        <DialogContent className="max-w-4xl bg-background border-border/20 shadow-2xl">
                             <DialogHeader>
                                 <DialogTitle className="text-2xl font-serif">Registrar Gasto</DialogTitle>
                                 <DialogDescription>
@@ -219,78 +292,131 @@ export default function GastosPage() {
                                 </DialogDescription>
                             </DialogHeader>
 
-                            <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Suplidor / Comercio</label>
-                                    <Input
-                                        placeholder="Ej: Altice Dominicana"
-                                        value={formData.supplierName}
-                                        onChange={e => setFormData({ ...formData, supplierName: e.target.value })}
-                                    />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
+                                {/* Left Side: Preview (Improved for long invoices) */}
+                                <div className="space-y-4">
+                                    <div className="relative border rounded-xl overflow-hidden bg-slate-50 min-h-[400px] flex flex-col">
+                                        <div className="flex items-center justify-between p-2 border-b bg-white">
+                                            <span className="text-[10px] font-bold uppercase text-slate-400 px-2 tracking-widest">Vista Previa</span>
+                                            <div className="flex gap-1">
+                                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(prev => Math.max(0.5, prev - 0.25))}><ZoomOut className="w-4 h-4" /></Button>
+                                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(prev => Math.min(3, prev + 0.25))}><ZoomIn className="w-4 h-4" /></Button>
+                                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(1)}><Maximize2 className="w-4 h-4" /></Button>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex-1 overflow-auto p-4 flex items-start justify-center cursor-move">
+                                            {scannedImage ? (
+                                                <img
+                                                    src={scannedImage}
+                                                    alt="Factura Principal"
+                                                    style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}
+                                                    className="shadow-md rounded shadow-black/10 max-w-full"
+                                                />
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center h-full text-slate-300 gap-3 py-20">
+                                                    <Receipt className="w-12 h-12 opacity-20" />
+                                                    <p className="text-xs italic">Sin imagen adjunta</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {extraPhotos.length > 0 && (
+                                            <div className="p-3 border-t bg-white flex gap-2 overflow-x-auto">
+                                                {extraPhotos.map((img, idx) => (
+                                                    <div key={idx} className="relative w-12 h-12 rounded border overflow-hidden flex-shrink-0 group cursor-pointer" onClick={() => setScannedImage(img)}>
+                                                        <img src={img} className="w-full h-full object-cover" />
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                            <ScanLine className="w-4 h-4 text-white" />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="relative">
+                                        <input type="file" accept="image/*" onChange={handleAddExtraPhoto} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                        <Button variant="outline" className="w-full border-dashed gap-2 h-10 text-xs">
+                                            <Layers className="w-4 h-4" /> Añadir página/foto adicional
+                                        </Button>
+                                    </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+
+                                {/* Right Side: Form */}
+                                <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">RNC Suplidor</label>
+                                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Suplidor / Comercio</label>
                                         <Input
-                                            placeholder="RNC / Cédula"
-                                            value={formData.supplierRnc}
-                                            onChange={e => setFormData({ ...formData, supplierRnc: e.target.value })}
+                                            placeholder="Ej: Altice Dominicana"
+                                            value={formData.supplierName}
+                                            onChange={e => setFormData({ ...formData, supplierName: e.target.value })}
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">NCF</label>
-                                        <Input
-                                            placeholder="B01..."
-                                            value={formData.ncf}
-                                            onChange={e => setFormData({ ...formData, ncf: e.target.value })}
-                                        />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">RNC Suplidor</label>
+                                            <Input
+                                                placeholder="RNC / Cédula"
+                                                value={formData.supplierRnc}
+                                                onChange={e => setFormData({ ...formData, supplierRnc: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">NCF</label>
+                                            <Input
+                                                placeholder="B01..."
+                                                value={formData.ncf}
+                                                onChange={e => setFormData({ ...formData, ncf: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Monto Base</label>
-                                        <div className="relative">
-                                            <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Monto Base</label>
+                                            <div className="relative">
+                                                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                                <Input
+                                                    type="number"
+                                                    className="pl-9"
+                                                    value={formData.amount}
+                                                    onChange={e => setFormData({ ...formData, amount: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">ITBIS (Opcional)</label>
                                             <Input
                                                 type="number"
-                                                className="pl-9"
-                                                value={formData.amount}
-                                                onChange={e => setFormData({ ...formData, amount: e.target.value })}
+                                                value={formData.itbis}
+                                                onChange={e => setFormData({ ...formData, itbis: e.target.value })}
                                             />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">ITBIS (Opcional)</label>
+                                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Tipo de Gasto (DGII)</label>
+                                        <Select
+                                            value={formData.category}
+                                            onValueChange={val => setFormData({ ...formData, category: val })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecciona categoría" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {EXPENSE_CATEGORIES.map(cat => (
+                                                    <SelectItem key={cat.id} value={cat.id}>{cat.id} - {cat.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Fecha de Factura</label>
                                         <Input
-                                            type="number"
-                                            value={formData.itbis}
-                                            onChange={e => setFormData({ ...formData, itbis: e.target.value })}
+                                            type="date"
+                                            value={formData.date}
+                                            onChange={e => setFormData({ ...formData, date: e.target.value })}
                                         />
                                     </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Tipo de Gasto (DGII)</label>
-                                    <Select
-                                        value={formData.category}
-                                        onValueChange={val => setFormData({ ...formData, category: val })}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecciona categoría" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {EXPENSE_CATEGORIES.map(cat => (
-                                                <SelectItem key={cat.id} value={cat.id}>{cat.id} - {cat.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Fecha de Factura</label>
-                                    <Input
-                                        type="date"
-                                        value={formData.date}
-                                        onChange={e => setFormData({ ...formData, date: e.target.value })}
-                                    />
                                 </div>
                             </div>
 
