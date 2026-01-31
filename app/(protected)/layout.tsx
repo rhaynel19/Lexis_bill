@@ -21,14 +21,35 @@ export default function ProtectedLayout({
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [userFromApi, setUserFromApi] = useState<{ role?: string } | null>(null);
 
     useEffect(() => {
-        const user = localStorage.getItem("user");
-        if (!user) {
-            router.push("/login");
-        } else {
-            setIsLoading(false);
-        }
+        const checkAuth = async () => {
+            try {
+                const { api } = await import("@/lib/api-service");
+                const me = await api.getMe();
+                setUserFromApi(me || null);
+                if (me) {
+                    const current = JSON.parse(localStorage.getItem("user") || "{}");
+                    localStorage.setItem("user", JSON.stringify({
+                        ...current,
+                        name: me.name,
+                        email: me.email,
+                        role: me.role,
+                        subscription: me.subscription,
+                        rnc: me.rnc,
+                        fiscalStatus: me.fiscalStatus
+                    }));
+                }
+            } catch {
+                localStorage.removeItem("user");
+                router.push("/login");
+                return;
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        checkAuth();
     }, [router]);
 
     const handleLogout = async () => {
@@ -87,7 +108,7 @@ export default function ProtectedLayout({
                                     <SheetTitle className="text-sidebar-primary text-left uppercase tracking-tighter font-black">LEXIS BILL</SheetTitle>
                                 </SheetHeader>
                                 <nav className="flex-1 overflow-y-auto p-4">
-                                    <SidebarLinks isMobile onLogout={handleLogout} onNavigate={() => setMenuOpen(false)} />
+                                    <SidebarLinks isMobile isAdmin={userFromApi?.role === "admin"} onLogout={handleLogout} onNavigate={() => setMenuOpen(false)} />
                                 </nav>
                             </SheetContent>
                         </Sheet>
@@ -104,7 +125,7 @@ export default function ProtectedLayout({
                 {/* Desktop Sidebar */}
                 <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border h-full overflow-y-auto">
                     <nav className="flex-1 px-4 py-8 flex flex-col">
-                        <SidebarLinks onLogout={handleLogout} />
+                        <SidebarLinks isAdmin={userFromApi?.role === "admin"} onLogout={handleLogout} />
                     </nav>
                     <div className="p-6 border-t border-sidebar-border/50 text-center">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Lexis Bill Pro</p>
@@ -153,16 +174,7 @@ export default function ProtectedLayout({
     );
 }
 
-function AdminNavLink() {
-    const [isAdmin, setIsAdmin] = useState(false);
-    useEffect(() => {
-        try {
-            const u = localStorage.getItem("user");
-            setIsAdmin(!!(u && JSON.parse(u).role === "admin"));
-        } catch {
-            setIsAdmin(false);
-        }
-    }, []);
+function AdminNavLink({ isAdmin }: { isAdmin: boolean }) {
     if (!isAdmin) return null;
     return (
         <Link href="/admin" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-amber-500/20 transition-colors text-amber-600 border-l-2 border-amber-500/50 mt-2">
@@ -172,7 +184,7 @@ function AdminNavLink() {
     );
 }
 
-function SidebarLinks({ isMobile = false, onLogout, onNavigate }: { isMobile?: boolean, onLogout?: () => void; onNavigate?: () => void }) {
+function SidebarLinks({ isMobile = false, isAdmin = false, onLogout, onNavigate }: { isMobile?: boolean; isAdmin?: boolean; onLogout?: () => void; onNavigate?: () => void }) {
     const NavLink = ({ href, children, ...props }: { href: string; children: React.ReactNode; [k: string]: unknown }) => (
         <Link href={href} onClick={onNavigate} className={props.className as string} {...props}>
             {children}
@@ -211,7 +223,7 @@ function SidebarLinks({ isMobile = false, onLogout, onNavigate }: { isMobile?: b
                     <Settings className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Configuración</span>
                 </NavLink>
-                <AdminNavLink />
+                <AdminNavLink isAdmin={isAdmin} />
             </div>
 
             {onLogout && (

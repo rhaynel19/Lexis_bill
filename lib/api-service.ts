@@ -280,6 +280,35 @@ export const api = {
     },
 
     async getAdminStats() {
-        return secureFetch<any>(`${API_URL}/admin/stats`, { cacheKey: "admin_stats" });
+        return secureFetch<any>(`${API_URL}/admin/stats`);
+    },
+
+    // Borrador y plantillas de factura
+    async getInvoiceDraft() {
+        return secureFetch<any>(`${API_URL}/invoice-draft`);
+    },
+
+    async saveInvoiceDraft(data: { items: any[]; clientName?: string; rnc?: string; invoiceType?: string }) {
+        return secureFetch<any>(`${API_URL}/invoice-draft`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+    },
+
+    async deleteInvoiceDraft() {
+        return secureFetch<any>(`${API_URL}/invoice-draft`, { method: "DELETE" });
+    },
+
+    async getInvoiceTemplates() {
+        return secureFetch<any[]>(`${API_URL}/invoice-templates`);
+    },
+
+    async saveInvoiceTemplate(data: { name: string; invoiceType?: string; items: any[]; clientName?: string; rnc?: string }) {
+        return secureFetch<any>(`${API_URL}/invoice-templates`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
     }
 };

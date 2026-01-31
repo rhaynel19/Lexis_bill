@@ -197,6 +197,26 @@ const expenseSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+const invoiceDraftSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    items: [{ description: String, quantity: Number, price: Number, isExempt: Boolean }],
+    clientName: String,
+    rnc: String,
+    invoiceType: String,
+    updatedAt: { type: Date, default: Date.now }
+});
+invoiceDraftSchema.index({ userId: 1 }, { unique: true });
+
+const invoiceTemplateSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    name: { type: String, required: true },
+    invoiceType: String,
+    items: [{ description: String, quantity: Number, price: Number, isExempt: Boolean }],
+    clientName: String,
+    rnc: String,
+    createdAt: { type: Date, default: Date.now }
+});
+
 const quoteSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     clientName: { type: String, required: true },
@@ -221,6 +241,8 @@ const quoteSchema = new mongoose.Schema({
 // Avoid "OverwriteModelError" in serverless environments
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const PaymentRequest = mongoose.models.PaymentRequest || mongoose.model('PaymentRequest', paymentRequestSchema);
+const InvoiceDraft = mongoose.models.InvoiceDraft || mongoose.model('InvoiceDraft', invoiceDraftSchema);
+const InvoiceTemplate = mongoose.models.InvoiceTemplate || mongoose.model('InvoiceTemplate', invoiceTemplateSchema);
 const NCFSettings = mongoose.models.NCFSettings || mongoose.model('NCFSettings', ncfSettingsSchema);
 const Invoice = mongoose.models.Invoice || mongoose.model('Invoice', invoiceSchema);
 const Customer = mongoose.models.Customer || mongoose.model('Customer', customerSchema);
@@ -878,6 +900,67 @@ app.post('/api/customers', verifyToken, async (req, res) => {
         res.json(customer);
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// --- BORRADOR Y PLANTILLAS DE FACTURA ---
+app.get('/api/invoice-draft', verifyToken, async (req, res) => {
+    try {
+        const draft = await InvoiceDraft.findOne({ userId: req.userId });
+        res.json(draft || null);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.put('/api/invoice-draft', verifyToken, async (req, res) => {
+    try {
+        const { items, clientName, rnc, invoiceType } = req.body;
+        const draft = await InvoiceDraft.findOneAndUpdate(
+            { userId: req.userId },
+            { items: items || [], clientName: clientName || '', rnc: rnc || '', invoiceType: invoiceType || '', updatedAt: new Date() },
+            { upsert: true, new: true }
+        );
+        res.json(draft);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/api/invoice-draft', verifyToken, async (req, res) => {
+    try {
+        await InvoiceDraft.deleteOne({ userId: req.userId });
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/invoice-templates', verifyToken, async (req, res) => {
+    try {
+        const templates = await InvoiceTemplate.find({ userId: req.userId }).sort({ createdAt: -1 });
+        res.json(templates);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/invoice-templates', verifyToken, async (req, res) => {
+    try {
+        const { name, invoiceType, items, clientName, rnc } = req.body;
+        if (!name) return res.status(400).json({ message: 'Nombre requerido' });
+        const template = new InvoiceTemplate({
+            userId: req.userId,
+            name,
+            invoiceType: invoiceType || '',
+            items: items || [],
+            clientName: clientName || '',
+            rnc: rnc || ''
+        });
+        await template.save();
+        res.status(201).json(template);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 

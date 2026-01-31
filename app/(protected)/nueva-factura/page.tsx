@@ -153,6 +153,7 @@ export default function NewInvoice() {
     const [isSearchingRNC, setIsSearchingRNC] = useState(false);
     const [savedClients, setSavedClients] = useState<any[]>([]);
     const [savedServices, setSavedServices] = useState<any[]>([]);
+    const [savedTemplates, setSavedTemplates] = useState<any[]>([]);
 
     const [items, setItems] = useState<InvoiceItem[]>([
         { id: "1", description: "", quantity: 1, price: 0, isExempt: false }
@@ -165,11 +166,10 @@ export default function NewInvoice() {
 
     // Load CRM Data and Check for Cloned Invoice
     useEffect(() => {
-        // 0. Security Check
-        const token = localStorage.getItem("token");
+        // 0. Security / Setup Check (auth validada por layout vía cookie)
         const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
-        if (!token) {
+        if (!storedUser.email) {
             router.push("/login");
             return;
         }
@@ -195,6 +195,19 @@ export default function NewInvoice() {
         const services = localStorage.getItem("services");
         if (services) setSavedServices(JSON.parse(services));
 
+        // Templates from API
+        const fetchTemplates = async () => {
+            try {
+                const { api } = await import("@/lib/api-service");
+                const templates = await api.getInvoiceTemplates();
+                setSavedTemplates(templates || []);
+            } catch {
+                const local = localStorage.getItem("invoiceTemplates");
+                if (local) setSavedTemplates(JSON.parse(local));
+            }
+        };
+        fetchTemplates();
+
         // Clone Invoice
         const invoiceToClone = localStorage.getItem("invoiceToClone");
         if (invoiceToClone) {
@@ -217,18 +230,41 @@ export default function NewInvoice() {
             }
             localStorage.removeItem("invoiceToClone");
         } else {
-            // Restore Draft if exists
-            const draft = localStorage.getItem("invoiceDraft");
-            if (draft) {
+            // Restore Draft: API first, fallback localStorage
+            const restoreDraft = async () => {
                 try {
-                    const d = JSON.parse(draft);
-                    if (d.items) setItems(d.items);
-                    if (d.clientName) setClientName(d.clientName);
-                    if (d.rnc) setRnc(d.rnc);
-                    if (d.invoiceType) setInvoiceType(d.invoiceType);
-                    toast.info("📂 Borrador restaurado automáticamente.");
-                } catch (e) { localStorage.removeItem("invoiceDraft"); }
-            }
+                    const { api } = await import("@/lib/api-service");
+                    const d = await api.getInvoiceDraft();
+                    if (d && (d.items?.length || d.clientName || d.rnc)) {
+                        if (d.items?.length) setItems(d.items.map((i: any, idx: number) => ({
+                            id: (i.id || Date.now() + idx).toString(),
+                            description: i.description || "",
+                            quantity: i.quantity ?? 1,
+                            price: i.price ?? 0,
+                            isExempt: i.isExempt
+                        })));
+                        if (d.clientName) setClientName(d.clientName);
+                        if (d.rnc) setRnc(d.rnc);
+                        if (d.invoiceType) setInvoiceType(d.invoiceType);
+                        toast.info("📂 Borrador restaurado automáticamente.");
+                        return;
+                    }
+                } catch {
+                    // Fallback a localStorage
+                }
+                const local = localStorage.getItem("invoiceDraft");
+                if (local) {
+                    try {
+                        const d = JSON.parse(local);
+                        if (d.items) setItems(d.items);
+                        if (d.clientName) setClientName(d.clientName);
+                        if (d.rnc) setRnc(d.rnc);
+                        if (d.invoiceType) setInvoiceType(d.invoiceType);
+                        toast.info("📂 Borrador restaurado.");
+                    } catch (e) { localStorage.removeItem("invoiceDraft"); }
+                }
+            };
+            restoreDraft();
         }
 
         // Load Profession and User Details from Config/User
@@ -237,11 +273,17 @@ export default function NewInvoice() {
         if (config.exequatur) setExequatur(config.exequatur);
     }, []);
 
-    // Save Draft on Change
+    // Save Draft on Change (API + localStorage backup)
     useEffect(() => {
         if (!isGenerating && !showSuccessModal) {
             const draft = { items, clientName, rnc, invoiceType };
             localStorage.setItem("invoiceDraft", JSON.stringify(draft));
+            const timer = setTimeout(() => {
+                import("@/lib/api-service").then(({ api }) =>
+                    api.saveInvoiceDraft(draft).catch(() => {})
+                );
+            }, 500);
+            return () => clearTimeout(timer);
         }
     }, [items, clientName, rnc, invoiceType, isGenerating, showSuccessModal]);
 
@@ -276,27 +318,39 @@ export default function NewInvoice() {
     }, [items, invoiceType]); // Deps for context
 
     // Template Logic
-    const handleSaveTemplate = () => {
+    const handleSaveTemplate = async () => {
         const name = prompt("Nombre de la plantilla (Ej: Iguala Mensual):");
-        if (name) {
+        if (!name) return;
+        try {
+            const { api } = await import("@/lib/api-service");
+            await api.saveInvoiceTemplate({ name, invoiceType, items, clientName, rnc });
+            setSavedTemplates((prev) => [...prev, { name, invoiceType, items, clientName, rnc }]);
+            toast.success("✅ Plantilla guardada exitosamente.");
+        } catch (e) {
             const template = { name, invoiceType, items, clientName, rnc };
             const existing = localStorage.getItem("invoiceTemplates");
             const templates = existing ? JSON.parse(existing) : [];
             templates.push(template);
-            templates.push(template);
             localStorage.setItem("invoiceTemplates", JSON.stringify(templates));
-            toast.success("✅ Plantilla guardada exitosamente.");
+            setSavedTemplates(templates);
+            toast.success("✅ Plantilla guardada (local).");
         }
-    }
+    };
 
     const handleLoadTemplate = (t: any) => {
-        setInvoiceType(t.invoiceType);
-        setClientName(t.clientName);
-        setRnc(t.rnc);
-        setItems(t.items);
-        setItems(t.items);
+        setInvoiceType(t.invoiceType || "");
+        setClientName(t.clientName || "");
+        setRnc(t.rnc || "");
+        const its = (t.items || []).map((i: any, idx: number) => ({
+            id: (i.id || Date.now() + idx).toString(),
+            description: i.description || "",
+            quantity: i.quantity ?? 1,
+            price: i.price ?? 0,
+            isExempt: i.isExempt
+        }));
+        setItems(its.length ? its : [{ id: "1", description: "", quantity: 1, price: 0, isExempt: false }]);
         toast.success(`📂 Plantilla "${t.name}" cargada.`);
-    }
+    };
 
     // CRM Handlers
     const handleRNCSearch = async () => {
@@ -598,7 +652,8 @@ export default function NewInvoice() {
 
             setLastInvoiceNCF(ncf);
             setShowSuccessModal(true);
-            localStorage.removeItem("invoiceDraft"); // Clear draft on success
+            localStorage.removeItem("invoiceDraft");
+            api.deleteInvoiceDraft().catch(() => {});
 
         } catch (error: any) {
             console.error(error);
@@ -688,15 +743,14 @@ export default function NewInvoice() {
                 <div className="h-8 w-[1px] bg-border mx-2"></div>
                 {/* Loader Mock */}
                 <Select onValueChange={(val) => {
-                    const templates = JSON.parse(localStorage.getItem("invoiceTemplates") || "[]");
-                    const t = templates.find((tmp: any) => tmp.name === val);
+                    const t = savedTemplates.find((tmp: any) => tmp.name === val);
                     if (t) handleLoadTemplate(t);
                 }}>
                     <SelectTrigger className="w-[200px] h-9">
                         <SelectValue placeholder="Cargar Plantilla..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {(typeof window !== 'undefined' ? JSON.parse(localStorage.getItem("invoiceTemplates") || "[]") : []).map((t: any, i: number) => (
+                        {savedTemplates.map((t: any, i: number) => (
                             <SelectItem key={i} value={t.name}>{t.name}</SelectItem>
                         ))}
                     </SelectContent>
