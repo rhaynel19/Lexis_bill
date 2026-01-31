@@ -19,12 +19,17 @@ import {
 import { api } from "@/lib/api-service";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { FiscalDisclaimerModal } from "@/components/FiscalDisclaimerModal";
+import { toast } from "sonner";
 
 export default function ReportsPage() {
     const [summary, setSummary] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [disclaimerOpen, setDisclaimerOpen] = useState(false);
+    const [reportToDownload, setReportToDownload] = useState<"606" | "607" | null>(null);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const months = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -47,32 +52,44 @@ export default function ReportsPage() {
         }
     };
 
-    const handleDownload607 = async () => {
+    const doDownload607 = async () => {
+        const blob = await api.downloadReport607(selectedMonth, selectedYear);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `607_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const doDownload606 = async () => {
+        const blob = await api.downloadReport606(selectedMonth, selectedYear);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `606_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleDisclaimerConfirm = async () => {
+        if (!reportToDownload) return;
+        setIsDownloading(true);
         try {
-            const blob = await api.downloadReport607(selectedMonth, selectedYear);
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `607_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.txt`;
-            a.click();
-            URL.revokeObjectURL(url);
+            if (reportToDownload === "607") await doDownload607();
+            else await doDownload606();
+            toast.success(`Reporte ${reportToDownload} descargado correctamente`);
         } catch (e) {
             console.error(e);
+            toast.error("Error al descargar el reporte. Intenta de nuevo.");
+        } finally {
+            setIsDownloading(false);
         }
     };
 
-    const handleDownload606 = async () => {
-        try {
-            const blob = await api.downloadReport606(selectedMonth, selectedYear);
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `606_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.txt`;
-            a.click();
-            URL.revokeObjectURL(url);
-        } catch (e) {
-            console.error(e);
-        }
+    const openDisclaimer = (report: "606" | "607") => {
+        setReportToDownload(report);
+        setDisclaimerOpen(true);
     };
 
     const isMonthClosed = (mIndex: number) => {
@@ -216,14 +233,14 @@ export default function ReportsPage() {
                                         <Button
                                             variant="secondary"
                                             className="w-full justify-between font-bold h-10 group bg-accent/10 hover:bg-accent/20 text-accent border-accent/20"
-                                            onClick={(e) => { e.stopPropagation(); handleDownload607(); }}
+                                            onClick={(e) => { e.stopPropagation(); openDisclaimer("607"); }}
                                         >
                                             607 - Ventas <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
                                         </Button>
                                         <Button
                                             variant="outline"
                                             className="w-full justify-between font-bold h-10 border-border/20 text-muted-foreground hover:text-foreground hover:bg-muted"
-                                            onClick={(e) => { e.stopPropagation(); handleDownload606(); }}
+                                            onClick={(e) => { e.stopPropagation(); openDisclaimer("606"); }}
                                         >
                                             606 - Compras <Download className="w-4 h-4" />
                                         </Button>
@@ -268,6 +285,17 @@ export default function ReportsPage() {
                     </div>
                 </div>
             </div>
+
+            {reportToDownload && (
+                <FiscalDisclaimerModal
+                    open={disclaimerOpen}
+                    onOpenChange={(open) => { setDisclaimerOpen(open); if (!open) setReportToDownload(null); }}
+                    reportType={reportToDownload}
+                    reportLabel={reportToDownload === "607" ? "Ventas de Bienes y Servicios" : "Compras y Gastos"}
+                    onConfirmDownload={handleDisclaimerConfirm}
+                    isDownloading={isDownloading}
+                />
+            )}
 
             <div className="mt-8 p-6 bg-accent/5 rounded-2xl border border-accent/10 flex items-start gap-4 transition-colors">
                 <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-accent-foreground shrink-0 shadow-lg shadow-accent/20">

@@ -31,10 +31,11 @@ export default function Quotes() {
         setIsLoading(true);
         try {
             const data = await api.getQuotes();
-            setQuotes((data || []).map((q: { _id?: { toString: () => string }; id?: string; [key: string]: unknown }) => ({
+            const normalized = (data || []).map((q: { _id?: { toString: () => string }; id?: string; [key: string]: unknown }) => ({
                 ...q,
                 id: q.id || (q._id as { toString?: () => string })?.toString?.() || String(q._id)
-            })));
+            })) as Quote[];
+            setQuotes(normalized);
         } catch {
             setQuotes([]);
         } finally {
