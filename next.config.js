@@ -8,16 +8,14 @@ const withPWA = require('next-pwa')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: true,
-    // Forzamos salida estable para PWA
-    images: {
-        unoptimized: true,
-    },
-    // Mantener temporalmente hasta corregir errores críticos
-    eslint: {
-        ignoreDuringBuilds: true,
-    },
-    typescript: {
-        ignoreBuildErrors: true,
+    images: { unoptimized: true },
+    // Proxy /api al backend en dev (cookies same-origin)
+    async rewrites() {
+        if (process.env.NODE_ENV === "development") {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+            return [{ source: "/api/:path*", destination: `${apiUrl.replace(/\/api$/, "")}/api/:path*` }];
+        }
+        return [];
     },
 }
 

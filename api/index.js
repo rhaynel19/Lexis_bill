@@ -3,15 +3,31 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(process.cwd(), '.env.local') });
 require('dotenv').config();
 
+// --- SEGURIDAD: JWT_SECRET obligatorio - fallar arranque si no existe ---
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+    console.error('❌ FATAL: JWT_SECRET debe estar definido y tener al menos 32 caracteres.');
+    process.exit(1);
+}
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
-app.use(cors());
+app.use(cookieParser());
+
+// CORS con credenciales para cookies HttpOnly
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // --- 1. CONFIGURACIÓN DE CONEXIÓN ---
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -153,6 +169,27 @@ const expenseSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+const quoteSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    clientName: { type: String, required: true },
+    clientRnc: { type: String, required: true },
+    clientPhone: { type: String },
+    items: [{
+        description: String,
+        quantity: Number,
+        price: Number,
+        isExempt: Boolean
+    }],
+    subtotal: { type: Number, required: true },
+    itbis: { type: Number, required: true },
+    total: { type: Number, required: true },
+    status: { type: String, enum: ['draft', 'sent', 'converted'], default: 'draft' },
+    validUntil: { type: Date, required: true },
+    invoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' },
+    lastSavedAt: { type: Date, default: Date.now },
+    createdAt: { type: Date, default: Date.now }
+});
+
 // Avoid "OverwriteModelError" in serverless environments
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const NCFSettings = mongoose.models.NCFSettings || mongoose.model('NCFSettings', ncfSettingsSchema);
@@ -160,13 +197,15 @@ const Invoice = mongoose.models.Invoice || mongoose.model('Invoice', invoiceSche
 const Customer = mongoose.models.Customer || mongoose.model('Customer', customerSchema);
 const SupportTicket = mongoose.models.SupportTicket || mongoose.model('SupportTicket', supportTicketSchema);
 const Expense = mongoose.models.Expense || mongoose.model('Expense', expenseSchema);
+const Quote = mongoose.models.Quote || mongoose.model('Quote', quoteSchema);
 
 // --- 3. MIDDLEWARE ---
+// SEGURIDAD: Token solo en cookie HttpOnly (no en URL ni localStorage)
 const verifyToken = (req, res, next) => {
-    const token = req.headers['authorization'];
-    if (!token) return res.status(403).json({ message: 'No token provided' });
+    const token = req.cookies?.lexis_auth;
+    if (!token) return res.status(403).json({ message: 'Sesión no válida. Inicie sesión.' });
 
-    jwt.verify(token.split(' ')[1], process.env.JWT_SECRET || 'secret_key_lexis_placeholder', async (err, decoded) => {
+    jwt.verify(token, JWT_SECRET, async (err, decoded) => {
         if (err) return res.status(401).json({ message: 'Unauthorized' });
 
         try {
@@ -194,24 +233,59 @@ const verifyToken = (req, res, next) => {
 };
 
 // --- 4. HELPERS ---
-async function getNextNcf(userId, type, session) {
+// DGII NCF: Tipos soportados - B01/E31 Empresas, B02/E32 Consumidor, B14 Educación, B15/E15 Gobierno
+const NCF_TYPES_BUSINESS = ['01', '31'];
+const NCF_TYPES_CONSUMER = ['02', '32'];
+const NCF_TYPES_EDUCATION = ['14'];
+const NCF_TYPES_GOVERNMENT = ['15', '45'];
+
+function validateNcfForClient(ncfType, clientRnc) {
+    if (!clientRnc) return { valid: true };
+    const cleanRnc = (clientRnc || '').replace(/[^\d]/g, '');
+    const isBusiness = cleanRnc.length === 9;
+    const isGov = cleanRnc.startsWith('4') || cleanRnc.length === 11; // simplificado: cédula o gubernamental
+
+    if (NCF_TYPES_BUSINESS.includes(ncfType) && !isBusiness) return { valid: false, reason: 'NCF B01/E31 solo para empresas (RNC 9 dígitos)' };
+    if (NCF_TYPES_CONSUMER.includes(ncfType) && isBusiness) return { valid: false, reason: 'NCF B02/E32 para consumidor final, no empresas' };
+    if (NCF_TYPES_GOVERNMENT.includes(ncfType) && !isGov) return { valid: false, reason: 'NCF B15/E15 solo para facturación gubernamental' };
+    return { valid: true };
+}
+
+async function getNextNcf(userId, type, session, clientRnc) {
+    // DGII: Validar tipo de cliente vs tipo de NCF
+    const clientCheck = validateNcfForClient(type, clientRnc);
+    if (!clientCheck.valid) throw new Error(clientCheck.reason);
+
+    const now = new Date();
+    // DGII: Validar fecha de expiración del rango - solo lotes vigentes
     const activeBatch = await NCFSettings.findOneAndUpdate(
         {
             userId,
             type,
             isActive: true,
+            expiryDate: { $gte: now },
             $expr: { $lt: ["$currentValue", "$finalNumber"] }
         },
         { $inc: { currentValue: 1 } },
         { new: true, session }
     );
 
-    if (!activeBatch) return null;
+    if (!activeBatch) {
+        const expired = await NCFSettings.findOne({ userId, type, isActive: true, expiryDate: { $lt: now } }).session(session);
+        if (expired) throw new Error('El rango de NCF ha vencido. Configure un nuevo lote en Configuración.');
+        throw new Error('No hay secuencias NCF disponibles para este tipo. Configure un lote en Configuración.');
+    }
 
     const isElectronic = activeBatch.series === 'E';
     const padding = isElectronic ? 10 : 8;
     const paddedSeq = activeBatch.currentValue.toString().padStart(padding, '0');
-    return `${activeBatch.series}${type}${paddedSeq}`;
+    const fullNcf = `${activeBatch.series}${type}${paddedSeq}`;
+
+    // DGII: Validar unicidad (doble verificación - índice unique en Invoice protege)
+    const exists = await Invoice.findOne({ ncfSequence: fullNcf }).session(session);
+    if (exists) throw new Error('NCF duplicado detectado. Contacte soporte.');
+
+    return fullNcf;
 }
 
 function validateTaxId(id) {
@@ -329,7 +403,6 @@ app.post('/api/auth/login', async (req, res) => {
             name: user.name,
             profession: user.profession,
             rnc: user.rnc,
-            accessToken: token,
             fiscalStatus: {
                 suggested: user.suggestedFiscalName,
                 confirmed: user.confirmedFiscalName
@@ -339,6 +412,12 @@ app.post('/api/auth/login', async (req, res) => {
         console.error(`[AUTH] Error in login:`, error);
         res.status(500).json({ message: 'Error interno en el servidor', error: error.message });
     }
+});
+
+// Logout: limpiar cookie HttpOnly
+app.post('/api/auth/logout', (req, res) => {
+    res.clearCookie('lexis_auth', { path: '/', httpOnly: true });
+    res.json({ success: true });
 });
 
 app.post('/api/auth/confirm-fiscal-name', verifyToken, async (req, res) => {
@@ -533,7 +612,7 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
     session.startTransaction();
     try {
         const { clientName, clientRnc, ncfType, items, subtotal, itbis, total } = req.body;
-        const fullNcf = await getNextNcf(req.userId, ncfType, session);
+        const fullNcf = await getNextNcf(req.userId, ncfType, session, clientRnc);
         if (!fullNcf) throw new Error("No hay secuencias NCF disponibles.");
         const newInvoice = new Invoice({ userId: req.userId, clientName, clientRnc, ncfType, ncfSequence: fullNcf, items, subtotal, itbis, total });
         await newInvoice.save({ session });
@@ -583,55 +662,52 @@ app.get('/api/reports/summary', verifyToken, async (req, res) => {
     }
 });
 
-app.get('/api/reports/606', verifyToken, async (req, res) => {
-    // Reporte de Compras (606) - Placeholder hasta implementar módulo de gastos
-    if (!req.user.confirmedFiscalName) {
-        return res.status(403).json({ message: 'Confirma tu nombre fiscal para generar reportes.' });
-    }
-
-    try {
-        const { month, year } = req.query;
-        // Por ahora generamos un reporte vacío con el formato correcto
-        let report = `606|${req.user.rnc}|${year}${month.toString().padStart(2, '0')}|0\n`;
-
-        res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Content-Disposition', `attachment; filename=606_${req.user.rnc}_${year}${month}.txt`);
-        res.send(report);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
+// --- REPORTE 607 (VENTAS) - Formato oficial DGII Norma 06-2018 / 07-2018 ---
+// Estructura: RNC|TipoId|NCF|NCFModificado|TipoIngreso|FechaComprobante|FechaRetencion|
+// MontoFacturado|ITBISFacturado|ITBISRetenido|ITBISPercibido|RetencionRenta|ISR|ISC|OtrosImpuestos|MontoTotal|
+// ITBIS3ros|Percepciones|Intereses|IngresosTerceros
 app.get('/api/reports/607', verifyToken, async (req, res) => {
-    // Bloqueo Inteligente
     if (!req.user.confirmedFiscalName) {
         return res.status(403).json({ message: 'Confirma tu nombre fiscal para generar reportes.' });
     }
 
     try {
         const { month, year } = req.query;
-        const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0, 23, 59, 59);
+        const m = parseInt(month, 10);
+        const y = parseInt(year, 10);
+        if (!m || !y || m < 1 || m > 12) {
+            return res.status(400).json({ message: 'Parámetros month y year inválidos.' });
+        }
+
+        const startDate = new Date(y, m - 1, 1);
+        const endDate = new Date(y, m, 0, 23, 59, 59);
 
         const invoices = await Invoice.find({
             userId: req.userId,
             date: { $gte: startDate, $lte: endDate },
             status: { $ne: 'cancelled' }
-        });
+        }).sort({ date: 1, ncfSequence: 1 });
 
-        // Generar formato TXT simplificado (Encabezado + Líneas)
-        let report = `607|${req.user.rnc}|${year}${month.toString().padStart(2, '0')}|${invoices.length}\n`;
+        const periodo = `${y}${m.toString().padStart(2, '0')}`;
+        const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
+        let report = `607|${rncEmisor}|${periodo}|${invoices.length}\n`;
 
         invoices.forEach(inv => {
-            const fecha = new Date(inv.date).toISOString().slice(0, 10).replace(/-/g, '');
-            report += `${inv.clientRnc}|01|${inv.ncfSequence}||${fecha}||${inv.subtotal.toFixed(2)}|${inv.itbis.toFixed(2)}|||||||||\n`;
+            const fechaComp = new Date(inv.date).toISOString().slice(0, 10).replace(/-/g, '');
+            const rncCliente = (inv.clientRnc || '').replace(/[^\d]/g, '');
+            const tipoId = rncCliente.length === 9 ? '1' : '2';
+            const montoFact = (inv.subtotal || 0).toFixed(2);
+            const itbisFact = (inv.itbis || 0).toFixed(2);
+            const montoTotal = (inv.total || 0).toFixed(2);
+
+            report += `${rncCliente}|${tipoId}|${inv.ncfSequence}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|0.00|0.00|0.00|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00|0.00\n`;
         });
 
-        res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Content-Disposition', `attachment; filename=607_${req.user.rnc}_${year}${month}.txt`);
+        res.setHeader('Content-Type', 'text/plain; charset=iso-8859-1');
+        res.setHeader('Content-Disposition', `attachment; filename=607_${rncEmisor}_${periodo}.txt`);
         res.send(report);
-
     } catch (error) {
+        console.error('[607] Error:', error.message);
         res.status(500).json({ error: error.message });
     }
 });
@@ -675,33 +751,193 @@ app.delete('/api/expenses/:id', verifyToken, async (req, res) => {
     }
 });
 
+// --- REPORTE 606 (COMPRAS/GASTOS) - Formato DGII - Fuente única: Expenses ---
+// Validaciones: NCF suplidor, categoría 01-11, campos obligatorios
+const DGII_EXPENSE_CATEGORIES = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11'];
+
+function isValidNcfStructure(ncf) {
+    if (!ncf || typeof ncf !== 'string') return false;
+    const clean = ncf.replace(/[^\dA-Za-z]/g, '');
+    return clean.length >= 11 && (clean.startsWith('B') || clean.startsWith('E'));
+}
+
 app.get('/api/reports/606', verifyToken, async (req, res) => {
+    if (!req.user.confirmedFiscalName) {
+        return res.status(403).json({ message: 'Confirma tu nombre fiscal para generar reportes.' });
+    }
+
     try {
         const { month, year } = req.query;
-        const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0, 23, 59, 59);
+        const m = parseInt(month, 10);
+        const y = parseInt(year, 10);
+        if (!m || !y || m < 1 || m > 12) {
+            return res.status(400).json({ message: 'Parámetros month y year inválidos.' });
+        }
+
+        const startDate = new Date(y, m - 1, 1);
+        const endDate = new Date(y, m, 0, 23, 59, 59);
 
         const expenses = await Expense.find({
             userId: req.userId,
             date: { $gte: startDate, $lte: endDate }
+        }).sort({ date: 1 });
+
+        const errores = [];
+        expenses.forEach((exp, idx) => {
+            if (!exp.supplierName || !exp.supplierRnc || !exp.ncf || exp.amount == null) {
+                errores.push(`Gasto ${idx + 1}: Faltan campos obligatorios (suplidor, RNC, NCF, monto).`);
+            }
+            if (!DGII_EXPENSE_CATEGORIES.includes(exp.category)) {
+                errores.push(`Gasto ${idx + 1}: Categoría ${exp.category} inválida. Use códigos 01-11 DGII.`);
+            }
+            if (!isValidNcfStructure(exp.ncf)) {
+                errores.push(`Gasto ${idx + 1}: NCF del suplidor "${exp.ncf}" no tiene formato válido.`);
+            }
         });
 
-        // Formato 606: RNC|Periodo|CantidadRegistros
-        // Registro: RNC/Cedula|TipoId|TipoGasto|NCF|NCFModificado|Fecha|FechaPago|MontoServicios|MontoBienes|TotalMonto|ITBIS|...
-        let report = `606|${req.user.rnc}|${year}${month.toString().padStart(2, '0')}|${expenses.length}\n`;
+        if (errores.length > 0) {
+            return res.status(400).json({ message: 'Errores fiscales. Corrija antes de exportar.', details: errores });
+        }
+
+        const periodo = `${y}${m.toString().padStart(2, '0')}`;
+        const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
+        let report = `606|${rncEmisor}|${periodo}|${expenses.length}\n`;
 
         expenses.forEach(exp => {
             const fecha = new Date(exp.date).toISOString().slice(0, 10).replace(/-/g, '');
-            const rncLimpiado = exp.supplierRnc.replace(/[^0-9]/g, '');
-            const tipoId = rncLimpiado.length === 9 ? '1' : '2'; // 1=RNC, 2=Cedula
+            const rncLimpiado = (exp.supplierRnc || '').replace(/[^0-9]/g, '');
+            const tipoId = rncLimpiado.length === 9 ? '1' : '2';
+            const itbisPagado = (exp.itbis || 0).toFixed(2);
+            const montoTotal = (exp.amount || 0).toFixed(2);
 
-            // Simplificado para Lexis Bill inicial:
-            report += `${rncLimpiado}|${tipoId}|${exp.category}|${exp.ncf}||${fecha}||${exp.amount.toFixed(2)}|0.00|${exp.amount.toFixed(2)}|${exp.itbis.toFixed(2)}|||||||||\n`;
+            report += `${rncLimpiado}|${tipoId}|${exp.category}|${exp.ncf}||${fecha}||${montoTotal}|0.00|${montoTotal}|${itbisPagado}|${itbisPagado}|||||||||\n`;
         });
 
-        res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Content-Disposition', `attachment; filename=606_${req.user.rnc}_${year}${month}.txt`);
+        res.setHeader('Content-Type', 'text/plain; charset=iso-8859-1');
+        res.setHeader('Content-Disposition', `attachment; filename=606_${rncEmisor}_${periodo}.txt`);
         res.send(report);
+    } catch (error) {
+        console.error('[606] Error:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- COTIZACIONES (Quotes) - MongoDB, no localStorage ---
+app.get('/api/quotes', verifyToken, async (req, res) => {
+    try {
+        const quotes = await Quote.find({ userId: req.userId }).sort({ lastSavedAt: -1 });
+        res.json(quotes.map(q => ({
+            id: q._id.toString(),
+            _id: q._id,
+            clientName: q.clientName,
+            rnc: q.clientRnc,
+            clientPhone: q.clientPhone,
+            items: q.items,
+            subtotal: q.subtotal,
+            itbis: q.itbis,
+            total: q.total,
+            status: q.status,
+            date: q.createdAt,
+            validUntil: q.validUntil,
+            invoiceId: q.invoiceId
+        })));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/quotes', verifyToken, async (req, res) => {
+    try {
+        const { clientName, clientRnc, clientPhone, items, subtotal, itbis, total, validUntil } = req.body;
+        const quote = new Quote({
+            userId: req.userId,
+            clientName,
+            clientRnc: (clientRnc || '').replace(/\D/g, '') || clientRnc || '',
+            clientPhone,
+            items: items || [],
+            subtotal: subtotal || 0,
+            itbis: itbis || 0,
+            total: total || 0,
+            validUntil: new Date(validUntil || Date.now() + 15 * 24 * 60 * 60 * 1000),
+            status: 'draft'
+        });
+        await quote.save();
+        res.status(201).json({ ...quote.toObject(), id: quote._id.toString() });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.put('/api/quotes/:id', verifyToken, async (req, res) => {
+    try {
+        const quote = await Quote.findOne({ _id: req.params.id, userId: req.userId });
+        if (!quote) return res.status(404).json({ message: 'Cotización no encontrada' });
+        if (quote.status === 'converted') return res.status(400).json({ message: 'No se puede editar una cotización ya facturada.' });
+
+        const { clientName, clientRnc, clientPhone, items, subtotal, itbis, total, validUntil, status } = req.body;
+        if (clientName !== undefined) quote.clientName = clientName;
+        if (clientRnc !== undefined) quote.clientRnc = clientRnc;
+        if (clientPhone !== undefined) quote.clientPhone = clientPhone;
+        if (items !== undefined) quote.items = items;
+        if (subtotal !== undefined) quote.subtotal = subtotal;
+        if (itbis !== undefined) quote.itbis = itbis;
+        if (total !== undefined) quote.total = total;
+        if (validUntil !== undefined) quote.validUntil = new Date(validUntil);
+        if (status !== undefined && ['draft', 'sent'].includes(status)) quote.status = status;
+        quote.lastSavedAt = new Date();
+        await quote.save();
+        res.json({ ...quote.toObject(), id: quote._id.toString() });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Convertir cotización a factura - marca como converted, asocia invoiceId, bloquea doble facturación
+app.post('/api/quotes/:id/convert', verifyToken, async (req, res) => {
+    if (!req.user.confirmedFiscalName) {
+        return res.status(403).json({ message: 'Confirma tu nombre fiscal para facturar.' });
+    }
+    try {
+        const quote = await Quote.findOne({ _id: req.params.id, userId: req.userId });
+        if (!quote) return res.status(404).json({ message: 'Cotización no encontrada' });
+        if (quote.status === 'converted') {
+            return res.status(400).json({ message: 'Esta cotización ya fue facturada.', invoiceId: quote.invoiceId });
+        }
+
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            const ncfType = quote.clientRnc?.replace(/[^\d]/g, '').length === 9 ? '31' : '32';
+            const fullNcf = await getNextNcf(req.userId, ncfType, session, quote.clientRnc);
+            const newInvoice = new Invoice({
+                userId: req.userId,
+                clientName: quote.clientName,
+                clientRnc: quote.clientRnc,
+                ncfType,
+                ncfSequence: fullNcf,
+                items: quote.items,
+                subtotal: quote.subtotal,
+                itbis: quote.itbis,
+                total: quote.total
+            });
+            await newInvoice.save({ session });
+            quote.status = 'converted';
+            quote.invoiceId = newInvoice._id;
+            quote.lastSavedAt = new Date();
+            await quote.save({ session });
+            await Customer.findOneAndUpdate(
+                { userId: req.userId, rnc: quote.clientRnc },
+                { lastInvoiceDate: new Date(), $set: { name: quote.clientName } },
+                { upsert: true, session }
+            );
+            await session.commitTransaction();
+            session.endSession();
+            res.status(201).json({ message: 'Factura creada', invoice: newInvoice, ncf: fullNcf });
+        } catch (err) {
+            await session.abortTransaction();
+            session.endSession();
+            throw err;
+        }
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

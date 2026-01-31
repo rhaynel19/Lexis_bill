@@ -118,6 +118,8 @@ export function CustomerMigration({ onImportSuccess }: { onImportSuccess: () => 
                             className="hidden"
                             onChange={(e) => e.target.files?.[0] && processFile(e.target.files[0])}
                             accept=".csv,.json"
+                            aria-label="Subir archivo CSV o JSON para migración"
+                            title="Subir archivo"
                         />
 
                         {isUploading ? (

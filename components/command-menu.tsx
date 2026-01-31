@@ -68,6 +68,8 @@ export function CommandMenu() {
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         autoFocus
+                        aria-label="Buscar comando o acción"
+                        title="Buscar comando"
                     />
                     <div className="text-xs text-slate-400 border border-slate-200 rounded px-1.5 py-0.5">ESC</div>
                 </div>

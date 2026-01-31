@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     Plus,
     Search,
@@ -43,6 +43,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import jsQR from "jsqr";
 import { ZoomIn, ZoomOut, Maximize2, Layers } from "lucide-react";
+import styles from "./gastos.module.css";
 
 const EXPENSE_CATEGORIES = [
     { id: "01", name: "Gastos de Personal" },
@@ -79,10 +80,17 @@ export default function GastosPage() {
     const [scannedImage, setScannedImage] = useState<string | null>(null);
     const [zoom, setZoom] = useState(1);
     const [extraPhotos, setExtraPhotos] = useState<string[]>([]);
+    const invoiceImgRef = useRef<HTMLImageElement>(null);
 
     useEffect(() => {
         loadExpenses();
     }, []);
+
+    useEffect(() => {
+        if (invoiceImgRef.current) {
+            invoiceImgRef.current.style.setProperty("--invoice-zoom", String(zoom));
+        }
+    }, [zoom]);
 
     const loadExpenses = async () => {
         try {
@@ -265,6 +273,8 @@ export default function GastosPage() {
                             onChange={handleScan}
                             className="absolute inset-0 opacity-0 cursor-pointer z-10"
                             disabled={isScanning}
+                            aria-label="Subir imagen o PDF para escaneo IA o QR"
+                            title="Subir imagen o PDF"
                         />
                         <Button
                             variant="outline"
@@ -308,10 +318,10 @@ export default function GastosPage() {
                                         <div className="flex-1 overflow-auto p-4 flex items-start justify-center cursor-move">
                                             {scannedImage ? (
                                                 <img
+                                                    ref={invoiceImgRef}
                                                     src={scannedImage}
                                                     alt="Factura Principal"
-                                                    style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}
-                                                    className="shadow-md rounded shadow-black/10 max-w-full"
+                                                    className={cn(styles.invoicePreviewImg, "shadow-md rounded shadow-black/10 max-w-full")}
                                                 />
                                             ) : (
                                                 <div className="flex flex-col items-center justify-center h-full text-slate-300 gap-3 py-20">
@@ -325,7 +335,7 @@ export default function GastosPage() {
                                             <div className="p-3 border-t bg-white flex gap-2 overflow-x-auto">
                                                 {extraPhotos.map((img, idx) => (
                                                     <div key={idx} className="relative w-12 h-12 rounded border overflow-hidden flex-shrink-0 group cursor-pointer" onClick={() => setScannedImage(img)}>
-                                                        <img src={img} className="w-full h-full object-cover" />
+                                                        <img src={img} alt={`Foto adicional del comprobante ${idx + 1}`} className="w-full h-full object-cover" title={`Ver foto adicional ${idx + 1}`} />
                                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                                             <ScanLine className="w-4 h-4 text-white" />
                                                         </div>
@@ -336,7 +346,7 @@ export default function GastosPage() {
                                     </div>
 
                                     <div className="relative">
-                                        <input type="file" accept="image/*" onChange={handleAddExtraPhoto} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                        <input type="file" accept="image/*" onChange={handleAddExtraPhoto} className="absolute inset-0 opacity-0 cursor-pointer" aria-label="Añadir página o foto adicional" title="Añadir foto" />
                                         <Button variant="outline" className="w-full border-dashed gap-2 h-10 text-xs">
                                             <Layers className="w-4 h-4" /> Añadir página/foto adicional
                                         </Button>

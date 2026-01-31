@@ -114,7 +114,7 @@ export default function Configuration() {
                             <div className="space-y-3">
                                 <Label className="text-slate-600">Logo de Empresa</Label>
                                 <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer relative min-h-[160px]">
-                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'logo')} />
+                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'logo')} aria-label="Subir logo de empresa" title="Subir logo" />
                                     {logoPreview ? (
                                         <div className="relative w-full h-32">
                                             <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
@@ -136,7 +136,7 @@ export default function Configuration() {
                             <div className="space-y-3">
                                 <Label className="text-slate-600">Sello Digital / Firma</Label>
                                 <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer relative min-h-[160px]">
-                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'seal')} />
+                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'seal')} aria-label="Subir sello digital o firma" title="Subir sello" />
                                     {sealPreview ? (
                                         <div className="relative w-full h-32">
                                             <img src={sealPreview} alt="Sello" className="w-full h-full object-contain" />
@@ -174,9 +174,11 @@ export default function Configuration() {
                                 <Label className="text-base font-bold text-slate-800">Facturación Electrónica Activa</Label>
                                 <p className="text-sm text-slate-500">Lexis Bill sugerirá Serie E (E31, E32...) en lugar de Serie B.</p>
                             </div>
-                            <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-200 cursor-pointer transition-colors duration-200 focus:outline-none"
+                            <div
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors duration-200 focus:outline-none ${config.hasElectronicBilling ? 'bg-indigo-600' : 'bg-slate-200'}`}
                                 onClick={() => setConfig({ ...config, hasElectronicBilling: !config.hasElectronicBilling })}
-                                style={{ backgroundColor: config.hasElectronicBilling ? '#4F46E5' : '#E2E8F0' }}>
+                                title="Activar o desactivar facturación electrónica"
+                            >
                                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${config.hasElectronicBilling ? 'translate-x-6' : 'translate-x-1'}`} />
                             </div>
                         </div>
@@ -212,6 +214,8 @@ export default function Configuration() {
                                 id="profession"
                                 value={config.profession}
                                 onChange={handleSelectChange}
+                                title="Especialidad o sector profesional"
+                                aria-label="Especialidad o sector profesional"
                                 className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <option value="general">Profesional General</option>

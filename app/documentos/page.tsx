@@ -81,7 +81,7 @@ export default function DocumentVault() {
                         <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-slate-200 rounded-lg bg-white hover:bg-slate-50 transition-colors cursor-pointer group" onClick={() => document.getElementById('file-upload')?.click()}>
                             <Upload className="h-12 w-12 text-slate-400 group-hover:text-primary transition-colors" />
                             <p className="mt-2 text-sm text-slate-500 font-medium">Click para seleccionar</p>
-                            <input type="file" id="file-upload" className="hidden" onChange={handleUpload} accept=".pdf,.jpg,.jpeg,.png" />
+                            <input type="file" id="file-upload" className="hidden" onChange={handleUpload} accept=".pdf,.jpg,.jpeg,.png" aria-label="Subir documento PDF o imagen" title="Subir documento" />
                         </div>
                         <Button className="w-full" onClick={handleUpload}>
                             Guardar en Bóveda

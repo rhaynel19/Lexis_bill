@@ -1,21 +1,24 @@
 import { secureFetch } from "./secure-fetch";
 
-const API_URL = (typeof window !== "undefined" && window.location.hostname === "localhost")
-    ? (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api")
-    : "/api";
+// Siempre /api para same-origin (cookies HttpOnly). En dev, next.config rewrites proxy a backend.
+const API_URL = "/api";
 
 export const api = {
-    // Auth
+    // Auth - credenciales via cookie HttpOnly
     async login(email: string, password: string) {
         return secureFetch<any>(`${API_URL}/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
-            cacheKey: undefined // No cache for login
+            cacheKey: undefined
         });
     },
 
-    async register(data: any) {
+    async logout() {
+        return secureFetch<any>(`${API_URL}/auth/logout`, { method: "POST" });
+    },
+
+    async register(data: { [key: string]: unknown }) {
         return secureFetch<any>(`${API_URL}/auth/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -24,30 +27,22 @@ export const api = {
     },
 
     async confirmFiscalName(confirmedName: string) {
-        const token = localStorage.getItem("token");
         return secureFetch<any>(`${API_URL}/auth/confirm-fiscal-name`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ confirmedName }),
         });
     },
 
-    async updateProfile(data: any) {
-        const token = localStorage.getItem("token");
+    async updateProfile(data: { [key: string]: unknown }) {
         return secureFetch<any>(`${API_URL}/auth/profile`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
         });
     },
 
-    // RNC
+    // RNC (público)
     async validateRnc(number: string) {
         return secureFetch<any>(`${API_URL}/rnc/${number}`, {
             cacheKey: `rnc_${number}` // Cache RNC lookups
@@ -166,29 +161,60 @@ export const api = {
 
     // Reports & Tax
     async getTaxSummary(month: number, year: number) {
-        const token = localStorage.getItem("token");
         return secureFetch<any>(`${API_URL}/reports/summary?month=${month}&year=${year}`, {
-            headers: { "Authorization": `Bearer ${token}` },
             cacheKey: `tax_summary_${month}_${year}`
         });
     },
 
-    getReport607Url(month: number, year: number) {
-        const token = localStorage.getItem("token");
-        return `${API_URL}/reports/607?month=${month}&year=${year}&token=${token}`;
+    async downloadReport607(month: number, year: number): Promise<Blob> {
+        const res = await fetch(`${API_URL}/reports/607?month=${month}&year=${year}`, { credentials: "include" });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error((err as { message?: string }).message || "Error al descargar reporte 607");
+        }
+        return res.blob();
     },
 
-    getReport606Url(month: number, year: number) {
-        const token = localStorage.getItem("token");
-        return `${API_URL}/reports/606?month=${month}&year=${year}&token=${token}`;
+    async downloadReport606(month: number, year: number): Promise<Blob> {
+        const res = await fetch(`${API_URL}/reports/606?month=${month}&year=${year}`, { credentials: "include" });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error((err as { message?: string }).message || "Error al descargar reporte 606");
+        }
+        return res.blob();
+    },
+
+    async getQuotes() {
+        return secureFetch<any[]>(`${API_URL}/quotes`, { cacheKey: "quotes_list" });
+    },
+
+    async createQuote(data: { [key: string]: unknown }) {
+        const res = await secureFetch<any>(`${API_URL}/quotes`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        localStorage.removeItem("cache_quotes_list");
+        return res;
+    },
+
+    async updateQuote(id: string, data: { [key: string]: unknown }) {
+        const res = await secureFetch<any>(`${API_URL}/quotes/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        localStorage.removeItem("cache_quotes_list");
+        return res;
+    },
+
+    async convertQuoteToInvoice(quoteId: string) {
+        return secureFetch<any>(`${API_URL}/quotes/${quoteId}/convert`, { method: "POST" });
     },
 
     // Expenses (606)
     async getExpenses() {
-        const token = localStorage.getItem("token");
-        return secureFetch<any[]>(`${API_URL}/expenses`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
+        return secureFetch<any[]>(`${API_URL}/expenses`);
     },
 
     async saveExpense(expenseData: any) {
@@ -204,31 +230,15 @@ export const api = {
     },
 
     async deleteExpense(id: string) {
-        const token = localStorage.getItem("token");
-        return secureFetch<any>(`${API_URL}/expenses/${id}`, {
-            method: "DELETE",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
+        return secureFetch<any>(`${API_URL}/expenses/${id}`, { method: "DELETE" });
     },
 
     // Subscription & Payments
     async getSubscriptionStatus() {
-        const token = localStorage.getItem("token");
-        return secureFetch<any>(`${API_URL}/subscription/status`, {
-            headers: { "Authorization": `Bearer ${token}` },
-            // Important: Do NOT cache subscription status too aggressively or handle expiry carefully
-            // But for robustness, caching it for offline viewing is actually good as long as we don't block access improperly.
-            // Let's cache it but maybe logic elsewhere handles "if too old check online".
-            // For now, let's cache it to show status even if offline.
-            cacheKey: "subscription_status"
-        });
+        return secureFetch<any>(`${API_URL}/subscription/status`, { cacheKey: "subscription_status" });
     },
 
     async getPaymentHistory() {
-        const token = localStorage.getItem("token");
-        return secureFetch<any[]>(`${API_URL}/payments/history`, {
-            headers: { "Authorization": `Bearer ${token}` },
-            cacheKey: "payment_history"
-        });
+        return secureFetch<any[]>(`${API_URL}/payments/history`, { cacheKey: "payment_history" });
     }
 };

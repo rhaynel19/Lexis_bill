@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, FileText, ArrowRight, Eye, Download, MessageCircle, Pencil } from "lucide-react";
+import { Plus, FileText, ArrowRight, Eye, Pencil, Loader2 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -12,6 +12,7 @@ import { DocumentViewer, Quote } from "@/components/DocumentViewer";
 import { downloadQuotePDF, QuoteData } from "@/lib/pdf-generator";
 import { generateQuoteWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp-utils";
 import { toast } from "sonner";
+import { api } from "@/lib/api-service";
 
 export default function Quotes() {
     const router = useRouter();
@@ -19,23 +20,43 @@ export default function Quotes() {
     const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
     const [isViewerOpen, setIsViewerOpen] = useState(false);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [convertingId, setConvertingId] = useState<string | null>(null);
 
     useEffect(() => {
-        const stored = localStorage.getItem("quotes");
-        if (stored) {
-            setQuotes(JSON.parse(stored).reverse());
-        }
+        loadQuotes();
     }, []);
 
-    const handleConvertToInvoice = (quote: Quote) => {
-        const invoiceToClone = {
-            clientName: quote.clientName,
-            rnc: quote.rnc,
-            items: quote.items,
-            type: "32"
-        };
-        localStorage.setItem("invoiceToClone", JSON.stringify(invoiceToClone));
-        router.push("/nueva-factura");
+    const loadQuotes = async () => {
+        setIsLoading(true);
+        try {
+            const data = await api.getQuotes();
+            setQuotes((data || []).map((q: { _id?: { toString: () => string }; id?: string; [key: string]: unknown }) => ({
+                ...q,
+                id: q.id || (q._id as { toString?: () => string })?.toString?.() || String(q._id)
+            })));
+        } catch {
+            setQuotes([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleConvertToInvoice = async (quote: Quote) => {
+        if (quote.status === "converted") {
+            toast.error("Esta cotización ya fue facturada");
+            return;
+        }
+        setConvertingId(quote.id);
+        try {
+            const res = await api.convertQuoteToInvoice(quote.id);
+            toast.success("Factura creada exitosamente");
+            router.push("/dashboard");
+        } catch (e: unknown) {
+            toast.error((e as { message?: string })?.message || "Error al convertir");
+        } finally {
+            setConvertingId(null);
+        }
     };
 
     const handleViewQuote = (quote: Quote) => {
@@ -100,8 +121,11 @@ export default function Quotes() {
                 <CardHeader className="bg-slate-50 border-b border-slate-100">
                     <CardTitle className="text-lg font-bold text-slate-800">Historial de Cotizaciones</CardTitle>
                 </CardHeader>
-                <CardContent className="pt-6">
-                    <Table>
+                <CardContent className="pt-6 overflow-x-auto">
+                    {isLoading ? (
+                        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
+                    ) : (
+                    <Table className="min-w-[640px]">
                         <TableHeader>
                             <TableRow className="bg-slate-50/50 hover:bg-transparent">
                                 <TableHead className="font-bold text-slate-700">ID</TableHead>
@@ -135,37 +159,42 @@ export default function Quotes() {
                                         </TableCell>
 
                                         <TableCell className="text-center">
-                                            <StatusBadge status={q.status || "borrador"} />
+                                            <StatusBadge status={q.status === "converted" ? "converted" : q.status === "sent" ? "sent" : "borrador"} />
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <div className="flex gap-2 justify-end">
+                                            <div className="flex gap-2 justify-end flex-wrap">
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    className="w-9 h-9 p-0 border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                                                    className="w-9 h-9 p-0 min-w-[36px] min-h-[36px] border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50"
                                                     onClick={() => handleViewQuote(q)}
                                                     title="Ver detalles"
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="w-9 h-9 p-0 text-blue-600 border-blue-100 hover:bg-blue-50"
-                                                    onClick={() => router.push(`/nueva-cotizacion?edit=${q.id}`)}
-                                                    title="Editar cotización"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="gap-2 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-100 font-bold hidden md:flex"
-                                                    onClick={() => handleConvertToInvoice(q)}
-                                                    title="Convertir a factura"
-                                                >
-                                                    Facturar <ArrowRight className="w-3 h-3" />
-                                                </Button>
+                                                {q.status !== "converted" && (
+                                                    <>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="w-9 h-9 p-0 min-w-[36px] min-h-[36px] text-blue-600 border-blue-100 hover:bg-blue-50"
+                                                            onClick={() => router.push(`/nueva-cotizacion?edit=${q.id}`)}
+                                                            title="Editar cotización"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="gap-1 sm:gap-2 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-100 font-bold min-h-[36px]"
+                                                            onClick={() => handleConvertToInvoice(q)}
+                                                            disabled={!!convertingId}
+                                                            title="Convertir a factura"
+                                                        >
+                                                            {convertingId === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span className="hidden sm:inline">Facturar</span> <ArrowRight className="w-3 h-3" /></>}
+                                                        </Button>
+                                                    </>
+                                                )}
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -173,6 +202,7 @@ export default function Quotes() {
                             )}
                         </TableBody>
                     </Table>
+                    )}
                 </CardContent>
             </Card>
 

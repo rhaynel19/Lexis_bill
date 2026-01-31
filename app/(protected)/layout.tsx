@@ -21,25 +21,27 @@ export default function ProtectedLayout({
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) {
+        const user = localStorage.getItem("user");
+        if (!user) {
             router.push("/login");
         } else {
             setIsLoading(false);
         }
     }, [router]);
 
-    const handleLogout = () => {
-        localStorage.removeItem("token");
+    const handleLogout = async () => {
+        try {
+            const { api } = await import("@/lib/api-service");
+            await api.logout();
+        } catch {
+            // Ignorar si falla (ej. offline)
+        }
         localStorage.removeItem("user");
-        // Clear caches from api-service if any
         Object.keys(localStorage).forEach(key => {
-            if (key.startsWith("cache_")) {
-                localStorage.removeItem(key);
-            }
+            if (key.startsWith("cache_")) localStorage.removeItem(key);
         });
         toast.success("Sesión cerrada correctamente");
-        router.push("/");
+        router.push("/login");
     };
 
     if (isLoading) {
@@ -74,7 +76,7 @@ export default function ProtectedLayout({
                         {/* Mobile Menu Trigger */}
                         <Sheet>
                             <SheetTrigger asChild>
-                                <Button variant="ghost" size="icon" className="md:hidden text-foreground hover:bg-foreground/10">
+                                <Button variant="ghost" size="icon" className="md:hidden text-foreground hover:bg-foreground/10" aria-label="Abrir menú de navegación">
                                     <Menu className="w-6 h-6" />
                                 </Button>
                             </SheetTrigger>
@@ -119,7 +121,7 @@ export default function ProtectedLayout({
             {/* Mobile FAB (Floating Action Button) */}
             <div className="fixed bottom-24 right-6 md:hidden z-50">
                 <Link href="/nueva-factura">
-                    <button className="h-14 w-14 bg-[#D4AF37] text-white rounded-full shadow-xl shadow-amber-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all">
+                    <button className="h-14 w-14 bg-[#D4AF37] text-white rounded-full shadow-xl shadow-amber-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all" aria-label="Nueva factura" title="Nueva factura">
                         <Plus className="h-8 w-8" />
                     </button>
                 </Link>

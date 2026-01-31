@@ -184,9 +184,9 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
                         </div>
                     ) : (
                         <>
-                            {/* Desktop View */}
-                            <div className="hidden md:block">
-                                <Table>
+                            {/* Desktop View - scroll horizontal en móvil/tablet */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <Table className="min-w-[640px]">
                                     <TableHeader className="bg-muted/50">
                                         <TableRow className="border-border/10">
                                             <TableHead className="font-semibold text-muted-foreground pl-8">Fecha</TableHead>

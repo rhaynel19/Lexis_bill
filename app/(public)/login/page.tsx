@@ -34,8 +34,7 @@ export default function LoginPage() {
             const { api } = await import("@/lib/api-service");
             const data = await api.login(email, password);
 
-            // Save Token and User
-            localStorage.setItem("token", data.accessToken);
+            // Usuario (token en cookie HttpOnly - no localStorage)
             localStorage.setItem("user", JSON.stringify({
                 name: data.name,
                 email: data.email,

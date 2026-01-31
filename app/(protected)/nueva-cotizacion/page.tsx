@@ -7,16 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, FormEvent, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getDominicanDate } from "@/lib/date-utils";
-import { Loader2, ArrowLeft, Save, Eye } from "lucide-react";
-import { InvoiceData } from "@/lib/pdf-generator";
+import { Loader2, ArrowLeft, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { handleNumericKeyDown } from "@/lib/input-validators";
 import { DocumentPreview } from "@/components/DocumentPreview";
 import { validateRNCOrCedula } from "@/lib/validators";
 import { Suspense } from "react";
+import { api } from "@/lib/api-service";
 
 interface QuoteItem {
     id: string;
@@ -47,40 +47,34 @@ function NewQuoteForm() {
     ]);
     const [savedClients, setSavedClients] = useState<any[]>([]);
 
-    // Cargar datos si estamos en modo edición
+    // Cargar cotización desde API si modo edición
     useEffect(() => {
         if (editId) {
-            try {
-                const stored = localStorage.getItem("quotes");
-                if (stored) {
-                    const quotes = JSON.parse(stored);
-                    const toEdit = quotes.find((q: any) => q.id === editId);
-                    if (toEdit) {
-                        setClientName(toEdit.clientName || "");
-                        setRnc(toEdit.rnc || "");
-                        setClientPhone(toEdit.clientPhone || "");
-                        if (Array.isArray(toEdit.items)) {
-                            setItems(toEdit.items);
-                        }
-                        setStatus(toEdit.status || "editada");
-                        // Detectar validez
-                        if (toEdit.validUntil && toEdit.date) {
-                            const date1 = new Date(toEdit.validUntil).getTime();
-                            const date2 = new Date(toEdit.date).getTime();
-                            if (!isNaN(date1) && !isNaN(date2)) {
-                                const diffTime = Math.abs(date1 - date2);
-                                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-                                setValidityDays(diffDays.toString());
-                            }
-                        }
-                        setIsClientLocked(true);
-                        toast.info(`Editando cotización ${editId}`);
+            api.getQuotes().then(quotes => {
+                const toEdit = (quotes || []).find((q: { id?: string; _id?: { toString: () => string } }) => (q.id || (q._id as { toString?: () => string })?.toString?.()) === editId);
+                if (toEdit) {
+                    setClientName((toEdit as { clientName?: string }).clientName || "");
+                    setRnc((toEdit as { clientRnc?: string; rnc?: string }).clientRnc || (toEdit as { rnc?: string }).rnc || "");
+                    setClientPhone((toEdit as { clientPhone?: string }).clientPhone || "");
+                    const its = (toEdit as { items?: QuoteItem[] }).items;
+                    if (Array.isArray(its) && its.length) {
+                        setItems(its.map((it: QuoteItem, i: number) => ({ ...it, id: it.id || String(i + 1) })));
                     }
+                    setStatus((toEdit as { status?: string }).status === "converted" ? "converted" : "editada");
+                    const vu = (toEdit as { validUntil?: string }).validUntil;
+                    const dt = (toEdit as { date?: string; createdAt?: string }).date || (toEdit as { createdAt?: string }).createdAt;
+                    if (vu && dt) {
+                        const d1 = new Date(vu).getTime();
+                        const d2 = new Date(dt).getTime();
+                        if (!isNaN(d1) && !isNaN(d2)) {
+                            const diffDays = Math.round(Math.abs(d1 - d2) / (1000 * 60 * 60 * 24));
+                            setValidityDays(String(Math.max(1, diffDays)));
+                        }
+                    }
+                    setIsClientLocked(true);
+                    toast.info("Editando cotización");
                 }
-            } catch (error) {
-                console.error("Error loading quote for edit:", error);
-                toast.error("Error al cargar la cotización para editar");
-            }
+            }).catch(() => toast.error("Error al cargar la cotización"));
         }
     }, [editId]);
 
@@ -190,39 +184,33 @@ function NewQuoteForm() {
         setIsSubmitting(true);
 
         try {
-            const quoteData = {
-                id: editId || `COT-${Date.now().toString().slice(-6)}`,
+            const validUntil = new Date(Date.now() + parseInt(validityDays || "15") * 24 * 60 * 60 * 1000).toISOString();
+            const payload = {
                 clientName: clientName.trim(),
-                rnc: rnc.replace(/-/g, ""),
+                clientRnc: rnc.replace(/\D/g, "") || rnc,
                 clientPhone,
                 items: items
                     .filter(item => item.description.trim() !== "")
                     .map(item => ({
-                        ...item,
+                        description: item.description,
                         quantity: Number(item.quantity) || 1,
-                        price: Number(item.price) || 0
+                        price: Number(item.price) || 0,
+                        isExempt: item.isExempt
                     })),
                 subtotal,
                 itbis,
                 total,
-                date: editId ? undefined : getDominicanDate(), // Mantener fecha original si es edición
-                validUntil: new Date(Date.now() + parseInt(validityDays) * 24 * 60 * 60 * 1000).toISOString(),
-                status: editId ? "editada" : "borrador"
+                validUntil,
+                status: editId ? "sent" : "draft"
             };
 
-            const existing = localStorage.getItem("quotes");
-            let quotes = existing ? JSON.parse(existing) : [];
-
             if (editId) {
-                // Actualizar existente
-                quotes = quotes.map((q: any) => q.id === editId ? { ...q, ...quoteData, date: q.date } : q);
+                await api.updateQuote(editId, payload);
+                toast.success("✅ Cotización actualizada");
             } else {
-                // Crear nueva
-                quotes.push(quoteData);
+                await api.createQuote(payload);
+                toast.success("✅ Cotización guardada");
             }
-
-            localStorage.setItem("quotes", JSON.stringify(quotes));
-            toast.success(editId ? "✅ Cotización actualizada" : "✅ Cotización guardada");
             router.push("/cotizaciones");
         } catch (error) {
             toast.error("Error al guardar la cotización");
@@ -230,6 +218,29 @@ function NewQuoteForm() {
             setIsSubmitting(false);
         }
     };
+
+    // Auto-guardado cada 30s solo para cotizaciones existentes (editId)
+    const lastSaveRef = useRef<string>("");
+    useEffect(() => {
+        if (!editId || status === "converted" || !clientName.trim() || total <= 0) return;
+        const t = setInterval(() => {
+            const key = `${clientName}-${rnc}-${items.length}-${total}`;
+            if (key === lastSaveRef.current) return;
+            lastSaveRef.current = key;
+            const payload = {
+                clientName: clientName.trim(),
+                clientRnc: rnc.replace(/\D/g, "") || rnc,
+                clientPhone,
+                items: items.filter(i => i.description.trim()).map(i => ({ description: i.description, quantity: Number(i.quantity) || 1, price: Number(i.price) || 0, isExempt: i.isExempt })),
+                subtotal,
+                itbis,
+                total,
+                validUntil: new Date(Date.now() + parseInt(validityDays || "15") * 24 * 60 * 60 * 1000).toISOString()
+            };
+            api.updateQuote(editId, payload).then(() => { lastSaveRef.current = key; }).catch(() => { lastSaveRef.current = ""; });
+        }, 30000);
+        return () => clearInterval(t);
+    }, [editId, clientName, rnc, clientPhone, items, subtotal, itbis, total, validityDays, status]);
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -387,6 +398,8 @@ function NewQuoteForm() {
                                                             checked={!item.isExempt}
                                                             onChange={e => updateItem(item.id, "isExempt", !e.target.checked)}
                                                             className="w-4 h-4 text-indigo-600 rounded-md border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                                                            aria-label={item.isExempt ? "Exento de ITBIS - Marcar para gravar" : "Gravado con ITBIS - Marcar para exentar"}
+                                                            title={item.isExempt ? "Exento de ITBIS" : "Gravado con ITBIS"}
                                                         />
                                                     </div>
                                                 </TableCell>

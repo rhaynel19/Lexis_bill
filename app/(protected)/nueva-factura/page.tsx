@@ -851,6 +851,8 @@ export default function NewInvoice() {
                                             checked={saveClient}
                                             onChange={(e) => setSaveClient(e.target.checked)}
                                             className="h-4 w-4 text-accent rounded border-border/30"
+                                            aria-label="Guardar cliente en mi lista"
+                                            title="Guardar cliente"
                                         />
                                         <Label htmlFor="save-client" className="text-sm font-normal text-muted-foreground cursor-pointer">
                                             Guardar en mi lista de clientes
@@ -1107,6 +1109,8 @@ export default function NewInvoice() {
                                                                             checked={item.isExempt || false}
                                                                             onChange={(e) => updateItem(item.id, "isExempt", e.target.checked)}
                                                                             className="rounded border-border/30 text-accent focus:ring-accent"
+                                                                            aria-label="Gasto legal o suplido no gravable"
+                                                                            title="Exento ITBIS"
                                                                         />
                                                                         <Label htmlFor={`exempt-${item.id}`} className="font-normal text-muted-foreground">
                                                                             Gasto Legal / Suplido (No Gravable)
@@ -1142,6 +1146,8 @@ export default function NewInvoice() {
                                                 checked={applyRetentions}
                                                 onChange={(e) => setApplyRetentions(e.target.checked)}
                                                 className="h-4 w-4 text-accent rounded border-border/30 focus:ring-accent"
+                                                aria-label="Aplicar retenciones de ley para persona jurídica"
+                                                title="Aplicar retenciones"
                                             />
                                             <Label htmlFor="apply-retentions" className="font-medium text-foreground cursor-pointer">
                                                 Aplicar Retenciones de Ley (Persona Jurídica)

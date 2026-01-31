@@ -68,6 +68,8 @@ export function LegalCheckbox({ id, checked, onChange, onOpenModal }: { id: stri
                     checked={checked}
                     onChange={onChange}
                     className="w-4 h-4 text-[#0A192F] bg-white border-slate-300 rounded focus:ring-[#D4AF37] transition-all cursor-pointer"
+                    aria-label="Aceptar términos y condiciones"
+                    title="Aceptar términos"
                 />
             </div>
             <div className="text-[11px] leading-tight text-slate-500">

@@ -47,16 +47,32 @@ export default function ReportsPage() {
         }
     };
 
-    const handleDownload607 = () => {
-        const token = localStorage.getItem("token");
-        const url = `${process.env.NEXT_PUBLIC_API_URL}/reports/607?month=${selectedMonth}&year=${selectedYear}&token=${token}`;
-        window.open(url, '_blank');
+    const handleDownload607 = async () => {
+        try {
+            const blob = await api.downloadReport607(selectedMonth, selectedYear);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `607_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error(e);
+        }
     };
 
-    const handleDownload606 = () => {
-        const token = localStorage.getItem("token");
-        const url = `${process.env.NEXT_PUBLIC_API_URL}/reports/606?month=${selectedMonth}&year=${selectedYear}&token=${token}`;
-        window.open(url, '_blank');
+    const handleDownload606 = async () => {
+        try {
+            const blob = await api.downloadReport606(selectedMonth, selectedYear);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `606_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     const isMonthClosed = (mIndex: number) => {
@@ -80,10 +96,13 @@ export default function ReportsPage() {
                     </p>
                 </div>
                 <div className="flex gap-3 bg-secondary p-2 rounded-2xl shadow-sm border border-border/10 transition-colors">
+                    <label htmlFor="year-select" className="sr-only">Año fiscal</label>
                     <select
+                        id="year-select"
                         className="bg-transparent border-none text-sm font-bold text-foreground outline-none focus:ring-0 cursor-pointer px-2"
                         value={selectedYear}
                         onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                        aria-label="Seleccionar año fiscal"
                     >
                         <option value={2026}>2026</option>
                         <option value={2025}>2025</option>
@@ -238,7 +257,7 @@ export default function ReportsPage() {
                             className="h-14 px-8 text-lg bg-foreground text-background hover:bg-foreground/90 font-bold shadow-xl transition-all hover:scale-105"
                             onClick={() => {
                                 const subject = `Reportes Fiscales LexisBill - ${months[selectedMonth - 1]} ${selectedYear}`;
-                                const body = `Hola,\n\nAdjunto los enlaces para descargar los reportes fiscales del periodo ${months[selectedMonth - 1]} ${selectedYear}:\n\n- Reporte 606 (Compras): ${process.env.NEXT_PUBLIC_API_URL}/reports/606?month=${selectedMonth}&year=${selectedYear}\n- Reporte 607 (Ventas): ${process.env.NEXT_PUBLIC_API_URL}/reports/607?month=${selectedMonth}&year=${selectedYear}\n- Resumen ITBIS: RD$ ${(summary?.itbis || 0).toLocaleString()}\n\nGenerado automáticamente por LexisBill.`;
+                                const body = `Hola,\n\nAdjunto el resumen fiscal del periodo ${months[selectedMonth - 1]} ${selectedYear}:\n\n- Resumen ITBIS: RD$ ${(summary?.itbis || 0).toLocaleString()}\n- Subtotal Neto: RD$ ${(summary?.subtotal || 0).toLocaleString()}\n- Comprobantes: ${summary?.count || 0}\n\nLos reportes 606 y 607 deben descargarse desde tu cuenta LexisBill (Reportes Fiscales).\n\nGenerado automáticamente por LexisBill.`;
                                 window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
                             }}
                         >

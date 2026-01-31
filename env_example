@@ -1,11 +1,14 @@
 # Configuración del Servidor y Base de Datos
 PORT=3001
 NODE_ENV=development
-DATABASE_URL=postgres://user:password@localhost:5432/billig_db
+MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/lexis_bill
 
-# Seguridad
-JWT_SECRET=tu_secreto_super_seguro_aqui
+# Seguridad (OBLIGATORIO - la app no arranca sin JWT_SECRET)
+JWT_SECRET=tu_secreto_super_seguro_minimo_32_caracteres
 CORS_ORIGIN=http://localhost:3000
+
+# Dev: URL del API para proxy (rewrites next.config)
+NEXT_PUBLIC_API_URL=http://localhost:3001/api
 
 # Pasarelas de Pago (Integración Futura)
 # Azul

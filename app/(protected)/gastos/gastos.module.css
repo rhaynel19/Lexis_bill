@@ -1,0 +1,6 @@
+/* Estilos del visor de factura - zoom dinámico vía variable CSS */
+.invoicePreviewImg {
+  transform: scale(var(--invoice-zoom, 1));
+  transform-origin: top center;
+  transition: transform 0.2s;
+}

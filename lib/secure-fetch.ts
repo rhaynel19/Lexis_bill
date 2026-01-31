@@ -47,9 +47,9 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
 
             const response = await fetch(url, {
                 ...fetchOptions,
+                credentials: 'include',
                 headers: {
                     ...headers,
-                    // Headers por defecto recomendados para evitar problemas de CORS/Content-Type
                     "Accept": "application/json",
                 },
                 signal: controller.signal
