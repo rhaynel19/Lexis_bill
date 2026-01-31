@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CommandMenu } from "@/components/command-menu";
-import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt } from "lucide-react";
+import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TrialHeaderBadge } from "@/components/TrialHeaderBadge";
@@ -165,6 +165,10 @@ export default function ProtectedLayout({
                     <Plus className="w-6 h-6 rotate-45" />
                     <span className="text-[10px] font-medium uppercase">Fiscal</span>
                 </Link>
+                <Link href="/pagos" className="flex flex-col items-center gap-1 text-amber-600 hover:text-amber-500 font-medium">
+                    <CreditCard className="w-6 h-6" />
+                    <span className="text-[10px] font-medium uppercase">Pagar</span>
+                </Link>
                 <Link href="/configuracion" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-accent">
                     <Settings className="w-6 h-6" />
                     <span className="text-[10px] font-medium uppercase">Perfil</span>
@@ -218,6 +222,10 @@ function SidebarLinks({ isMobile = false, isAdmin = false, onLogout, onNavigate 
                 <NavLink href="/reportes" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
                     <Download className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Reportes Fiscales</span>
+                </NavLink>
+                <NavLink href="/pagos" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 transition-colors text-amber-600 border-l-2 border-amber-500/40">
+                    <CreditCard className="w-5 h-5 text-amber-600" />
+                    <span className="text-sm font-semibold">Pagar</span>
                 </NavLink>
                 <NavLink href="/configuracion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
                     <Settings className="w-5 h-5 text-sidebar-foreground/60" />

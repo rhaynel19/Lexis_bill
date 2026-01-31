@@ -8,7 +8,6 @@ import { useState, useEffect } from "react";
 import { Save, Upload, Settings } from "lucide-react";
 import { SupportTicketForm } from "@/components/support-ticket-form";
 import { ComprobantesConfig } from "@/components/ComprobantesConfig";
-import { MembershipConfig } from "@/components/MembershipConfig";
 import { usePreferences } from "@/components/providers/PreferencesContext";
 import { toast } from "sonner";
 
@@ -157,9 +156,6 @@ export default function Configuration() {
                         </div>
                     </CardContent>
                 </Card>
-
-                {/* Membresía */}
-                <MembershipConfig />
 
                 {/* NCF Configuration Section */}
                 <ComprobantesConfig />
