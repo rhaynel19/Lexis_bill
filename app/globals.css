@@ -200,12 +200,28 @@
 @layer base {
   * {
     border-color: var(--border);
-    outline-color: color-mix(in srgb, var(--ring) 50%, transparent);
+    /* Fallback para Chrome < 111: color sólido en vez de color-mix */
+    outline-color: var(--ring);
+  }
+
+  @supports (color: color-mix(in srgb, red 50%, transparent)) {
+    * {
+      outline-color: color-mix(in srgb, var(--ring) 50%, transparent);
+    }
   }
 
   body {
     background-color: var(--background);
     color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Mejor nitidez en temas oscuros (Midnight, Luxury, System dark) - evita letras borrosas */
+  .dark,
+  [data-theme="midnight"],
+  [data-theme="luxury"] {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;

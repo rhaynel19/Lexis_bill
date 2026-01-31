@@ -40,6 +40,7 @@ import { EmotionalStatusWidget } from "@/components/dashboard/EmotionalStatusWid
 import { AIInsightWidget } from "@/components/dashboard/AIInsightWidget";
 
 import { usePreferences } from "@/components/providers/PreferencesContext";
+import { cn } from "@/lib/utils";
 
 // Interfaz para definir la estructura de una factura
 interface Invoice {
@@ -137,9 +138,9 @@ export default function Dashboard() {
       setError("");
 
       try {
-        // 0. Security Check
-        const token = localStorage.getItem("token");
-        if (!token) {
+        // 0. Security Check (auth via cookie lexis_auth; user en localStorage para UI)
+        const user = localStorage.getItem("user");
+        if (!user) {
           router.push("/login");
           return;
         }
@@ -465,7 +466,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="mt-6 w-full bg-secondary/20 rounded-full h-1.5">
-                  <div className="bg-secondary h-1.5 rounded-full" style={{ width: pendingInvoices > 0 ? '60%' : '0%' }}></div>
+                  <div className={cn("bg-secondary h-1.5 rounded-full transition-all", pendingInvoices > 0 ? "w-[60%]" : "w-0")}></div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">En proceso de cobro</p>
               </CardContent>

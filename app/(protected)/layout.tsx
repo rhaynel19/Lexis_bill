@@ -19,6 +19,7 @@ export default function ProtectedLayout({
 }>) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
+    const [menuOpen, setMenuOpen] = useState(false);
 
     useEffect(() => {
         const user = localStorage.getItem("user");
@@ -74,7 +75,7 @@ export default function ProtectedLayout({
                         <ThemeToggle />
 
                         {/* Mobile Menu Trigger */}
-                        <Sheet>
+                        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
                             <SheetTrigger asChild>
                                 <Button variant="ghost" size="icon" className="md:hidden text-foreground hover:bg-foreground/10" aria-label="Abrir menú de navegación">
                                     <Menu className="w-6 h-6" />
@@ -85,7 +86,7 @@ export default function ProtectedLayout({
                                     <SheetTitle className="text-sidebar-primary text-left uppercase tracking-tighter font-black">LEXIS BILL</SheetTitle>
                                 </SheetHeader>
                                 <nav className="flex-1 overflow-y-auto p-4">
-                                    <SidebarLinks isMobile onLogout={handleLogout} />
+                                    <SidebarLinks isMobile onLogout={handleLogout} onNavigate={() => setMenuOpen(false)} />
                                 </nav>
                             </SheetContent>
                         </Sheet>
@@ -151,40 +152,45 @@ export default function ProtectedLayout({
     );
 }
 
-function SidebarLinks({ isMobile = false, onLogout }: { isMobile?: boolean, onLogout?: () => void }) {
+function SidebarLinks({ isMobile = false, onLogout, onNavigate }: { isMobile?: boolean, onLogout?: () => void; onNavigate?: () => void }) {
+    const NavLink = ({ href, children, ...props }: { href: string; children: React.ReactNode; [k: string]: unknown }) => (
+        <Link href={href} onClick={onNavigate} className={props.className as string} {...props}>
+            {children}
+        </Link>
+    );
     return (
         <div className="flex flex-col h-full justify-between">
             <div className="space-y-2">
-                <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-primary/10 transition-colors group">
+                <NavLink href="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-primary/10 transition-colors group">
                     <LayoutDashboard className="w-5 h-5 text-sidebar-primary" />
                     <span className="font-medium">Dashboard</span>
-                </Link>
-                <Link href="/nueva-factura" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold shadow-lg shadow-sidebar-primary/20 hover:scale-[1.02] transition-all">
+                </NavLink>
+                <NavLink href="/nueva-factura" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold shadow-lg shadow-sidebar-primary/20 hover:scale-[1.02] transition-all">
                     <Plus className="w-5 h-5" />
                     <span>Nueva Factura</span>
-                </Link>
+                </NavLink>
                 <div className="pt-4 pb-2 px-4 text-[10px] text-sidebar-foreground/50 uppercase tracking-widest font-bold border-t border-sidebar-border/30 mt-2">Documentos</div>
-                <Link href="/nueva-cotizacion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                <NavLink href="/nueva-cotizacion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
                     <FileText className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Nueva Cotización</span>
-                </Link>
-                <Link href="/cotizaciones" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                </NavLink>
+                <NavLink href="/cotizaciones" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
                     <FileText className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Ver Cotizaciones</span>
-                </Link>
+                </NavLink>
                 <div className="pt-4 pb-2 px-4 text-[10px] text-sidebar-foreground/50 uppercase tracking-widest font-bold border-t border-sidebar-border/30 mt-2">Gestión</div>
-                <Link href="/gastos" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                <NavLink href="/gastos" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
                     <Receipt className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Gastos (606)</span>
-                </Link>
-                <Link href="/reportes" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                </NavLink>
+                <NavLink href="/reportes" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
                     <Download className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Reportes Fiscales</span>
-                </Link>
-                <Link href="/configuracion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                </NavLink>
+                <NavLink href="/configuracion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
                     <Settings className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Configuración</span>
-                </Link>
+                </NavLink>
             </div>
 
             {onLogout && (

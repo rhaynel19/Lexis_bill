@@ -141,13 +141,13 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
     return (
         <>
             <Card className="bg-card border-none shadow-xl shadow-accent/5 rounded-2xl overflow-hidden mt-6">
-                <CardHeader className="border-b border-border/10 bg-muted/50 px-8 py-6">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div>
-                            <CardTitle className="text-xl font-bold text-foreground">Transacciones Recientes</CardTitle>
-                            <CardDescription className="text-muted-foreground">Gestión de comprobantes fiscales</CardDescription>
+                <CardHeader className="border-b border-border/10 bg-muted/50 px-4 sm:px-6 md:px-8 py-4 md:py-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
+                        <div className="min-w-0">
+                            <CardTitle className="text-lg md:text-xl font-bold text-foreground">Transacciones Recientes</CardTitle>
+                            <CardDescription className="text-muted-foreground text-sm">Gestión de comprobantes fiscales</CardDescription>
                         </div>
-                        <div className="flex gap-3 items-center">
+                        <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
                             {/* Filter Dropdown */}
                             <div className="flex items-center gap-2">
                                 <Filter className="w-4 h-4 text-muted-foreground" />
@@ -164,9 +164,9 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
                                 </Select>
                             </div>
 
-                            <Button variant="outline" onClick={() => router.push('/reportes')} className="text-success border-success/20 hover:bg-success/10">
-                                <Download className="w-4 h-4 mr-2" />
-                                Reportes 606/607
+                            <Button variant="outline" onClick={() => router.push('/reportes')} className="text-success border-success/20 hover:bg-success/10 shrink-0">
+                                <Download className="w-4 h-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Reportes </span>606/607
                             </Button>
                         </div>
                     </div>

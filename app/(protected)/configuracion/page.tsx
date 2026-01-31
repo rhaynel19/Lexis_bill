@@ -95,7 +95,7 @@ export default function Configuration() {
     };
 
     return (
-        <div className="container mx-auto px-4 py-6 md:py-8 max-w-5xl">
+        <div className="container mx-auto px-4 py-6 md:py-8 pb-28 md:pb-12 max-w-5xl">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-primary mb-2">Mi Oficina Fiscal</h1>
                 <p className="text-gray-500">Personalice la apariencia de sus documentos y datos fiscales.</p>
@@ -261,8 +261,11 @@ export default function Configuration() {
             </div>
 
             {/* Support Section */}
-            <div className="mt-12 pt-12 border-t">
+            <div className="mt-12 pt-12 border-t border-border/20">
                 <SupportTicketForm />
+                <p className="mt-4 text-xs text-muted-foreground">
+                    Tu mensaje será revisado por el equipo de soporte. Te contactaremos si necesitamos más información.
+                </p>
             </div>
         </div>
     );

@@ -21,9 +21,10 @@ export function SupportTicketForm() {
             const rnc = userStr ? JSON.parse(userStr).rnc : "ANONIMO";
 
             // Call API (Needs to be implemented in api-service but fetch works for now)
-            const res = await fetch("http://localhost:3001/api/tickets", {
+            const res = await fetch("/api/tickets", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({ rnc, type, description })
             });
 
