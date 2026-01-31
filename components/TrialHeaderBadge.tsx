@@ -9,27 +9,22 @@ export function TrialHeaderBadge() {
     const [status, setStatus] = useState<any>(null);
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) {
-            setStatus("no-session");
-            return;
-        }
-
         api.getSubscriptionStatus()
             .then(data => setStatus(data))
             .catch(() => setStatus("error"));
     }, []);
 
-    if (!status || status === "no-session" || status === "error") return null;
+    if (!status || status === "error") return null;
 
-    if (status.subscriptionStatus === 'Trial') {
+    const isTrial = status.plan === "free" || status.status === "pending" || (status.daysRemaining != null && status.daysRemaining < 30);
+    if (isTrial || status.status === "pending") {
         return (
-            <Link href="/pagos">
+            <Link href="/configuracion#membresia">
                 <div className="group flex items-center gap-2 text-xs font-black bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-lg shadow-amber-500/20 active:scale-95">
                     <Sparkles className="w-3 h-3 animate-pulse" />
-                    PRUEBA GRATIS: {status.daysRemaining} DÍAS
+                    {status.status === "pending" ? "PENDIENTE DE PAGO" : `PLAN FREE${status.daysRemaining != null && status.daysRemaining < 999 ? `: ${status.daysRemaining} DÍAS` : ""}`}
                     <div className="hidden lg:block border-l border-white/30 ml-1 pl-2 text-[10px] font-bold">
-                        ACTIVAR PRO
+                        UPGRADE
                     </div>
                 </div>
             </Link>

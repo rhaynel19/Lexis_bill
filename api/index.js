@@ -71,6 +71,13 @@ app.use(async (req, res, next) => {
     }
 });
 
+// --- PLANES DE MEMBRESÍA (Manual: Transferencia / PayPal) ---
+const MEMBERSHIP_PLANS = {
+    free: { id: 'free', name: 'Free', price: 0, currency: 'DOP', invoicesPerMonth: 5, features: ['5 facturas / mes', 'Reportes básicos'] },
+    pro: { id: 'pro', name: 'Pro', price: 950, currency: 'DOP', invoicesPerMonth: -1, features: ['Facturas ilimitadas', 'Reportes 606/607', 'Soporte prioritario'] },
+    premium: { id: 'premium', name: 'Premium', price: 2450, currency: 'DOP', invoicesPerMonth: -1, features: ['Todo Pro', 'Multi-negocio (futuro)', 'Soporte VIP'] }
+};
+
 // --- 2. MODELOS ---
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
@@ -87,6 +94,16 @@ const userSchema = new mongoose.Schema({
     subscriptionStatus: { type: String, enum: ['Activo', 'Bloqueado', 'Trial', 'Gracia'], default: 'Trial' },
     expiryDate: { type: Date, default: () => new Date(Date.now() + 15 * 24 * 60 * 60 * 1000) },
 
+    // Nuevo modelo de suscripción (Memberships)
+    subscription: {
+        plan: { type: String, enum: ['free', 'pro', 'premium'], default: 'free' },
+        status: { type: String, enum: ['active', 'pending', 'expired'], default: 'active' },
+        paymentMethod: { type: String, enum: ['transferencia', 'paypal'], default: null },
+        startDate: { type: Date },
+        endDate: { type: Date }
+    },
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+
     // Identidad Fiscal (Asistente Inteligente)
     suggestedFiscalName: { type: String },
     confirmedFiscalName: { type: String },
@@ -101,6 +118,17 @@ const userSchema = new mongoose.Schema({
     }],
     createdAt: { type: Date, default: Date.now }
 });
+
+const paymentRequestSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    plan: { type: String, enum: ['free', 'pro', 'premium'], required: true },
+    paymentMethod: { type: String, enum: ['transferencia', 'paypal'], required: true },
+    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    requestedAt: { type: Date, default: Date.now },
+    processedAt: { type: Date },
+    processedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+});
+paymentRequestSchema.index({ status: 1, requestedAt: -1 });
 
 const ncfSettingsSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -192,12 +220,31 @@ const quoteSchema = new mongoose.Schema({
 
 // Avoid "OverwriteModelError" in serverless environments
 const User = mongoose.models.User || mongoose.model('User', userSchema);
+const PaymentRequest = mongoose.models.PaymentRequest || mongoose.model('PaymentRequest', paymentRequestSchema);
 const NCFSettings = mongoose.models.NCFSettings || mongoose.model('NCFSettings', ncfSettingsSchema);
 const Invoice = mongoose.models.Invoice || mongoose.model('Invoice', invoiceSchema);
 const Customer = mongoose.models.Customer || mongoose.model('Customer', customerSchema);
 const SupportTicket = mongoose.models.SupportTicket || mongoose.model('SupportTicket', supportTicketSchema);
 const Expense = mongoose.models.Expense || mongoose.model('Expense', expenseSchema);
 const Quote = mongoose.models.Quote || mongoose.model('Quote', quoteSchema);
+
+function getUserSubscription(user) {
+    const sub = user.subscription || {};
+    const plan = sub.plan || user.membershipLevel || 'free';
+    let status = sub.status;
+    if (!status) {
+        if (user.subscriptionStatus === 'Activo') status = 'active';
+        else if (user.subscriptionStatus === 'Bloqueado') status = 'expired';
+        else status = 'active';
+    }
+    return {
+        plan,
+        status: status || 'active',
+        paymentMethod: sub.paymentMethod || null,
+        startDate: sub.startDate || user.createdAt,
+        endDate: sub.endDate || user.expiryDate
+    };
+}
 
 // --- 3. MIDDLEWARE ---
 // SEGURIDAD: Token solo en cookie HttpOnly (no en URL ni localStorage)
@@ -212,24 +259,36 @@ const verifyToken = (req, res, next) => {
             const user = await User.findById(decoded.id);
             if (!user) return res.status(404).json({ message: 'User not found' });
 
+            const sub = getUserSubscription(user);
             const now = new Date();
-            const gracePeriodLimit = new Date(user.expiryDate);
-            gracePeriodLimit.setDate(gracePeriodLimit.getDate() + 5);
+            const endDate = sub.endDate ? new Date(sub.endDate) : user.expiryDate ? new Date(user.expiryDate) : null;
 
-            if (now > gracePeriodLimit) {
-                return res.status(403).json({
-                    message: 'Suscripción bloqueada. Periodo de gracia finalizado.',
-                    code: 'SUBSCRIPTION_LOCKED'
-                });
+            if (sub.status === 'expired' && endDate) {
+                const gracePeriodLimit = new Date(endDate);
+                gracePeriodLimit.setDate(gracePeriodLimit.getDate() + 5);
+                if (now > gracePeriodLimit) {
+                    return res.status(403).json({
+                        message: 'Suscripción bloqueada. Periodo de gracia finalizado.',
+                        code: 'SUBSCRIPTION_LOCKED'
+                    });
+                }
             }
 
             req.userId = decoded.id;
             req.user = user;
+            req.subscription = sub;
             next();
         } catch (dbErr) {
             res.status(500).json({ error: 'Error verificando suscripción' });
         }
     });
+};
+
+const verifyAdmin = (req, res, next) => {
+    if (req.user?.role !== 'admin') {
+        return res.status(403).json({ message: 'Acceso denegado. Solo administradores.' });
+    }
+    next();
 };
 
 // --- 4. HELPERS ---
@@ -362,6 +421,12 @@ app.post('/api/auth/register', async (req, res) => {
             email, password: hashedPassword, name, rnc, profession,
             subscriptionStatus: status,
             expiryDate: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
+            subscription: {
+                plan: plan === 'pro' ? 'pro' : 'free',
+                status: 'active',
+                startDate: new Date(),
+                endDate: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000)
+            },
             suggestedFiscalName: req.body.suggestedName || ""
         });
 
@@ -405,6 +470,7 @@ app.post('/api/auth/login', async (req, res) => {
             path: '/'
         });
 
+        const sub = getUserSubscription(user);
         console.log(`[AUTH] Login successful: ${email}`);
         res.status(200).json({
             id: user._id,
@@ -412,6 +478,8 @@ app.post('/api/auth/login', async (req, res) => {
             name: user.name,
             profession: user.profession,
             rnc: user.rnc,
+            role: user.role || 'user',
+            subscription: sub,
             fiscalStatus: {
                 suggested: user.suggestedFiscalName,
                 confirmed: user.confirmedFiscalName
@@ -427,6 +495,25 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/logout', (req, res) => {
     res.clearCookie('lexis_auth', { path: '/', httpOnly: true });
     res.json({ success: true });
+});
+
+app.get('/api/auth/me', verifyToken, async (req, res) => {
+    try {
+        const user = req.user;
+        const sub = getUserSubscription(user);
+        res.json({
+            id: user._id,
+            email: user.email,
+            name: user.name,
+            profession: user.profession,
+            rnc: user.rnc,
+            role: user.role || 'user',
+            subscription: sub,
+            fiscalStatus: { suggested: user.suggestedFiscalName, confirmed: user.confirmedFiscalName }
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.post('/api/auth/confirm-fiscal-name', verifyToken, async (req, res) => {
@@ -473,6 +560,201 @@ app.post('/api/auth/profile', verifyToken, async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// --- MEMBRESÍAS (Manual: Transferencia / PayPal) ---
+app.get('/api/membership/plans', (req, res) => {
+    res.json({ plans: Object.values(MEMBERSHIP_PLANS) });
+});
+
+app.get('/api/membership/payment-info', (req, res) => {
+    res.json({
+        bankName: process.env.LEXISBILL_BANK_NAME || 'Banco Popular Dominicano',
+        bankAccount: process.env.LEXISBILL_BANK_ACCOUNT || 'XXX-XXXXXX-X',
+        paypalEmail: process.env.LEXISBILL_PAYPAL_EMAIL || 'pagos@lexisbill.com'
+    });
+});
+
+app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
+    try {
+        const { plan, paymentMethod } = req.body;
+        if (!plan || !['pro', 'premium'].includes(plan)) {
+            return res.status(400).json({ message: 'Plan inválido. Elige Pro o Premium.' });
+        }
+        if (!paymentMethod || !['transferencia', 'paypal'].includes(paymentMethod)) {
+            return res.status(400).json({ message: 'Método de pago inválido. Elige Transferencia o PayPal.' });
+        }
+
+        const existing = await PaymentRequest.findOne({ userId: req.userId, status: 'pending' });
+        if (existing) {
+            return res.status(400).json({ message: 'Ya tienes una solicitud de pago pendiente. Espera a que la validemos.' });
+        }
+
+        const pr = new PaymentRequest({
+            userId: req.userId,
+            plan,
+            paymentMethod,
+            status: 'pending'
+        });
+        await pr.save();
+
+        const user = req.user;
+        if (!user.subscription) user.subscription = {};
+        user.subscription.plan = plan;
+        user.subscription.status = 'pending';
+        user.subscription.paymentMethod = paymentMethod;
+        await user.save();
+
+        res.status(201).json({
+            message: 'Tu solicitud fue registrada. Tu membresía será activada una vez validemos el pago.',
+            paymentRequest: { id: pr._id, plan, paymentMethod, status: 'pending' }
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- ADMIN: Pagos pendientes y validación ---
+app.get('/api/admin/pending-payments', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const list = await PaymentRequest.find({ status: 'pending' })
+            .populate('userId', 'name email rnc')
+            .sort({ requestedAt: -1 });
+        res.json(list.map(p => ({
+            id: p._id,
+            userId: p.userId?._id,
+            userName: p.userId?.name,
+            userEmail: p.userId?.email,
+            plan: p.plan,
+            paymentMethod: p.paymentMethod,
+            requestedAt: p.requestedAt
+        })));
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const pr = await PaymentRequest.findById(req.params.id);
+        if (!pr || pr.status !== 'pending') {
+            return res.status(404).json({ message: 'Solicitud no encontrada o ya procesada.' });
+        }
+
+        const user = await User.findById(pr.userId);
+        if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
+
+        const now = new Date();
+        const endDate = new Date(now);
+        endDate.setDate(endDate.getDate() + 30);
+
+        if (!user.subscription) user.subscription = {};
+        user.subscription.plan = pr.plan;
+        user.subscription.status = 'active';
+        user.subscription.paymentMethod = pr.paymentMethod;
+        user.subscription.startDate = now;
+        user.subscription.endDate = endDate;
+        user.expiryDate = endDate;
+        user.subscriptionStatus = 'Activo';
+        user.membershipLevel = pr.plan;
+        await user.save();
+
+        pr.status = 'approved';
+        pr.processedAt = now;
+        pr.processedBy = req.userId;
+        await pr.save();
+
+        res.json({ message: 'Pago aprobado. Membresía activada por 30 días.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/admin/reject-payment/:id', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const pr = await PaymentRequest.findById(req.params.id);
+        if (!pr || pr.status !== 'pending') {
+            return res.status(404).json({ message: 'Solicitud no encontrada o ya procesada.' });
+        }
+
+        const user = await User.findById(pr.userId);
+        if (user && user.subscription) {
+            user.subscription.status = user.subscription.plan === 'free' ? 'active' : user.subscription.status;
+            user.subscription.paymentMethod = null;
+            await user.save();
+        }
+
+        pr.status = 'rejected';
+        pr.processedAt = new Date();
+        pr.processedBy = req.userId;
+        await pr.save();
+
+        res.json({ message: 'Solicitud rechazada.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- ADMIN: Estadísticas CEO ---
+app.get('/api/admin/stats', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const [totalUsers, usersThisMonth, allInvoices, invoicesThisMonth, allExpenses, pendingPayments, planCounts] = await Promise.all([
+            User.countDocuments({}),
+            User.countDocuments({ createdAt: { $gte: startOfMonth } }),
+            Invoice.find({ status: { $ne: 'cancelled' } }),
+            Invoice.find({ status: { $ne: 'cancelled' }, date: { $gte: startOfMonth } }),
+            Expense.find({}),
+            PaymentRequest.countDocuments({ status: 'pending' }),
+            User.aggregate([
+                { $project: { plan: { $ifNull: ['$subscription.plan', { $ifNull: ['$membershipLevel', 'free'] }] } } },
+                { $group: { _id: '$plan', count: { $sum: 1 } } }
+            ])
+        ]);
+
+        const report606Count = new Set(allExpenses.map(e => `${e.userId}-${e.date?.getFullYear()}-${(e.date?.getMonth() || 0) + 1}`)).size;
+        const report607Count = new Set(allInvoices.map(i => `${i.userId}-${i.date?.getFullYear()}-${(i.date?.getMonth() || 0) + 1}`)).size;
+
+        const ncfByType = {};
+        allInvoices.forEach(inv => {
+            const t = (inv.ncfSequence || '').substring(1, 3) || 'XX';
+            ncfByType[t] = (ncfByType[t] || 0) + 1;
+        });
+
+        const freeCount = planCounts.find(p => p._id === 'free')?.count || 0;
+        const proCount = planCounts.find(p => p._id === 'pro')?.count || 0;
+        const premiumCount = planCounts.find(p => p._id === 'premium')?.count || 0;
+
+        const activeSubs = await User.countDocuments({
+            $or: [
+                { 'subscription.status': 'active' },
+                { subscriptionStatus: 'Activo' },
+                { subscriptionStatus: 'Trial' }
+            ]
+        });
+
+        res.json({
+            users: { total: totalUsers, newThisMonth: usersThisMonth },
+            invoicing: {
+                totalInvoices: allInvoices.length,
+                monthlyInvoices: invoicesThisMonth.length,
+                monthlyTotal: invoicesThisMonth.reduce((s, i) => s + (i.total || 0), 0),
+                totalItbis: allInvoices.reduce((s, i) => s + (i.itbis || 0), 0)
+            },
+            fiscal: { report606: report606Count, report607: report607Count, invoicesByNcfType: ncfByType },
+            business: {
+                freeUsers: freeCount,
+                proUsers: proCount,
+                premiumUsers: premiumCount,
+                activeMemberships: activeSubs,
+                pendingPayments
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -615,6 +897,32 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
             message: 'Para emitir documentos fiscales, confirma tu nombre fiscal en el dashboard.',
             code: 'FISCAL_NAME_REQUIRED'
         });
+    }
+
+    const sub = req.subscription || getUserSubscription(req.user);
+    if (sub.status === 'expired') {
+        return res.status(403).json({
+            message: 'Tu membresía ha expirado. Actualiza tu plan en Configuración.',
+            code: 'SUBSCRIPTION_EXPIRED'
+        });
+    }
+
+    const planConfig = MEMBERSHIP_PLANS[sub.plan] || MEMBERSHIP_PLANS.free;
+    if (planConfig.invoicesPerMonth >= 0) {
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        const count = await Invoice.countDocuments({
+            userId: req.userId,
+            date: { $gte: startOfMonth },
+            status: { $ne: 'cancelled' }
+        });
+        if (count >= planConfig.invoicesPerMonth) {
+            return res.status(403).json({
+                message: `Límite del plan Free alcanzado (${planConfig.invoicesPerMonth} facturas/mes). Actualiza a Pro para facturas ilimitadas.`,
+                code: 'INVOICE_LIMIT_REACHED'
+            });
+        }
     }
 
     const session = await mongoose.startSession();
@@ -953,11 +1261,17 @@ app.post('/api/quotes/:id/convert', verifyToken, async (req, res) => {
 });
 
 app.get('/api/subscription/status', verifyToken, (req, res) => {
-    const user = req.user;
+    const sub = req.subscription || getUserSubscription(req.user);
     const now = new Date();
-    const expiry = new Date(user.expiryDate);
-    const diffDays = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
-    res.json({ expiryDate: user.expiryDate, daysRemaining: diffDays, status: user.subscriptionStatus });
+    const endDate = sub.endDate ? new Date(sub.endDate) : req.user.expiryDate ? new Date(req.user.expiryDate) : null;
+    const diffDays = endDate ? Math.ceil((endDate - now) / (1000 * 60 * 60 * 24)) : 999;
+    res.json({
+        plan: sub.plan,
+        status: sub.status,
+        expiryDate: endDate,
+        daysRemaining: Math.max(0, diffDays),
+        paymentMethod: sub.paymentMethod
+    });
 });
 
 // Final export for Vercel

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CommandMenu } from "@/components/command-menu";
 import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt } from "lucide-react";
@@ -152,6 +153,25 @@ export default function ProtectedLayout({
     );
 }
 
+function AdminNavLink() {
+    const [isAdmin, setIsAdmin] = useState(false);
+    useEffect(() => {
+        try {
+            const u = localStorage.getItem("user");
+            setIsAdmin(!!(u && JSON.parse(u).role === "admin"));
+        } catch {
+            setIsAdmin(false);
+        }
+    }, []);
+    if (!isAdmin) return null;
+    return (
+        <Link href="/admin" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-amber-500/20 transition-colors text-amber-600 border-l-2 border-amber-500/50 mt-2">
+            <ShieldAlert className="w-5 h-5" />
+            <span className="text-sm font-medium">Panel Admin</span>
+        </Link>
+    );
+}
+
 function SidebarLinks({ isMobile = false, onLogout, onNavigate }: { isMobile?: boolean, onLogout?: () => void; onNavigate?: () => void }) {
     const NavLink = ({ href, children, ...props }: { href: string; children: React.ReactNode; [k: string]: unknown }) => (
         <Link href={href} onClick={onNavigate} className={props.className as string} {...props}>
@@ -191,6 +211,7 @@ function SidebarLinks({ isMobile = false, onLogout, onNavigate }: { isMobile?: b
                     <Settings className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Configuración</span>
                 </NavLink>
+                <AdminNavLink />
             </div>
 
             {onLogout && (

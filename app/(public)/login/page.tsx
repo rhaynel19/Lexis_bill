@@ -34,11 +34,12 @@ export default function LoginPage() {
             const { api } = await import("@/lib/api-service");
             const data = await api.login(email, password);
 
-            // Usuario (token en cookie HttpOnly - no localStorage)
+            // Usuario (token en cookie HttpOnly - role y subscription desde API)
             localStorage.setItem("user", JSON.stringify({
                 name: data.name,
                 email: data.email,
-                role: data.profession,
+                role: data.role || "user",
+                subscription: data.subscription,
                 rnc: data.rnc,
                 fiscalStatus: data.fiscalStatus,
                 biometric: false

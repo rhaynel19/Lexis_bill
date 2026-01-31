@@ -10,6 +10,13 @@ CORS_ORIGIN=http://localhost:3000
 # Dev: URL del API para proxy (rewrites next.config)
 NEXT_PUBLIC_API_URL=http://localhost:3001/api
 
+# Membresías manuales (Transferencia / PayPal)
+LEXISBILL_BANK_NAME=Banco Popular Dominicano
+LEXISBILL_BANK_ACCOUNT=XXX-XXXXXX-X
+LEXISBILL_PAYPAL_EMAIL=pagos@lexisbill.com
+
+# Crear primer admin: en MongoDB, actualizar usuario: db.users.updateOne({email:"admin@ejemplo.com"}, {$set:{role:"admin"}})
+
 # Pasarelas de Pago (Integración Futura)
 # Azul
 AZUL_MERCHANT_ID=

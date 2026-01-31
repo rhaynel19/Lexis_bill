@@ -240,5 +240,46 @@ export const api = {
 
     async getPaymentHistory() {
         return secureFetch<any[]>(`${API_URL}/payments/history`, { cacheKey: "payment_history" });
+    },
+
+    // Auth - usuario actual (role, subscription)
+    async getMe() {
+        return secureFetch<any>(`${API_URL}/auth/me`, { cacheKey: "auth_me" });
+    },
+
+    // Membresías (planes y solicitar pago manual)
+    async getMembershipPlans() {
+        return secureFetch<any>(`${API_URL}/membership/plans`, { cacheKey: "membership_plans" });
+    },
+
+    async getMembershipPaymentInfo() {
+        return secureFetch<any>(`${API_URL}/membership/payment-info`);
+    },
+
+    async requestMembershipPayment(plan: string, paymentMethod: "transferencia" | "paypal") {
+        const res = await secureFetch<any>(`${API_URL}/membership/request-payment`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ plan, paymentMethod }),
+        });
+        if (typeof localStorage !== "undefined") localStorage.removeItem("cache_subscription_status");
+        return res;
+    },
+
+    // Admin - pagos pendientes y validación
+    async getPendingPayments() {
+        return secureFetch<any[]>(`${API_URL}/admin/pending-payments`);
+    },
+
+    async approvePayment(id: string) {
+        return secureFetch<any>(`${API_URL}/admin/approve-payment/${id}`, { method: "POST" });
+    },
+
+    async rejectPayment(id: string) {
+        return secureFetch<any>(`${API_URL}/admin/reject-payment/${id}`, { method: "POST" });
+    },
+
+    async getAdminStats() {
+        return secureFetch<any>(`${API_URL}/admin/stats`, { cacheKey: "admin_stats" });
     }
 };
