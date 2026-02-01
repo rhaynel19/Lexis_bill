@@ -125,14 +125,14 @@ function RegisterForm() {
                 {/* Back Button */}
                 <button
                     onClick={() => router.back()}
-                    className="flex items-center gap-2 text-slate-400 hover:text-[#D4AF37] transition-colors mb-6 text-sm font-medium group"
+                    className="flex items-center gap-2 text-slate-400 hover:text-lexis-gold transition-colors mb-6 text-sm font-medium group"
                     type="button"
                 >
                     <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Volver atrás
                 </button>
 
                 <Card className="w-full bg-white/95 backdrop-blur border-none shadow-2xl overflow-hidden rounded-2xl">
-                    <div className="h-2 w-full bg-gradient-to-r from-blue-600 via-[#D4AF37] to-blue-950"></div>
+                    <div className="h-2 w-full bg-gradient-to-r from-blue-600 via-lexis-gold to-blue-950"></div>
                     <CardHeader className="text-center pb-2 pt-8">
                         <CardTitle className="text-2xl font-black text-blue-950 tracking-tight uppercase">
                             {plan === 'pro' ? 'ACTIVA TU PLAN PRO' : 'COMIENZA TU PRUEBA'}

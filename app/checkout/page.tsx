@@ -19,11 +19,11 @@ export default function CheckoutPage() {
     const [paymentMethod, setPaymentMethod] = useState<"card" | "transfer">("card");
 
     return (
-        <div className="min-h-screen bg-[#0A192F] text-[#F9F6EE] font-sans p-6 md:p-12 selection:bg-[#D4AF37]/30">
+        <div className="min-h-screen bg-lexis-bg-deep text-lexis-text-light font-sans p-6 md:p-12 selection:bg-lexis-gold/30">
             <div className="max-w-5xl mx-auto">
                 {/* Header/Back */}
                 <div className="mb-10">
-                    <Link href="/" className="flex items-center gap-2 text-slate-400 hover:text-[#D4AF37] transition-colors group">
+                    <Link href="/" className="flex items-center gap-2 text-slate-400 hover:text-lexis-gold transition-colors group">
                         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                         <span className="text-sm font-medium uppercase tracking-widest">Volver</span>
                     </Link>
@@ -39,16 +39,16 @@ export default function CheckoutPage() {
                             </p>
                         </div>
 
-                        <Card className="bg-white/5 border-[#D4AF37]/20 backdrop-blur-md overflow-hidden relative">
-                            <div className="absolute top-0 right-0 bg-[#D4AF37] text-[#0A192F] text-[10px] font-bold px-3 py-1 rounded-bl-lg">POPULAR</div>
+                        <Card className="bg-white/5 border-lexis-gold/20 backdrop-blur-md overflow-hidden relative">
+                            <div className="absolute top-0 right-0 bg-lexis-gold text-lexis-bg-deep text-[10px] font-bold px-3 py-1 rounded-bl-lg">POPULAR</div>
                             <CardHeader className="border-b border-white/5 pb-6">
-                                <CardTitle className="font-serif text-[#D4AF37] text-xl">Plan Profesional Mensual</CardTitle>
+                                <CardTitle className="font-serif text-lexis-gold text-xl">Plan Profesional Mensual</CardTitle>
                                 <CardDescription className="text-slate-500">Acceso total ilimitado</CardDescription>
                             </CardHeader>
                             <CardContent className="pt-6 space-y-4">
                                 <div className="flex justify-between items-end">
                                     <span className="text-slate-400 text-sm">Suscripción Mensual</span>
-                                    <span className="font-serif text-3xl font-bold text-[#F9F6EE]">RD$950.00</span>
+                                    <span className="font-serif text-3xl font-bold text-lexis-text-light">RD$950.00</span>
                                 </div>
                                 <div className="flex justify-between items-center text-[10px] text-slate-500 uppercase tracking-widest pt-4 border-t border-white/5">
                                     <span>Impuestos incluidos</span>
@@ -75,14 +75,14 @@ export default function CheckoutPage() {
                             <div className="flex p-1 bg-white/5 rounded-xl border border-white/10">
                                 <button
                                     onClick={() => setPaymentMethod("card")}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition-all ${paymentMethod === "card" ? "bg-[#D4AF37] text-[#0A192F]" : "text-slate-400 hover:text-[#F9F6EE]"}`}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition-all ${paymentMethod === "card" ? "bg-lexis-gold text-[#0A192F]" : "text-slate-400 hover:text-lexis-text-light"}`}
                                 >
                                     <CreditCard className="w-4 h-4" />
                                     Tarjeta de Crédito
                                 </button>
                                 <button
                                     onClick={() => setPaymentMethod("transfer")}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition-all ${paymentMethod === "transfer" ? "bg-[#D4AF37] text-[#0A192F]" : "text-slate-400 hover:text-[#F9F6EE]"}`}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition-all ${paymentMethod === "transfer" ? "bg-lexis-gold text-lexis-bg-deep" : "text-slate-400 hover:text-lexis-text-light"}`}
                                 >
                                     <Building2 className="w-4 h-4" />
                                     Transferencia
@@ -96,12 +96,12 @@ export default function CheckoutPage() {
                                             <div className="space-y-4">
                                                 <div className="space-y-2">
                                                     <Label htmlFor="card-name" className="text-xs text-slate-400 uppercase tracking-widest">Nombre en la Tarjeta</Label>
-                                                    <Input id="card-name" placeholder="DR. CARLOS ROSARIO" className="bg-white/5 border-white/10 h-12 focus:border-[#D4AF37] transition-all" />
+                                                    <Input id="card-name" placeholder="DR. CARLOS ROSARIO" className="bg-white/5 border-white/10 h-12 focus:border-lexis-gold transition-all" />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="card-number" className="text-xs text-slate-400 uppercase tracking-widest">Número de Tarjeta</Label>
                                                     <div className="relative">
-                                                        <Input id="card-number" placeholder="0000 0000 0000 0000" className="bg-white/5 border-white/10 h-12 px-12 focus:border-[#D4AF37] transition-all" />
+                                                        <Input id="card-number" placeholder="0000 0000 0000 0000" className="bg-white/5 border-white/10 h-12 px-12 focus:border-lexis-gold transition-all" />
                                                         <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
                                                             <div className="w-6 h-4 bg-slate-700 rounded-sm opacity-50"></div>
@@ -112,12 +112,12 @@ export default function CheckoutPage() {
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div className="space-y-2">
                                                         <Label htmlFor="expiry" className="text-xs text-slate-400 uppercase tracking-widest">Vencimiento</Label>
-                                                        <Input id="expiry" placeholder="MM / YY" className="bg-white/5 border-white/10 h-12 focus:border-[#D4AF37] transition-all" />
+                                                        <Input id="expiry" placeholder="MM / YY" className="bg-white/5 border-white/10 h-12 focus:border-lexis-gold transition-all" />
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label htmlFor="cvv" className="text-xs text-slate-400 uppercase tracking-widest">CVV</Label>
                                                         <div className="relative">
-                                                            <Input id="cvv" placeholder="123" className="bg-white/5 border-white/10 h-12 focus:border-[#D4AF37] transition-all" />
+                                                            <Input id="cvv" placeholder="123" className="bg-white/5 border-white/10 h-12 focus:border-lexis-gold transition-all" />
                                                             <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                                                         </div>
                                                     </div>
@@ -131,7 +131,7 @@ export default function CheckoutPage() {
                                                 <p className="text-[10px] text-slate-500 text-center mb-4 italic">
                                                     Por ahora, usa transferencia bancaria o visita la sección Pagar.
                                                 </p>
-                                                <Button type="button" disabled className="relative overflow-hidden group w-full h-14 text-lg bg-[#D4AF37]/50 text-[#0A192F] font-bold rounded-xl cursor-not-allowed">
+                                                <Button type="button" disabled className="relative overflow-hidden group w-full h-14 text-lg bg-lexis-gold/50 text-[#0A192F] font-bold rounded-xl cursor-not-allowed">
                                                     <span className="relative z-10">Pago con tarjeta próximamente</span>
                                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] transition-none"></div>
                                                     <style dangerouslySetInnerHTML={{
@@ -146,38 +146,38 @@ export default function CheckoutPage() {
                                         </div>
                                     ) : (
                                         <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300">
-                                            <div className="p-6 rounded-2xl bg-[#D4AF37]/5 border border-[#D4AF37]/20 space-y-6">
-                                                <div className="space-y-2 text-center pb-4 border-b border-[#D4AF37]/10">
-                                                    <p className="text-xs text-[#D4AF37] uppercase tracking-widest font-bold">Instrucciones de Pago</p>
+                                            <div className="p-6 rounded-2xl bg-lexis-gold/5 border border-lexis-gold/20 space-y-6">
+                                                <div className="space-y-2 text-center pb-4 border-b border-lexis-gold/10">
+                                                    <p className="text-xs text-lexis-gold uppercase tracking-widest font-bold">Instrucciones de Pago</p>
                                                     <p className="text-[10px] text-slate-400">Realice la transferencia y envíe el comprobante por WhatsApp.</p>
                                                 </div>
 
                                                 <div className="space-y-4">
                                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-4 group cursor-pointer">
                                                         <span className="text-[10px] text-slate-500 uppercase tracking-widest">Banco</span>
-                                                        <span className="text-sm font-bold text-[#F9F6EE] group-hover:text-[#D4AF37] transition-colors">BANCO POPULAR</span>
+                                                        <span className="text-sm font-bold text-lexis-text-light group-hover:text-lexis-gold transition-colors">BANCO POPULAR</span>
                                                     </div>
                                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-4 group cursor-pointer">
                                                         <span className="text-[10px] text-slate-500 uppercase tracking-widest">Tipo de Cuenta</span>
-                                                        <span className="text-sm font-bold text-[#F9F6EE]">CORRIENTE RD$</span>
+                                                        <span className="text-sm font-bold text-lexis-text-light">CORRIENTE RD$</span>
                                                     </div>
                                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-4 group cursor-pointer">
                                                         <span className="text-[10px] text-slate-500 uppercase tracking-widest">Número de Cuenta</span>
-                                                        <span className="text-sm font-serif font-bold text-[#D4AF37] tracking-wider">792-XXXXXX-2</span>
+                                                        <span className="text-sm font-serif font-bold text-lexis-gold tracking-wider">792-XXXXXX-2</span>
                                                     </div>
                                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-4 group cursor-pointer">
                                                         <span className="text-[10px] text-slate-500 uppercase tracking-widest">Beneficiario</span>
-                                                        <span className="text-sm font-bold text-[#F9F6EE]">LEXIS BILL SOLUTIONS SRL</span>
+                                                        <span className="text-sm font-bold text-lexis-text-light">LEXIS BILL SOLUTIONS SRL</span>
                                                     </div>
                                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-4 group cursor-pointer">
                                                         <span className="text-[10px] text-slate-500 uppercase tracking-widest">RNC</span>
-                                                        <span className="text-sm font-bold text-[#F9F6EE]">132-XXXXX-9</span>
+                                                        <span className="text-sm font-bold text-lexis-text-light">132-XXXXX-9</span>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             <div className="space-y-3">
-                                                <Button asChild className="w-full h-14 text-lg border-2 border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#0A192F] bg-transparent font-bold rounded-xl transition-all">
+                                                <Button asChild className="w-full h-14 text-lg border-2 border-lexis-gold text-lexis-gold hover:bg-lexis-gold hover:text-[#0A192F] bg-transparent font-bold rounded-xl transition-all">
                                                     <Link href="/pagos">Completar pago en Lexis Bill</Link>
                                                 </Button>
                                                 <a

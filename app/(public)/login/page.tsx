@@ -106,22 +106,22 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#0F172A] px-4 relative overflow-hidden">
+        <div className="min-h-screen flex items-center justify-center bg-lexis-bg-deep px-4 relative overflow-hidden">
             {/* Background Luxury Effects */}
             <div className="absolute inset-0">
-                <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
-                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-900/30 rounded-full blur-[120px]"></div>
-                <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] bg-[#D4AF37]/10 rounded-full blur-[100px]"></div>
+                <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5" />
+                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-900/30 rounded-full blur-[120px]" />
+                <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] bg-lexis-gold/10 rounded-full blur-[100px]" />
             </div>
 
             <Card className="w-full max-w-md bg-white/95 backdrop-blur border-none shadow-2xl relative z-10 overflow-hidden">
-                <div className="h-2 w-full bg-gradient-to-r from-blue-900 via-[#D4AF37] to-blue-900"></div>
+                <div className="h-2 w-full bg-gradient-to-r from-blue-900 via-lexis-gold to-blue-900" />
                 <CardHeader className="text-center pb-2 pt-8">
                     <div className="mx-auto w-16 h-16 bg-blue-950 rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-blue-900/20 transform rotate-3">
-                        <span className="text-3xl font-bold text-[#D4AF37]">L</span>
+                        <span className="text-3xl font-bold text-lexis-gold">L</span>
                     </div>
                     <CardTitle className="text-3xl font-serif font-bold tracking-tighter">
-                        <span className="text-[#D4AF37]">LEXIS</span>{" "}
+                        <span className="text-lexis-gold">LEXIS</span>{" "}
                         <span className="text-blue-950">BILL</span>
                     </CardTitle>
                     <CardDescription className="text-slate-500 font-medium">Oficina Fiscal Inteligente</CardDescription>
@@ -135,7 +135,7 @@ export default function LoginPage() {
                                 placeholder="Correo Profesional"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="bg-slate-50 border-slate-200 h-12 focus:ring-[#D4AF37]"
+                                className="bg-slate-50 border-slate-200 h-12 focus:ring-lexis-gold"
                                 required
                             />
                             <Input
@@ -143,7 +143,7 @@ export default function LoginPage() {
                                 placeholder="Contraseña"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="bg-slate-50 border-slate-200 h-12 focus:ring-[#D4AF37]"
+                                className="bg-slate-50 border-slate-200 h-12 focus:ring-lexis-gold"
                             />
                         </div>
 
@@ -166,7 +166,7 @@ export default function LoginPage() {
 
                         <Button
                             type="submit"
-                            className="w-full bg-[#1e293b] hover:bg-[#0f172a] text-white font-bold py-6 text-lg shadow-lg shadow-blue-900/20 transition-all hover:scale-[1.01] hover:shadow-blue-900/30"
+                            className="w-full bg-lexis-bg-deep hover:bg-lexis-bg-mid text-white font-bold py-6 text-lg shadow-lg shadow-blue-900/20 transition-all hover:scale-[1.01] hover:shadow-blue-900/30"
                             disabled={isLoading}
                         >
                             {isLoading ? (
