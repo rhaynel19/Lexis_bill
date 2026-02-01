@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 type Theme = "light" | "midnight" | "luxury" | "system";
+/** Tema efectivo aplicado al DOM (cuando system prefiere oscuro usamos "dark") */
+type AppliedTheme = "light" | "dark" | "midnight" | "luxury";
 
 interface ThemeProviderProps {
     children: React.ReactNode;
@@ -43,19 +45,20 @@ export function ThemeProvider({
         root.classList.remove("light", "dark", "midnight", "luxury");
         root.removeAttribute("data-theme");
 
-        let themeToApply = theme;
-
+        let themeToApply: AppliedTheme;
         if (theme === "system") {
             const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-            themeToApply = isDark ? "midnight" : "light";
+            themeToApply = isDark ? "dark" : "light";
+        } else {
+            themeToApply = theme;
         }
 
         // Apply theme as class and data-theme attribute
         root.classList.add(themeToApply);
         root.setAttribute("data-theme", themeToApply);
 
-        // Map 'midnight' and 'luxury' to 'dark' class for tailwind 'dark:' utility support
-        if (themeToApply === "midnight" || themeToApply === "luxury") {
+        // Map all dark themes to 'dark' class for tailwind 'dark:' utility support
+        if (themeToApply === "dark" || themeToApply === "midnight" || themeToApply === "luxury") {
             root.classList.add("dark");
         }
     }, [theme]);
