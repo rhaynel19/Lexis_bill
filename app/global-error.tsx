@@ -2,6 +2,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
+import styles from "./global-error.module.css";
 
 export default function GlobalError({
     error,
@@ -15,32 +16,17 @@ export default function GlobalError({
     return (
         <html>
             <body>
-                <div style={{
-                    minHeight: "100vh",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "2rem",
-                    fontFamily: "system-ui",
-                    textAlign: "center"
-                }}>
-                    <h1 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>
+                <div className={styles.container}>
+                    <h1 className={styles.title}>
                         Algo salió mal
                     </h1>
-                    <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>
+                    <p className={styles.message}>
                         Hemos registrado el error. Por favor, intenta de nuevo.
                     </p>
                     <button
+                        className={styles.button}
                         onClick={() => window.location.href = "/"}
-                        style={{
-                            padding: "0.5rem 1rem",
-                            background: "#0f172a",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "0.5rem",
-                            cursor: "pointer"
-                        }}
+                        type="button"
                     >
                         Volver al inicio
                     </button>

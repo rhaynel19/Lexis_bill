@@ -155,45 +155,45 @@ export default function LandingPage() {
             </section>
 
             {/* Pricing Section (La Invitación) */}
-            <section id="precio" className="py-40 bg-gradient-to-b from-transparent to-[#081221]">
-                <div className="container mx-auto px-6 text-center">
-                    <h2 className="font-serif text-4xl md:text-5xl font-bold mb-24 underline decoration-[#D4AF37]/30 underline-offset-8 italic">
+            <section id="precio" className="py-24 sm:py-40 bg-gradient-to-b from-transparent to-[#081221] overflow-x-hidden">
+                <div className="container mx-auto px-4 sm:px-6 text-center">
+                    <h2 className="font-serif text-4xl md:text-5xl font-bold mb-16 sm:mb-24 underline decoration-[#D4AF37]/30 underline-offset-8 italic">
                         15 días para enamorarte de tu <br className="hidden md:block" />
                         <span className="text-[#D4AF37]">nueva organización.</span>
                     </h2>
-                    <div className="max-w-md mx-auto relative group">
+                    <div className="max-w-lg mx-auto relative group w-full min-w-0">
                         <div className="absolute -inset-1 bg-gradient-to-r from-[#D4AF37] to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-                        <Card className="relative bg-[#0A192F] border-[#D4AF37]/20 p-10 pt-16 overflow-hidden rounded-3xl">
+                        <Card className="relative bg-[#0A192F] border-[#D4AF37]/20 p-6 sm:p-10 pt-14 sm:pt-16 rounded-3xl overflow-visible">
                             <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20">
                                 <span className="bg-[#D4AF37] text-[#0A192F] text-[12px] font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap tracking-wider">
                                     MEMBRESÍA PROFESIONAL
                                 </span>
                             </div>
-                            <CardHeader className="text-center pb-10 border-b border-[#D4AF37]/10">
-                                <CardTitle className="font-serif text-[#D4AF37] text-3xl mb-6">Plan Profesional</CardTitle>
-                                <div className="flex flex-col items-center gap-6">
-                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-end justify-center gap-8 sm:gap-12 w-full">
-                                        <div className="flex-1 min-w-0 py-4 sm:py-0 sm:pb-2 px-6 rounded-xl bg-[#0A192F]/80 border border-[#D4AF37]/10">
+                            <CardHeader className="text-center pb-8 sm:pb-10 border-b border-[#D4AF37]/10 overflow-visible">
+                                <CardTitle className="font-serif text-[#D4AF37] text-2xl sm:text-3xl mb-6 break-words">Plan Profesional</CardTitle>
+                                <div className="flex flex-col items-center gap-6 w-full min-w-0">
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-end justify-center gap-6 sm:gap-8 w-full max-w-full">
+                                        <div className="flex-1 min-w-0 w-full sm:min-w-[140px] py-4 sm:py-0 sm:pb-2 px-4 sm:px-6 rounded-xl bg-[#0A192F]/80 border border-[#D4AF37]/10">
                                             <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Mensual</p>
-                                            <div className="flex items-baseline justify-center gap-1">
-                                                <span className="text-3xl md:text-4xl font-bold text-[#F9F6EE]">RD$950</span>
+                                            <div className="flex items-baseline justify-center gap-1 flex-wrap">
+                                                <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#F9F6EE]">RD$950</span>
                                                 <span className="text-[#D4AF37] text-base md:text-lg font-semibold align-bottom">/mes</span>
                                             </div>
                                         </div>
-                                        <div className="flex-1 min-w-0 py-4 sm:py-0 sm:pb-2 px-6 rounded-xl bg-[#D4AF37]/10 border-2 border-[#D4AF37]/30 relative">
+                                        <div className="flex-1 min-w-0 w-full sm:min-w-[140px] py-4 sm:py-0 sm:pb-2 px-4 sm:px-6 rounded-xl bg-[#D4AF37]/10 border-2 border-[#D4AF37]/30 relative">
                                             <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-xs font-bold text-[#D4AF37] bg-[#0A192F] px-3 py-1 rounded-full whitespace-nowrap">⭐ Más popular</span>
                                             <p className="text-xs text-slate-400 uppercase tracking-wider mb-2 mt-2">Anual</p>
-                                            <div className="flex items-baseline justify-center gap-1">
-                                                <span className="text-3xl md:text-4xl font-bold text-[#F9F6EE]">RD$9,500</span>
+                                            <div className="flex items-baseline justify-center gap-1 flex-wrap">
+                                                <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#F9F6EE]">RD$9,500</span>
                                             </div>
                                             <p className="text-[#D4AF37] text-sm md:text-base font-semibold mt-2 text-center">🎁 Paga 10 meses y usa 12</p>
                                         </div>
                                     </div>
-                                    <p className="text-sm md:text-base text-slate-400 italic">Si no simplifica tu vida, no pagas nada.</p>
+                                    <p className="text-sm md:text-base text-slate-400 italic break-words w-full">Si no simplifica tu vida, no pagas nada.</p>
                                 </div>
                             </CardHeader>
-                            <CardContent className="pt-10 space-y-8">
-                                <ul className="space-y-8 text-left">
+                            <CardContent className="pt-8 sm:pt-10 space-y-8 overflow-visible">
+                                <ul className="space-y-8 text-left w-full min-w-0">
                                     <li className="flex items-start gap-4">
                                         <ShieldCheck className="w-6 h-6 text-[#D4AF37] mt-1 shrink-0 stroke-[1px]" />
                                         <div className="min-w-0">
@@ -229,12 +229,12 @@ export default function LandingPage() {
                                         </div>
                                     </li>
                                 </ul>
-                                <Link href="/registro" className="block pt-8 w-full">
-                                    <Button className="w-full min-h-[4rem] px-6 md:px-8 py-4 text-base md:text-lg bg-[#D4AF37] hover:bg-[#B8962E] text-[#0A192F] font-bold rounded-xl transition-all shadow-xl shadow-[#D4AF37]/10 flex items-center justify-center text-center whitespace-normal md:whitespace-nowrap leading-snug">
+                                <Link href="/registro" className="block pt-8 w-full min-w-0">
+                                    <Button className="w-full min-h-[4rem] px-4 sm:px-6 md:px-8 py-4 text-sm sm:text-base md:text-lg bg-[#D4AF37] hover:bg-[#B8962E] text-[#0A192F] font-bold rounded-xl transition-all shadow-xl shadow-[#D4AF37]/10 flex items-center justify-center text-center whitespace-normal leading-snug">
                                         Empezar mi Prueba de 15 Días GRATIS
                                     </Button>
                                 </Link>
-                                <p className="text-xs text-slate-400 mt-8 uppercase tracking-[0.15em] font-medium text-center leading-relaxed">Sin contratos. Sin tarjetas iniciales. Sin fricción.</p>
+                                <p className="text-xs text-slate-400 mt-8 uppercase tracking-[0.15em] font-medium text-center leading-relaxed break-words">Sin contratos. Sin tarjetas iniciales. Sin fricción.</p>
                             </CardContent>
                         </Card>
                     </div>
