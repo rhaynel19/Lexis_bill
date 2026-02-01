@@ -11,7 +11,7 @@ export default function LandingPage() {
                 <div className="container mx-auto px-6 h-20 flex items-center justify-between">
                     <div className="text-2xl font-serif font-bold tracking-tighter">
                         <span className="text-lexis-gold">Lexis</span>{" "}
-                        <span className="text-lexis-brand-blue">Bill</span>
+                        <span className="text-lexis-text-light">Bill</span>
                     </div>
                     <div className="hidden md:flex items-center gap-8">
                         <Link href="#beneficios" className="text-sm font-medium hover:text-lexis-gold transition-colors">Beneficios</Link>
@@ -165,12 +165,12 @@ export default function LandingPage() {
                         <div className="absolute -inset-1 bg-gradient-to-r from-lexis-gold to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000" />
                         <Card className="relative bg-lexis-bg-deep border-lexis-gold/20 p-6 sm:p-10 pt-14 sm:pt-16 rounded-3xl overflow-visible">
                             <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20">
-                                <span className="bg-lexis-gold text-lexis-bg-deep text-[12px] font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap tracking-wider">
+                                <span className="bg-lexis-gold text-white text-[12px] font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap tracking-wider">
                                     MEMBRESÍA PROFESIONAL
                                 </span>
                             </div>
                             <CardHeader className="text-center pb-8 sm:pb-10 border-b border-lexis-gold/10 overflow-visible">
-                                <CardTitle className="font-serif text-lexis-gold text-2xl sm:text-3xl mb-6 break-words">Plan Profesional</CardTitle>
+                                <CardTitle className="font-serif text-lexis-gold text-2xl sm:text-3xl mb-6 break-words">Plan Élite</CardTitle>
                                 <div className="flex flex-col items-center gap-6 w-full min-w-0">
                                     <div className="flex flex-col sm:flex-row items-stretch sm:items-end justify-center gap-6 sm:gap-8 w-full max-w-full">
                                         <div className="flex-1 min-w-0 w-full sm:min-w-[140px] py-4 sm:py-0 sm:pb-2 px-4 sm:px-6 rounded-xl bg-lexis-bg-deep/80 border border-lexis-gold/10">
@@ -189,7 +189,7 @@ export default function LandingPage() {
                                             <p className="text-lexis-gold text-sm md:text-base font-semibold mt-2 text-center">🎁 Paga 10 meses y usa 12</p>
                                         </div>
                                     </div>
-                                    <p className="text-sm md:text-base text-slate-400 italic break-words w-full">Si no simplifica tu vida, no pagas nada.</p>
+                                    <p className="text-sm md:text-base text-lexis-text-light italic break-words w-full">Si no simplifica tu vida, no pagas nada.</p>
                                 </div>
                             </CardHeader>
                             <CardContent className="pt-8 sm:pt-10 space-y-8 overflow-visible">
@@ -248,7 +248,7 @@ export default function LandingPage() {
                         <div className="col-span-1 md:col-span-2">
                             <div className="font-serif text-2xl font-bold mb-6">
                                 <span className="text-lexis-gold">Lexis</span>{" "}
-                                <span className="text-lexis-brand-blue">Bill</span>
+                                <span className="text-lexis-text-light">Bill</span>
                             </div>
                             <p className="text-slate-400 max-w-sm mb-6">
                                 Diseñado para profesionales y técnicos independientes que mueven la República Dominicana. Elegancia, cumplimiento y rapidez en un solo lugar.
