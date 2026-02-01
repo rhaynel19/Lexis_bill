@@ -57,6 +57,7 @@
   --color-lexis-gold: var(--lexis-gold);
   --color-lexis-gold-hover: var(--lexis-gold-hover);
   --color-lexis-text-light: var(--lexis-text-light);
+  --color-lexis-brand-blue: var(--lexis-brand-blue);
 }
 
 :root {
@@ -68,6 +69,8 @@
   --lexis-gold: #d4af37;
   --lexis-gold-hover: #b8962e;
   --lexis-text-light: #f9f6ee;
+  /* Azul marino del logo para "Bill" (visible sobre fondo oscuro) */
+  --lexis-brand-blue: #5b8fb9;
 
   /* --- LIGHT THEME (Default) --- */
   --bg-primary: oklch(0.985 0 0);
