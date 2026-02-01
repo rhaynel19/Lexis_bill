@@ -18,10 +18,13 @@ LEXISBILL_PAYPAL_EMAIL=pagos@lexisbill.com
 
 # Crear primer admin: en MongoDB, actualizar usuario: db.users.updateOne({email:"admin@ejemplo.com"}, {$set:{role:"admin"}})
 
-# Monitoreo de errores (OBLIGATORIO en producción - la app no arranca sin él)
-NEXT_PUBLIC_SENTRY_DSN=
-SENTRY_ORG=
-SENTRY_PROJECT=
+# Monitoreo de errores (OBLIGATORIO en producción)
+# Obtén el DSN en: sentry.io → tu proyecto → Settings → Client Keys (DSN)
+NEXT_PUBLIC_SENTRY_DSN=https://xxx@o123456.ingest.sentry.io/7890123
+# Slug de tu organización y proyecto en Sentry (ej: lexis-bill)
+SENTRY_ORG=lexis-bill
+SENTRY_PROJECT=javascript-nextjs
+# SENTRY_AUTH_TOKEN=  (opcional: para source maps; créalo en sentry.io → Settings → Auth Tokens)
 
 # Backup (scripts/backup-mongodb.js)
 BACKUP_OUTPUT_DIR=./backups

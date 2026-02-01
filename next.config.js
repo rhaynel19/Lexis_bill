@@ -25,6 +25,7 @@ const sentryWebpackPluginOptions = {
     silent: true,
     org: process.env.SENTRY_ORG,
     project: process.env.SENTRY_PROJECT,
+    tunnelRoute: "/monitoring",
 };
 
 const configWithPWA = withPWA(nextConfig);

@@ -4,33 +4,69 @@
 
 Sentry es **obligatorio** en producción. La app no arranca sin `NEXT_PUBLIC_SENTRY_DSN`.
 
-### Paso 1: Crear cuenta y proyecto
+### Opción A: Usar el wizard (recomendado)
+
+El wizard configura todo automáticamente: DSN, source maps, instrumentation y variables.
+
+1. **Abre una terminal** en la raíz del proyecto (donde está `package.json`).
+
+2. **Ejecuta el wizard:**
+   ```bash
+   npx @sentry/wizard@latest -i nextjs --saas --org lexis-bill --project javascript-nextjs
+   ```
+
+3. **El wizard hará:**
+   - Abrir el navegador para que inicies sesión en Sentry (o crees cuenta).
+   - Preguntar qué funciones quieres: Error Monitoring ✅, Logs, Session Replay, Tracing.
+   - Crear/actualizar archivos de configuración.
+   - Generar un **Auth Token** y crear `.env.sentry-build-plugin` (para subir source maps).
+   - Añadir variables a tu `.env.local`.
+
+4. **Responde las preguntas** según lo que necesites. Para empezar, marca **Error Monitoring**.
+
+5. **Después del wizard**, copia las variables que te indique a:
+   - **Local:** `.env.local`
+   - **Vercel:** Settings → Environment Variables
+
+   Variables típicas:
+   ```
+   NEXT_PUBLIC_SENTRY_DSN=https://xxx@o123456.ingest.sentry.io/7890123
+   SENTRY_ORG=lexis-bill
+   SENTRY_PROJECT=javascript-nextjs
+   SENTRY_AUTH_TOKEN=sntrys_xxx   (solo para builds, sube source maps)
+   ```
+
+6. **En Vercel** añade también `SENTRY_AUTH_TOKEN` si quieres stack traces legibles en Sentry.
+
+### Opción B: Configuración manual
 
 1. Ve a [sentry.io](https://sentry.io) y crea una cuenta.
 2. Crea un proyecto nuevo → elige **Next.js**.
 3. Copia el **DSN** que te muestra (ejemplo: `https://abc123@o123456.ingest.sentry.io/7890123`).
 
-### Paso 2: Añadir variables de entorno
+**Variables de entorno:**
 
 **En desarrollo (.env.local):**
-
 ```env
 NEXT_PUBLIC_SENTRY_DSN=https://tu-dsn@o123456.ingest.sentry.io/7890123
+SENTRY_ORG=lexis-bill
+SENTRY_PROJECT=javascript-nextjs
 ```
 
 **En Vercel (Producción):**
-
 1. Dashboard Vercel → tu proyecto → **Settings** → **Environment Variables**
 2. Añade:
    - `NEXT_PUBLIC_SENTRY_DSN` = `https://tu-dsn@o123456.ingest.sentry.io/7890123`
-   - Marca **Production**, **Preview** y **Development** si quieres monitoreo en preview también.
-3. **Save** y vuelve a desplegar.
+   - `SENTRY_ORG` = `lexis-bill`
+   - `SENTRY_PROJECT` = `javascript-nextjs`
+   - `SENTRY_AUTH_TOKEN` = (crea uno en Sentry → Settings → Auth Tokens) — opcional, para source maps
+3. Marca **Production**, **Preview** y **Development** según necesites.
+4. **Save** y vuelve a desplegar.
 
-### Paso 3: Verificar
+### Verificar
 
 - La app arranca sin error.
 - En Sentry → **Issues** verás los errores cuando ocurran.
-- El `sentry.client.config.ts` ya está configurado: solo necesita el DSN.
 
 ---
 
@@ -138,5 +174,8 @@ Atlas incluye backups automáticos en clusters M10+. Revisa en **Backup** → **
 | `JWT_SECRET` | ✅ | Mínimo 32 caracteres |
 | `MONGODB_URI` | ✅ | URI de MongoDB Atlas |
 | `NEXT_PUBLIC_SENTRY_DSN` | ✅ | DSN del proyecto Sentry |
+| `SENTRY_ORG` | ⚠️ Build | Slug de la org en Sentry (ej. lexis-bill) |
+| `SENTRY_PROJECT` | ⚠️ Build | Slug del proyecto (ej. javascript-nextjs) |
+| `SENTRY_AUTH_TOKEN` | ❌ | Para subir source maps; crea en Sentry → Auth Tokens |
 | `CORS_ORIGIN` | ✅ | URL del frontend (ej. https://lexisbill.com) |
 | `NEXT_PUBLIC_API_URL` | ✅ | URL de tu API (ej. https://api.lexisbill.com/api) |
