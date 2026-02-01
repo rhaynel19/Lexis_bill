@@ -11,6 +11,66 @@ const { withSentryConfig } = require('@sentry/nextjs');
 const nextConfig = {
     reactStrictMode: true,
     images: { unoptimized: true },
+
+    // === HEADERS DE SEGURIDAD ===
+    async headers() {
+        return [
+            {
+                // Aplicar a todas las rutas
+                source: '/:path*',
+                headers: [
+                    // Previene ataques MIME sniffing
+                    {
+                        key: 'X-Content-Type-Options',
+                        value: 'nosniff'
+                    },
+                    // Previene clickjacking (no permitir iframes)
+                    {
+                        key: 'X-Frame-Options',
+                        value: 'DENY'
+                    },
+                    // Filtro XSS del navegador (legacy pero útil)
+                    {
+                        key: 'X-XSS-Protection',
+                        value: '1; mode=block'
+                    },
+                    // Control de información del referer
+                    {
+                        key: 'Referrer-Policy',
+                        value: 'strict-origin-when-cross-origin'
+                    },
+                    // Forzar HTTPS (solo en producción)
+                    ...(process.env.NODE_ENV === 'production' ? [{
+                        key: 'Strict-Transport-Security',
+                        value: 'max-age=31536000; includeSubDomains; preload'
+                    }] : []),
+                    // Controla qué APIs del navegador puede usar la página
+                    {
+                        key: 'Permissions-Policy',
+                        value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+                    },
+                    // Content Security Policy - Protección contra XSS
+                    {
+                        key: 'Content-Security-Policy',
+                        value: [
+                            "default-src 'self'",
+                            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://*.vercel.app",
+                            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+                            "font-src 'self' https://fonts.gstatic.com data:",
+                            "img-src 'self' data: blob: https:",
+                            "connect-src 'self' https://*.vercel.app https://api.dgii.gov.do https://*.sentry.io wss:",
+                            "frame-ancestors 'none'",
+                            "form-action 'self'",
+                            "base-uri 'self'",
+                            "object-src 'none'",
+                            "upgrade-insecure-requests"
+                        ].join('; ')
+                    }
+                ]
+            }
+        ];
+    },
+
     // Proxy /api al backend en dev (cookies same-origin)
     async rewrites() {
         if (process.env.NODE_ENV === "development") {

@@ -30,6 +30,64 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const log = require('./logger');
 
+// === UTILIDADES DE SEGURIDAD ===
+
+/**
+ * Sanitiza un string: remueve caracteres peligrosos y limita longitud
+ */
+const sanitizeString = (str, maxLength = 500) => {
+    if (typeof str !== 'string') return '';
+    return str
+        .trim()
+        .slice(0, maxLength)
+        .replace(/<[^>]*>/g, '') // Remueve tags HTML
+        .replace(/\$/g, '') // Previene operadores MongoDB
+        .replace(/\{|\}/g, ''); // Previene objetos maliciosos
+};
+
+/**
+ * Sanitiza un email: valida formato y limpia
+ */
+const sanitizeEmail = (email) => {
+    if (typeof email !== 'string') return '';
+    const cleaned = email.trim().toLowerCase().slice(0, 254);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(cleaned) ? cleaned : '';
+};
+
+/**
+ * Valida un ObjectId de MongoDB
+ */
+const isValidObjectId = (id) => {
+    return mongoose.Types.ObjectId.isValid(id) && (new mongoose.Types.ObjectId(id)).toString() === id;
+};
+
+/**
+ * Valida fortaleza de contraseña
+ * Mínimo 8 caracteres, al menos 1 mayúscula, 1 minúscula, 1 número
+ */
+const validatePassword = (password) => {
+    if (typeof password !== 'string') return { valid: false, error: 'La contraseña es requerida' };
+    if (password.length < 8) return { valid: false, error: 'La contraseña debe tener al menos 8 caracteres' };
+    if (!/[A-Z]/.test(password)) return { valid: false, error: 'La contraseña debe tener al menos una mayúscula' };
+    if (!/[a-z]/.test(password)) return { valid: false, error: 'La contraseña debe tener al menos una minúscula' };
+    if (!/[0-9]/.test(password)) return { valid: false, error: 'La contraseña debe tener al menos un número' };
+    return { valid: true };
+};
+
+/**
+ * Sanitiza un objeto de items de factura/cotización
+ */
+const sanitizeItems = (items) => {
+    if (!Array.isArray(items)) return [];
+    return items.slice(0, 100).map(item => ({
+        description: sanitizeString(item?.description || '', 500),
+        quantity: Math.max(0, Math.min(Number(item?.quantity) || 0, 999999)),
+        price: Math.max(0, Math.min(Number(item?.price) || 0, 999999999)),
+        isExempt: Boolean(item?.isExempt)
+    })).filter(item => item.description && item.quantity > 0);
+};
+
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
@@ -563,8 +621,29 @@ app.post('/api/tickets', async (req, res) => {
 // Auth
 app.post('/api/auth/register', async (req, res) => {
     try {
-        const { email, password, name, rnc, profession, plan } = req.body;
+        const { password, plan } = req.body;
+        
+        // === SANITIZACIÓN DE INPUTS ===
+        const email = sanitizeEmail(req.body.email);
+        const name = sanitizeString(req.body.name, 100);
+        const rnc = sanitizeString(req.body.rnc, 20).replace(/[^0-9]/g, '');
+        const profession = sanitizeString(req.body.profession, 100);
+        
         log.info({ action: 'register' }, 'Registrando usuario');
+
+        // === VALIDACIONES ===
+        if (!email) {
+            return res.status(400).json({ message: 'El correo electrónico no es válido.' });
+        }
+        if (!name || name.length < 2) {
+            return res.status(400).json({ message: 'El nombre es requerido (mínimo 2 caracteres).' });
+        }
+        
+        // Validar fortaleza de contraseña
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.valid) {
+            return res.status(400).json({ message: passwordValidation.error });
+        }
 
         // Verificar si el usuario ya existe antes de intentar guardar (más limpio que el catch de mongo)
         const existingUser = await User.findOne({ email });
@@ -624,7 +703,7 @@ app.post('/api/auth/login', async (req, res) => {
         res.cookie('lexis_auth', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', // strict en prod previene CSRF
             maxAge: 86400 * 1000, // 24h en ms
             path: '/'
         });
@@ -807,6 +886,9 @@ app.get('/api/admin/pending-payments', verifyToken, verifyAdmin, async (req, res
 
 app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req, res) => {
     try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: 'ID de solicitud inválido' });
+        }
         const pr = await PaymentRequest.findById(req.params.id);
         if (!pr || pr.status !== 'pending') {
             return res.status(404).json({ message: 'Solicitud no encontrada o ya procesada.' });
@@ -844,6 +926,9 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
 
 app.post('/api/admin/reject-payment/:id', verifyToken, verifyAdmin, async (req, res) => {
     try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: 'ID de solicitud inválido' });
+        }
         const pr = await PaymentRequest.findById(req.params.id);
         if (!pr || pr.status !== 'pending') {
             return res.status(404).json({ message: 'Solicitud no encontrada o ya procesada.' });
@@ -1125,9 +1210,23 @@ app.get('/api/customers', verifyToken, async (req, res) => {
 
 app.post('/api/customers', verifyToken, async (req, res) => {
     try {
+        // === SANITIZACIÓN DE INPUTS ===
+        const sanitizedData = {
+            name: sanitizeString(req.body.name, 200),
+            rnc: sanitizeString(req.body.rnc, 20).replace(/[^0-9]/g, ''),
+            phone: sanitizeString(req.body.phone, 20).replace(/[^0-9+\-\s]/g, ''),
+            email: sanitizeEmail(req.body.email),
+            address: sanitizeString(req.body.address, 300),
+            userId: req.userId
+        };
+        
+        if (!sanitizedData.name || !sanitizedData.rnc) {
+            return res.status(400).json({ message: 'Nombre y RNC son requeridos' });
+        }
+        
         const customer = await Customer.findOneAndUpdate(
-            { userId: req.userId, rnc: req.body.rnc },
-            { ...req.body, userId: req.userId },
+            { userId: req.userId, rnc: sanitizedData.rnc },
+            sanitizedData,
             { upsert: true, new: true }
         );
         res.json(customer);
@@ -1138,6 +1237,11 @@ app.post('/api/customers', verifyToken, async (req, res) => {
 
 app.delete('/api/customers/:id', verifyToken, async (req, res) => {
     try {
+        // === VALIDACIÓN DE OBJECTID ===
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: 'ID de cliente inválido' });
+        }
+        
         const deleted = await Customer.findOneAndDelete({
             _id: req.params.id,
             userId: req.userId
@@ -1251,6 +1355,9 @@ app.post('/api/documents', verifyToken, async (req, res) => {
 
 app.get('/api/documents/:id', verifyToken, async (req, res) => {
     try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: 'ID de documento inválido' });
+        }
         const doc = await UserDocument.findOne({ _id: req.params.id, userId: req.userId });
         if (!doc) return res.status(404).json({ message: 'Documento no encontrado' });
         res.json({ id: doc._id.toString(), name: doc.name, type: doc.type, date: doc.createdAt, data: doc.data, mimeType: doc.mimeType });
@@ -1261,6 +1368,9 @@ app.get('/api/documents/:id', verifyToken, async (req, res) => {
 
 app.delete('/api/documents/:id', verifyToken, async (req, res) => {
     try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: 'ID de documento inválido' });
+        }
         const r = await UserDocument.findOneAndDelete({ _id: req.params.id, userId: req.userId });
         if (!r) return res.status(404).json({ message: 'Documento no encontrado' });
         res.json({ success: true });
@@ -1322,7 +1432,21 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        const { clientName, clientRnc, ncfType, items, subtotal, itbis, total } = req.body;
+        // === SANITIZACIÓN DE INPUTS ===
+        const clientName = sanitizeString(req.body.clientName, 200);
+        const clientRnc = sanitizeString(req.body.clientRnc, 20).replace(/[^0-9]/g, '');
+        const ncfType = sanitizeString(req.body.ncfType, 10);
+        const items = sanitizeItems(req.body.items);
+        const subtotal = Math.max(0, Math.min(Number(req.body.subtotal) || 0, 999999999));
+        const itbis = Math.max(0, Math.min(Number(req.body.itbis) || 0, 999999999));
+        const total = Math.max(0, Math.min(Number(req.body.total) || 0, 999999999));
+        
+        if (!clientName || !clientRnc || items.length === 0) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: 'Cliente, RNC e items son requeridos' });
+        }
+        
         const fullNcf = await getNextNcf(req.userId, ncfType, session, clientRnc);
         if (!fullNcf) throw new Error("No hay secuencias NCF disponibles.");
         const newInvoice = new Invoice({ userId: req.userId, clientName, clientRnc, ncfType, ncfSequence: fullNcf, items, subtotal, itbis, total });
@@ -1577,6 +1701,9 @@ app.post('/api/expenses', verifyToken, async (req, res) => {
 
 app.delete('/api/expenses/:id', verifyToken, async (req, res) => {
     try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: 'ID de gasto inválido' });
+        }
         await Expense.findOneAndDelete({ _id: req.params.id, userId: req.userId });
         res.json({ message: 'Gasto eliminado' });
     } catch (error) {
@@ -1783,16 +1910,29 @@ app.get('/api/quotes', verifyToken, async (req, res) => {
 
 app.post('/api/quotes', verifyToken, async (req, res) => {
     try {
-        const { clientName, clientRnc, clientPhone, items, subtotal, itbis, total, validUntil } = req.body;
+        // === SANITIZACIÓN DE INPUTS ===
+        const clientName = sanitizeString(req.body.clientName, 200);
+        const clientRnc = sanitizeString(req.body.clientRnc, 20).replace(/[^0-9]/g, '');
+        const clientPhone = sanitizeString(req.body.clientPhone, 20).replace(/[^0-9+\-\s]/g, '');
+        const items = sanitizeItems(req.body.items);
+        const subtotal = Math.max(0, Math.min(Number(req.body.subtotal) || 0, 999999999));
+        const itbis = Math.max(0, Math.min(Number(req.body.itbis) || 0, 999999999));
+        const total = Math.max(0, Math.min(Number(req.body.total) || 0, 999999999));
+        const validUntil = req.body.validUntil;
+        
+        if (!clientName) {
+            return res.status(400).json({ message: 'El nombre del cliente es requerido' });
+        }
+        
         const quote = new Quote({
             userId: req.userId,
             clientName,
-            clientRnc: (clientRnc || '').replace(/\D/g, '') || clientRnc || '',
+            clientRnc,
             clientPhone,
-            items: items || [],
-            subtotal: subtotal || 0,
-            itbis: itbis || 0,
-            total: total || 0,
+            items,
+            subtotal,
+            itbis,
+            total,
             validUntil: new Date(validUntil || Date.now() + 15 * 24 * 60 * 60 * 1000),
             status: 'draft'
         });
@@ -1805,20 +1945,25 @@ app.post('/api/quotes', verifyToken, async (req, res) => {
 
 app.put('/api/quotes/:id', verifyToken, async (req, res) => {
     try {
+        // === VALIDACIÓN DE OBJECTID ===
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: 'ID de cotización inválido' });
+        }
+        
         const quote = await Quote.findOne({ _id: req.params.id, userId: req.userId });
         if (!quote) return res.status(404).json({ message: 'Cotización no encontrada' });
         if (quote.status === 'converted') return res.status(400).json({ message: 'No se puede editar una cotización ya facturada.' });
 
-        const { clientName, clientRnc, clientPhone, items, subtotal, itbis, total, validUntil, status } = req.body;
-        if (clientName !== undefined) quote.clientName = clientName;
-        if (clientRnc !== undefined) quote.clientRnc = clientRnc;
-        if (clientPhone !== undefined) quote.clientPhone = clientPhone;
-        if (items !== undefined) quote.items = items;
-        if (subtotal !== undefined) quote.subtotal = subtotal;
-        if (itbis !== undefined) quote.itbis = itbis;
-        if (total !== undefined) quote.total = total;
-        if (validUntil !== undefined) quote.validUntil = new Date(validUntil);
-        if (status !== undefined && ['draft', 'sent'].includes(status)) quote.status = status;
+        // === SANITIZACIÓN DE INPUTS ===
+        if (req.body.clientName !== undefined) quote.clientName = sanitizeString(req.body.clientName, 200);
+        if (req.body.clientRnc !== undefined) quote.clientRnc = sanitizeString(req.body.clientRnc, 20).replace(/[^0-9]/g, '');
+        if (req.body.clientPhone !== undefined) quote.clientPhone = sanitizeString(req.body.clientPhone, 20).replace(/[^0-9+\-\s]/g, '');
+        if (req.body.items !== undefined) quote.items = sanitizeItems(req.body.items);
+        if (req.body.subtotal !== undefined) quote.subtotal = Math.max(0, Math.min(Number(req.body.subtotal) || 0, 999999999));
+        if (req.body.itbis !== undefined) quote.itbis = Math.max(0, Math.min(Number(req.body.itbis) || 0, 999999999));
+        if (req.body.total !== undefined) quote.total = Math.max(0, Math.min(Number(req.body.total) || 0, 999999999));
+        if (req.body.validUntil !== undefined) quote.validUntil = new Date(req.body.validUntil);
+        if (req.body.status !== undefined && ['draft', 'sent'].includes(req.body.status)) quote.status = req.body.status;
         quote.lastSavedAt = new Date();
         await quote.save();
         res.json({ ...quote.toObject(), id: quote._id.toString() });
@@ -1829,6 +1974,11 @@ app.put('/api/quotes/:id', verifyToken, async (req, res) => {
 
 // Convertir cotización a factura - marca como converted, asocia invoiceId, bloquea doble facturación
 app.post('/api/quotes/:id/convert', verifyToken, async (req, res) => {
+    // === VALIDACIÓN DE OBJECTID ===
+    if (!isValidObjectId(req.params.id)) {
+        return res.status(400).json({ message: 'ID de cotización inválido' });
+    }
+    
     if (!req.user.confirmedFiscalName) {
         return res.status(403).json({ message: 'Confirma tu nombre fiscal para facturar.' });
     }

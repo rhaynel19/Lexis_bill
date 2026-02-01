@@ -30,15 +30,14 @@ export default function ProtectedLayout({
                 const me = await api.getMe();
                 setUserFromApi(me || null);
                 if (me) {
+                    // Solo actualizamos datos mínimos en localStorage (name, role para UI)
+                    // Datos sensibles (email, rnc, subscription) se obtienen de la API cuando se necesitan
                     const current = JSON.parse(localStorage.getItem("user") || "{}");
                     localStorage.setItem("user", JSON.stringify({
                         ...current,
                         name: me.name,
-                        email: me.email,
-                        role: me.role,
-                        subscription: me.subscription,
-                        rnc: me.rnc,
-                        fiscalStatus: me.fiscalStatus
+                        role: me.role
+                        // NO guardamos: email, rnc, subscription, fiscalStatus (seguridad)
                     }));
                 }
             } catch {

@@ -40,14 +40,11 @@ export default function LoginPage() {
             const data = await api.login(email, password);
 
             localStorage.setItem(LAST_EMAIL_KEY, email);
-            // Usuario (token en cookie HttpOnly - role y subscription desde API)
+            // Usuario - SOLO datos mínimos para UI (token en cookie HttpOnly, datos sensibles desde API)
+            // NO guardamos: email completo, rnc, detalles de subscription (seguridad)
             localStorage.setItem("user", JSON.stringify({
                 name: data.name,
-                email: data.email,
                 role: data.role || "user",
-                subscription: data.subscription,
-                rnc: data.rnc,
-                fiscalStatus: data.fiscalStatus,
                 biometric: false
             }));
 
