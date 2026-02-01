@@ -117,8 +117,8 @@ export default function Quotes() {
             <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Cotizaciones" }]} className="mb-4 text-slate-500" />
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 font-serif lowercase tracking-tighter">Cotizaciones</h1>
-                    <p className="text-slate-500 font-medium">Gestione sus propuestas comerciales</p>
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-foreground font-serif lowercase tracking-tighter">Cotizaciones</h1>
+                    <p className="text-slate-500 dark:text-muted-foreground font-medium">Gestione sus propuestas comerciales</p>
                 </div>
                 <Link href="/nueva-cotizacion">
                     <Button className="bg-[#D4AF37] hover:bg-amber-600 text-white gap-2 font-bold shadow-lg shadow-amber-100">
