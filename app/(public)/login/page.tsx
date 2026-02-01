@@ -8,9 +8,14 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, Fingerprint, Lock, Mail, MessageCircle, AlertCircle, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
+const LAST_EMAIL_KEY = "lexis_last_email";
+
 export default function LoginPage() {
     const router = useRouter();
-    const [email, setEmail] = useState("");
+    const [email, setEmail] = useState(() => {
+        if (typeof window === "undefined") return "";
+        return localStorage.getItem(LAST_EMAIL_KEY) || "";
+    });
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
@@ -34,6 +39,7 @@ export default function LoginPage() {
             const { api } = await import("@/lib/api-service");
             const data = await api.login(email, password);
 
+            localStorage.setItem(LAST_EMAIL_KEY, email);
             // Usuario (token en cookie HttpOnly - role y subscription desde API)
             localStorage.setItem("user", JSON.stringify({
                 name: data.name,
@@ -50,7 +56,12 @@ export default function LoginPage() {
             setShowBiometric(true);
 
         } catch (err: any) {
-            setError(err.message || "Error al iniciar sesión");
+            const msg = err.message || "";
+            setError(
+                msg.toLowerCase().includes("credencial") || msg.toLowerCase().includes("invalid") || msg.toLowerCase().includes("unauthorized")
+                    ? "Correo o contraseña incorrectos. Verifica e intenta de nuevo."
+                    : msg || "Error al iniciar sesión"
+            );
         } finally {
             setIsLoading(false);
         }

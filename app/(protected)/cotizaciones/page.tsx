@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DocumentViewer, Quote } from "@/components/DocumentViewer";
+import { EmptyState } from "@/components/ui/empty-state";
 import { downloadQuotePDF, QuoteData } from "@/lib/pdf-generator";
 import { generateQuoteWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp-utils";
 import { toast } from "sonner";
@@ -140,8 +141,14 @@ export default function Quotes() {
                         <TableBody>
                             {quotes.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-12 text-slate-400 italic">
-                                        No hay cotizaciones registradas aún.
+                                    <TableCell colSpan={6} className="p-0">
+                                        <EmptyState
+                                            icon={FileText}
+                                            title="Aún no hay cotizaciones"
+                                            description="Crea tu primera cotización para enviar propuestas profesionales a tus clientes."
+                                            actionLabel="Nueva cotización"
+                                            actionHref="/nueva-cotizacion"
+                                        />
                                     </TableCell>
                                 </TableRow>
                             ) : (

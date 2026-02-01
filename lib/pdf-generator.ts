@@ -353,6 +353,9 @@ export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<jsPD
     const footerText = invoiceData.type === "quote"
         ? "ESTE DOCUMENTO NO TIENE VALOR FISCAL"
         : `Este documento es una representación impresa de un Comprobante Fiscal ${isElectronic ? "Electrónico" : ""}`;
+    const disclaimerText = invoiceData.type !== "quote"
+        ? "Comprobante interno. No constituye e-CF oficial hasta integración PSFE con DGII."
+        : "";
 
     doc.text(
         footerText,
@@ -360,6 +363,11 @@ export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<jsPD
         footerY,
         { align: "center" }
     );
+    if (disclaimerText) {
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.text(disclaimerText, pageWidth / 2, footerY + 5, { align: "center" });
+    }
 
     return doc;
 }

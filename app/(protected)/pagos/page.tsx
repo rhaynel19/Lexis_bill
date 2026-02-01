@@ -23,6 +23,7 @@ import { api } from "@/lib/api-service";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { MembershipConfig } from "@/components/MembershipConfig";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function PaymentsPage() {
     const [history, setHistory] = useState<any[]>([]);
@@ -138,8 +139,12 @@ export default function PaymentsPage() {
                         <TableBody>
                             {history.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center py-10 text-slate-400 italic">
-                                        No hay pagos registrados aún.
+                                    <TableCell colSpan={5} className="p-0">
+                                        <EmptyState
+                                            icon={CreditCard}
+                                            title="Sin pagos registrados"
+                                            description="Cuando actives tu membresía Pro, los pagos aparecerán aquí. Elige tu plan arriba."
+                                        />
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -184,7 +189,7 @@ export default function PaymentsPage() {
                 <div>
                     <h4 className="font-bold text-slate-900 text-sm">Tu suscripción está segura</h4>
                     <p className="text-xs text-slate-500 leading-relaxed mt-1">
-                        Estamos validando tu pago manualmente para mayor seguridad. Para cualquier duda, contacta a soporte.
+                        Validamos los pagos en 24-48 horas. Para cualquier duda, contacta a soporte.
                     </p>
                 </div>
             </div>

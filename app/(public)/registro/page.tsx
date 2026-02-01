@@ -88,18 +88,17 @@ function RegisterForm() {
         try {
             await api.register({ ...form, plan, suggestedName: rncStatus.name });
 
-            // Auto login after register
+            // Auto login after register (auth via cookie HttpOnly)
             const loginData = await api.login(form.email, form.password);
-            localStorage.setItem("token", loginData.accessToken);
             localStorage.setItem("user", JSON.stringify({
                 name: loginData.name,
                 email: loginData.email,
-                role: loginData.profession,
+                role: loginData.role || "user",
+                subscription: loginData.subscription,
                 rnc: loginData.rnc,
-                fiscalStatus: loginData.fiscalStatus
+                fiscalStatus: loginData.fiscalStatus,
+                biometric: false
             }));
-            // Note: biometric is not set during register currently in this snippet, 
-            // but following the login pattern is better for consistency.
 
             router.push("/dashboard");
         } catch (err: any) {

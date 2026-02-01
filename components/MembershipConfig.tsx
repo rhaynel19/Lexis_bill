@@ -66,7 +66,7 @@ export function MembershipConfig() {
         try {
             const { api } = await import("@/lib/api-service");
             await api.requestMembershipPayment(selectedPlan, selectedBilling, selectedMethod, selectedMethod === "transferencia" ? comprobante || undefined : undefined);
-            toast.success("Tu solicitud fue registrada. Tu membresía será activada una vez validemos el pago.");
+            toast.success("Solicitud registrada. Validamos tu pago en 24-48 horas.");
             setComprobante(null);
             setPaypalConfirmed(false);
             const status = await api.getSubscriptionStatus();
@@ -132,7 +132,7 @@ export function MembershipConfig() {
                             Estamos validando tu pago manualmente para mayor seguridad.
                         </p>
                         <p className="text-sm text-amber-800 mt-1">
-                            Tu membresía será activada pronto. Te notificaremos cuando esté lista.
+                            Validamos en 24-48 horas. Te notificaremos cuando esté activa.
                         </p>
                     </div>
                 )}
@@ -364,6 +364,13 @@ export function MembershipConfig() {
                             </div>
                         )}
 
+                        {canSubmit && (
+                            <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/50 space-y-1 text-sm">
+                                <p className="font-medium text-slate-700">Resumen de tu solicitud</p>
+                                <p className="text-slate-600">Plan Profesional • {selectedBilling === "annual" ? "Anual" : "Mensual"} • RD$ {selectedPrice.toLocaleString()} • {selectedMethod === "transferencia" ? "Transferencia" : "PayPal"}</p>
+                                <p className="text-xs text-amber-700 mt-1">✓ Validamos en 24-48 horas</p>
+                            </div>
+                        )}
                         <Button
                             onClick={handleRequestPayment}
                             disabled={isSubmitting || hasPending || !canSubmit}

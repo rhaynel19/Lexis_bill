@@ -9,6 +9,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InvoiceData, downloadInvoicePDF } from "@/lib/pdf-generator";
 import { DocumentViewer } from "@/components/DocumentViewer";
@@ -173,15 +174,25 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
                 </CardHeader>
                 <CardContent className="p-0">
                     {filteredInvoices.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            <div className="flex justify-center mb-4">
-                                <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center">
-                                    <Filter className="w-8 h-8 text-muted-foreground/50" />
+                        invoices.length === 0 ? (
+                            <EmptyState
+                                icon={CheckCircle}
+                                title="Aún no hay facturas"
+                                description="Crea tu primera factura fiscal para empezar a facturar a tus clientes."
+                                actionLabel="Nueva factura"
+                                actionHref="/nueva-factura"
+                            />
+                        ) : (
+                            <div className="text-center py-12 text-muted-foreground">
+                                <div className="flex justify-center mb-4">
+                                    <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center">
+                                        <Filter className="w-8 h-8 text-muted-foreground/50" />
+                                    </div>
                                 </div>
+                                <p className="font-medium text-foreground">No hay facturas con este filtro.</p>
+                                <p className="text-sm mt-1">Intenta cambiar el filtro o crea una nueva factura.</p>
                             </div>
-                            <p className="font-medium text-foreground">No hay facturas en esta vista.</p>
-                            <p className="text-sm mt-1 text-muted-foreground">Intenta cambiar el filtro o crea una nueva factura.</p>
-                        </div>
+                        )
                     ) : (
                         <>
                             {/* Desktop View - scroll horizontal en móvil/tablet */}

@@ -3,10 +3,21 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(process.cwd(), '.env.local') });
 require('dotenv').config();
 
-// --- SEGURIDAD: JWT_SECRET obligatorio - fallar arranque si no existe ---
+// --- FAIL-FAST: Variables críticas obligatorias ---
 const JWT_SECRET = process.env.JWT_SECRET;
+const MONGODB_URI = process.env.MONGODB_URI;
+const isProd = process.env.NODE_ENV === 'production';
+
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
     console.error('❌ FATAL: JWT_SECRET debe estar definido y tener al menos 32 caracteres.');
+    process.exit(1);
+}
+if (!MONGODB_URI) {
+    console.error('❌ FATAL: MONGODB_URI no definido.');
+    process.exit(1);
+}
+if (isProd && !process.env.NEXT_PUBLIC_SENTRY_DSN) {
+    console.error('❌ FATAL: NEXT_PUBLIC_SENTRY_DSN requerido en producción. Cree proyecto en sentry.io');
     process.exit(1);
 }
 
@@ -16,21 +27,62 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+const log = require('./logger');
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 
-// CORS con credenciales para cookies HttpOnly
+// CORS: en producción usar origen explícito; en dev permitir credenciales
+const corsOrigin = process.env.CORS_ORIGIN;
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || true,
+    origin: isProd && corsOrigin ? corsOrigin.split(',').map(o => o.trim()) : true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Rate limiting - Zero Risk Deploy
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { message: 'Demasiados intentos. Intenta en 15 minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+const invoiceLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 50,
+    message: { message: 'Límite de solicitudes excedido. Espera un momento.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+const reportLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 20,
+    message: { message: 'Demasiadas descargas. Espera un momento.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+const uploadLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 20,
+    message: { message: 'Demasiados archivos. Espera un momento.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/invoices', invoiceLimiter);
+app.use('/api/reports/606', reportLimiter);
+app.use('/api/reports/607', reportLimiter);
+app.use('/api/reports/606/validate', reportLimiter);
+app.use('/api/reports/607/validate', reportLimiter);
+app.use('/api/documents', uploadLimiter);
+
 // --- 1. CONFIGURACIÓN DE CONEXIÓN ---
-const MONGODB_URI = process.env.MONGODB_URI;
 
 // Conexión Singleton para Vercel Serverless
 let cachedDb = null;
@@ -39,12 +91,12 @@ const connectDB = async () => {
     if (mongoose.connection.readyState === 1) return mongoose.connection;
 
     if (!MONGODB_URI) {
-        console.error('❌ MONGODB_URI no definido');
+        log.error('MONGODB_URI no definido');
         throw new Error('MONGODB_URI_MISSING');
     }
 
     try {
-        console.log('=> Intentando conectar a MongoDB...');
+        log.info('Conectando a MongoDB...');
         return await mongoose.connect(MONGODB_URI, {
             serverSelectionTimeoutMS: 15000,
             dbName: 'lexis_bill' // Forzamos el nombre de la DB aquí también
@@ -61,7 +113,7 @@ app.use(async (req, res, next) => {
         await connectDB();
         next();
     } catch (err) {
-        console.error('❌ Error fatal de conexión:', err.message);
+        log.error({ err: err.message }, 'Error de conexión en request');
         res.status(503).json({
             message: 'Error de conexión fiscal con la base de datos.',
             error: err.message,
@@ -186,6 +238,8 @@ const invoiceSchema = new mongoose.Schema({
     modifiedNcf: { type: String },
     annulledBy: { type: String }
 });
+invoiceSchema.index({ userId: 1, date: -1 });
+invoiceSchema.index({ userId: 1, ncfSequence: 1 });
 
 const customerSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -220,6 +274,7 @@ const expenseSchema = new mongoose.Schema({
     imageUrl: { type: String },
     createdAt: { type: Date, default: Date.now }
 });
+expenseSchema.index({ userId: 1, date: -1 });
 
 const invoiceDraftSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -240,6 +295,28 @@ const invoiceTemplateSchema = new mongoose.Schema({
     rnc: String,
     createdAt: { type: Date, default: Date.now }
 });
+
+const userDocumentSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    name: { type: String, required: true },
+    type: { type: String, enum: ['Legal', 'Fiscal', 'Personal', 'Otro'], default: 'Personal' },
+    data: { type: String, required: true }, // base64 data URL (imagen o PDF)
+    mimeType: { type: String, default: 'application/octet-stream' },
+    createdAt: { type: Date, default: Date.now }
+});
+userDocumentSchema.index({ userId: 1, createdAt: -1 });
+
+const fiscalAuditLogSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    tipoReporte: { type: String, enum: ['606', '607'], required: true },
+    periodo: { type: String, required: true }, // YYYYMM
+    resultadoValidacion: { type: String, enum: ['ok', 'error'], required: true },
+    errores: [{ type: String }],
+    registros: { type: Number, default: 0 },
+    createdAt: { type: Date, default: Date.now }
+});
+fiscalAuditLogSchema.index({ userId: 1, createdAt: -1 });
+fiscalAuditLogSchema.index({ tipoReporte: 1, periodo: 1 });
 
 const quoteSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -273,6 +350,10 @@ const Customer = mongoose.models.Customer || mongoose.model('Customer', customer
 const SupportTicket = mongoose.models.SupportTicket || mongoose.model('SupportTicket', supportTicketSchema);
 const Expense = mongoose.models.Expense || mongoose.model('Expense', expenseSchema);
 const Quote = mongoose.models.Quote || mongoose.model('Quote', quoteSchema);
+const UserDocument = mongoose.models.UserDocument || mongoose.model('UserDocument', userDocumentSchema);
+const FiscalAuditLog = mongoose.models.FiscalAuditLog || mongoose.model('FiscalAuditLog', fiscalAuditLogSchema);
+
+const { validate607Format, validate606Format, validateNcfStructure } = require('./dgii-validator');
 
 function getUserSubscription(user) {
     // Usuario oficial/admin: acceso total siempre (plan Pro, sin bloqueos)
@@ -406,16 +487,13 @@ async function getNextNcf(userId, type, session, clientRnc) {
 
 function validateTaxId(id) {
     const str = id.replace(/[^\d]/g, '');
-    console.log(`[validateTaxId] Input: "${id}", Clean: "${str}", Length: ${str.length}`);
     if (str.length === 9) {
         let sum = 0;
         const weights = [7, 9, 8, 6, 5, 4, 3, 2];
         for (let i = 0; i < 8; i++) sum += parseInt(str[i]) * weights[i];
         let remainder = sum % 11;
         let digit = remainder === 0 ? 2 : (remainder === 1 ? 1 : 11 - remainder);
-        const isValid = digit === parseInt(str[8]);
-        console.log(`[validateTaxId] 9-digits: Sum=${sum}, Remainder=${remainder}, ExpectedDigit=${digit}, ActualDigit=${str[8]}, Valid=${isValid}`);
-        return isValid;
+        return digit === parseInt(str[8]);
     }
     if (str.length === 11) {
         let sum = 0;
@@ -426,23 +504,47 @@ function validateTaxId(id) {
             sum += prod;
         }
         let check = (10 - (sum % 10)) % 10;
-        const isValid = check === parseInt(str[10]);
-        console.log(`[validateTaxId] 11-digits: Sum=${sum}, CheckSum=${sum % 10}, ExpectedDigit=${check}, ActualDigit=${str[10]}, Valid=${isValid}`);
-        return isValid;
+        return check === parseInt(str[10]);
     }
     return false;
 }
 
 // --- 5. ENDPOINTS ---
 
-// Health & Root
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'UP',
-        timestamp: new Date().toISOString(),
+// Health Check - Production Grade (UptimeRobot, BetterStack, Pingdom)
+app.get('/api/health', async (req, res) => {
+    const checks = {
         database: mongoose.connection.readyState === 1 ? 'UP' : 'DOWN',
-        environment: process.env.NODE_ENV || 'production',
-        engine: 'Vercel Serverless (Unified)'
+        memory: process.memoryUsage ? 'OK' : 'UNKNOWN',
+        env: {
+            jwt: !!(process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 32),
+            mongodb: !!process.env.MONGODB_URI,
+            sentry: !!process.env.NEXT_PUBLIC_SENTRY_DSN
+        }
+    };
+
+    let memUsage = null;
+    if (process.memoryUsage) {
+        const mu = process.memoryUsage();
+        memUsage = { heapUsed: Math.round(mu.heapUsed / 1024 / 1024), heapTotal: Math.round(mu.heapTotal / 1024 / 1024) };
+    }
+
+    const dbOk = checks.database === 'UP';
+    const criticalOk = checks.env.jwt && checks.env.mongodb;
+    const status = dbOk && criticalOk ? 'healthy' : (dbOk ? 'degraded' : 'down');
+
+    res.status(status === 'down' ? 503 : 200).json({
+        status,
+        timestamp: new Date().toISOString(),
+        version: process.env.npm_package_version || '1.0',
+        checks: {
+            database: checks.database,
+            memory: memUsage,
+            jwtConfigured: checks.env.jwt,
+            mongodbConfigured: checks.env.mongodb,
+            sentryConfigured: checks.env.sentry
+        },
+        environment: process.env.NODE_ENV || 'production'
     });
 });
 
@@ -462,7 +564,7 @@ app.post('/api/tickets', async (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { email, password, name, rnc, profession, plan } = req.body;
-        console.log(`[AUTH] Registering user: ${email}`);
+        log.info({ action: 'register' }, 'Registrando usuario');
 
         // Verificar si el usuario ya existe antes de intentar guardar (más limpio que el catch de mongo)
         const existingUser = await User.findOne({ email });
@@ -488,10 +590,10 @@ app.post('/api/auth/register', async (req, res) => {
         });
 
         await newUser.save();
-        console.log(`[AUTH] User created successfully: ${email}`);
+        log.info({ action: 'register', success: true }, 'Usuario creado');
         res.status(201).json({ message: 'Usuario registrado exitosamente', plan: status });
     } catch (error) {
-        console.error(`[AUTH] Error in registration:`, error);
+        log.error({ err: error.message }, 'Error en registro');
         if (error.code === 11000) {
             return res.status(400).json({ message: 'El correo o el RNC ya están registrados.' });
         }
@@ -502,21 +604,21 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-        console.log(`[AUTH] Login attempt: ${email}`);
+        log.info({ action: 'login' }, 'Intento de login');
 
         const user = await User.findOne({ email });
         if (!user) {
-            console.warn(`[AUTH] Login failed: User not found (${email})`);
+            log.warn('Login fallido: usuario no encontrado');
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
 
         const passwordIsValid = await bcrypt.compare(password, user.password);
         if (!passwordIsValid) {
-            console.warn(`[AUTH] Login failed: Invalid password (${email})`);
+            log.warn('Login fallido: contraseña inválida');
             return res.status(401).json({ message: 'Contraseña inválida' });
         }
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret_key_lexis_placeholder', { expiresIn: 86400 });
+        const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: 86400 });
 
         // Cookie HttpOnly para que el middleware permita acceso a rutas protegidas
         res.cookie('lexis_auth', token, {
@@ -528,7 +630,7 @@ app.post('/api/auth/login', async (req, res) => {
         });
 
         const sub = getUserSubscription(user);
-        console.log(`[AUTH] Login successful: ${email}`);
+        log.info({ action: 'login', success: true }, 'Login exitoso');
         res.status(200).json({
             id: user._id,
             email: user.email,
@@ -543,7 +645,7 @@ app.post('/api/auth/login', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error(`[AUTH] Error in login:`, error);
+        log.error({ err: error.message }, 'Error en login');
         res.status(500).json({ message: 'Error interno en el servidor', error: error.message });
     }
 });
@@ -827,6 +929,90 @@ app.get('/api/admin/stats', verifyToken, verifyAdmin, async (req, res) => {
     }
 });
 
+// --- ADMIN: Dashboard CEO - Métricas SaaS completas ---
+app.get('/api/admin/metrics', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+
+        const [totalUsers, newThisMonth, newLastMonth, proUsers, approvedPayments, pendingPayments, expiredLastMonth] = await Promise.all([
+            User.countDocuments({}),
+            User.countDocuments({ createdAt: { $gte: startOfMonth } }),
+            User.countDocuments({ createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
+            User.countDocuments({ $or: [{ 'subscription.plan': 'pro' }, { membershipLevel: 'pro' }], role: { $ne: 'admin' } }),
+            PaymentRequest.find({ status: 'approved' }).sort({ processedAt: -1 }),
+            PaymentRequest.countDocuments({ status: 'pending' }),
+            User.countDocuments({
+                role: { $ne: 'admin' },
+                $or: [
+                    { 'subscription.status': 'expired', 'subscription.endDate': { $gte: startOfLastMonth, $lte: endOfLastMonth } },
+                    { subscriptionStatus: 'Bloqueado', expiryDate: { $gte: startOfLastMonth, $lte: endOfLastMonth } }
+                ]
+            })
+        ]);
+
+        const revenueTotal = approvedPayments.reduce((s, p) => {
+            const amt = p.billingCycle === 'annual' ? 9500 : 950;
+            return s + amt;
+        }, 0);
+
+        const mrr = proUsers * 950;
+        const arpu = proUsers > 0 ? revenueTotal / proUsers : 0;
+        const growthRate = newLastMonth > 0 ? ((newThisMonth - newLastMonth) / newLastMonth) * 100 : (newThisMonth > 0 ? 100 : 0);
+        const churnRate = totalUsers > 0 ? (expiredLastMonth / totalUsers) * 100 : 0;
+
+        res.json({
+            mrr: Math.round(mrr),
+            churn: Math.round(churnRate * 100) / 100,
+            activeUsers: proUsers,
+            arpu: Math.round(arpu),
+            revenueTotal,
+            growthRate: Math.round(growthRate * 100) / 100,
+            newThisMonth,
+            newLastMonth,
+            pendingPayments,
+            totalUsers
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- Alertas proactivas: NCF bajo, secuencias por vencer, suscripciones por vencer ---
+app.get('/api/alerts', verifyToken, async (req, res) => {
+    try {
+        const alerts = [];
+        const now = new Date();
+        const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+        const ncfSettings = await NCFSettings.find({ userId: req.userId, isActive: true });
+        ncfSettings.forEach(s => {
+            const remaining = (s.finalNumber || 0) - (s.currentValue || 0);
+            if (remaining < 10 && remaining >= 0) {
+                alerts.push({ type: 'ncf_low', message: `NCF ${s.series}${s.type} le quedan ${remaining} números.`, severity: 'warning' });
+            }
+            if (s.expiryDate && new Date(s.expiryDate) < in30Days) {
+                alerts.push({ type: 'ncf_expiring', message: `Secuencia NCF ${s.series}${s.type} vence el ${new Date(s.expiryDate).toLocaleDateString('es-DO')}.`, severity: 'warning' });
+            }
+        });
+
+        const user = await User.findById(req.userId);
+        if (user?.role !== 'admin') {
+            const sub = user?.subscription || {};
+            const endDate = sub.endDate ? new Date(sub.endDate) : user?.expiryDate ? new Date(user.expiryDate) : null;
+            if (endDate && endDate < in30Days && sub.status !== 'active') {
+                alerts.push({ type: 'subscription_expiring', message: `Tu suscripción vence el ${endDate.toLocaleDateString('es-DO')}.`, severity: 'info' });
+            }
+        }
+
+        res.json({ alerts });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/status', async (req, res) => {
     res.json({
         mongodb: mongoose.connection.readyState === 1 ? 'CONNECTED' : 'DISCONNECTED',
@@ -1011,10 +1197,75 @@ app.post('/api/invoice-templates', verifyToken, async (req, res) => {
     }
 });
 
+// --- BÓVEDA DE DOCUMENTOS (persistencia en MongoDB) ---
+const MAX_DOC_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+app.get('/api/documents', verifyToken, async (req, res) => {
+    try {
+        const docs = await UserDocument.find({ userId: req.userId }).sort({ createdAt: -1 });
+        res.json(docs.map(d => ({
+            id: d._id.toString(),
+            name: d.name,
+            type: d.type,
+            date: d.createdAt,
+            mimeType: d.mimeType
+        })));
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/documents', verifyToken, async (req, res) => {
+    try {
+        const { name, type, data } = req.body;
+        if (!name || !data) return res.status(400).json({ message: 'Nombre y archivo requeridos' });
+        const base64Match = data.match(/^data:([^;]+);base64,(.+)$/);
+        const mimeType = base64Match ? base64Match[1] : 'application/octet-stream';
+        const rawSize = base64Match ? (base64Match[2].length * 3) / 4 : 0;
+        if (rawSize > MAX_DOC_SIZE_BYTES) return res.status(400).json({ message: 'Archivo máximo 5MB' });
+        const doc = new UserDocument({
+            userId: req.userId,
+            name,
+            type: type || 'Personal',
+            data,
+            mimeType
+        });
+        await doc.save();
+        res.status(201).json({ id: doc._id.toString(), name: doc.name, type: doc.type, date: doc.createdAt });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/documents/:id', verifyToken, async (req, res) => {
+    try {
+        const doc = await UserDocument.findOne({ _id: req.params.id, userId: req.userId });
+        if (!doc) return res.status(404).json({ message: 'Documento no encontrado' });
+        res.json({ id: doc._id.toString(), name: doc.name, type: doc.type, date: doc.createdAt, data: doc.data, mimeType: doc.mimeType });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/api/documents/:id', verifyToken, async (req, res) => {
+    try {
+        const r = await UserDocument.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+        if (!r) return res.status(404).json({ message: 'Documento no encontrado' });
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/invoices', verifyToken, async (req, res) => {
     try {
-        const invoices = await Invoice.find({ userId: req.userId }).sort({ date: -1 });
-        res.json(invoices);
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(500, Math.max(10, parseInt(req.query.limit, 10) || 50));
+        const skip = (page - 1) * limit;
+        const [invoices, total] = await Promise.all([
+            Invoice.find({ userId: req.userId }).sort({ date: -1 }).skip(skip).limit(limit).lean(),
+            Invoice.countDocuments({ userId: req.userId })
+        ]);
+        res.json({ data: invoices, total, page, limit, pages: Math.ceil(total / limit) });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -1109,26 +1360,68 @@ app.get('/api/reports/summary', verifyToken, async (req, res) => {
     }
 });
 
-// --- REPORTE 607 (VENTAS) - Formato oficial DGII Norma 06-2018 / 07-2018 ---
-// Estructura: RNC|TipoId|NCF|NCFModificado|TipoIngreso|FechaComprobante|FechaRetencion|
-// MontoFacturado|ITBISFacturado|ITBISRetenido|ITBISPercibido|RetencionRenta|ISR|ISC|OtrosImpuestos|MontoTotal|
-// ITBIS3ros|Percepciones|Intereses|IngresosTerceros
-app.get('/api/reports/607', verifyToken, async (req, res) => {
-    if (!req.user.confirmedFiscalName) {
-        return res.status(403).json({ message: 'Confirma tu nombre fiscal para generar reportes.' });
-    }
+// --- Tax Health (Bolsillo Fiscal) - datos reales desde DB ---
+app.get('/api/reports/tax-health', verifyToken, async (req, res) => {
+    try {
+        const { month, year } = req.query;
+        const now = new Date();
+        const m = month ? parseInt(month, 10) : now.getMonth() + 1;
+        const y = year ? parseInt(year, 10) : now.getFullYear();
+        const startDate = new Date(y, m - 1, 1);
+        const endDate = new Date(y, m, 0, 23, 59, 59);
 
+        const [invoices, expenses] = await Promise.all([
+            Invoice.find({
+                userId: req.userId,
+                date: { $gte: startDate, $lte: endDate },
+                status: { $ne: 'cancelled' }
+            }),
+            Expense.find({
+                userId: req.userId,
+                date: { $gte: startDate, $lte: endDate }
+            })
+        ]);
+
+        const collectedItbis = invoices.reduce((sum, inv) => sum + (inv.itbis || 0), 0);
+        const retentions = invoices.reduce((sum, inv) => sum + (inv.isrRetention || 0) + (inv.itbisRetention || 0), 0);
+        const subtotalRevenue = invoices.reduce((sum, inv) => sum + (inv.subtotal || ((inv.total || 0) - (inv.itbis || 0))), 0);
+        const paidItbis = expenses.reduce((sum, exp) => sum + (exp.itbis != null ? exp.itbis : (exp.amount || 0) * 0.15), 0);
+        const itbisRetentions = invoices.reduce((sum, inv) => sum + (inv.itbisRetention || 0), 0);
+
+        let liability = collectedItbis - paidItbis;
+        if (liability < 0) liability = 0;
+        liability -= itbisRetentions;
+        if (liability < 0) liability = 0;
+
+        const netCash = subtotalRevenue - expenses.reduce((s, e) => s + (e.amount || 0), 0);
+
+        res.json({
+            collectedItbis,
+            paidItbis,
+            retentions,
+            netTaxPayable: liability,
+            safeToSpend: netCash,
+            status: liability > (collectedItbis * 0.5) ? 'warning' : 'healthy'
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- REPORTE 607 (VENTAS) - Pre-validación + Log Fiscal ---
+app.get('/api/reports/607/validate', verifyToken, async (req, res) => {
+    if (!req.user.confirmedFiscalName) {
+        return res.status(403).json({ valid: false, message: 'Confirma tu nombre fiscal para generar reportes.' });
+    }
     try {
         const { month, year } = req.query;
         const m = parseInt(month, 10);
         const y = parseInt(year, 10);
         if (!m || !y || m < 1 || m > 12) {
-            return res.status(400).json({ message: 'Parámetros month y year inválidos.' });
+            return res.status(400).json({ valid: false, errors: ['Parámetros month y year inválidos.'] });
         }
-
         const startDate = new Date(y, m - 1, 1);
         const endDate = new Date(y, m, 0, 23, 59, 59);
-
         const invoices = await Invoice.find({
             userId: req.userId,
             date: { $gte: startDate, $lte: endDate },
@@ -1138,7 +1431,6 @@ app.get('/api/reports/607', verifyToken, async (req, res) => {
         const periodo = `${y}${m.toString().padStart(2, '0')}`;
         const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
         let report = `607|${rncEmisor}|${periodo}|${invoices.length}\n`;
-
         invoices.forEach(inv => {
             const fechaComp = new Date(inv.date).toISOString().slice(0, 10).replace(/-/g, '');
             const rncCliente = (inv.clientRnc || '').replace(/[^\d]/g, '');
@@ -1146,15 +1438,86 @@ app.get('/api/reports/607', verifyToken, async (req, res) => {
             const montoFact = (inv.subtotal || 0).toFixed(2);
             const itbisFact = (inv.itbis || 0).toFixed(2);
             const montoTotal = (inv.total || 0).toFixed(2);
-
             report += `${rncCliente}|${tipoId}|${inv.ncfSequence}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|0.00|0.00|0.00|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00|0.00\n`;
+        });
+
+        const validation = validate607Format(report);
+        await FiscalAuditLog.create({
+            userId: req.userId,
+            tipoReporte: '607',
+            periodo,
+            resultadoValidacion: validation.valid ? 'ok' : 'error',
+            errores: validation.errors,
+            registros: invoices.length
+        });
+        res.json({ valid: validation.valid, errors: validation.errors || [] });
+    } catch (error) {
+        res.status(500).json({ valid: false, errors: [error.message] });
+    }
+});
+
+app.get('/api/reports/607', verifyToken, async (req, res) => {
+    if (!req.user.confirmedFiscalName) {
+        return res.status(403).json({ message: 'Confirma tu nombre fiscal para generar reportes.' });
+    }
+    try {
+        const { month, year } = req.query;
+        const m = parseInt(month, 10);
+        const y = parseInt(year, 10);
+        if (!m || !y || m < 1 || m > 12) {
+            return res.status(400).json({ message: 'Parámetros month y year inválidos.' });
+        }
+        const startDate = new Date(y, m - 1, 1);
+        const endDate = new Date(y, m, 0, 23, 59, 59);
+        const invoices = await Invoice.find({
+            userId: req.userId,
+            date: { $gte: startDate, $lte: endDate },
+            status: { $ne: 'cancelled' }
+        }).sort({ date: 1, ncfSequence: 1 });
+
+        const periodo = `${y}${m.toString().padStart(2, '0')}`;
+        const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
+        let report = `607|${rncEmisor}|${periodo}|${invoices.length}\n`;
+        invoices.forEach(inv => {
+            const fechaComp = new Date(inv.date).toISOString().slice(0, 10).replace(/-/g, '');
+            const rncCliente = (inv.clientRnc || '').replace(/[^\d]/g, '');
+            const tipoId = rncCliente.length === 9 ? '1' : '2';
+            const montoFact = (inv.subtotal || 0).toFixed(2);
+            const itbisFact = (inv.itbis || 0).toFixed(2);
+            const montoTotal = (inv.total || 0).toFixed(2);
+            report += `${rncCliente}|${tipoId}|${inv.ncfSequence}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|0.00|0.00|0.00|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00|0.00\n`;
+        });
+
+        const validation = validate607Format(report);
+        if (!validation.valid) {
+            await FiscalAuditLog.create({
+                userId: req.userId,
+                tipoReporte: '607',
+                periodo,
+                resultadoValidacion: 'error',
+                errores: validation.errors,
+                registros: invoices.length
+            });
+            return res.status(400).json({
+                message: 'El archivo no cumple el formato DGII. Corrija antes de descargar.',
+                valid: false,
+                details: validation.errors
+            });
+        }
+
+        await FiscalAuditLog.create({
+            userId: req.userId,
+            tipoReporte: '607',
+            periodo,
+            resultadoValidacion: 'ok',
+            errores: [],
+            registros: invoices.length
         });
 
         res.setHeader('Content-Type', 'text/plain; charset=iso-8859-1');
         res.setHeader('Content-Disposition', `attachment; filename=607_${rncEmisor}_${periodo}.txt`);
         res.send(report);
     } catch (error) {
-        console.error('[607] Error:', error.message);
         res.status(500).json({ error: error.message });
     }
 });
@@ -1162,6 +1525,16 @@ app.get('/api/reports/607', verifyToken, async (req, res) => {
 // --- GESTIÓN DE GASTOS (606) ---
 app.get('/api/expenses', verifyToken, async (req, res) => {
     try {
+        const page = parseInt(req.query.page, 10);
+        const limit = parseInt(req.query.limit, 10);
+        if (page && limit) {
+            const skip = (page - 1) * limit;
+            const [data, total] = await Promise.all([
+                Expense.find({ userId: req.userId }).sort({ date: -1 }).skip(skip).limit(Math.min(limit, 500)).lean(),
+                Expense.countDocuments({ userId: req.userId })
+            ]);
+            return res.json({ data, total, page, limit, pages: Math.ceil(total / limit) });
+        }
         const expenses = await Expense.find({ userId: req.userId }).sort({ date: -1 });
         res.json(expenses);
     } catch (error) {
@@ -1198,21 +1571,81 @@ app.delete('/api/expenses/:id', verifyToken, async (req, res) => {
     }
 });
 
-// --- REPORTE 606 (COMPRAS/GASTOS) - Formato DGII - Fuente única: Expenses ---
-// Validaciones: NCF suplidor, categoría 01-11, campos obligatorios
+// --- REPORTE 606 (COMPRAS/GASTOS) - Pre-validación + Log Fiscal ---
 const DGII_EXPENSE_CATEGORIES = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11'];
 
-function isValidNcfStructure(ncf) {
-    if (!ncf || typeof ncf !== 'string') return false;
-    const clean = ncf.replace(/[^\dA-Za-z]/g, '');
-    return clean.length >= 11 && (clean.startsWith('B') || clean.startsWith('E'));
-}
+app.get('/api/reports/606/validate', verifyToken, async (req, res) => {
+    if (!req.user.confirmedFiscalName) {
+        return res.status(403).json({ valid: false, message: 'Confirma tu nombre fiscal para generar reportes.' });
+    }
+    try {
+        const { month, year } = req.query;
+        const m = parseInt(month, 10);
+        const y = parseInt(year, 10);
+        if (!m || !y || m < 1 || m > 12) {
+            return res.status(400).json({ valid: false, errors: ['Parámetros month y year inválidos.'] });
+        }
+        const startDate = new Date(y, m - 1, 1);
+        const endDate = new Date(y, m, 0, 23, 59, 59);
+        const expenses = await Expense.find({
+            userId: req.userId,
+            date: { $gte: startDate, $lte: endDate }
+        }).sort({ date: 1 });
+
+        const preErrores = [];
+        expenses.forEach((exp, idx) => {
+            if (!exp.supplierName || !exp.supplierRnc || !exp.ncf || exp.amount == null) {
+                preErrores.push(`Gasto ${idx + 1}: Faltan campos obligatorios (suplidor, RNC, NCF, monto).`);
+            }
+            if (!DGII_EXPENSE_CATEGORIES.includes(exp.category)) {
+                preErrores.push(`Gasto ${idx + 1}: Categoría ${exp.category} inválida. Use códigos 01-11 DGII.`);
+            }
+            const ncfRes = validateNcfStructure(exp.ncf || '');
+            if (!ncfRes.valid) preErrores.push(`Gasto ${idx + 1}: ${ncfRes.errors.join('; ')}`);
+        });
+        if (preErrores.length > 0) {
+            await FiscalAuditLog.create({
+                userId: req.userId,
+                tipoReporte: '606',
+                periodo: `${y}${m.toString().padStart(2, '0')}`,
+                resultadoValidacion: 'error',
+                errores: preErrores,
+                registros: expenses.length
+            });
+            return res.json({ valid: false, errors: preErrores });
+        }
+
+        const periodo = `${y}${m.toString().padStart(2, '0')}`;
+        const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
+        let report = `606|${rncEmisor}|${periodo}|${expenses.length}\n`;
+        expenses.forEach(exp => {
+            const fecha = new Date(exp.date).toISOString().slice(0, 10).replace(/-/g, '');
+            const rncLimpiado = (exp.supplierRnc || '').replace(/[^0-9]/g, '');
+            const tipoId = rncLimpiado.length === 9 ? '1' : '2';
+            const itbisPagado = (exp.itbis || 0).toFixed(2);
+            const montoTotal = (exp.amount || 0).toFixed(2);
+            report += `${rncLimpiado}|${tipoId}|${exp.category}|${exp.ncf}||${fecha}||${montoTotal}|0.00|${montoTotal}|${itbisPagado}|${itbisPagado}|||||||||\n`;
+        });
+
+        const validation = validate606Format(report);
+        await FiscalAuditLog.create({
+            userId: req.userId,
+            tipoReporte: '606',
+            periodo,
+            resultadoValidacion: validation.valid ? 'ok' : 'error',
+            errores: validation.errors,
+            registros: expenses.length
+        });
+        res.json({ valid: validation.valid, errors: validation.errors || [] });
+    } catch (error) {
+        res.status(500).json({ valid: false, errors: [error.message] });
+    }
+});
 
 app.get('/api/reports/606', verifyToken, async (req, res) => {
     if (!req.user.confirmedFiscalName) {
         return res.status(403).json({ message: 'Confirma tu nombre fiscal para generar reportes.' });
     }
-
     try {
         const { month, year } = req.query;
         const m = parseInt(month, 10);
@@ -1220,51 +1653,82 @@ app.get('/api/reports/606', verifyToken, async (req, res) => {
         if (!m || !y || m < 1 || m > 12) {
             return res.status(400).json({ message: 'Parámetros month y year inválidos.' });
         }
-
         const startDate = new Date(y, m - 1, 1);
         const endDate = new Date(y, m, 0, 23, 59, 59);
-
         const expenses = await Expense.find({
             userId: req.userId,
             date: { $gte: startDate, $lte: endDate }
         }).sort({ date: 1 });
 
-        const errores = [];
+        const preErrores = [];
         expenses.forEach((exp, idx) => {
             if (!exp.supplierName || !exp.supplierRnc || !exp.ncf || exp.amount == null) {
-                errores.push(`Gasto ${idx + 1}: Faltan campos obligatorios (suplidor, RNC, NCF, monto).`);
+                preErrores.push(`Gasto ${idx + 1}: Faltan campos obligatorios.`);
             }
             if (!DGII_EXPENSE_CATEGORIES.includes(exp.category)) {
-                errores.push(`Gasto ${idx + 1}: Categoría ${exp.category} inválida. Use códigos 01-11 DGII.`);
+                preErrores.push(`Gasto ${idx + 1}: Categoría ${exp.category} inválida.`);
             }
-            if (!isValidNcfStructure(exp.ncf)) {
-                errores.push(`Gasto ${idx + 1}: NCF del suplidor "${exp.ncf}" no tiene formato válido.`);
-            }
+            const ncfRes = validateNcfStructure(exp.ncf || '');
+            if (!ncfRes.valid) preErrores.push(`Gasto ${idx + 1}: NCF inválido.`);
         });
-
-        if (errores.length > 0) {
-            return res.status(400).json({ message: 'Errores fiscales. Corrija antes de exportar.', details: errores });
+        if (preErrores.length > 0) {
+            await FiscalAuditLog.create({
+                userId: req.userId,
+                tipoReporte: '606',
+                periodo: `${y}${m.toString().padStart(2, '0')}`,
+                resultadoValidacion: 'error',
+                errores: preErrores,
+                registros: expenses.length
+            });
+            return res.status(400).json({
+                message: 'El archivo no cumple el formato DGII. Corrija antes de descargar.',
+                valid: false,
+                details: preErrores
+            });
         }
 
         const periodo = `${y}${m.toString().padStart(2, '0')}`;
         const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
         let report = `606|${rncEmisor}|${periodo}|${expenses.length}\n`;
-
         expenses.forEach(exp => {
             const fecha = new Date(exp.date).toISOString().slice(0, 10).replace(/-/g, '');
             const rncLimpiado = (exp.supplierRnc || '').replace(/[^0-9]/g, '');
             const tipoId = rncLimpiado.length === 9 ? '1' : '2';
             const itbisPagado = (exp.itbis || 0).toFixed(2);
             const montoTotal = (exp.amount || 0).toFixed(2);
-
             report += `${rncLimpiado}|${tipoId}|${exp.category}|${exp.ncf}||${fecha}||${montoTotal}|0.00|${montoTotal}|${itbisPagado}|${itbisPagado}|||||||||\n`;
+        });
+
+        const validation = validate606Format(report);
+        if (!validation.valid) {
+            await FiscalAuditLog.create({
+                userId: req.userId,
+                tipoReporte: '606',
+                periodo,
+                resultadoValidacion: 'error',
+                errores: validation.errors,
+                registros: expenses.length
+            });
+            return res.status(400).json({
+                message: 'El archivo no cumple el formato DGII. Corrija antes de descargar.',
+                valid: false,
+                details: validation.errors
+            });
+        }
+
+        await FiscalAuditLog.create({
+            userId: req.userId,
+            tipoReporte: '606',
+            periodo,
+            resultadoValidacion: 'ok',
+            errores: [],
+            registros: expenses.length
         });
 
         res.setHeader('Content-Type', 'text/plain; charset=iso-8859-1');
         res.setHeader('Content-Disposition', `attachment; filename=606_${rncEmisor}_${periodo}.txt`);
         res.send(report);
     } catch (error) {
-        console.error('[606] Error:', error.message);
         res.status(500).json({ error: error.message });
     }
 });
@@ -1272,8 +1736,9 @@ app.get('/api/reports/606', verifyToken, async (req, res) => {
 // --- COTIZACIONES (Quotes) - MongoDB, no localStorage ---
 app.get('/api/quotes', verifyToken, async (req, res) => {
     try {
-        const quotes = await Quote.find({ userId: req.userId }).sort({ lastSavedAt: -1 });
-        res.json(quotes.map(q => ({
+        const page = parseInt(req.query.page, 10);
+        const limit = parseInt(req.query.limit, 10);
+        const mapQuote = (q) => ({
             id: q._id.toString(),
             _id: q._id,
             clientName: q.clientName,
@@ -1287,7 +1752,17 @@ app.get('/api/quotes', verifyToken, async (req, res) => {
             date: q.createdAt,
             validUntil: q.validUntil,
             invoiceId: q.invoiceId
-        })));
+        });
+        if (page && limit) {
+            const skip = (page - 1) * limit;
+            const [quotes, total] = await Promise.all([
+                Quote.find({ userId: req.userId }).sort({ lastSavedAt: -1 }).skip(skip).limit(Math.min(limit, 500)).lean(),
+                Quote.countDocuments({ userId: req.userId })
+            ]);
+            return res.json({ data: quotes.map(mapQuote), total, page, limit, pages: Math.ceil(total / limit) });
+        }
+        const quotes = await Quote.find({ userId: req.userId }).sort({ lastSavedAt: -1 });
+        res.json(quotes.map(mapQuote));
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -1411,6 +1886,6 @@ module.exports = app;
 if (require.main === module) {
     const PORT = process.env.PORT || 3001;
     app.listen(PORT, () => {
-        console.log(`🚀 Lexis Bill Backend (Unified) running at http://localhost:${PORT}`);
+        log.info({ port: PORT }, 'Lexis Bill Backend running');
     });
 }

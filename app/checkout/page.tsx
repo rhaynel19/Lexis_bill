@@ -9,9 +9,7 @@ import {
     CreditCard,
     Building2,
     ShieldCheck,
-    CheckCircle2,
     ArrowLeft,
-    ChevronRight,
     Lock,
     MessageCircle
 } from "lucide-react";
@@ -127,11 +125,14 @@ export default function CheckoutPage() {
                                             </div>
 
                                             <div className="pt-6 border-t border-white/5">
-                                                <p className="text-[10px] text-slate-500 text-center mb-4 italic">
-                                                    "Inversión protegida por cifrado de grado bancario"
+                                                <p className="text-[10px] text-slate-500 text-center mb-2 italic">
+                                                    Próximamente: pago con tarjeta vía Stripe. Los datos de tarjeta no se procesan ni almacenan en este formulario.
                                                 </p>
-                                                <Button className="relative overflow-hidden group w-full h-14 text-lg bg-[#D4AF37] hover:bg-[#B8962E] text-[#0A192F] font-bold rounded-xl shadow-xl shadow-[#D4AF37]/10 transition-all hover:scale-[1.01]">
-                                                    <span className="relative z-10">Pagar RD$950.00</span>
+                                                <p className="text-[10px] text-slate-500 text-center mb-4 italic">
+                                                    Por ahora, usa transferencia bancaria o visita la sección Pagar.
+                                                </p>
+                                                <Button type="button" disabled className="relative overflow-hidden group w-full h-14 text-lg bg-[#D4AF37]/50 text-[#0A192F] font-bold rounded-xl cursor-not-allowed">
+                                                    <span className="relative z-10">Pago con tarjeta próximamente</span>
                                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] transition-none"></div>
                                                     <style dangerouslySetInnerHTML={{
                                                         __html: `
@@ -176,8 +177,8 @@ export default function CheckoutPage() {
                                             </div>
 
                                             <div className="space-y-3">
-                                                <Button className="w-full h-14 text-lg border-2 border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#0A192F] bg-transparent font-bold rounded-xl transition-all">
-                                                    Confirmar Pago
+                                                <Button asChild className="w-full h-14 text-lg border-2 border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#0A192F] bg-transparent font-bold rounded-xl transition-all">
+                                                    <Link href="/pagos">Completar pago en Lexis Bill</Link>
                                                 </Button>
                                                 <a
                                                     href={`https://wa.me/18290000000?text=${encodeURIComponent("Hola Lexis Bill, acabo de realizar mi transferencia para el Plan Profesional. Adjunto el comprobante.")}`}

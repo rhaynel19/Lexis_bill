@@ -38,6 +38,7 @@ import { FiscalNamePrompt } from "@/components/FiscalNamePrompt";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { EmotionalStatusWidget } from "@/components/dashboard/EmotionalStatusWidget";
 import { AIInsightWidget } from "@/components/dashboard/AIInsightWidget";
+import { AlertsBanner } from "@/components/AlertsBanner";
 
 import { usePreferences } from "@/components/providers/PreferencesContext";
 import { cn } from "@/lib/utils";
@@ -130,6 +131,15 @@ export default function Dashboard() {
   const [fiscalState, setFiscalState] = useState<{ suggested: string; confirmed: string | null }>({ suggested: "", confirmed: null });
   const [isFiscalHealthy, setIsFiscalHealthy] = useState(true);
   const [lowNcfType, setLowNcfType] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      const u = JSON.parse(localStorage.getItem("user") || "{}");
+      return u.name || "";
+    } catch {
+      return "";
+    }
+  });
   // Profession is now from context
 
   useEffect(() => {
@@ -154,6 +164,7 @@ export default function Dashboard() {
 
         // Get user data from local storage to check fiscal status initially
         const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        setUserName(storedUser.name || "");
         setFiscalState({
           suggested: storedUser.fiscalStatus?.suggested || "",
           confirmed: storedUser.fiscalStatus?.confirmed || null
@@ -166,8 +177,9 @@ export default function Dashboard() {
           return;
         }
 
-        // 3. Fetch Invoices from Server
-        const invoices: Invoice[] = await api.getInvoices();
+        // 3. Fetch Invoices from Server (paginado: 200 para stats del dashboard)
+        const invRes = await api.getInvoices(1, 200);
+        const invoices: Invoice[] = invRes?.data || [];
 
         if (invoices && invoices.length > 0) {
           const now = new Date();
@@ -250,13 +262,11 @@ export default function Dashboard() {
   }, []);
 
   const handleRefresh = () => {
-    // Re-fetch data
     const refresh = async () => {
       const { api } = await import("@/lib/api-service");
-      const invoices = await api.getInvoices();
-      if (invoices) {
-        setRecentInvoices(invoices.slice(0, 10));
-      }
+      const invRes = await api.getInvoices(1, 200);
+      const invoices = invRes?.data || [];
+      if (invoices.length > 0) setRecentInvoices(invoices.slice(0, 10));
     };
     refresh();
   };
@@ -334,7 +344,7 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-1">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-              Bienvenido, {APP_CONFIG.company.name}
+              Bienvenido, {userName || APP_CONFIG.company.name}
             </h2>
             <p className="text-sm md:text-base text-slate-500 mt-1">Aquí está lo que está pasando con tu negocio hoy.</p>
           </div>
@@ -347,6 +357,9 @@ export default function Dashboard() {
             </Link>
           </div>
         </div>
+
+        {/* Alertas proactivas: NCF bajo, secuencias por vencer, suscripción */}
+        <AlertsBanner />
 
         {/* AI Insight (Phase 2) */}
         <AIInsightWidget revenue={totalRevenue} pendingCount={pendingInvoices} />

@@ -5,6 +5,7 @@ MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/lexis_bill
 
 # Seguridad (OBLIGATORIO - la app no arranca sin JWT_SECRET)
 JWT_SECRET=tu_secreto_super_seguro_minimo_32_caracteres
+# Producción: origen(es) permitidos para CORS. Múltiples: https://a.com,https://b.com
 CORS_ORIGIN=http://localhost:3000
 
 # Dev: URL del API para proxy (rewrites next.config)
@@ -16,6 +17,15 @@ LEXISBILL_BANK_ACCOUNT=XXX-XXXXXX-X
 LEXISBILL_PAYPAL_EMAIL=pagos@lexisbill.com
 
 # Crear primer admin: en MongoDB, actualizar usuario: db.users.updateOne({email:"admin@ejemplo.com"}, {$set:{role:"admin"}})
+
+# Monitoreo de errores (OBLIGATORIO en producción - la app no arranca sin él)
+NEXT_PUBLIC_SENTRY_DSN=
+SENTRY_ORG=
+SENTRY_PROJECT=
+
+# Backup (scripts/backup-mongodb.js)
+BACKUP_OUTPUT_DIR=./backups
+# BACKUP_BUCKET=s3://bucket-name (opcional, para subir a S3/R2)
 
 # Pasarelas de Pago (Integración Futura)
 # Azul

@@ -1,0 +1,43 @@
+/* Barras de progreso del Bolsillo Fiscal */
+.progressTrack {
+  width: 100%;
+  background-color: rgb(51 65 85); /* slate-700 */
+  height: 0.25rem;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progressBarCollected {
+  height: 100%;
+  background-color: rgb(34 197 94); /* emerald-500 */
+  width: 100%;
+}
+
+.progressBarDeductible {
+  height: 100%;
+  background-color: rgb(245 158 11); /* amber-500 */
+  transition: width 0.2s ease;
+}
+
+/* Clases de ancho discreto para evitar estilos en línea (0–100% en pasos de 5) */
+.width0 { width: 0%; }
+.width5 { width: 5%; }
+.width10 { width: 10%; }
+.width15 { width: 15%; }
+.width20 { width: 20%; }
+.width25 { width: 25%; }
+.width30 { width: 30%; }
+.width35 { width: 35%; }
+.width40 { width: 40%; }
+.width45 { width: 45%; }
+.width50 { width: 50%; }
+.width55 { width: 55%; }
+.width60 { width: 60%; }
+.width65 { width: 65%; }
+.width70 { width: 70%; }
+.width75 { width: 75%; }
+.width80 { width: 80%; }
+.width85 { width: 85%; }
+.width90 { width: 90%; }
+.width95 { width: 95%; }
+.width100 { width: 100%; }

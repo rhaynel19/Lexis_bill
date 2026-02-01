@@ -170,63 +170,62 @@ export default function LandingPage() {
                                 </span>
                             </div>
                             <CardHeader className="text-center pb-10 border-b border-[#D4AF37]/10">
-                                <CardTitle className="font-serif text-[#D4AF37] text-3xl mb-4">Plan Profesional</CardTitle>
-                                <div className="flex flex-col items-center gap-3">
-                                    <div className="flex items-end justify-center gap-4 flex-wrap">
-                                        <div className="text-center">
-                                            <p className="text-xs text-slate-500 uppercase tracking-wider">Mensual</p>
-                                            <div className="flex items-end gap-1">
+                                <CardTitle className="font-serif text-[#D4AF37] text-3xl mb-6">Plan Profesional</CardTitle>
+                                <div className="flex flex-col items-center gap-6">
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-end justify-center gap-8 sm:gap-12 w-full">
+                                        <div className="flex-1 min-w-0 py-4 sm:py-0 sm:pb-2 px-6 rounded-xl bg-[#0A192F]/80 border border-[#D4AF37]/10">
+                                            <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Mensual</p>
+                                            <div className="flex items-baseline justify-center gap-1">
                                                 <span className="text-3xl md:text-4xl font-bold text-[#F9F6EE]">RD$950</span>
-                                                <span className="text-[#D4AF37] text-lg font-semibold mb-1 align-bottom">/mes</span>
+                                                <span className="text-[#D4AF37] text-base md:text-lg font-semibold align-bottom">/mes</span>
                                             </div>
                                         </div>
-                                        <span className="text-slate-500 hidden sm:inline">|</span>
-                                        <div className="text-center relative">
-                                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-[#D4AF37] bg-[#D4AF37]/20 px-2 py-0.5 rounded">⭐ Más popular</span>
-                                            <p className="text-xs text-slate-500 uppercase tracking-wider">Anual</p>
-                                            <div className="flex items-end gap-1">
+                                        <div className="flex-1 min-w-0 py-4 sm:py-0 sm:pb-2 px-6 rounded-xl bg-[#D4AF37]/10 border-2 border-[#D4AF37]/30 relative">
+                                            <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-xs font-bold text-[#D4AF37] bg-[#0A192F] px-3 py-1 rounded-full whitespace-nowrap">⭐ Más popular</span>
+                                            <p className="text-xs text-slate-400 uppercase tracking-wider mb-2 mt-2">Anual</p>
+                                            <div className="flex items-baseline justify-center gap-1">
                                                 <span className="text-3xl md:text-4xl font-bold text-[#F9F6EE]">RD$9,500</span>
                                             </div>
-                                            <p className="text-[#D4AF37] text-sm font-semibold mt-0.5">🎁 Paga 10 meses y usa 12</p>
+                                            <p className="text-[#D4AF37] text-sm md:text-base font-semibold mt-2 text-center">🎁 Paga 10 meses y usa 12</p>
                                         </div>
                                     </div>
-                                    <p className="text-sm text-slate-400 italic">Si no simplifica tu vida, no pagas nada.</p>
+                                    <p className="text-sm md:text-base text-slate-400 italic">Si no simplifica tu vida, no pagas nada.</p>
                                 </div>
                             </CardHeader>
                             <CardContent className="pt-10 space-y-8">
-                                <ul className="space-y-6 text-left">
-                                    <li className="flex items-start gap-4 text-slate-300">
+                                <ul className="space-y-8 text-left">
+                                    <li className="flex items-start gap-4">
                                         <ShieldCheck className="w-6 h-6 text-[#D4AF37] mt-1 shrink-0 stroke-[1px]" />
-                                        <div>
-                                            <p className="font-bold">Validación Instantánea de RNC</p>
-                                            <p className="text-sm text-slate-500">Valida a tus clientes en segundos como una multinacional.</p>
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-[#F9F6EE]">Validación Instantánea de RNC</p>
+                                            <p className="text-sm text-slate-400 mt-1 leading-relaxed">Valida a tus clientes en segundos como una multinacional.</p>
                                         </div>
                                     </li>
-                                    <li className="flex items-start gap-4 text-slate-300">
+                                    <li className="flex items-start gap-4">
                                         <ShieldCheck className="w-6 h-6 text-[#D4AF37] mt-1 shrink-0 stroke-[1px]" />
-                                        <div>
-                                            <p className="font-bold">Multiperfil de Oficios</p>
-                                            <p className="text-sm text-slate-500">Ya seas abogado, plomero o médico, adaptamos tus NCF a tu necesidad.</p>
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-[#F9F6EE]">Multiperfil de Oficios</p>
+                                            <p className="text-sm text-slate-400 mt-1 leading-relaxed">Ya seas abogado, plomero o médico, adaptamos tus NCF a tu necesidad.</p>
                                         </div>
                                     </li>
-                                    <li className="flex items-start gap-4 text-slate-300">
+                                    <li className="flex items-start gap-4">
                                         <ShieldCheck className="w-6 h-6 text-[#D4AF37] mt-1 shrink-0 stroke-[1px]" />
-                                        <div>
-                                            <p className="font-bold">Acceso Mobile-First + WhatsApp</p>
-                                            <p className="text-sm text-slate-500">Factura bajo el sol o en el consultorio y envíala al instante.</p>
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-[#F9F6EE]">Acceso Mobile-First + WhatsApp</p>
+                                            <p className="text-sm text-slate-400 mt-1 leading-relaxed">Factura bajo el sol o en el consultorio y envíala al instante.</p>
                                         </div>
                                     </li>
-                                    <li className="flex items-start gap-4 text-slate-300">
+                                    <li className="flex items-start gap-4">
                                         <ShieldCheck className="w-6 h-6 text-[#D4AF37] mt-1 shrink-0 stroke-[1px]" />
-                                        <div>
-                                            <p className="font-bold">Cero Contabilidad Compleja</p>
-                                            <p className="text-sm text-slate-500">Nosotros hacemos el trabajo sucio de la DGII por ti.</p>
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-[#F9F6EE]">Cero Contabilidad Compleja</p>
+                                            <p className="text-sm text-slate-400 mt-1 leading-relaxed">Nosotros hacemos el trabajo sucio de la DGII por ti.</p>
                                         </div>
                                     </li>
-                                    <li className="flex items-start gap-4 text-slate-300">
+                                    <li className="flex items-start gap-4">
                                         <ShieldCheck className="w-6 h-6 text-[#D4AF37] mt-1 shrink-0 stroke-[1px]" />
-                                        <div>
-                                            <p className="font-bold">Soporte Prioritario Anacaona</p>
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-[#F9F6EE]">Soporte Prioritario Anacaona</p>
                                         </div>
                                     </li>
                                 </ul>
@@ -235,7 +234,7 @@ export default function LandingPage() {
                                         Empezar mi Prueba de 15 Días GRATIS
                                     </Button>
                                 </Link>
-                                <p className="text-[11px] text-slate-500 mt-6 uppercase tracking-[0.2em] font-medium text-center">Sin contratos. Sin tarjetas iniciales. Sin fricción.</p>
+                                <p className="text-xs text-slate-400 mt-8 uppercase tracking-[0.15em] font-medium text-center leading-relaxed">Sin contratos. Sin tarjetas iniciales. Sin fricción.</p>
                             </CardContent>
                         </Card>
                     </div>

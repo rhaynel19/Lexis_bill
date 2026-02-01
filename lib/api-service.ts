@@ -58,46 +58,34 @@ export const api = {
         });
     },
 
-    // Invoices
+    // Invoices (auth via cookie HttpOnly)
     async createInvoice(data: any) {
-        const token = localStorage.getItem("token");
         return secureFetch<any>(`${API_URL}/invoices`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
         });
     },
 
-    async getInvoices() {
-        const token = localStorage.getItem("token");
-        return secureFetch<any[]>(`${API_URL}/invoices`, {
-            headers: {
-                "Authorization": `Bearer ${token}`
-            },
-            cacheKey: "invoices_list" // Cache invoice list for dashboard robustness
-        });
+    async getInvoices(page = 1, limit = 50) {
+        const res = await secureFetch<{ data: any[]; total: number; page: number; limit: number; pages: number }>(
+            `${API_URL}/invoices?page=${page}&limit=${limit}`,
+            { cacheKey: `invoices_list_${page}_${limit}` }
+        );
+        return res;
     },
 
     // NCF Settings
     async getNcfSettings() {
-        const token = localStorage.getItem("token");
         return secureFetch<any[]>(`${API_URL}/ncf-settings`, {
-            headers: { "Authorization": `Bearer ${token}` },
             cacheKey: "ncf_settings"
         });
     },
 
     async saveNcfSetting(data: any) {
-        const token = localStorage.getItem("token");
         const res = await secureFetch<any>(`${API_URL}/ncf-settings`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
         });
         // Invalidate cache manually ideally, or just wait for next fetch override
@@ -107,30 +95,20 @@ export const api = {
 
     // Credit Note
     async createCreditNote(invoiceId: string) {
-        const token = localStorage.getItem("token");
-        return secureFetch<any>(`${API_URL}/invoices/${invoiceId}/credit-note`, {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${token}` }
-        });
+        return secureFetch<any>(`${API_URL}/invoices/${invoiceId}/credit-note`, { method: "POST" });
     },
 
     // Customers (CRM)
     async getCustomers() {
-        const token = localStorage.getItem("token");
         return secureFetch<any[]>(`${API_URL}/customers`, {
-            headers: { "Authorization": `Bearer ${token}` },
             cacheKey: "customers_list"
         });
     },
 
     async saveCustomer(data: any) {
-        const token = localStorage.getItem("token");
         const res = await secureFetch<any>(`${API_URL}/customers`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
         });
         localStorage.removeItem("cache_customers_list");
@@ -138,13 +116,9 @@ export const api = {
     },
 
     async importCustomers(data: any[]) {
-        const token = localStorage.getItem("token");
         const res = await secureFetch<any>(`${API_URL}/customers/import`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
         });
         localStorage.removeItem("cache_customers_list");
@@ -152,9 +126,7 @@ export const api = {
     },
 
     async getCustomerHistory(rnc: string) {
-        const token = localStorage.getItem("token");
         return secureFetch<any>(`${API_URL}/customers/${rnc}/history`, {
-            headers: { "Authorization": `Bearer ${token}` },
             cacheKey: `customer_history_${rnc}`
         });
     },
@@ -166,11 +138,35 @@ export const api = {
         });
     },
 
+    async getTaxHealth(month?: number, year?: number) {
+        const now = new Date();
+        const m = month ?? now.getMonth() + 1;
+        const y = year ?? now.getFullYear();
+        return secureFetch<any>(`${API_URL}/reports/tax-health?month=${m}&year=${y}`, {
+            cacheKey: `tax_health_${m}_${y}`
+        });
+    },
+
+    async validateReport607(month: number, year: number): Promise<{ valid: boolean; errors?: string[] }> {
+        const res = await fetch(`${API_URL}/reports/607/validate?month=${month}&year=${year}`, { credentials: "include" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return { valid: false, errors: [(data as { message?: string }).message || "Error de validación"] };
+        return data;
+    },
+
+    async validateReport606(month: number, year: number): Promise<{ valid: boolean; errors?: string[] }> {
+        const res = await fetch(`${API_URL}/reports/606/validate?month=${month}&year=${year}`, { credentials: "include" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return { valid: false, errors: [(data as { message?: string }).message || "Error de validación"] };
+        return data;
+    },
+
     async downloadReport607(month: number, year: number): Promise<Blob> {
         const res = await fetch(`${API_URL}/reports/607?month=${month}&year=${year}`, { credentials: "include" });
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            throw new Error((err as { message?: string }).message || "Error al descargar reporte 607");
+            const details = (err as { details?: string[] }).details;
+            throw new Error(details?.length ? details.join("; ") : (err as { message?: string }).message || "Error al descargar reporte 607");
         }
         return res.blob();
     },
@@ -179,7 +175,8 @@ export const api = {
         const res = await fetch(`${API_URL}/reports/606?month=${month}&year=${year}`, { credentials: "include" });
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            throw new Error((err as { message?: string }).message || "Error al descargar reporte 606");
+            const details = (err as { details?: string[] }).details;
+            throw new Error(details?.length ? details.join("; ") : (err as { message?: string }).message || "Error al descargar reporte 606");
         }
         return res.blob();
     },
@@ -218,13 +215,9 @@ export const api = {
     },
 
     async saveExpense(expenseData: any) {
-        const token = localStorage.getItem("token");
         return secureFetch<any>(`${API_URL}/expenses`, {
             method: "POST",
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(expenseData)
         });
     },
@@ -283,6 +276,14 @@ export const api = {
         return secureFetch<any>(`${API_URL}/admin/stats`);
     },
 
+    async getAdminMetrics() {
+        return secureFetch<any>(`${API_URL}/admin/metrics`);
+    },
+
+    async getAlerts() {
+        return secureFetch<{ alerts: Array<{ type: string; message: string; severity: string }> }>(`${API_URL}/alerts`);
+    },
+
     // Borrador y plantillas de factura
     async getInvoiceDraft() {
         return secureFetch<any>(`${API_URL}/invoice-draft`);
@@ -310,5 +311,30 @@ export const api = {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
         });
+    },
+
+    // Bóveda de Documentos (MongoDB)
+    async getDocuments() {
+        return secureFetch<any[]>(`${API_URL}/documents`, { cacheKey: "user_documents" });
+    },
+
+    async uploadDocument(name: string, type: string, data: string) {
+        const res = await secureFetch<any>(`${API_URL}/documents`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, type, data }),
+        });
+        if (typeof localStorage !== "undefined") localStorage.removeItem("cache_user_documents");
+        return res;
+    },
+
+    async getDocument(id: string) {
+        return secureFetch<any>(`${API_URL}/documents/${id}`);
+    },
+
+    async deleteDocument(id: string) {
+        const res = await secureFetch<any>(`${API_URL}/documents/${id}`, { method: "DELETE" });
+        if (typeof localStorage !== "undefined") localStorage.removeItem("cache_user_documents");
+        return res;
     }
 };

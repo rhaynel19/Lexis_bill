@@ -16,6 +16,7 @@ const PROTECTED_PATHS = [
     "/clientes",
     "/gastos",
     "/pagos",
+    "/documentos",
     "/admin"
 ];
 
@@ -46,6 +47,7 @@ export const config = {
         "/clientes/:path*",
         "/gastos/:path*",
         "/pagos/:path*",
+        "/documentos/:path*",
         "/admin/:path*"
     ]
 };

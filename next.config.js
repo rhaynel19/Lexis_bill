@@ -5,6 +5,8 @@ const withPWA = require('next-pwa')({
     disable: process.env.NODE_ENV === 'development'
 })
 
+const { withSentryConfig } = require('@sentry/nextjs');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: true,
@@ -19,4 +21,13 @@ const nextConfig = {
     },
 }
 
-module.exports = withPWA(nextConfig)
+const sentryWebpackPluginOptions = {
+    silent: true,
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+};
+
+const configWithPWA = withPWA(nextConfig);
+module.exports = process.env.NEXT_PUBLIC_SENTRY_DSN
+    ? withSentryConfig(configWithPWA, sentryWebpackPluginOptions)
+    : configWithPWA;

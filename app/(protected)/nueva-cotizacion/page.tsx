@@ -247,13 +247,13 @@ function NewQuoteForm() {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 font-serif lowercase tracking-tighter">
+                    <h1 className="text-3xl font-black text-foreground font-serif lowercase tracking-tighter">
                         {editId ? `editando ${editId}` : "nueva cotización"}
                     </h1>
-                    <p className="text-slate-500 font-medium">Cree una propuesta profesional para su cliente</p>
+                    <p className="text-muted-foreground font-medium">Cree una propuesta profesional para su cliente</p>
                 </div>
                 <Link href="/cotizaciones">
-                    <Button variant="ghost" className="text-slate-400 hover:text-slate-600 px-0 md:px-4">
+                        <Button variant="ghost" className="text-muted-foreground hover:text-foreground px-0 md:px-4">
                         <ArrowLeft className="w-4 h-4 mr-2" /> Volver al listado
                     </Button>
                 </Link>
@@ -261,18 +261,18 @@ function NewQuoteForm() {
 
             <form onSubmit={handlePreSubmit}>
                 <div className="grid gap-6">
-                    <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
-                        <CardHeader className="bg-slate-50 border-b border-slate-100">
-                            <CardTitle className="text-lg font-bold text-slate-800">Información del Cliente</CardTitle>
+                    <Card className="border border-border shadow-xl rounded-2xl overflow-hidden bg-card">
+                        <CardHeader className="bg-muted/50 border-b border-border">
+                            <CardTitle className="text-lg font-bold text-foreground">Información del Cliente</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6 pt-6">
                             {savedClients.length > 0 && !editId && (
-                                <div className="space-y-2 mb-4 p-4 bg-indigo-50/30 rounded-xl border border-indigo-100/50">
-                                    <Label className="text-indigo-600 font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                                <div className="space-y-2 mb-4 p-4 bg-primary/5 rounded-xl border border-primary/20">
+                                    <Label className="text-primary font-bold text-xs uppercase tracking-wider flex items-center gap-2">
                                         <Loader2 className="w-3 h-3 animate-pulse" /> Sugerencia: Clientes Frecuentes
                                     </Label>
                                     <Select onValueChange={handleSelectClient}>
-                                        <SelectTrigger className="bg-white border-indigo-200 focus:ring-indigo-500 h-11">
+                                        <SelectTrigger className="bg-background border-border h-11 text-foreground">
                                             <SelectValue placeholder="Seleccionar cliente guardado..." />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -285,14 +285,14 @@ function NewQuoteForm() {
                             )}
                             <div className="grid gap-6 md:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label className="font-bold text-slate-700">Nombre del Cliente <span className="text-red-500">*</span></Label>
+                                    <Label className="font-bold text-foreground">Nombre del Cliente <span className="text-red-500">*</span></Label>
                                     <div className="relative">
                                         <Input
                                             value={clientName}
                                             onChange={e => setClientName(e.target.value)}
                                             readOnly={isClientLocked}
                                             placeholder="Nombre completo o razón social"
-                                            className={isClientLocked ? "bg-emerald-50/30 border-emerald-200 text-slate-700 font-bold pr-10 h-11" : "h-11"}
+                                            className={isClientLocked ? "bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/50 text-foreground font-bold pr-10 h-11" : "h-11 text-foreground bg-background"}
                                             required
                                         />
                                         {isClientLocked && (
@@ -308,27 +308,27 @@ function NewQuoteForm() {
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="font-bold text-slate-700">RNC / Cédula</Label>
+                                    <Label className="font-bold text-foreground">RNC / Cédula</Label>
                                     <Input
                                         value={rnc}
                                         onChange={e => handleRncChange(e.target.value)}
                                         placeholder="Ej: 131234567"
-                                        className="h-11 font-mono"
+                                        className="h-11 font-mono text-foreground bg-background"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="font-bold text-slate-700">Teléfono (WhatsApp)</Label>
+                                    <Label className="font-bold text-foreground">Teléfono (WhatsApp)</Label>
                                     <Input
                                         value={clientPhone}
                                         onChange={e => setClientPhone(e.target.value)}
                                         placeholder="Ej: 8095551234"
-                                        className="h-11"
+                                        className="h-11 text-foreground bg-background"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="font-bold text-slate-700">Validez de Oferta</Label>
+                                    <Label className="font-bold text-foreground">Validez de Oferta</Label>
                                     <Select value={validityDays} onValueChange={setValidityDays}>
-                                        <SelectTrigger className="h-11">
+                                        <SelectTrigger className="h-11 bg-background text-foreground">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -343,32 +343,32 @@ function NewQuoteForm() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
-                        <CardHeader className="bg-slate-50 border-b border-slate-100">
-                            <CardTitle className="text-lg font-bold text-slate-800">Conceptos de la Propuesta</CardTitle>
+                    <Card className="border border-border shadow-xl rounded-2xl overflow-hidden bg-card">
+                        <CardHeader className="bg-muted/50 border-b border-border">
+                            <CardTitle className="text-lg font-bold text-foreground">Conceptos de la Propuesta</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-6">
                             <div className="overflow-x-auto -mx-6 px-6 md:mx-0 md:px-0">
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="bg-slate-50/50 hover:bg-transparent">
-                                            <TableHead className="w-[45%] font-bold text-slate-700">Descripción</TableHead>
-                                            <TableHead className="w-[10%] text-center font-bold text-slate-700">Cant.</TableHead>
-                                            <TableHead className="w-[20%] text-right font-bold text-slate-700">Precio</TableHead>
-                                            <TableHead className="w-[10%] text-center font-bold text-slate-700">ITBIS</TableHead>
-                                            <TableHead className="w-[15%] text-right font-bold text-slate-700">Total</TableHead>
+                                        <TableRow className="bg-muted/30 hover:bg-transparent">
+                                            <TableHead className="w-[45%] font-bold text-foreground">Descripción</TableHead>
+                                            <TableHead className="w-[10%] text-center font-bold text-foreground">Cant.</TableHead>
+                                            <TableHead className="w-[20%] text-right font-bold text-foreground">Precio</TableHead>
+                                            <TableHead className="w-[10%] text-center font-bold text-foreground">ITBIS</TableHead>
+                                            <TableHead className="w-[15%] text-right font-bold text-foreground">Total</TableHead>
                                             <TableHead className="w-[50px]"></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {items.map(item => (
-                                            <TableRow key={item.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/30">
+                                            <TableRow key={item.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20">
                                                 <TableCell>
                                                     <Input
                                                         value={item.description}
                                                         onChange={e => updateItem(item.id, "description", e.target.value)}
                                                         placeholder="Nombre del servicio o producto..."
-                                                        className="border-none bg-transparent shadow-none px-0 focus-visible:ring-0 font-medium text-slate-800 h-10"
+                                                        className="border-none bg-transparent shadow-none px-0 focus-visible:ring-0 font-medium text-foreground h-10 placeholder:opacity-100"
                                                     />
                                                 </TableCell>
                                                 <TableCell>
@@ -378,7 +378,7 @@ function NewQuoteForm() {
                                                         value={item.quantity}
                                                         onKeyDown={(e: any) => handleNumericKeyDown(e, false)}
                                                         onChange={e => updateItem(item.id, "quantity", e.target.value)}
-                                                        className="text-center h-10"
+                                                        className="text-center h-10 text-foreground"
                                                     />
                                                 </TableCell>
                                                 <TableCell>
@@ -388,7 +388,7 @@ function NewQuoteForm() {
                                                         value={item.price}
                                                         onKeyDown={(e: any) => handleNumericKeyDown(e, true)}
                                                         onChange={e => updateItem(item.id, "price", e.target.value)}
-                                                        className="text-right h-10"
+                                                        className="text-right h-10 text-foreground"
                                                     />
                                                 </TableCell>
                                                 <TableCell className="text-center">
@@ -403,7 +403,7 @@ function NewQuoteForm() {
                                                         />
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="font-black text-right text-slate-900">
+                                                <TableCell className="font-black text-right text-foreground">
                                                     {formatCurrency(Number(item.quantity) * Number(item.price))}
                                                 </TableCell>
                                                 <TableCell className="text-right">
@@ -412,7 +412,7 @@ function NewQuoteForm() {
                                                             variant="ghost"
                                                             size="icon"
                                                             onClick={() => removeItem(item.id)}
-                                                            className="text-slate-300 hover:text-red-500 w-8 h-8"
+                                                            className="text-muted-foreground hover:text-red-500 w-8 h-8"
                                                         >
                                                             ✕
                                                         </Button>
@@ -424,23 +424,23 @@ function NewQuoteForm() {
                                 </Table>
                             </div>
 
-                            <Button type="button" variant="outline" size="sm" onClick={addItem} className="mt-6 border-dashed border-2 border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/50 w-full font-bold">
+                            <Button type="button" variant="outline" size="sm" onClick={addItem} className="mt-6 border-dashed border-2 border-border text-muted-foreground hover:text-primary hover:border-primary/50 hover:bg-primary/5 w-full font-bold">
                                 + Agregar otro ítem
                             </Button>
 
                             <div className="flex justify-end mt-10">
-                                <div className="bg-slate-50 p-6 rounded-2xl w-full md:w-80 space-y-3 border border-slate-100">
-                                    <div className="flex justify-between items-center text-sm font-medium text-slate-500">
+                                <div className="bg-muted/50 p-6 rounded-2xl w-full md:w-80 space-y-3 border border-border">
+                                    <div className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                                         <span>Subtotal:</span>
-                                        <span className="font-bold text-slate-800">{formatCurrency(subtotal)}</span>
+                                        <span className="font-bold text-foreground">{formatCurrency(subtotal)}</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-sm font-medium text-slate-500">
+                                    <div className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                                         <span>ITBIS (18%):</span>
-                                        <span className="font-bold text-slate-800">{formatCurrency(itbis)}</span>
+                                        <span className="font-bold text-foreground">{formatCurrency(itbis)}</span>
                                     </div>
-                                    <div className="flex justify-between items-center font-black text-xl border-t-2 border-slate-200 pt-3 mt-3">
-                                        <span className="text-slate-900 uppercase tracking-tighter">Total:</span>
-                                        <span className="text-indigo-700 drop-shadow-sm">{formatCurrency(total)}</span>
+                                    <div className="flex justify-between items-center font-black text-xl border-t-2 border-border pt-3 mt-3">
+                                        <span className="text-foreground uppercase tracking-tighter">Total:</span>
+                                        <span className="text-primary drop-shadow-sm">{formatCurrency(total)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -449,7 +449,7 @@ function NewQuoteForm() {
 
                     <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
                         <Link href="/cotizaciones" className="w-full sm:w-auto">
-                            <Button variant="outline" type="button" className="w-full h-12 text-slate-500 font-bold px-8">Cancelar</Button>
+                            <Button variant="outline" type="button" className="w-full h-12 text-muted-foreground font-bold px-8">Cancelar</Button>
                         </Link>
                         <Button
                             type="submit"

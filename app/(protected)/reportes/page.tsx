@@ -30,6 +30,7 @@ export default function ReportsPage() {
     const [disclaimerOpen, setDisclaimerOpen] = useState(false);
     const [reportToDownload, setReportToDownload] = useState<"606" | "607" | null>(null);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
     const months = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -75,10 +76,23 @@ export default function ReportsPage() {
     const handleDisclaimerConfirm = async () => {
         if (!reportToDownload) return;
         setIsDownloading(true);
+        setValidationErrors([]);
         try {
+            // Pre-validación obligatoria antes de descargar
+            const validateRes = reportToDownload === "607"
+                ? await api.validateReport607(selectedMonth, selectedYear)
+                : await api.validateReport606(selectedMonth, selectedYear);
+
+            if (!validateRes.valid && validateRes.errors?.length) {
+                setValidationErrors(validateRes.errors);
+                return;
+            }
+
             if (reportToDownload === "607") await doDownload607();
             else await doDownload606();
             toast.success(`Reporte ${reportToDownload} descargado correctamente`);
+            setDisclaimerOpen(false);
+            setReportToDownload(null);
         } catch (e) {
             console.error(e);
             toast.error("Error al descargar el reporte. Intenta de nuevo.");
@@ -89,6 +103,7 @@ export default function ReportsPage() {
 
     const openDisclaimer = (report: "606" | "607") => {
         setReportToDownload(report);
+        setValidationErrors([]);
         setDisclaimerOpen(true);
     };
 
@@ -289,11 +304,12 @@ export default function ReportsPage() {
             {reportToDownload && (
                 <FiscalDisclaimerModal
                     open={disclaimerOpen}
-                    onOpenChange={(open) => { setDisclaimerOpen(open); if (!open) setReportToDownload(null); }}
+                    onOpenChange={(open) => { setDisclaimerOpen(open); if (!open) { setReportToDownload(null); setValidationErrors([]); } }}
                     reportType={reportToDownload}
                     reportLabel={reportToDownload === "607" ? "Ventas de Bienes y Servicios" : "Compras y Gastos"}
                     onConfirmDownload={handleDisclaimerConfirm}
                     isDownloading={isDownloading}
+                    validationErrors={validationErrors}
                 />
             )}
 
@@ -304,7 +320,7 @@ export default function ReportsPage() {
                 <div>
                     <h4 className="font-black text-foreground text-sm italic">Recordatorio Fiscal</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed mt-1">
-                        Recuerda que los reportes 607 deben presentarse a más tardar el día 15 de cada mes. Nuestro sistema e-CF asegura que tus correlativos estén siempre en orden para evitar multas innecesarias.
+                        Los reportes 606 y 607 deben presentarse antes del día 15 del mes siguiente. Pre-valida los archivos con la herramienta oficial de la DGII antes de enviarlos. Los correlativos NCF se mantienen en orden en el sistema.
                     </p>
                 </div>
             </div>

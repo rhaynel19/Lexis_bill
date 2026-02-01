@@ -8,21 +8,26 @@ import { toast } from "sonner";
 
 export default function AdminCEODashboard() {
     const [stats, setStats] = useState<any>(null);
+    const [metrics, setMetrics] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchStats = async () => {
+        const fetchData = async () => {
             try {
                 const { api } = await import("@/lib/api-service");
-                const data = await api.getAdminStats();
-                setStats(data);
+                const [statsData, metricsData] = await Promise.all([
+                    api.getAdminStats(),
+                    api.getAdminMetrics().catch(() => null)
+                ]);
+                setStats(statsData);
+                setMetrics(metricsData);
             } catch (e) {
                 toast.error("Error al cargar estadísticas.");
             } finally {
                 setIsLoading(false);
             }
         };
-        fetchStats();
+        fetchData();
     }, []);
 
     const formatCurrency = (n: number) =>
@@ -44,6 +49,65 @@ export default function AdminCEODashboard() {
                 <h1 className="text-2xl font-bold">Estadísticas CEO</h1>
                 <p className="text-muted-foreground text-sm">Métricas clave del negocio LexisBill</p>
             </div>
+
+            {/* Métricas SaaS (MRR, Churn, ARPU, etc.) */}
+            {metrics && (
+                <div>
+                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5" /> Métricas SaaS
+                    </h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs font-medium text-muted-foreground">MRR</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <span className="text-xl font-bold">{formatCurrency(metrics.mrr ?? 0)}</span>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs font-medium text-muted-foreground">Revenue Total</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <span className="text-xl font-bold">{formatCurrency(metrics.revenueTotal ?? 0)}</span>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs font-medium text-muted-foreground">ARPU</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <span className="text-xl font-bold">{formatCurrency(metrics.arpu ?? 0)}</span>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs font-medium text-muted-foreground">Churn %</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <span className="text-xl font-bold">{(metrics.churn ?? 0)}%</span>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs font-medium text-muted-foreground">Growth %</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <span className="text-xl font-bold">{(metrics.growthRate ?? 0)}%</span>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs font-medium text-muted-foreground">Activos Pro</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <span className="text-xl font-bold">{metrics.activeUsers ?? 0}</span>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            )}
 
             {/* Usuarios */}
             <div>

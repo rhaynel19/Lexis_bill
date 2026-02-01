@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CommandMenu } from "@/components/command-menu";
-import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt, CreditCard } from "lucide-react";
+import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt, CreditCard, FolderLock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TrialHeaderBadge } from "@/components/TrialHeaderBadge";
@@ -234,6 +234,10 @@ function SidebarLinks({ isMobile = false, isAdmin = false, onLogout, onNavigate 
                 <NavLink href="/pagos" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 transition-colors text-amber-600 border-l-2 border-amber-500/40">
                     <CreditCard className="w-5 h-5 text-amber-600" />
                     <span className="text-sm font-semibold">Pagar</span>
+                </NavLink>
+                <NavLink href="/documentos" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                    <FolderLock className="w-5 h-5 text-sidebar-foreground/60" />
+                    <span className="text-sm">Documentos</span>
                 </NavLink>
                 <NavLink href="/configuracion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
                     <Settings className="w-5 h-5 text-sidebar-foreground/60" />
