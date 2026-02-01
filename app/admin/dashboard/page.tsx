@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, FileText, DollarSign, BarChart3, CreditCard, Loader2 } from "lucide-react";
+import { Users, FileText, DollarSign, BarChart3, CreditCard, Loader2, Handshake, TrendingUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -9,18 +9,21 @@ import { toast } from "sonner";
 export default function AdminCEODashboard() {
     const [stats, setStats] = useState<any>(null);
     const [metrics, setMetrics] = useState<any>(null);
+    const [partnerStats, setPartnerStats] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const { api } = await import("@/lib/api-service");
-                const [statsData, metricsData] = await Promise.all([
+                const [statsData, metricsData, partnerStatsData] = await Promise.all([
                     api.getAdminStats(),
-                    api.getAdminMetrics().catch(() => null)
+                    api.getAdminMetrics().catch(() => null),
+                    api.getAdminPartnersStats().catch(() => null)
                 ]);
                 setStats(statsData);
                 setMetrics(metricsData);
+                setPartnerStats(partnerStatsData);
             } catch (e) {
                 toast.error("Error al cargar estadísticas.");
             } finally {
@@ -223,6 +226,78 @@ export default function AdminCEODashboard() {
                     </Card>
                 </div>
             </div>
+
+            {/* Programa Partners */}
+            {partnerStats && (
+                <div>
+                    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <Handshake className="w-5 h-5 text-amber-500" /> Programa Partners
+                    </h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+                        <Card className="border-amber-200/50 dark:border-amber-900/30">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs font-medium text-muted-foreground">Partners activos</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <span className="text-2xl font-bold">{partnerStats.totalPartners ?? 0}</span>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-amber-200/50 dark:border-amber-900/30">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs font-medium text-muted-foreground">Cartera activa</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <span className="text-2xl font-bold text-amber-600">{partnerStats.activeReferrals ?? 0}</span>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {partnerStats.trialReferrals ?? 0} en prueba · {partnerStats.churnedReferrals ?? 0} churned
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-amber-200/50 dark:border-amber-900/30">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                    <TrendingUp className="w-3.5 h-3.5" /> Revenue canal
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <span className="text-2xl font-bold">{formatCurrency(partnerStats.revenueFromPartners ?? 0)}</span>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-amber-200/50 dark:border-amber-900/30">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs font-medium text-muted-foreground">Comisiones pagadas</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <span className="text-2xl font-bold text-green-600">{formatCurrency(partnerStats.commissionsPaid ?? 0)}</span>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-amber-200/50 dark:border-amber-900/30">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs font-medium text-muted-foreground">Comisiones pendientes</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <span className="text-2xl font-bold text-amber-600">{formatCurrency(partnerStats.commissionsPending ?? 0)}</span>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-amber-200/50 dark:border-amber-900/30">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs font-medium text-muted-foreground">Pendientes aprobar</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <span className="text-2xl font-bold">{partnerStats.pendingApprovals ?? 0}</span>
+                                {partnerStats.pendingApprovals > 0 && (
+                                    <Link href="/admin/partners" className="block text-xs text-primary mt-1 hover:underline">
+                                        Ver →
+                                    </Link>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <Link href="/admin/partners">
+                        <span className="text-sm text-amber-600 hover:text-amber-500 font-medium mt-2 inline-block">Ver dashboard de partners →</span>
+                    </Link>
+                </div>
+            )}
 
             {/* Negocio / Membresías */}
             <div>

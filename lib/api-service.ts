@@ -344,5 +344,58 @@ export const api = {
         const res = await secureFetch<any>(`${API_URL}/documents/${id}`, { method: "DELETE" });
         if (typeof localStorage !== "undefined") localStorage.removeItem("cache_user_documents");
         return res;
+    },
+
+    // Programa Partners
+    async validateReferralCode(code: string) {
+        return secureFetch<{ valid: boolean; partnerName?: string }>(`${API_URL}/referral/validate?code=${encodeURIComponent(code)}`);
+    },
+
+    async validateInviteToken(token: string) {
+        return secureFetch<{ valid: boolean; source?: string }>(`${API_URL}/referral/invite?token=${encodeURIComponent(token)}`);
+    },
+
+    async applyPartner(data: { name: string; phone?: string; inviteToken?: string }) {
+        return secureFetch<any>(`${API_URL}/partners/apply`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+    },
+
+    async getPartnerDashboard() {
+        return secureFetch<any>(`${API_URL}/partners/dashboard`);
+    },
+
+    async getPartnerMe() {
+        return secureFetch<any>(`${API_URL}/partners/me`);
+    },
+
+    async getAdminPartners() {
+        return secureFetch<any[]>(`${API_URL}/admin/partners`);
+    },
+
+    async getAdminPartnersStats() {
+        return secureFetch<any>(`${API_URL}/admin/partners/stats`);
+    },
+
+    async approvePartner(id: string) {
+        return secureFetch<any>(`${API_URL}/admin/partners/${id}/approve`, { method: "POST" });
+    },
+
+    async suspendPartner(id: string) {
+        return secureFetch<any>(`${API_URL}/admin/partners/${id}/suspend`, { method: "POST" });
+    },
+
+    async getPartnerCartera(partnerId: string) {
+        return secureFetch<{ partner: { name: string; referralCode: string }; cartera: any[] }>(`${API_URL}/admin/partners/${partnerId}/cartera`);
+    },
+
+    async createPartnerInvite(data?: { expiresDays?: number; maxUses?: number }) {
+        return secureFetch<{ inviteUrl: string; token: string; expiresAt: string; maxUses: number }>(`${API_URL}/admin/partners/invites`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data || {}),
+        });
     }
 };

@@ -234,7 +234,7 @@ const userSchema = new mongoose.Schema({
         startDate: { type: Date },
         endDate: { type: Date }
     },
-    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    role: { type: String, enum: ['user', 'admin', 'partner'], default: 'user' },
 
     // Identidad Fiscal (Asistente Inteligente)
     suggestedFiscalName: { type: String },
@@ -410,6 +410,92 @@ const Expense = mongoose.models.Expense || mongoose.model('Expense', expenseSche
 const Quote = mongoose.models.Quote || mongoose.model('Quote', quoteSchema);
 const UserDocument = mongoose.models.UserDocument || mongoose.model('UserDocument', userDocumentSchema);
 const FiscalAuditLog = mongoose.models.FiscalAuditLog || mongoose.model('FiscalAuditLog', fiscalAuditLogSchema);
+
+// --- PARTNER PROGRAM ---
+const partnerSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    referralCode: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    email: { type: String, required: true },
+    phone: { type: String },
+    tier: { type: String, enum: ['starter', 'growth', 'elite'], default: 'starter' },
+    commissionRate: { type: Number, default: 0.07 },
+    bankName: { type: String },
+    bankAccount: { type: String },
+    bankAccountType: { type: String, enum: ['ahorro', 'corriente'] },
+    status: { type: String, enum: ['pending', 'active', 'suspended'], default: 'pending' },
+    approvedAt: { type: Date },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    invitedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerInvite' },
+    termsAcceptedAt: { type: Date, required: true },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+partnerSchema.index({ referralCode: 1 });
+partnerSchema.index({ status: 1 });
+
+const partnerReferralSchema = new mongoose.Schema({
+    partnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    status: { type: String, enum: ['active', 'churned', 'trial'], default: 'trial' },
+    subscribedAt: { type: Date },
+    churnedAt: { type: Date },
+    createdAt: { type: Date, default: Date.now }
+});
+partnerReferralSchema.index({ partnerId: 1, status: 1 });
+partnerReferralSchema.index({ userId: 1 }, { unique: true });
+
+const partnerCommissionSchema = new mongoose.Schema({
+    partnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', required: true },
+    month: { type: String, required: true },
+    year: { type: Number, required: true },
+    activeClientsCount: { type: Number, default: 0 },
+    totalRevenue: { type: Number, default: 0 },
+    commissionRate: { type: Number },
+    commissionAmount: { type: Number, default: 0 },
+    status: { type: String, enum: ['pending', 'paid', 'cancelled'], default: 'pending' },
+    paidAt: { type: Date },
+    paymentRef: { type: String },
+    createdAt: { type: Date, default: Date.now }
+});
+partnerCommissionSchema.index({ partnerId: 1, month: 1 }, { unique: true });
+
+const Partner = mongoose.models.Partner || mongoose.model('Partner', partnerSchema);
+const PartnerReferral = mongoose.models.PartnerReferral || mongoose.model('PartnerReferral', partnerReferralSchema);
+const PartnerCommission = mongoose.models.PartnerCommission || mongoose.model('PartnerCommission', partnerCommissionSchema);
+
+// Invitaciones de Partner (modelo híbrido)
+const partnerInviteSchema = new mongoose.Schema({
+    token: { type: String, required: true, unique: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    usedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    usedAt: { type: Date },
+    expiresAt: { type: Date },
+    maxUses: { type: Number, default: 1 },
+    useCount: { type: Number, default: 0 },
+    status: { type: String, enum: ['active', 'used', 'expired'], default: 'active' },
+    createdAt: { type: Date, default: Date.now }
+});
+partnerInviteSchema.index({ token: 1 });
+partnerInviteSchema.index({ status: 1 });
+
+const PartnerInvite = mongoose.models.PartnerInvite || mongoose.model('PartnerInvite', partnerInviteSchema);
+
+function generateInviteToken() {
+    return 'INV' + Math.random().toString(36).slice(2, 10).toUpperCase() + Date.now().toString(36).slice(-4).toUpperCase();
+}
+
+function generateReferralCode(name) {
+    const base = (name || 'LB').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4) || 'LB';
+    const random = Math.random().toString(36).slice(2, 6).toUpperCase();
+    return base + random;
+}
+
+function getPartnerTier(activeCount) {
+    if (activeCount >= 51) return { tier: 'elite', rate: 0.10 };
+    if (activeCount >= 21) return { tier: 'growth', rate: 0.09 };
+    return { tier: 'starter', rate: 0.07 };
+}
 
 const { validate607Format, validate606Format, validateNcfStructure } = require('./dgii-validator');
 
@@ -669,6 +755,26 @@ app.post('/api/auth/register', async (req, res) => {
         });
 
         await newUser.save();
+
+        // === PROGRAMA PARTNERS: Registrar referido si hay código válido ===
+        const referralCode = sanitizeString(req.body.referralCode || '', 20).toUpperCase();
+        if (referralCode) {
+            try {
+                const partner = await Partner.findOne({ referralCode, status: 'active' });
+                if (partner) {
+                    await PartnerReferral.create({
+                        partnerId: partner._id,
+                        userId: newUser._id,
+                        status: plan === 'pro' ? 'active' : 'trial',
+                        subscribedAt: plan === 'pro' ? new Date() : null
+                    });
+                    log.info({ action: 'register', referralCode }, 'Referido vinculado a partner');
+                }
+            } catch (refErr) {
+                log.warn({ err: refErr.message }, 'Error vinculando referido');
+            }
+        }
+
         log.info({ action: 'register', success: true }, 'Usuario creado');
         res.status(201).json({ message: 'Usuario registrado exitosamente', plan: status });
     } catch (error) {
@@ -739,6 +845,9 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
     try {
         const user = req.user;
         const sub = getUserSubscription(user);
+        let partner = null;
+        const p = await Partner.findOne({ userId: user._id });
+        if (p) partner = { referralCode: p.referralCode, status: p.status, tier: p.tier };
         res.json({
             id: user._id,
             email: user.email,
@@ -747,7 +856,8 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
             rnc: user.rnc,
             role: user.role || 'user',
             subscription: sub,
-            fiscalStatus: { suggested: user.suggestedFiscalName, confirmed: user.confirmedFiscalName }
+            fiscalStatus: { suggested: user.suggestedFiscalName, confirmed: user.confirmedFiscalName },
+            partner
         });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -768,6 +878,182 @@ app.post('/api/auth/confirm-fiscal-name', verifyToken, async (req, res) => {
         res.json({ success: true, confirmedName });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// --- PARTNER PROGRAM ---
+// Validar código de referido (público)
+app.get('/api/referral/validate', async (req, res) => {
+    try {
+        const code = sanitizeString(req.query.code || '', 20).toUpperCase();
+        if (!code) return res.json({ valid: false });
+        const partner = await Partner.findOne({ referralCode: code, status: 'active' });
+        res.json({ valid: !!partner, partnerName: partner?.name });
+    } catch (e) {
+        res.json({ valid: false });
+    }
+});
+
+// Validar token de invitación partner (público)
+app.get('/api/referral/invite', async (req, res) => {
+    try {
+        const token = sanitizeString(req.query.token || '', 50);
+        if (!token) return res.json({ valid: false });
+        const invite = await PartnerInvite.findOne({ token, status: 'active' });
+        if (!invite) return res.json({ valid: false });
+        const now = new Date();
+        if (invite.expiresAt && now > invite.expiresAt) {
+            invite.status = 'expired';
+            await invite.save();
+            return res.json({ valid: false });
+        }
+        if (invite.maxUses && invite.useCount >= invite.maxUses) {
+            return res.json({ valid: false });
+        }
+        res.json({ valid: true, source: 'invite' });
+    } catch (e) {
+        res.json({ valid: false });
+    }
+});
+
+// Aplicar para ser Partner (requiere login)
+const partnerApplyLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    message: { message: 'Demasiadas solicitudes. Intenta en 1 hora.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+app.post('/api/partners/apply', verifyToken, partnerApplyLimiter, async (req, res) => {
+    try {
+        const userId = req.userId;
+        const existing = await User.findById(userId);
+        if (!existing) return res.status(404).json({ message: 'Usuario no encontrado' });
+
+        const name = sanitizeString(req.body.name || existing.name, 100);
+        const phone = sanitizeString(req.body.phone, 30);
+        const inviteToken = sanitizeString(req.body.inviteToken || '', 50);
+
+        const exists = await Partner.findOne({ userId });
+        if (exists) {
+            if (exists.status === 'pending') return res.status(400).json({ message: 'Ya tienes una solicitud pendiente.' });
+            if (exists.status === 'active') return res.status(400).json({ message: 'Ya eres partner activo.', referralCode: exists.referralCode });
+        }
+
+        let invitedBy = null;
+        if (inviteToken) {
+            const invite = await PartnerInvite.findOne({ token: inviteToken, status: 'active' });
+            if (invite) {
+                const now = new Date();
+                if ((!invite.expiresAt || now <= invite.expiresAt) && (!invite.maxUses || invite.useCount < invite.maxUses)) {
+                    invitedBy = invite._id;
+                    invite.useCount = (invite.useCount || 0) + 1;
+                    if (invite.maxUses && invite.useCount >= invite.maxUses) invite.status = 'used';
+                    invite.usedBy = userId;
+                    invite.usedAt = now;
+                    await invite.save();
+                }
+            }
+        }
+
+        let referralCode = generateReferralCode(name);
+        while (await Partner.findOne({ referralCode })) referralCode = generateReferralCode(name + Math.random());
+
+        const partnerData = {
+            userId,
+            referralCode,
+            name,
+            email: existing.email,
+            phone,
+            status: 'pending',
+            termsAcceptedAt: new Date()
+        };
+        if (invitedBy) partnerData.invitedBy = invitedBy;
+        const partner = new Partner(partnerData);
+        await partner.save();
+
+        if (existing.role !== 'partner') {
+            existing.role = 'partner';
+            await existing.save();
+        }
+
+        res.status(201).json({
+            message: 'Solicitud enviada. Te contactaremos cuando sea aprobada.',
+            status: 'pending'
+        });
+    } catch (e) {
+        log.error({ err: e.message }, 'Error en partner apply');
+        res.status(500).json({ message: 'Error al enviar solicitud' });
+    }
+});
+
+const verifyPartner = async (req, res, next) => {
+    const p = await Partner.findOne({ userId: req.userId, status: 'active' });
+    if (!p) return res.status(403).json({ message: 'Acceso denegado. No eres partner activo.' });
+    req.partner = p;
+    next();
+};
+
+app.get('/api/partners/me', verifyToken, verifyPartner, async (req, res) => {
+    try {
+        const p = req.partner;
+        const activeCount = await PartnerReferral.countDocuments({ partnerId: p._id, status: 'active' });
+        const trialCount = await PartnerReferral.countDocuments({ partnerId: p._id, status: 'trial' });
+        const tier = getPartnerTier(activeCount);
+        if (tier.tier !== p.tier) {
+            p.tier = tier.tier;
+            p.commissionRate = tier.rate;
+            await p.save();
+        }
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lexisbill.com.do';
+        res.json({
+            referralCode: p.referralCode,
+            referralUrl: `${baseUrl}/registro?ref=${p.referralCode}`,
+            tier: p.tier,
+            commissionRate: p.commissionRate,
+            activeClients: activeCount,
+            trialClients: trialCount
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/partners/dashboard', verifyToken, verifyPartner, async (req, res) => {
+    try {
+        const p = req.partner;
+        const activeCount = await PartnerReferral.countDocuments({ partnerId: p._id, status: 'active' });
+        const trialCount = await PartnerReferral.countDocuments({ partnerId: p._id, status: 'trial' });
+        const churnedCount = await PartnerReferral.countDocuments({ partnerId: p._id, status: 'churned' });
+        const tier = getPartnerTier(activeCount);
+        const pricePerClient = 950;
+        const totalRevenue = activeCount * pricePerClient;
+        const commissionAmount = Math.round(totalRevenue * tier.rate);
+
+        const commissions = await PartnerCommission.find({ partnerId: p._id })
+            .sort({ year: -1, month: -1 }).limit(12).lean();
+
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lexisbill.com.do';
+        res.json({
+            referralCode: p.referralCode,
+            referralUrl: `${baseUrl}/registro?ref=${p.referralCode}`,
+            tier: tier.tier,
+            commissionRate: tier.rate,
+            activeClients: activeCount,
+            trialClients: trialCount,
+            churnedClients: churnedCount,
+            totalRevenue,
+            commissionThisMonth: commissionAmount,
+            commissions: commissions.map(c => ({
+                month: c.month,
+                year: c.year,
+                activeClients: c.activeClientsCount,
+                amount: c.commissionAmount,
+                status: c.status
+            }))
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -918,6 +1204,12 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
         pr.processedBy = req.userId;
         await pr.save();
 
+        // Marcar referido como activo si es partner referral
+        await PartnerReferral.findOneAndUpdate(
+            { userId: pr.userId },
+            { status: 'active', subscribedAt: now }
+        );
+
         res.json({ message: 'Pago aprobado. Membresía activada por 30 días.' });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -947,6 +1239,172 @@ app.post('/api/admin/reject-payment/:id', verifyToken, verifyAdmin, async (req, 
         await pr.save();
 
         res.json({ message: 'Solicitud rechazada.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- ADMIN: Programa Partners ---
+app.get('/api/admin/partners', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const partners = await Partner.find().sort({ createdAt: -1 }).populate('userId', 'name email').lean();
+        const withStats = await Promise.all(partners.map(async (p) => {
+            const active = await PartnerReferral.countDocuments({ partnerId: p._id, status: 'active' });
+            const trial = await PartnerReferral.countDocuments({ partnerId: p._id, status: 'trial' });
+            const churned = await PartnerReferral.countDocuments({ partnerId: p._id, status: 'churned' });
+            const totalCommissions = await PartnerCommission.aggregate([
+                { $match: { partnerId: p._id, status: 'paid' } },
+                { $group: { _id: null, total: { $sum: '$commissionAmount' } } }
+            ]);
+            const pendingCommissions = await PartnerCommission.aggregate([
+                { $match: { partnerId: p._id, status: 'pending' } },
+                { $group: { _id: null, total: { $sum: '$commissionAmount' } } }
+            ]);
+            return {
+                ...p,
+                activeClients: active,
+                trialClients: trial,
+                churnedClients: churned,
+                totalEarned: totalCommissions[0]?.total || 0,
+                pendingPayout: pendingCommissions[0]?.total || 0
+            };
+        }));
+        res.json(withStats);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Crear invitación partner (admin)
+app.post('/api/admin/partners/invites', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const days = Math.min(30, Math.max(1, parseInt(req.body.expiresDays, 10) || 7));
+        const maxUses = Math.min(100, Math.max(1, parseInt(req.body.maxUses, 10) || 1));
+        let token = generateInviteToken();
+        while (await PartnerInvite.findOne({ token })) token = generateInviteToken();
+
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + days);
+
+        const invite = new PartnerInvite({
+            token,
+            createdBy: req.userId,
+            expiresAt,
+            maxUses,
+            status: 'active'
+        });
+        await invite.save();
+
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lexisbill.com.do';
+        const inviteUrl = `${baseUrl}/unirse-como-partner?invite=${token}`;
+
+        res.status(201).json({
+            message: 'Invitación creada',
+            token,
+            inviteUrl,
+            expiresAt: invite.expiresAt,
+            maxUses
+        });
+    } catch (e) {
+        log.error({ err: e.message }, 'Error creando invitación partner');
+        res.status(500).json({ message: 'Error al crear invitación' });
+    }
+});
+
+app.get('/api/admin/partners/stats', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const total = await Partner.countDocuments({ status: 'active' });
+        const pending = await Partner.countDocuments({ status: 'pending' });
+        const suspended = await Partner.countDocuments({ status: 'suspended' });
+        const totalReferrals = await PartnerReferral.countDocuments();
+        const activeReferrals = await PartnerReferral.countDocuments({ status: 'active' });
+        const trialReferrals = await PartnerReferral.countDocuments({ status: 'trial' });
+        const churnedReferrals = await PartnerReferral.countDocuments({ status: 'churned' });
+        const pricePerClient = 950;
+        const revenueFromPartners = activeReferrals * pricePerClient;
+        const totalCommissionsPaid = await PartnerCommission.aggregate([
+            { $match: { status: 'paid' } },
+            { $group: { _id: null, total: { $sum: '$commissionAmount' } } }
+        ]);
+        const totalCommissionsPending = await PartnerCommission.aggregate([
+            { $match: { status: 'pending' } },
+            { $group: { _id: null, total: { $sum: '$commissionAmount' } } }
+        ]);
+        res.json({
+            totalPartners: total,
+            pendingApprovals: pending,
+            suspendedPartners: suspended,
+            totalReferrals,
+            activeReferrals,
+            trialReferrals,
+            churnedReferrals,
+            revenueFromPartners,
+            commissionsPaid: totalCommissionsPaid[0]?.total || 0,
+            commissionsPending: totalCommissionsPending[0]?.total || 0
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Cartera de un partner (referidos)
+app.get('/api/admin/partners/:id/cartera', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID inválido' });
+        const partner = await Partner.findById(req.params.id);
+        if (!partner) return res.status(404).json({ message: 'Partner no encontrado' });
+
+        const referidos = await PartnerReferral.find({ partnerId: partner._id })
+            .populate('userId', 'name email rnc')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const cartera = referidos.map(r => ({
+            userId: r.userId?._id,
+            name: r.userId?.name,
+            email: r.userId?.email,
+            rnc: r.userId?.rnc,
+            status: r.status,
+            subscribedAt: r.subscribedAt,
+            churnedAt: r.churnedAt,
+            createdAt: r.createdAt
+        }));
+
+        res.json({
+            partner: { name: partner.name, referralCode: partner.referralCode },
+            cartera
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/admin/partners/:id/approve', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID inválido' });
+        const p = await Partner.findById(req.params.id);
+        if (!p) return res.status(404).json({ message: 'Partner no encontrado' });
+        if (p.status === 'active') return res.status(400).json({ message: 'Partner ya está aprobado' });
+        p.status = 'active';
+        p.approvedAt = new Date();
+        p.approvedBy = req.userId;
+        p.updatedAt = new Date();
+        await p.save();
+        res.json({ message: 'Partner aprobado', referralCode: p.referralCode });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/admin/partners/:id/suspend', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID inválido' });
+        const p = await Partner.findById(req.params.id);
+        if (!p) return res.status(404).json({ message: 'Partner no encontrado' });
+        p.status = 'suspended';
+        p.updatedAt = new Date();
+        await p.save();
+        res.json({ message: 'Partner suspendido' });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

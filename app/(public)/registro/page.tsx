@@ -23,6 +23,8 @@ function RegisterForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const plan = searchParams.get("plan"); // 'pro' or null (trial)
+    const ref = searchParams.get("ref") || ""; // Código de referido
+    const invite = searchParams.get("invite") || ""; // Invitación partner
 
     const [form, setForm] = useState({
         email: "",
@@ -87,7 +89,7 @@ function RegisterForm() {
         setIsLoading(true);
 
         try {
-            await api.register({ ...form, plan, suggestedName: rncStatus.name });
+            await api.register({ ...form, plan, suggestedName: rncStatus.name, referralCode: ref || undefined });
 
             // Auto login after register (auth via cookie HttpOnly)
             const loginData = await api.login(form.email, form.password);
@@ -101,8 +103,8 @@ function RegisterForm() {
                 biometric: false
             }));
 
-            toast.success("Cuenta creada. Redirigiendo al dashboard…");
-            router.push("/dashboard");
+            toast.success("Cuenta creada. Redirigiendo…");
+            router.push(invite ? `/unirse-como-partner?invite=${invite}` : "/dashboard");
         } catch (err: any) {
             // Manejo de errores amigable
             if (err.message === "Failed to fetch") {
@@ -144,6 +146,12 @@ function RegisterForm() {
                                 ? 'Suscripción automática por RD$950/mes'
                                 : 'Acceso total por 15 días. Sin tarjetas.'}
                         </CardDescription>
+                        {ref && (
+                            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 text-xs font-semibold border border-amber-200">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                Referido por un Partner Lexis Bill
+                            </div>
+                        )}
                     </CardHeader>
                     <CardContent className="px-6 md:px-10 pb-10">
                         <form onSubmit={handleRegister} className="space-y-5">

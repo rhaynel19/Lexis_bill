@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CommandMenu } from "@/components/command-menu";
-import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt, CreditCard, FolderLock, Users } from "lucide-react";
+import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt, CreditCard, FolderLock, Users, Handshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TrialHeaderBadge } from "@/components/TrialHeaderBadge";
@@ -21,7 +21,7 @@ export default function ProtectedLayout({
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
     const [menuOpen, setMenuOpen] = useState(false);
-    const [userFromApi, setUserFromApi] = useState<{ role?: string } | null>(null);
+    const [userFromApi, setUserFromApi] = useState<{ role?: string; partner?: { referralCode: string; status: string } } | null>(null);
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -115,7 +115,7 @@ export default function ProtectedLayout({
                                     <SheetTitle className="text-sidebar-primary text-left uppercase tracking-tighter font-black">LEXIS BILL</SheetTitle>
                                 </SheetHeader>
                                 <nav className="flex-1 overflow-y-auto p-4">
-                                    <SidebarLinks isMobile isAdmin={userFromApi?.role === "admin"} onLogout={handleLogout} onNavigate={() => setMenuOpen(false)} />
+                                    <SidebarLinks isMobile isAdmin={userFromApi?.role === "admin"} isPartner={userFromApi?.partner?.status === "active"} onLogout={handleLogout} onNavigate={() => setMenuOpen(false)} />
                                 </nav>
                             </SheetContent>
                         </Sheet>
@@ -132,7 +132,7 @@ export default function ProtectedLayout({
                 {/* Desktop Sidebar */}
                 <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border h-full overflow-y-auto">
                     <nav className="flex-1 px-4 py-8 flex flex-col">
-                        <SidebarLinks isAdmin={userFromApi?.role === "admin"} onLogout={handleLogout} />
+                        <SidebarLinks isAdmin={userFromApi?.role === "admin"} isPartner={userFromApi?.partner?.status === "active"} onLogout={handleLogout} />
                     </nav>
                     <div className="p-6 border-t border-sidebar-border/50 text-center">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Lexis Bill Pro</p>
@@ -199,7 +199,7 @@ function AdminNavLink({ isAdmin }: { isAdmin: boolean }) {
     );
 }
 
-function SidebarLinks({ isMobile = false, isAdmin = false, onLogout, onNavigate }: { isMobile?: boolean; isAdmin?: boolean; onLogout?: () => void; onNavigate?: () => void }) {
+function SidebarLinks({ isMobile = false, isAdmin = false, isPartner = false, onLogout, onNavigate }: { isMobile?: boolean; isAdmin?: boolean; isPartner?: boolean; onLogout?: () => void; onNavigate?: () => void }) {
     const NavLink = ({ href, children, ...props }: { href: string; children: React.ReactNode; [k: string]: unknown }) => (
         <Link href={href} onClick={onNavigate} className={props.className as string} {...props}>
             {children}
@@ -250,6 +250,12 @@ function SidebarLinks({ isMobile = false, isAdmin = false, onLogout, onNavigate 
                     <Settings className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Configuración</span>
                 </NavLink>
+                {isPartner && (
+                    <NavLink href="/partners" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-amber-500/20 transition-colors text-amber-600 border-l-2 border-amber-500/50 mt-2">
+                        <Handshake className="w-5 h-5" />
+                        <span className="text-sm font-medium">Partner</span>
+                    </NavLink>
+                )}
                 <AdminNavLink isAdmin={isAdmin} />
             </div>
 

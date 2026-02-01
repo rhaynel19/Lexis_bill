@@ -30,6 +30,7 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-8">
             <Link href="#beneficios" className="text-sm font-medium hover:text-lexis-gold transition-colors">Beneficios</Link>
             <Link href="#precio" className="text-sm font-medium hover:text-lexis-gold transition-colors">Precio</Link>
+            <Link href="/unirse-como-partner" className="text-sm font-medium hover:text-lexis-gold transition-colors">Ser Partner</Link>
             {isLoggedIn ? (
               <Link href="/dashboard">
                 <Button className="bg-lexis-gold text-lexis-bg-deep hover:bg-lexis-gold-hover transition-all text-sm font-bold uppercase tracking-widest px-8 rounded-md shadow-lg shadow-lexis-gold/20">
@@ -56,6 +57,7 @@ export default function LandingPage() {
                 <div className="flex flex-col gap-8 text-center">
                   <Link href="#beneficios" className="text-xl font-serif hover:text-lexis-gold">Beneficios</Link>
                   <Link href="#precio" className="text-xl font-serif hover:text-lexis-gold">Precio</Link>
+                  <Link href="/unirse-como-partner" className="text-xl font-serif hover:text-lexis-gold">Ser Partner</Link>
                   {isLoggedIn ? (
                     <Link href="/dashboard">
                       <Button className="w-full bg-lexis-gold text-lexis-bg-deep font-bold py-6 rounded-xl shadow-lg shadow-lexis-gold/20 text-xl">
