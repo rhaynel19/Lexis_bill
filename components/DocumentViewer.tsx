@@ -153,7 +153,7 @@ export function DocumentViewer({
     const companyName = getCompanyName();
     const companyRnc = getCompanyRnc();
     const documentNumber = type === "quote"
-        ? (document as Quote).id
+        ? `COT-${(document as Quote).id.slice(-8)}`
         : (document as Invoice).ncfSequence || (document as Invoice).id;
 
     const documentDate = document.date;
@@ -325,7 +325,8 @@ export function DocumentViewer({
                                 variant="outline"
                                 onClick={handleEdit}
                                 className="col-span-1 h-12 order-3 sm:order-2 border-accent/20 text-accent hover:bg-accent/5 font-bold flex items-center justify-center p-0 sm:px-4"
-                                title="Editar"
+                                title="Editar cotización"
+                                aria-label="Editar cotización"
                             >
                                 <Pencil className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
                                 <span className="hidden sm:inline">Editar</span>
@@ -345,7 +346,8 @@ export function DocumentViewer({
                                 }}
                                 variant="outline"
                                 className="col-span-1 h-12 text-success border-success/20 hover:bg-success/5 order-2 sm:order-2 font-bold flex items-center justify-center p-0 sm:px-4"
-                                title="WhatsApp"
+                                title="Enviar por WhatsApp"
+                                aria-label="Enviar por WhatsApp"
                             >
                                 <MessageCircle className="w-6 h-6 sm:w-5 sm:h-5 sm:mr-2" />
                                 <span className="hidden sm:inline">WhatsApp</span>
@@ -358,10 +360,11 @@ export function DocumentViewer({
                                 disabled={isGeneratingPDF}
                                 className="col-span-1 sm:col-span-auto h-12 bg-primary hover:bg-primary/90 text-primary-foreground order-1 sm:order-3 font-bold shadow-lg shadow-primary/20 flex items-center justify-center p-0 sm:px-8"
                                 title="Descargar PDF"
+                                aria-label={isGeneratingPDF ? "Generando PDF" : "Descargar PDF"}
                             >
                                 <Download className="w-6 h-6 sm:w-5 sm:h-5 sm:mr-2" />
-                                <span className="hidden sm:inline">{isGeneratingPDF ? "..." : "PDF"}</span>
-                                <span className="hidden md:inline ml-1">{!isGeneratingPDF && "Descargar PDF"}</span>
+                                <span className="hidden sm:inline">{isGeneratingPDF ? "Generando…" : "PDF"}</span>
+                                <span className="hidden md:inline ml-1">{isGeneratingPDF ? "Generando…" : "Descargar PDF"}</span>
                             </Button>
                         )}
                     </div>

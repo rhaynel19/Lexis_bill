@@ -17,6 +17,7 @@ import { DocumentPreview } from "@/components/DocumentPreview";
 import { validateRNCOrCedula } from "@/lib/validators";
 import { Suspense } from "react";
 import { api } from "@/lib/api-service";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
 interface QuoteItem {
     id: string;
@@ -260,11 +261,12 @@ function NewQuoteForm() {
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-5xl">
+            <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Cotizaciones", href: "/cotizaciones" }, { label: editId ? "Editar cotización" : "Nueva cotización" }]} className="mb-4 text-muted-foreground" />
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
                     <h1 className="text-3xl font-black text-foreground font-serif lowercase tracking-tighter">
-                        {editId ? `editando ${editId}` : "nueva cotización"}
+                        {editId ? `editando cotización` : "nueva cotización"}
                     </h1>
                     <p className="text-muted-foreground font-medium">Cree una propuesta profesional para su cliente</p>
                 </div>

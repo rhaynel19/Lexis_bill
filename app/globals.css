@@ -234,6 +234,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    /* Transición suave al cambiar de tema para mejor experiencia */
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   /* Placeholders legibles en todos los temas */

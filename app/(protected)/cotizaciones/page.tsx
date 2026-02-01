@@ -15,6 +15,7 @@ import { downloadQuotePDF, QuoteData } from "@/lib/pdf-generator";
 import { generateQuoteWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp-utils";
 import { toast } from "sonner";
 import { api } from "@/lib/api-service";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
 export default function Quotes() {
     const router = useRouter();
@@ -95,7 +96,9 @@ export default function Quotes() {
             toast.success("✅ PDF descargado exitosamente");
         } catch (error) {
             console.error("Error generando PDF:", error);
-            toast.error("Error al generar PDF");
+            toast.error("Error al generar PDF", {
+                action: { label: "Reintentar", onClick: () => handleDownloadPDF() },
+            });
         } finally {
             setIsGeneratingPDF(false);
         }
@@ -111,6 +114,7 @@ export default function Quotes() {
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-6xl">
+            <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Cotizaciones" }]} className="mb-4 text-slate-500" />
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 font-serif lowercase tracking-tighter">Cotizaciones</h1>
@@ -168,7 +172,7 @@ export default function Quotes() {
                             ) : (
                                 quotes.map((q) => (
                                     <TableRow key={q.id} className="hover:bg-slate-50/50 border-b border-slate-50 last:border-0 transition-colors">
-                                        <TableCell className="font-mono text-xs text-slate-500 dark:text-slate-400 font-bold">{q.id}</TableCell>
+                                        <TableCell className="font-mono text-xs text-slate-500 dark:text-slate-400 font-bold">{q.id?.length > 8 ? `COT-${q.id.slice(-8)}` : q.id}</TableCell>
                                         <TableCell>
                                             <div>
                                                 <p className="font-bold text-slate-800 dark:text-slate-200">{q.clientName}</p>

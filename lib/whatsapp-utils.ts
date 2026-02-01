@@ -40,7 +40,8 @@ export function generateQuoteWhatsAppMessage(quote: {
 
     const fromText = companyName ? ` de parte de *${companyName}*` : "";
 
-    return `Hola *${quote.clientName}*! 🇩🇴${fromText}\n\nEs un placer saludarle. Le envío formalmente su *cotización* con el número *${quote.id}* por valor de *${formatCurrency(quote.total)}*.\n\n📎 Te envío adjunto el PDF de la cotización.\n\nQuedo a su disposición para cualquier consulta. ¡Feliz resto del día!`;
+    const quoteRef = quote.id?.length > 8 ? `COT-${quote.id.slice(-8)}` : quote.id;
+    return `Hola *${quote.clientName}*! 🇩🇴${fromText}\n\nEs un placer saludarle. Le envío formalmente su *cotización* con el número *${quoteRef}* por valor de *${formatCurrency(quote.total)}*.\n\n📎 Te envío adjunto el PDF de la cotización.\n\nQuedo a su disposición para cualquier consulta. ¡Feliz resto del día!`;
 }
 
 /**

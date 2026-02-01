@@ -167,7 +167,8 @@ export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<jsPD
     doc.setFontSize(12);
     doc.setTextColor(...goldColor);
     if (invoiceData.type === "quote") {
-        doc.text(`Número: ${invoiceData.sequenceNumber}`, titleX, margin.top + 20, { align: "right" });
+        const quoteNum = invoiceData.sequenceNumber?.length > 8 ? `COT-${invoiceData.sequenceNumber.slice(-8)}` : (invoiceData.sequenceNumber || "COT");
+        doc.text(`Número: ${quoteNum}`, titleX, margin.top + 20, { align: "right" });
     } else {
         doc.text(`NCF: ${invoiceData.sequenceNumber}`, titleX, margin.top + 20, { align: "right" });
     }
@@ -451,6 +452,7 @@ export async function generateQuotePDF(quoteData: QuoteData): Promise<jsPDF> {
  */
 export async function downloadQuotePDF(quoteData: QuoteData): Promise<void> {
     const pdf = await generateQuotePDF(quoteData);
-    const fileName = `Cotizacion_${quoteData.id}.pdf`;
+    const ref = quoteData.id?.length > 8 ? `COT-${quoteData.id.slice(-8)}` : quoteData.id || "COT";
+    const fileName = `Cotizacion_${ref}.pdf`;
     pdf.save(fileName);
 }

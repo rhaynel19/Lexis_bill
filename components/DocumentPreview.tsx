@@ -44,11 +44,11 @@ export function DocumentPreview({
                     </div>
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">
-                    <Button variant="outline" className="bg-background text-foreground border-border/20 hover:bg-muted flex-1 md:flex-initial" onClick={onEdit}>
+                    <Button variant="outline" className="bg-background text-foreground border-border/20 hover:bg-muted flex-1 md:flex-initial" onClick={onEdit} title="Volver a editar" aria-label="Editar">
                         <Edit2 className="w-4 h-4 mr-2" /> Editar
                     </Button>
-                    <Button className="bg-success hover:bg-success/90 text-success-foreground font-bold flex-1 md:flex-initial shadow-lg shadow-success/20" onClick={onConfirm} disabled={isProcessing}>
-                        {isProcessing ? "Procesando..." : (type === "invoice" ? "Confirmar y Emitir" : "Guardar Cotización")}
+                    <Button className="bg-success hover:bg-success/90 text-success-foreground font-bold flex-1 md:flex-initial shadow-lg shadow-success/20" onClick={onConfirm} disabled={isProcessing} title={type === "quote" ? "Guardar cotización" : "Confirmar y emitir factura"} aria-busy={isProcessing}>
+                        {isProcessing ? "Procesando…" : (type === "invoice" ? "Confirmar y Emitir" : "Guardar Cotización")}
                     </Button>
                 </div>
             </div>
@@ -120,11 +120,23 @@ export function DocumentPreview({
 
             {/* Quick Actions (Beneath Preview) */}
             <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1 border-border/30 hover:border-success hover:bg-success/5 hover:text-success transition-all">
+                <Button
+                    variant="outline"
+                    className="h-16 flex flex-col items-center justify-center gap-1 border-border/30 hover:border-success hover:bg-success/5 hover:text-success transition-all"
+                    title="Guarda primero; luego podrás enviar por WhatsApp desde el detalle"
+                    aria-label="Enviar por WhatsApp (guarda antes)"
+                    onClick={() => toast.info("Guarda primero la cotización; luego podrás enviar por WhatsApp desde el detalle.", { duration: 4000 })}
+                >
                     <Share2 className="w-5 h-5" />
                     <span className="text-xs font-bold uppercase">Enviar WhatsApp</span>
                 </Button>
-                <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1 border-border/30 hover:border-accent hover:bg-accent/5 hover:text-accent transition-all">
+                <Button
+                    variant="outline"
+                    className="h-16 flex flex-col items-center justify-center gap-1 border-border/30 hover:border-accent hover:bg-accent/5 hover:text-accent transition-all"
+                    title="Guarda la cotización; luego podrás descargar el PDF desde el detalle"
+                    aria-label="Descargar PDF (guarda antes)"
+                    onClick={() => toast.info("Guarda primero la cotización; luego podrás descargar el PDF desde el detalle.", { duration: 4000 })}
+                >
                     <Download className="w-5 h-5" />
                     <span className="text-xs font-bold uppercase">Solo Descargar PDF</span>
                 </Button>
