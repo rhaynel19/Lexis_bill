@@ -129,26 +129,30 @@ export default function LoginPage() {
                 <CardContent className="px-8 pb-8">
                     <form onSubmit={handleLogin} className="space-y-5">
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold text-blue-900 uppercase tracking-wider">Credenciales de Acceso</label>
+                            <label htmlFor="login-email" className="text-xs font-semibold text-blue-900 uppercase tracking-wider">Credenciales de Acceso</label>
                             <Input
+                                id="login-email"
                                 type="email"
-                                placeholder="Correo Profesional"
+                                placeholder="ejemplo@correo.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="bg-slate-50 border-slate-200 h-12 focus:ring-lexis-gold"
                                 required
+                                aria-describedby={error ? "login-error" : undefined}
                             />
                             <Input
+                                id="login-password"
                                 type="password"
                                 placeholder="Contraseña"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="bg-slate-50 border-slate-200 h-12 focus:ring-lexis-gold"
+                                aria-describedby={error ? "login-error" : undefined}
                             />
                         </div>
 
                         {error && (
-                            <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
+                            <div id="login-error" className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-start gap-2 animate-in fade-in slide-in-from-top-1" role="alert">
                                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                                 <p>{error}</p>
                             </div>
@@ -168,9 +172,10 @@ export default function LoginPage() {
                             type="submit"
                             className="w-full bg-lexis-bg-deep hover:bg-lexis-bg-mid text-white font-bold py-6 text-lg shadow-lg shadow-blue-900/20 transition-all hover:scale-[1.01] hover:shadow-blue-900/30"
                             disabled={isLoading}
+                            aria-busy={isLoading}
                         >
                             {isLoading ? (
-                                <span className="flex items-center gap-2"><Lock className="w-4 h-4 animate-spin" /> Verificando...</span>
+                                <span className="flex items-center gap-2"><Lock className="w-4 h-4 animate-spin" aria-hidden /> Entrando...</span>
                             ) : (
                                 "Entrar a mi Oficina Fiscal"
                             )}

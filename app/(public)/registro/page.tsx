@@ -9,6 +9,7 @@ import { CheckCircle2, User, Lock, Mail, Building2, Briefcase, ShieldCheck, Arro
 import Link from "next/link";
 import { api } from "@/lib/api-service";
 import { Suspense } from "react";
+import { toast } from "sonner";
 import { TermsModal, LegalCheckbox } from "@/components/legal-design";
 import {
     Select,
@@ -100,6 +101,7 @@ function RegisterForm() {
                 biometric: false
             }));
 
+            toast.success("Cuenta creada. Redirigiendo al dashboard…");
             router.push("/dashboard");
         } catch (err: any) {
             // Manejo de errores amigable
@@ -287,8 +289,9 @@ function RegisterForm() {
                                 type="submit"
                                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-7 text-lg shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98] rounded-xl"
                                 disabled={isLoading || !acceptedTerms}
+                                aria-busy={isLoading}
                             >
-                                {isLoading ? "Estamos verificando tu información..." : (plan === 'pro' ? 'Activar Plan Elite' : 'Empezar 15 Días Gratis')}
+                                {isLoading ? "Creando cuenta…" : (plan === 'pro' ? 'Activar Plan Elite' : 'Empezar 15 Días Gratis')}
                             </Button>
 
                             <div className="pt-2 text-center">

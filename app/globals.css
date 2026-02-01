@@ -254,6 +254,39 @@
 
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
+  body {
+    overflow-x: hidden;
+    min-height: 100dvh;
+    min-height: 100vh;
+  }
+
+  /* Imágenes responsive en todos los dispositivos */
+  img,
+  video {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+
+  /* Contenedor responsive: móvil → tablet → laptop → desktop */
+  .container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  @media (min-width: 1280px) {
+    .container {
+      max-width: 1280px;
+    }
+  }
+
+  @media (min-width: 1536px) {
+    .container {
+      max-width: 1400px;
+    }
   }
 
   /* Mejorar touch targets en mobile - Estilo estándar para evitar warnings */

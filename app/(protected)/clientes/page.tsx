@@ -35,6 +35,10 @@ export default function CustomersPage() {
         loadCustomers();
     }, []);
 
+    useEffect(() => {
+        if (!isLoading && customers.length === 0) setShowMigration(true);
+    }, [isLoading, customers.length]);
+
     const loadCustomers = async () => {
         setIsLoading(true);
         try {
@@ -78,7 +82,7 @@ export default function CustomersPage() {
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" className="gap-2" onClick={() => setShowMigration(!showMigration)}>
-                        {showMigration ? "Ver Listado" : "Importar / Migrar"}
+                        {showMigration ? "Ver listado" : "Subir planilla / Migrar"}
                     </Button>
                     <Button className="gap-2 shadow-lg shadow-primary/20">
                         <UserPlus className="w-4 h-4" /> Nuevo Cliente
@@ -88,6 +92,20 @@ export default function CustomersPage() {
 
             {showMigration && (
                 <CustomerMigration onImportSuccess={loadCustomers} />
+            )}
+
+            {!showMigration && customers.length === 0 && !isLoading && (
+                <Card className="border-primary/20 bg-primary/5 mb-8">
+                    <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div>
+                            <h3 className="font-bold text-primary text-lg">¿Tienes una planilla de clientes?</h3>
+                            <p className="text-slate-600 text-sm mt-1">Impórtala en segundos desde CSV o Excel (exportado como CSV). Sin copiar a mano.</p>
+                        </div>
+                        <Button className="gap-2 shrink-0" onClick={() => setShowMigration(true)}>
+                            <FileDown className="w-4 h-4" /> Subir planilla / Migrar
+                        </Button>
+                    </CardContent>
+                </Card>
             )}
 
             <div className="grid gap-6">
@@ -126,9 +144,18 @@ export default function CustomersPage() {
                                 ) : filteredCustomers.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={4} className="h-64 text-center py-12">
-                                            <div className="flex flex-col items-center gap-4 opacity-40">
-                                                <Users className="w-16 h-16" />
-                                                <p className="font-medium">No se encontraron clientes</p>
+                                            <div className="flex flex-col items-center gap-4">
+                                                <Users className="w-16 h-16 text-slate-300" aria-hidden />
+                                                <p className="font-medium text-slate-600">
+                                                    {customers.length === 0
+                                                        ? "Aún no tienes clientes. Usa «Subir planilla / Migrar» para importar tu listado."
+                                                        : "No se encontraron clientes con ese criterio."}
+                                                </p>
+                                                {customers.length === 0 && (
+                                                    <Button variant="outline" className="gap-2 mt-2" onClick={() => setShowMigration(true)}>
+                                                        <FileDown className="w-4 h-4" /> Subir planilla
+                                                    </Button>
+                                                )}
                                             </div>
                                         </TableCell>
                                     </TableRow>

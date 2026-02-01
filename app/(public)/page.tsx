@@ -22,7 +22,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-lexis-bg-deep text-lexis-text-light font-sans selection:bg-lexis-gold/30">
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-lexis-bg-deep/80 backdrop-blur-md border-b-2 border-lexis-gold/40">
-        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="container mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
           <div className="text-2xl font-serif font-bold tracking-tighter">
             <span className="text-lexis-gold">Lexis</span>{" "}
             <span className="text-lexis-text-light">Bill</span>
@@ -48,8 +48,8 @@ export default function LandingPage() {
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-lexis-text-light hover:bg-lexis-gold/10">
-                  <Menu className="w-6 h-6" />
+                <Button variant="ghost" size="icon" className="text-lexis-text-light hover:bg-lexis-gold/10" aria-label="Abrir menú de navegación">
+                  <Menu className="w-6 h-6" aria-hidden />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="bg-lexis-bg-deep border-lexis-gold/20 text-lexis-text-light pt-20">
@@ -84,14 +84,14 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <header className="relative pt-40 pb-24 md:pt-56 md:pb-40 overflow-hidden">
+      <header className="relative pt-32 pb-20 sm:pt-40 sm:pb-24 md:pt-56 md:pb-40 overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 opacity-20">
           <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-lexis-gold rounded-full blur-[140px]"></div>
           <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600 rounded-full blur-[120px]"></div>
         </div>
 
-        <div className="container mx-auto px-6 text-center">
-          <span className="inline-block text-lexis-gold text-xs font-bold tracking-[0.3em] uppercase mb-8 animate-fade-in bg-lexis-gold/10 px-4 py-2 rounded-full border border-lexis-gold/20">
+        <div className="container mx-auto px-4 sm:px-6 text-center max-w-6xl mx-auto">
+          <span className="inline-block text-lexis-gold text-xs font-bold tracking-[0.2em] sm:tracking-[0.3em] uppercase mb-6 sm:mb-8 animate-fade-in bg-lexis-gold/10 px-3 sm:px-4 py-2 rounded-full border border-lexis-gold/20">
             EL ÚNICO SISTEMA QUE HABLA DOMINICANO 🇩🇴
           </span>
           <h1 className="font-serif text-5xl md:text-8xl font-bold leading-tight mb-8 max-w-5xl mx-auto tracking-tight">
@@ -121,7 +121,7 @@ export default function LandingPage() {
 
       {/* Section: Dolor (La Realidad) */}
       <section className="py-32 bg-[#081221] border-y border-lexis-gold/5">
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="font-serif text-4xl md:text-5xl font-bold mb-8 text-lexis-text-light">
               Recupera tus noches y tus <span className="text-lexis-gold">fines de semana.</span>
@@ -151,7 +151,7 @@ export default function LandingPage() {
 
       {/* New Section: ¿Es para mí? */}
       <section className="py-24 bg-lexis-bg-deep">
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-center">
             <div>
               <h2 className="font-serif text-4xl font-bold mb-8">¿Es Lexis Bill <br /><span className="text-lexis-gold">para mí?</span></h2>
@@ -188,7 +188,7 @@ export default function LandingPage() {
 
       {/* New Section: Cómo Funciona */}
       <section className="py-32 bg-[#081221] border-y border-lexis-gold/5">
-        <div className="container mx-auto px-6 text-center">
+        <div className="container mx-auto px-4 sm:px-6 text-center">
           <h2 className="font-serif text-4xl md:text-5xl font-bold mb-20 text-lexis-text-light">Tranquilidad en <span className="text-lexis-gold">3 pasos.</span></h2>
           <div className="grid md:grid-cols-3 gap-12">
             <div className="space-y-6">
@@ -212,7 +212,7 @@ export default function LandingPage() {
 
       {/* Section: Valor Único (Diferenciación) */}
       <section id="beneficios" className="py-40 bg-lexis-bg-deep">
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="text-center mb-24">
             <h2 className="font-serif text-4xl md:text-6xl font-bold mb-6">
               Más que facturas, <br />
@@ -256,7 +256,7 @@ export default function LandingPage() {
 
       {/* Section: Nuestra Misión */}
       <section className="py-24 bg-[#081221]">
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <span className="text-lexis-gold text-xs font-bold tracking-[0.4em] uppercase">El Porqué de Lexis Bill</span>
             <h2 className="font-serif text-3xl md:text-5xl font-bold leading-tight">
@@ -272,7 +272,7 @@ export default function LandingPage() {
 
       {/* FAQ Section */}
       <section className="py-32 bg-lexis-bg-deep">
-        <div className="container mx-auto px-6 max-w-4xl">
+        <div className="container mx-auto px-4 sm:px-6 max-w-4xl">
           <h2 className="font-serif text-3xl md:text-5xl font-bold mb-16 text-center text-lexis-gold">Preguntas Frecuentes</h2>
           <div className="space-y-8">
             <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
@@ -384,7 +384,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="py-20 border-t border-lexis-gold/10 bg-[#081221]">
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="grid md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-2">
               <div className="font-serif text-2xl font-bold mb-6">

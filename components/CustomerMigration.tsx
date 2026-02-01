@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileSpreadsheet, Download, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { api } from "@/lib/api-service";
+import { toast } from "sonner";
 
 export function CustomerMigration({ onImportSuccess }: { onImportSuccess: () => void }) {
     const [isDragging, setIsDragging] = useState(false);
@@ -27,12 +28,12 @@ export function CustomerMigration({ onImportSuccess }: { onImportSuccess: () => 
 
     const processFile = async (file: File) => {
         if (!file.name.endsWith('.csv') && !file.name.endsWith('.json')) {
-            alert("Solo se admiten archivos .csv o .json");
+            toast.error("Solo se admiten archivos .csv o .json. Si tienes Excel, expórtalo como CSV.");
             return;
         }
 
         if (file.size > 2 * 1024 * 1024) {
-            alert("El archivo supera el límite de 2MB");
+            toast.error("El archivo supera el límite de 2 MB.");
             return;
         }
 
@@ -57,10 +58,14 @@ export function CustomerMigration({ onImportSuccess }: { onImportSuccess: () => 
             }
 
             const response = await api.importCustomers(data);
-            setResults({ success: true, message: response.message });
+            const msg = response.message || "Clientes importados correctamente.";
+            setResults({ success: true, message: msg });
+            toast.success(msg);
             onImportSuccess();
         } catch (error: any) {
-            setResults({ success: false, message: error.message || "Error al procesar el archivo" });
+            const errMsg = error.message || "Error al procesar el archivo. Revisa el formato (RNC, nombre).";
+            setResults({ success: false, message: errMsg });
+            toast.error(errMsg);
         } finally {
             setIsUploading(false);
         }
@@ -77,31 +82,32 @@ export function CustomerMigration({ onImportSuccess }: { onImportSuccess: () => 
         <Card className="border-none shadow-xl bg-white/50 backdrop-blur-sm overflow-hidden mb-8">
             <CardHeader className="bg-primary/5 pb-4">
                 <CardTitle className="text-primary flex items-center gap-2">
-                    <FileSpreadsheet className="w-5 h-5" /> Centro de Migración
+                    <FileSpreadsheet className="w-5 h-5" aria-hidden /> Subir planilla de clientes
                 </CardTitle>
-                <CardDescription>Importa tus clientes desde Excel o CSV de forma masiva</CardDescription>
+                <CardDescription>Migra tus clientes desde un CSV o desde Excel (exportado como CSV). Sin copiar a mano.</CardDescription>
             </CardHeader>
             <CardContent className="p-6">
                 <div className="grid md:grid-cols-2 gap-8">
                     <div className="space-y-4">
                         <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100">
                             <h4 className="font-bold text-blue-900 text-sm mb-2 flex items-center gap-2">
-                                <Download className="w-4 h-4" /> ¿No tienes una plantilla?
+                                <Download className="w-4 h-4" aria-hidden /> ¿No tienes una plantilla?
                             </h4>
                             <p className="text-xs text-blue-700 leading-relaxed mb-4">
-                                Descarga nuestro formato estándar para asegurar que tus datos se importen correctamente.
+                                Descarga el formato estándar (CSV). Si usas Excel, guarda como &quot;CSV (delimitado por comas)&quot; y súbelo aquí.
                             </p>
                             <Button variant="outline" size="sm" className="w-full bg-white border-blue-200 text-blue-700 hover:bg-blue-50" onClick={handleDownloadTemplate}>
-                                Descargar Plantilla CSV
+                                Descargar plantilla CSV
                             </Button>
                         </div>
 
                         <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                            <h4 className="font-bold text-slate-900 text-sm mb-2">Instrucciones</h4>
+                            <h4 className="font-bold text-slate-900 text-sm mb-2">Formato de la planilla</h4>
                             <ul className="text-[11px] text-slate-500 space-y-1 list-disc pl-4">
-                                <li><strong>RNC:</strong> 9 u 11 dígitos obligatorios.</li>
-                                <li><strong>Nombre:</strong> Razón social o nombre personal.</li>
-                                <li>El sistema actualizará automáticamente clientes duplicados.</li>
+                                <li><strong>RNC:</strong> 9 u 11 dígitos (obligatorio).</li>
+                                <li><strong>Nombre:</strong> Razón social o nombre del cliente.</li>
+                                <li><strong>Opcional:</strong> phone, email, notes.</li>
+                                <li>Si un RNC ya existe, se actualiza con los nuevos datos.</li>
                             </ul>
                         </div>
                     </div>
@@ -144,10 +150,10 @@ export function CustomerMigration({ onImportSuccess }: { onImportSuccess: () => 
                                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100 mb-4">
                                     <Upload className="w-8 h-8 text-primary" />
                                 </div>
-                                <h3 className="text-lg font-bold text-slate-900 capitalize">Arrastra tu archivo</h3>
-                                <p className="text-xs text-slate-500 mt-1 mb-6 px-4">Solo archivos .csv o .json de hasta 2MB</p>
-                                <Button onClick={() => fileInputRef.current?.click()} className="shadow-lg shadow-primary/20">
-                                    Seleccionar Archivo
+                                <h3 className="text-lg font-bold text-slate-900 capitalize">Arrastra tu planilla aquí</h3>
+                                <p className="text-xs text-slate-500 mt-1 mb-6 px-4">CSV o JSON, hasta 2 MB. Excel: expórtalo como CSV.</p>
+                                <Button onClick={() => fileInputRef.current?.click()} className="shadow-lg shadow-primary/20" aria-label="Seleccionar archivo CSV o JSON">
+                                    Seleccionar archivo
                                 </Button>
                             </>
                         )}
