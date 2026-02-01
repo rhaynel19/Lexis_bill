@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Link from "next/link";
 import { useState, useEffect, Fragment } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { validateRNCOrCedula, autoFormatRNCOrCedula } from "@/lib/validators";
 import { validateRNC } from "@/lib/rnc-validator";
 import { numberToText } from "@/lib/number-to-text";
@@ -26,6 +26,8 @@ import { AIService } from "@/lib/ai-service-mock";
 import { ValidatorService } from "@/lib/validator-service";
 import { SuggestionWidget } from "@/components/ui/suggestion-widget";
 import { DocumentPreview } from "@/components/DocumentPreview";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { ContextualHelp } from "@/components/ui/contextual-help";
 
 // Interfaz para definir la estructura de un ítem de factura
 interface InvoiceItem {
@@ -38,6 +40,7 @@ interface InvoiceItem {
 
 export default function NewInvoice() {
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     // Estados para los campos del formulario
     const [invoiceType, setInvoiceType] = useState("");
@@ -190,6 +193,17 @@ export default function NewInvoice() {
             }
         };
         fetchClients();
+
+        // Pre-fill from Clientes list (Facturar desde listado)
+        const qRnc = searchParams.get("rnc");
+        const qName = searchParams.get("name");
+        const qPhone = searchParams.get("phone");
+        if (qRnc || qName) {
+            if (qRnc) setRnc(qRnc);
+            if (qName) setClientName(qName);
+            if (qPhone) setClientPhone(qPhone);
+            if (qRnc || qName) setIsClientLocked(true);
+        }
 
         // Services (Still localStorage for now or default)
         const services = localStorage.getItem("services");
@@ -411,7 +425,6 @@ export default function NewInvoice() {
         try {
             const parsedItems = await AIService.parseInvoiceText(magicCommand);
 
-            // Map parsed items to InvoiceItem structure with ID
             const newItems: InvoiceItem[] = parsedItems.map(p => ({
                 id: Date.now().toString() + Math.random().toString().slice(2),
                 description: p.description,
@@ -420,7 +433,6 @@ export default function NewInvoice() {
                 isExempt: invoiceType === "44"
             }));
 
-            // If it's the first empty item, replace it, otherwise append
             if (items.length === 1 && !items[0].description && items[0].price === 0) {
                 setItems(newItems);
             } else {
@@ -429,7 +441,6 @@ export default function NewInvoice() {
 
             setMagicCommand("");
             toast.success(`✨ Agregados ${newItems.length} ítems mágicamente`);
-
         } catch (e) {
             console.error(e);
             toast.error("No pude entender eso. Intenta ser más claro.");
@@ -681,7 +692,7 @@ export default function NewInvoice() {
     }, [rnc, invoiceType, items]);
 
     const handleWhatsAppShare = () => {
-        const text = `Hola *${clientName}*! 🇩🇴\n\nAdjunto su Comprobante Fiscal *${lastInvoiceNCF}* por valor de *${formatCurrency(total)}*.\n\nGracias por preferirnos.`;
+        const text = `Hola *${clientName}*! 🇩🇴\n\nLe envío su comprobante fiscal *${lastInvoiceNCF}* por valor de *${formatCurrency(total)}*.\n\n📎 Te envío adjunto el PDF del comprobante.\n\nGracias por preferirnos.`;
         let phone = clientPhone.replace(/[^\d]/g, '');
         // Auto-fix Dominican Numbers (10 digits -> 1 + 10 digits)
         if (phone.length === 10 && (phone.startsWith("809") || phone.startsWith("829") || phone.startsWith("849"))) {
@@ -724,13 +735,15 @@ export default function NewInvoice() {
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-5xl">
+            <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Nueva factura" }]} className="mb-4 text-muted-foreground" />
             {/* Encabezado */}
             <div className="mb-8 flex items-center justify-between">
                 <div>
                     <h2 className="text-3xl font-bold text-accent">Nueva Factura</h2>
                     <p className="text-muted-foreground">Crear comprobante fiscal electrónico (e-CF)</p>
+                    <p className="text-xs text-muted-foreground/80 mt-1">Tu borrador se guarda automáticamente y está disponible en todos tus dispositivos.</p>
                 </div>
-                <Link href="/">
+                <Link href="/dashboard">
                     <Button variant="outline">← Volver</Button>
                 </Link>
             </div>
@@ -773,7 +786,10 @@ export default function NewInvoice() {
                                 <CardContent className="space-y-4">
                                     {/* Selector de Tipo de e-CF */}
                                     <div className="space-y-2">
-                                        <Label htmlFor="invoice-type">Tipo de Comprobante (e-CF) *</Label>
+                                        <div className="flex items-center gap-2">
+                                            <Label htmlFor="invoice-type">Tipo de Comprobante (e-CF) *</Label>
+                                            <ContextualHelp text="NCF: Número de Comprobante Fiscal. B01/E31 para empresas (RNC 9 dígitos), B02/E32 para consumidor final. El tipo debe coincidir con el cliente." mode="popover" />
+                                        </div>
                                         <Select value={invoiceType} onValueChange={setInvoiceType}>
                                             <SelectTrigger id="invoice-type">
                                                 <SelectValue placeholder="Selecciona el tipo de comprobante" />
@@ -1416,6 +1432,9 @@ export default function NewInvoice() {
                         <DialogDescription className="text-center">
                             El comprobante ha sido registrado y el PDF descargado.
                         </DialogDescription>
+                        <p className="text-center text-xs text-muted-foreground mt-2">
+                            Al abrir WhatsApp, <strong>adjunta el PDF</strong> descargado (botón 📎) antes de enviar.
+                        </p>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <Button onClick={handleWhatsAppShare} className="w-full bg-[#25D366] hover:bg-[#128C7E] flex gap-2">

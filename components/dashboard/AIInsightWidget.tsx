@@ -2,36 +2,33 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
-import { AIService } from "@/lib/ai-service-mock"; // Using mock for now
+import { AIService } from "@/lib/ai-service-mock";
 import { usePreferences } from "@/components/providers/PreferencesContext";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { PredictiveService } from "@/lib/predictive-service";
 
 interface AIInsightWidgetProps {
     revenue: number;
     pendingCount: number;
+    /** Ingresos del mes anterior (cuando viene del dashboard con datos reales) */
+    previousRevenue?: number;
+    /** Alertas predictivas con datos reales (NCF, pendientes, clientes recurrentes) */
+    predictions?: string[];
 }
 
-export function AIInsightWidget({ revenue, pendingCount }: AIInsightWidgetProps) {
+export function AIInsightWidget({ revenue, pendingCount, previousRevenue, predictions = [] }: AIInsightWidgetProps) {
     const { profession, mode } = usePreferences();
     const [insight, setInsight] = useState("");
     const [task, setTask] = useState<{ task: string, urgency: string } | null>(null);
-    const [predictions, setPredictions] = useState<string[]>([]);
 
     useEffect(() => {
-        // Simulate "AI Thinking"
-        const previousRevenue = revenue * 0.8; // Mock comparison
-        const text = AIService.generateMonthlyInsight(revenue, previousRevenue, pendingCount, profession);
+        const prevRev = previousRevenue !== undefined ? previousRevenue : revenue * 0.8;
+        const text = AIService.generateMonthlyInsight(revenue, prevRev, pendingCount, profession);
         setInsight(text);
 
         const currentDay = new Date().getDate();
         setTask(AIService.predictNextTaxTask(currentDay));
-
-        // Predictive Alerts
-        setPredictions(PredictiveService.getPredictiveAlerts());
-
-    }, [revenue, pendingCount, profession]);
+    }, [revenue, previousRevenue, pendingCount, profession]);
 
     return (
         <Card className="border-none bg-gradient-to-r from-violet-600/10 to-indigo-600/10 shadow-sm mb-6 overflow-hidden relative">
@@ -56,7 +53,7 @@ export function AIInsightWidget({ revenue, pendingCount }: AIInsightWidgetProps)
                                 ⚡ {task.task}
                             </div>
                         )}
-                        {predictions.map((pred, i) => (
+                        {(predictions || []).map((pred, i) => (
                             <div key={i} className="text-xs font-bold px-2 py-1 rounded inline-flex items-center bg-indigo-100 text-indigo-700">
                                 🔮 {pred}
                             </div>

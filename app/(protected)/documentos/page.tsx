@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Upload, FileText, Trash2, Eye, ShieldCheck, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api-service";
 import { toast } from "sonner";
 
@@ -18,13 +19,17 @@ export default function DocumentVault() {
     const [docs, setDocs] = useState<Doc[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     const loadDocs = async () => {
+        setLoading(true);
+        setLoadError(null);
         try {
             const data = await api.getDocuments();
             setDocs(data);
         } catch {
             setDocs([]);
+            setLoadError("No se pudieron cargar los documentos. Revisa tu conexión e intenta de nuevo.");
         } finally {
             setLoading(false);
         }
@@ -55,7 +60,7 @@ export default function DocumentVault() {
             loadDocs();
             fileInput.value = "";
         } catch {
-            toast.error("Error al subir el documento");
+            toast.error("Error al subir el documento. Revisa tu conexión e intenta de nuevo.");
         } finally {
             setUploading(false);
         }
@@ -131,7 +136,7 @@ export default function DocumentVault() {
                         </div>
                         <Button className="w-full" onClick={handleUpload} disabled={uploading}>
                             {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                            Guardar en Bóveda
+                            {uploading ? "Subiendo…" : "Guardar en Bóveda"}
                         </Button>
                     </CardContent>
                 </Card>
@@ -142,9 +147,17 @@ export default function DocumentVault() {
                         <CardDescription>{docs.length} documentos almacenados</CardDescription>
                     </CardHeader>
                     <CardContent>
+                        {loadError && (
+                            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                                <p className="text-sm text-destructive font-medium">{loadError}</p>
+                                <Button variant="outline" size="sm" onClick={loadDocs} className="shrink-0">Reintentar</Button>
+                            </div>
+                        )}
                         {loading ? (
-                            <div className="flex justify-center py-12">
-                                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                            <div className="space-y-3 py-4">
+                                {[1, 2, 3, 4].map((i) => (
+                                    <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                                ))}
                             </div>
                         ) : docs.length === 0 ? (
                             <p className="text-center py-8 text-muted-foreground">La bóveda está vacía. Sube tu primer documento.</p>

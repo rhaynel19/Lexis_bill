@@ -132,7 +132,7 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
 
         const message = generateInvoiceWhatsAppMessage(invoice);
         openWhatsApp(invoice.clientPhone, message);
-        toast.info("📲 Abriendo WhatsApp...");
+        toast.info("📲 Abriendo WhatsApp. Recuerda adjuntar el PDF antes de enviar.", { duration: 4000 });
     };
 
     const renderStatusBadge = (status: string) => {
@@ -240,6 +240,8 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
                                                             variant="ghost"
                                                             className="h-8 w-8 p-0"
                                                             onClick={() => handleViewInvoice(inv)}
+                                                            title="Ver factura"
+                                                            aria-label="Ver factura"
                                                         >
                                                             <Eye className="w-4 h-4" />
                                                         </Button>

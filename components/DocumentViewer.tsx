@@ -341,7 +341,7 @@ export function DocumentViewer({
 
                                     const { openWhatsApp } = require("@/lib/whatsapp-utils");
                                     openWhatsApp(document.clientPhone, message);
-                                    toast.info("📲 Abriendo WhatsApp...");
+                                    toast.info("📲 Abriendo WhatsApp. Recuerda adjuntar el PDF antes de enviar.", { duration: 4000 });
                                 }}
                                 variant="outline"
                                 className="col-span-1 h-12 text-success border-success/20 hover:bg-success/5 order-2 sm:order-2 font-bold flex items-center justify-center p-0 sm:px-4"

@@ -8,20 +8,26 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
     Users,
     Search,
-    Plus,
     FileDown,
     MessageCircle,
-    Filter,
     ArrowRight,
     UserPlus,
     Building2,
     Calendar,
-    Phone
+    Phone,
+    Receipt,
+    FileText,
+    Trash2
 } from "lucide-react";
+import Link from "next/link";
 import { api } from "@/lib/api-service";
 import { CustomerMigration } from "@/components/CustomerMigration";
 import { CustomerDrawer } from "@/components/CustomerDrawer";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { toast } from "sonner";
 
 export default function CustomersPage() {
     const [customers, setCustomers] = useState<any[]>([]);
@@ -30,6 +36,9 @@ export default function CustomersPage() {
     const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [showMigration, setShowMigration] = useState(false);
+    const [customerToDelete, setCustomerToDelete] = useState<any>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     useEffect(() => {
         loadCustomers();
@@ -41,11 +50,13 @@ export default function CustomersPage() {
 
     const loadCustomers = async () => {
         setIsLoading(true);
+        setLoadError(null);
         try {
             const data = await api.getCustomers();
             setCustomers(data);
         } catch (error) {
             console.error("Error loading customers:", error);
+            setLoadError("No se pudieron cargar los clientes. Revisa tu conexión e intenta de nuevo.");
         } finally {
             setIsLoading(false);
         }
@@ -68,8 +79,33 @@ export default function CustomersPage() {
         window.open(`https://wa.me/${cleanPhone}`, '_blank');
     };
 
+    const handleDelete = async () => {
+        if (!customerToDelete?._id) return;
+        setIsDeleting(true);
+        try {
+            await api.deleteCustomer(customerToDelete._id);
+            toast.success("Cliente eliminado");
+            setCustomerToDelete(null);
+            loadCustomers();
+        } catch (err: any) {
+            toast.error(err?.message || "No se pudo eliminar el cliente");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    const buildClientQuery = (c: any) => {
+        const params = new URLSearchParams();
+        if (c.rnc) params.set("rnc", c.rnc);
+        if (c.name) params.set("name", c.name);
+        if (c.phone) params.set("phone", c.phone);
+        return params.toString();
+    };
+
     return (
+        <TooltipProvider>
         <div className="container mx-auto px-4 py-8">
+            <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Clientes" }]} className="mb-4 text-muted-foreground" />
             {/* Header section with Stats */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
@@ -125,6 +161,14 @@ export default function CustomersPage() {
                 {/* Main Table Card */}
                 <Card className="border-none shadow-xl bg-white/80 backdrop-blur-md overflow-hidden">
                     <CardContent className="p-0">
+                        {loadError && (
+                            <div className="p-4 bg-destructive/10 border-b border-destructive/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                <p className="text-sm text-destructive font-medium">{loadError}</p>
+                                <Button variant="outline" size="sm" onClick={loadCustomers} className="shrink-0">
+                                    Reintentar
+                                </Button>
+                            </div>
+                        )}
                         <Table>
                             <TableHeader className="bg-slate-50">
                                 <TableRow className="hover:bg-transparent">
@@ -138,7 +182,9 @@ export default function CustomersPage() {
                                 {isLoading ? (
                                     [1, 2, 3, 4, 5].map(i => (
                                         <TableRow key={i}>
-                                            <TableCell colSpan={4} className="h-16 animate-pulse bg-slate-50/50" />
+                                            <TableCell colSpan={4} className="h-16">
+                                                <div className="h-4 w-full max-w-[200px] rounded animate-pulse bg-muted" />
+                                            </TableCell>
                                         </TableRow>
                                     ))
                                 ) : filteredCustomers.length === 0 ? (
@@ -191,24 +237,71 @@ export default function CustomersPage() {
                                                 <span className="text-slate-300 text-xs">- Ninguna -</span>
                                             )}
                                         </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2 pr-2">
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    className="h-9 w-9 p-0 hover:bg-green-50 hover:text-green-600 rounded-full"
-                                                    onClick={(e) => handleWhatsApp(e, customer.phone)}
-                                                    disabled={!customer.phone}
-                                                >
-                                                    <MessageCircle className="h-5 w-5" />
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    className="h-9 w-9 p-0 hover:bg-primary hover:text-white rounded-full"
-                                                >
-                                                    <ArrowRight className="h-5 w-5" />
-                                                </Button>
+                                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex justify-end gap-1 flex-wrap">
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Link href={`/nueva-factura?${buildClientQuery(customer)}`}>
+                                                            <Button size="sm" variant="ghost" className="h-9 gap-1.5 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg px-2" aria-label="Facturar">
+                                                                <Receipt className="h-4 w-4" /> <span className="hidden sm:inline text-xs">Facturar</span>
+                                                            </Button>
+                                                        </Link>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>Facturar a este cliente</TooltipContent>
+                                                </Tooltip>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Link href={`/nueva-cotizacion?${buildClientQuery(customer)}`}>
+                                                            <Button size="sm" variant="ghost" className="h-9 gap-1.5 hover:bg-blue-50 hover:text-blue-600 rounded-lg px-2" aria-label="Cotizar">
+                                                                <FileText className="h-4 w-4" /> <span className="hidden sm:inline text-xs">Cotizar</span>
+                                                            </Button>
+                                                        </Link>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>Crear cotización</TooltipContent>
+                                                </Tooltip>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-9 w-9 p-0 hover:bg-green-50 hover:text-green-600 rounded-full"
+                                                            onClick={(e) => handleWhatsApp(e, customer.phone)}
+                                                            disabled={!customer.phone}
+                                                            aria-label="Enviar por WhatsApp"
+                                                        >
+                                                            <MessageCircle className="h-5 w-5" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>Enviar por WhatsApp</TooltipContent>
+                                                </Tooltip>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-9 w-9 p-0 hover:bg-primary hover:text-white rounded-full"
+                                                            onClick={() => openDetails(customer)}
+                                                            aria-label="Ver detalle"
+                                                        >
+                                                            <ArrowRight className="h-5 w-5" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>Ver detalle</TooltipContent>
+                                                </Tooltip>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-9 w-9 p-0 hover:bg-red-50 hover:text-red-600 rounded-full"
+                                                            onClick={() => setCustomerToDelete(customer)}
+                                                            aria-label="Eliminar"
+                                                        >
+                                                            <Trash2 className="h-5 w-5" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>Eliminar cliente</TooltipContent>
+                                                </Tooltip>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -224,6 +317,24 @@ export default function CustomersPage() {
                 onClose={() => setIsDrawerOpen(false)}
                 customer={selectedCustomer}
             />
+
+            <Dialog open={!!customerToDelete} onOpenChange={(open) => !open && setCustomerToDelete(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Eliminar cliente</DialogTitle>
+                        <DialogDescription>
+                            ¿Eliminar a <strong>{customerToDelete?.name}</strong> (RNC {customerToDelete?.rnc})? Esta acción no se puede deshacer.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setCustomerToDelete(null)} disabled={isDeleting}>Cancelar</Button>
+                        <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+                            {isDeleting ? "Eliminando…" : "Eliminar"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
+        </TooltipProvider>
     );
 }

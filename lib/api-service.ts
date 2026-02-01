@@ -131,6 +131,14 @@ export const api = {
         });
     },
 
+    async deleteCustomer(id: string) {
+        const res = await secureFetch<{ success: boolean; message?: string }>(`${API_URL}/customers/${id}`, {
+            method: "DELETE",
+        });
+        localStorage.removeItem("cache_customers_list");
+        return res;
+    },
+
     // Reports & Tax
     async getTaxSummary(month: number, year: number) {
         return secureFetch<any>(`${API_URL}/reports/summary?month=${month}&year=${year}`, {

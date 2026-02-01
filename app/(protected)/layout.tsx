@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CommandMenu } from "@/components/command-menu";
-import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt, CreditCard, FolderLock } from "lucide-react";
+import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt, CreditCard, FolderLock, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TrialHeaderBadge } from "@/components/TrialHeaderBadge";
@@ -159,27 +159,31 @@ export default function ProtectedLayout({
             </div>
 
             {/* Mobile Bottom Navigation Bar */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-secondary border-t border-border/20 px-4 py-2 flex justify-around items-center z-40 shadow-[0_-2px_15px_rgba(0,0,0,0.3)]">
-                <Link href="/dashboard" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-accent">
-                    <LayoutDashboard className="w-6 h-6" />
-                    <span className="text-[10px] font-medium uppercase">Inicio</span>
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-secondary border-t border-border/20 px-2 py-2 flex justify-around items-center z-40 shadow-[0_-2px_15px_rgba(0,0,0,0.3)]">
+                <Link href="/dashboard" className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-accent min-w-0 flex-1">
+                    <LayoutDashboard className="w-5 h-5 shrink-0" />
+                    <span className="text-[9px] font-medium uppercase truncate w-full text-center">Inicio</span>
                 </Link>
-                <Link href="/cotizaciones" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-accent">
-                    <FileText className="w-6 h-6" />
-                    <span className="text-[10px] font-medium uppercase">Cotiza</span>
+                <Link href="/cotizaciones" className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-accent min-w-0 flex-1">
+                    <FileText className="w-5 h-5 shrink-0" />
+                    <span className="text-[9px] font-medium uppercase truncate w-full text-center">Cotiza</span>
                 </Link>
-                <div className="w-12"></div> {/* Space for FAB */}
-                <Link href="/reportes" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-accent">
-                    <Plus className="w-6 h-6 rotate-45" />
-                    <span className="text-[10px] font-medium uppercase">Fiscal</span>
+                <Link href="/clientes" className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-accent min-w-0 flex-1">
+                    <Users className="w-5 h-5 shrink-0" />
+                    <span className="text-[9px] font-medium uppercase truncate w-full text-center">Clientes</span>
                 </Link>
-                <Link href="/pagos" className="flex flex-col items-center gap-1 text-amber-600 hover:text-amber-500 font-medium">
-                    <CreditCard className="w-6 h-6" />
-                    <span className="text-[10px] font-medium uppercase">Pagar</span>
+                <div className="w-10 shrink-0"></div> {/* Space for FAB */}
+                <Link href="/reportes" className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-accent min-w-0 flex-1">
+                    <Download className="w-5 h-5 shrink-0" />
+                    <span className="text-[9px] font-medium uppercase truncate w-full text-center">Fiscal</span>
                 </Link>
-                <Link href="/configuracion" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-accent">
-                    <Settings className="w-6 h-6" />
-                    <span className="text-[10px] font-medium uppercase">Perfil</span>
+                <Link href="/pagos" className="flex flex-col items-center gap-0.5 text-amber-600 hover:text-amber-500 font-medium min-w-0 flex-1">
+                    <CreditCard className="w-5 h-5 shrink-0" />
+                    <span className="text-[9px] font-medium uppercase truncate w-full text-center">Pagar</span>
+                </Link>
+                <Link href="/configuracion" className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-accent min-w-0 flex-1">
+                    <Settings className="w-5 h-5 shrink-0" />
+                    <span className="text-[9px] font-medium uppercase truncate w-full text-center">Perfil</span>
                 </Link>
             </nav>
         </div>
@@ -223,6 +227,10 @@ function SidebarLinks({ isMobile = false, isAdmin = false, onLogout, onNavigate 
                     <span className="text-sm">Ver Cotizaciones</span>
                 </NavLink>
                 <div className="pt-4 pb-2 px-4 text-[10px] text-sidebar-foreground/50 uppercase tracking-widest font-bold border-t border-sidebar-border/30 mt-2">Gestión</div>
+                <NavLink href="/clientes" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                    <Users className="w-5 h-5 text-sidebar-foreground/60" />
+                    <span className="text-sm">Clientes / Migrar</span>
+                </NavLink>
                 <NavLink href="/gastos" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
                     <Receipt className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Gastos (606)</span>

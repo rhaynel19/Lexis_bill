@@ -79,9 +79,25 @@ function NewQuoteForm() {
     }, [editId]);
 
     useEffect(() => {
-        const clients = localStorage.getItem("clients");
-        if (clients) setSavedClients(JSON.parse(clients));
+        api.getCustomers().then(data => setSavedClients(data || [])).catch(() => {
+            const local = localStorage.getItem("clients");
+            if (local) setSavedClients(JSON.parse(local));
+        });
     }, []);
+
+    // Pre-fill from Clientes list (Cotizar desde listado)
+    useEffect(() => {
+        if (editId) return;
+        const qRnc = searchParams.get("rnc");
+        const qName = searchParams.get("name");
+        const qPhone = searchParams.get("phone");
+        if (qRnc || qName) {
+            if (qRnc) setRnc(qRnc);
+            if (qName) setClientName(qName);
+            if (qPhone) setClientPhone(qPhone);
+            setIsClientLocked(true);
+        }
+    }, [editId, searchParams]);
 
     const handleRncChange = (value: string) => {
         setRnc(value);

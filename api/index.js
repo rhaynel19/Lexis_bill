@@ -1136,6 +1136,19 @@ app.post('/api/customers', verifyToken, async (req, res) => {
     }
 });
 
+app.delete('/api/customers/:id', verifyToken, async (req, res) => {
+    try {
+        const deleted = await Customer.findOneAndDelete({
+            _id: req.params.id,
+            userId: req.userId
+        });
+        if (!deleted) return res.status(404).json({ message: 'Cliente no encontrado' });
+        res.json({ success: true, message: 'Cliente eliminado' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- BORRADOR Y PLANTILLAS DE FACTURA ---
 app.get('/api/invoice-draft', verifyToken, async (req, res) => {
     try {

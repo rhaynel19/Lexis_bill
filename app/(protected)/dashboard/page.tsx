@@ -39,6 +39,7 @@ import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { EmotionalStatusWidget } from "@/components/dashboard/EmotionalStatusWidget";
 import { AIInsightWidget } from "@/components/dashboard/AIInsightWidget";
 import { AlertsBanner } from "@/components/AlertsBanner";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
 import { usePreferences } from "@/components/providers/PreferencesContext";
 import { cn } from "@/lib/utils";
@@ -113,7 +114,9 @@ export default function Dashboard() {
   const router = useRouter();
   // Estados para almacenar las estadísticas del dashboard
   const [totalRevenue, setTotalRevenue] = useState(0);
+  const [previousMonthRevenue, setPreviousMonthRevenue] = useState(0);
   const [pendingInvoices, setPendingInvoices] = useState(0);
+  const [predictiveAlerts, setPredictiveAlerts] = useState<string[]>([]);
   const [totalClients, setTotalClients] = useState(0);
   const [recentInvoices, setRecentInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -195,6 +198,16 @@ export default function Dashboard() {
           const monthlyRevenue = monthlyInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
           setTotalRevenue(monthlyRevenue);
 
+          // Ingresos del mes anterior (para insight real)
+          const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+          const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+          const previousMonthlyInvoices = invoices.filter((inv) => {
+            const invDate = new Date(inv.date);
+            return invDate.getMonth() === prevMonth && invDate.getFullYear() === prevYear;
+          });
+          const prevRevenue = previousMonthlyInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+          setPreviousMonthRevenue(prevRevenue);
+
           // ITBIS (18% simplified or from data)
           const monthlyTaxes = monthlyInvoices.reduce((sum, inv) => sum + (inv.itbis || 0), 0);
           setEstimatedTaxes(monthlyTaxes);
@@ -229,7 +242,7 @@ export default function Dashboard() {
         }
 
 
-        // Check NCF Health
+        // Check NCF Health + predictive alerts con datos reales
         try {
           const ncfSettings = await api.getNcfSettings() as NcfSetting[];
           const lowSequence = ncfSettings.find((s: NcfSetting) =>
@@ -239,6 +252,15 @@ export default function Dashboard() {
             setIsFiscalHealthy(false);
             setLowNcfType(lowSequence.type);
           }
+          // Alertas predictivas con datos reales (NCF, pendientes, clientes recurrentes)
+          const { PredictiveService: Pred } = await import("@/lib/predictive-service");
+          const pending = (invRes?.data || []).filter((inv: Invoice) => inv.status === "pending").length;
+          const alerts = Pred.getPredictiveAlerts({
+            ncfSettings: ncfSettings as { type: string; currentValue: number; finalNumber: number; isActive?: boolean }[],
+            invoices: (invRes?.data || []) as { date: string; total?: number; status?: string; rnc?: string; clientRnc?: string; clientName?: string }[],
+            pendingCount: pending
+          });
+          setPredictiveAlerts(alerts);
         } catch (e) { console.error("NCF Settings Fetch Error:", e); }
 
       } catch (err: unknown) {
@@ -340,6 +362,7 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 py-8">
         <TrialBanner />
         <SubscriptionAlert />
+        <Breadcrumbs items={[{ label: "Inicio" }]} className="mb-4 text-slate-500" />
         {/* Título del Dashboard */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-1">
           <div>
@@ -361,8 +384,13 @@ export default function Dashboard() {
         {/* Alertas proactivas: NCF bajo, secuencias por vencer, suscripción */}
         <AlertsBanner />
 
-        {/* AI Insight (Phase 2) */}
-        <AIInsightWidget revenue={totalRevenue} pendingCount={pendingInvoices} />
+        {/* AI Insight con datos reales (ingresos, alertas NCF y pendientes) */}
+        <AIInsightWidget
+          revenue={totalRevenue}
+          previousRevenue={previousMonthRevenue}
+          pendingCount={pendingInvoices}
+          predictions={predictiveAlerts}
+        />
 
         {/* Prompt de Identidad Fiscal o Bloqueo Informativo */}
         {!fiscalState.confirmed ? (

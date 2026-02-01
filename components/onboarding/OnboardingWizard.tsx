@@ -234,10 +234,14 @@ export function OnboardingWizard() {
                                     <h3 className="text-3xl font-serif font-bold text-[#D4AF37]">¡Todo Listo!</h3>
                                     <p className="text-slate-300 text-lg">
                                         Tu oficina virtual está configurada.
-                                        <br />
-                                        <span className="text-sm text-slate-500 mt-2 block">
-                                            Estamos activando el "Modo Simple" para que empieces sin estrés.
-                                        </span>
+                                    </p>
+                                    <ul className="text-left text-slate-400 text-sm space-y-2 max-w-sm mx-auto bg-white/5 rounded-lg p-4 border border-white/10">
+                                        <li><strong className="text-[#D4AF37]">Nueva Factura</strong> — Aquí creas y emites tus comprobantes fiscales.</li>
+                                        <li><strong className="text-[#D4AF37]">Reportes Fiscales</strong> — Aquí ves y descargas tus reportes 606 y 607.</li>
+                                        <li><strong className="text-[#D4AF37]">Clientes</strong> — Gestiona y migra tu planilla de clientes.</li>
+                                    </ul>
+                                    <p className="text-xs text-slate-500">
+                                        Modo Simple activado para que empieces sin estrés.
                                     </p>
 
                                     <Button onClick={completeOnboarding} className="w-full h-14 text-lg bg-[#D4AF37] hover:bg-[#B8962E] text-[#0A192F] font-bold rounded-xl mt-8 shadow-xl shadow-[#D4AF37]/20 animate-pulse">

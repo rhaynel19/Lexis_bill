@@ -4,6 +4,18 @@ Propuestas de implementación de Inteligencia Artificial ordenadas por impacto y
 
 ---
 
+## 0. Implementado (feb 2025) — sin APIs externas
+
+| Funcionalidad | Dónde | Cómo |
+|---------------|-------|------|
+| **Insights y alertas con datos reales** | Dashboard → AIInsightWidget | `PredictiveService.getPredictiveAlerts({ ncfSettings, invoices, pendingCount })`: alertas NCF por agotarse, facturas pendientes, cliente recurrente. Ingresos mes anterior para comparación real. Todo con datos de tu cuenta. |
+| **Texto → ítems factura** | Nueva factura, "comando mágico" | Lógica local en `AIService.parseInvoiceText`: palabras clave y heurísticas (ej. "consulta", "aire", "igual/mensual", número al final como precio). Sin ChatGPT ni APIs externas. |
+| **Extracción en Gastos 606** | Gastos, subir imagen | Primero intenta QR (DGII). Si no hay QR, usa `AIService.extractExpenseData` (mock con datos de ejemplo). Sin APIs de visión; se puede completar manualmente. |
+
+Lexis Bill no usa OpenAI ni otras APIs de pago para estas funciones.
+
+---
+
 ## 1. Estado actual (mocks existentes)
 
 | Funcionalidad | Ubicación | Estado |

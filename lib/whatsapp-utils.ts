@@ -1,5 +1,9 @@
 /**
  * Utilidades para envío de documentos por WhatsApp
+ *
+ * Nota: El enlace wa.me solo permite prellenar el mensaje de texto; no se puede adjuntar
+ * un archivo (PDF) por URL. Por eso el mensaje incluye "📎 Te envío adjunto el PDF" para
+ * recordar al usuario que debe adjuntar el PDF manualmente en WhatsApp antes de enviar.
  */
 
 /**
@@ -36,7 +40,7 @@ export function generateQuoteWhatsAppMessage(quote: {
 
     const fromText = companyName ? ` de parte de *${companyName}*` : "";
 
-    return `Hola *${quote.clientName}*! 🇩🇴${fromText}\n\nEs un placer saludarle. Le envío formalmente su *cotización* con el número *${quote.id}* por valor de *${formatCurrency(quote.total)}*.\n\nQuedo a su disposición para cualquier consulta. ¡Feliz resto del día!`;
+    return `Hola *${quote.clientName}*! 🇩🇴${fromText}\n\nEs un placer saludarle. Le envío formalmente su *cotización* con el número *${quote.id}* por valor de *${formatCurrency(quote.total)}*.\n\n📎 Te envío adjunto el PDF de la cotización.\n\nQuedo a su disposición para cualquier consulta. ¡Feliz resto del día!`;
 }
 
 /**
@@ -58,7 +62,7 @@ export function generateInvoiceWhatsAppMessage(invoice: {
     const fromText = companyName ? ` de parte de *${companyName}*` : "";
     const documentNumber = (invoice.ncfSequence || invoice.id).slice(-11);
 
-    return `Hola *${invoice.clientName}*! 🇩🇴${fromText}\n\nLe envío su *recibo/comprobante fiscal* con numeración *${documentNumber}* por el monto de *${formatCurrency(invoice.total)}*. Muchas gracias por su confianza.\n\nQuedo atento ante cualquier duda. ¡Saludos!`;
+    return `Hola *${invoice.clientName}*! 🇩🇴${fromText}\n\nLe envío su *recibo/comprobante fiscal* con numeración *${documentNumber}* por el monto de *${formatCurrency(invoice.total)}*.\n\n📎 Te envío adjunto el PDF del comprobante.\n\nMuchas gracias por su confianza. Quedo atento ante cualquier duda. ¡Saludos!`;
 }
 
 /**

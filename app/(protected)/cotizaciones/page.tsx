@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DocumentViewer, Quote } from "@/components/DocumentViewer";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { downloadQuotePDF, QuoteData } from "@/lib/pdf-generator";
 import { generateQuoteWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp-utils";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ export default function Quotes() {
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [convertingId, setConvertingId] = useState<string | null>(null);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     useEffect(() => {
         loadQuotes();
@@ -30,6 +32,7 @@ export default function Quotes() {
 
     const loadQuotes = async () => {
         setIsLoading(true);
+        setLoadError(null);
         try {
             const data = await api.getQuotes();
             const normalized = (data || []).map((q: { _id?: { toString: () => string }; id?: string; [key: string]: unknown }) => ({
@@ -39,6 +42,7 @@ export default function Quotes() {
             setQuotes(normalized);
         } catch {
             setQuotes([]);
+            setLoadError("No se pudieron cargar las cotizaciones. Revisa tu conexión e intenta de nuevo.");
         } finally {
             setIsLoading(false);
         }
@@ -102,7 +106,7 @@ export default function Quotes() {
 
         const message = generateQuoteWhatsAppMessage(selectedQuote);
         openWhatsApp(selectedQuote.clientPhone, message);
-        toast.info("📲 Abriendo WhatsApp...");
+        toast.info("📲 Abriendo WhatsApp. Recuerda adjuntar el PDF antes de enviar.", { duration: 4000 });
     };
 
     return (
@@ -124,8 +128,18 @@ export default function Quotes() {
                     <CardTitle className="text-lg font-bold text-slate-800">Historial de Cotizaciones</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6 overflow-x-auto">
+                    {loadError && (
+                        <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                            <p className="text-sm text-destructive font-medium">{loadError}</p>
+                            <Button variant="outline" size="sm" onClick={loadQuotes} className="shrink-0">Reintentar</Button>
+                        </div>
+                    )}
                     {isLoading ? (
-                        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
+                        <div className="space-y-3">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <Skeleton key={i} className="h-14 w-full rounded-lg" />
+                            ))}
+                        </div>
                     ) : (
                     <Table className="min-w-[640px]">
                         <TableHeader>
@@ -199,7 +213,7 @@ export default function Quotes() {
                                                             disabled={!!convertingId}
                                                             title="Convertir a factura"
                                                         >
-                                                            {convertingId === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span className="hidden sm:inline">Facturar</span> <ArrowRight className="w-3 h-3" /></>}
+                                                            {convertingId === q.id ? <><Loader2 className="w-4 h-4 animate-spin" /> <span className="hidden sm:inline">Convirtiendo…</span></> : <><span className="hidden sm:inline">Facturar</span> <ArrowRight className="w-3 h-3" /></>}
                                                         </Button>
                                                     </>
                                                 )}

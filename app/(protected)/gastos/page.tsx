@@ -39,6 +39,8 @@ import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-service";
 import { AIService } from "@/lib/ai-service-mock";
 import { DGIIQRParser } from "@/lib/qr-parser";
+import { parseTirillaText, hasUsefulData } from "@/lib/tirilla-ocr-parser";
+import { ContextualHelp } from "@/components/ui/contextual-help";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import jsQR from "jsqr";
@@ -62,6 +64,8 @@ const EXPENSE_CATEGORIES = [
 export default function GastosPage() {
     const [expenses, setExpenses] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddOpen, setIsAddOpen] = useState(false);
@@ -93,11 +97,13 @@ export default function GastosPage() {
     }, [zoom]);
 
     const loadExpenses = async () => {
+        setIsLoading(true);
+        setLoadError(null);
         try {
-            setIsLoading(true);
             const data = await api.getExpenses();
             setExpenses(data);
         } catch (error) {
+            setLoadError("No se pudieron cargar los gastos. Revisa tu conexión e intenta de nuevo.");
             toast.error("Error al cargar los gastos");
         } finally {
             setIsLoading(false);
@@ -110,6 +116,7 @@ export default function GastosPage() {
             return;
         }
 
+        setIsSaving(true);
         try {
             const payload = {
                 ...formData,
@@ -122,7 +129,9 @@ export default function GastosPage() {
             resetForm();
             loadExpenses();
         } catch (error) {
-            toast.error("Error al guardar el gasto");
+            toast.error("Error al guardar el gasto. Revisa tu conexión e intenta de nuevo.");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -166,12 +175,43 @@ export default function GastosPage() {
                 }
             }
         } catch (e) {
-            console.warn("QR Scanning failed, falling back to IA OCR");
+            console.warn("QR no detectado, intentando leer texto de la tirilla...");
         }
 
-        // 2. Fallback to IA OCR
-        toast.info("Escaneando factura con IA...");
+        // 2. OCR con Tesseract (tirilla sin QR): leer texto y extraer datos
+        toast.info("Leyendo texto de la tirilla...");
 
+        try {
+            const { createWorker } = await import("tesseract.js");
+            const worker = await createWorker("spa");
+            const { data } = await worker.recognize(file);
+            await worker.terminate();
+            const rawText = data?.text?.trim() || "";
+
+            if (rawText.length > 0) {
+                const parsed = parseTirillaText(rawText);
+                if (hasUsefulData(parsed)) {
+                    setFormData({
+                        supplierName: parsed.supplierName,
+                        supplierRnc: parsed.supplierRnc,
+                        ncf: parsed.ncf,
+                        amount: parsed.amount.toString(),
+                        itbis: parsed.itbis.toString(),
+                        category: parsed.category,
+                        date: parsed.date || new Date().toISOString().split("T")[0],
+                    });
+                    setIsAddOpen(true);
+                    toast.success("Datos extraídos de la tirilla. Revisa y completa si falta algo.");
+                    setIsScanning(false);
+                    return;
+                }
+            }
+        } catch (ocrErr) {
+            console.warn("OCR tirilla falló, usando datos de ejemplo:", ocrErr);
+        }
+
+        // 3. Fallback: datos de ejemplo para completar manualmente
+        toast.info("Completa los datos del comprobante...");
         try {
             const result = await AIService.extractExpenseData(file);
             setFormData({
@@ -181,12 +221,12 @@ export default function GastosPage() {
                 amount: result.amount.toString(),
                 itbis: result.itbis.toString(),
                 category: result.category,
-                date: new Date().toISOString().split('T')[0]
+                date: new Date().toISOString().split("T")[0],
             });
             setIsAddOpen(true);
-            toast.success("Datos extraídos correctamente por la IA");
+            toast.success("Formulario listo. Ajusta los datos si es necesario.");
         } catch (error) {
-            toast.error("No se pudo extraer la información. Por favor llena el formulario manualmente.");
+            toast.error("No se pudo leer el comprobante. Llena el formulario manualmente.");
             setIsAddOpen(true);
         } finally {
             setIsScanning(false);
@@ -273,8 +313,8 @@ export default function GastosPage() {
                             onChange={handleScan}
                             className="absolute inset-0 opacity-0 cursor-pointer z-10"
                             disabled={isScanning}
-                            aria-label="Subir imagen o PDF para escaneo IA o QR"
-                            title="Subir imagen o PDF"
+                            aria-label="Subir imagen de factura o tirilla (QR o lectura de texto)"
+                            title="Subir imagen de factura o tirilla"
                         />
                         <Button
                             variant="outline"
@@ -282,8 +322,9 @@ export default function GastosPage() {
                             disabled={isScanning}
                         >
                             {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <ScanLine className="w-5 h-5" />}
-                            Escaneo IA / QR
+                            Escaneo QR / Tirilla
                         </Button>
+                        <p className="text-[10px] text-muted-foreground mt-1 px-1">Tirillas sin QR: leemos el texto. Foto clara = mejor resultado.</p>
                     </div>
 
                     <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) resetForm(); }}>
@@ -404,7 +445,10 @@ export default function GastosPage() {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Tipo de Gasto (DGII)</label>
+                                        <div className="flex items-center gap-2">
+                                            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Tipo de Gasto (DGII)</label>
+                                            <ContextualHelp text="Categoría del gasto para el reporte 606. Ej: 01 Personal, 02 Trabajos y servicios, 03 Arrendamientos. Debe coincidir con la clasificación de la DGII." mode="popover" />
+                                        </div>
                                         <Select
                                             value={formData.category}
                                             onValueChange={val => setFormData({ ...formData, category: val })}
@@ -431,8 +475,10 @@ export default function GastosPage() {
                             </div>
 
                             <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancelar</Button>
-                                <Button onClick={handleSaveExpense}>Guardar Gasto</Button>
+                                <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={isSaving}>Cancelar</Button>
+                                <Button onClick={handleSaveExpense} disabled={isSaving}>
+                                    {isSaving ? "Guardando…" : "Guardar Gasto"}
+                                </Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
@@ -481,6 +527,12 @@ export default function GastosPage() {
 
             {/* List Section */}
             <div className="space-y-3">
+                {loadError && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                        <p className="text-sm text-destructive font-medium">{loadError}</p>
+                        <Button variant="outline" size="sm" onClick={loadExpenses} className="shrink-0">Reintentar</Button>
+                    </div>
+                )}
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 gap-4">
                         <Loader2 className="w-10 h-10 text-accent animate-spin" />
