@@ -302,9 +302,9 @@ export default function LandingPage() {
             15 días para recuperar tu <br className="hidden md:block" />
             <span className="text-lexis-gold">tranquilidad fiscal.</span>
           </h2>
-          <div className="max-w-lg mx-auto relative group w-full min-w-0">
+          <div className="max-w-lg sm:max-w-xl mx-auto relative group w-full min-w-0 px-1">
             <div className="absolute -inset-1 bg-gradient-to-r from-lexis-gold to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-            <Card className="relative bg-lexis-bg-deep border-lexis-gold/20 p-6 sm:p-10 pt-14 sm:pt-16 rounded-3xl overflow-visible">
+            <Card className="relative bg-lexis-bg-deep border-lexis-gold/20 p-6 sm:p-10 pt-14 sm:pt-16 rounded-3xl overflow-hidden">
               <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20">
                 <span className="bg-lexis-gold text-white text-[12px] font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap tracking-wider">
                   MEMBRESÍA PROFESIONAL
@@ -313,21 +313,21 @@ export default function LandingPage() {
               <CardHeader className="text-center pb-8 sm:pb-10 border-b border-lexis-gold/10 overflow-visible">
                 <CardTitle className="font-serif text-lexis-gold text-2xl sm:text-3xl mb-6 break-words">Plan Élite</CardTitle>
                 <div className="flex flex-col items-center gap-6 w-full min-w-0">
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-end justify-center gap-6 sm:gap-8 w-full max-w-full">
-                    <div className="flex-1 min-w-0 w-full sm:min-w-[140px] py-4 sm:py-0 sm:pb-2 px-4 sm:px-6 rounded-xl bg-lexis-bg-deep/80 border border-lexis-gold/10">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full">
+                    <div className="w-full min-w-0 py-4 px-4 sm:px-5 rounded-xl bg-lexis-bg-deep/80 border border-lexis-gold/10 flex flex-col items-center justify-center">
                       <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Mensual</p>
-                      <div className="flex items-baseline justify-center gap-1 flex-wrap">
-                        <span className="text-2xl sm:text-3xl md:text-5xl font-bold text-lexis-text-light">RD$950</span>
-                        <span className="text-lexis-gold text-base md:text-xl font-semibold align-bottom">/mes</span>
+                      <div className="flex items-baseline justify-center gap-1 flex-wrap text-center">
+                        <span className="text-xl sm:text-2xl md:text-3xl font-bold text-lexis-text-light tabular-nums">RD$950</span>
+                        <span className="text-lexis-gold text-sm sm:text-base font-semibold">/mes</span>
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0 w-full sm:min-w-[140px] py-4 sm:py-0 sm:pb-2 px-4 sm:px-6 rounded-xl bg-lexis-gold/10 border-2 border-lexis-gold/30 relative">
+                    <div className="w-full min-w-0 py-4 px-4 sm:px-5 rounded-xl bg-lexis-gold/10 border-2 border-lexis-gold/30 relative flex flex-col items-center justify-center">
                       <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-xs font-bold text-lexis-gold bg-lexis-bg-deep px-3 py-1 rounded-full whitespace-nowrap">⭐ Más popular</span>
                       <p className="text-xs text-slate-400 uppercase tracking-wider mb-2 mt-2">Anual</p>
-                      <div className="flex items-baseline justify-center gap-1 flex-wrap">
-                        <span className="text-2xl sm:text-3xl md:text-5xl font-bold text-lexis-text-light">RD$9,500</span>
+                      <div className="flex items-baseline justify-center gap-1 flex-wrap text-center">
+                        <span className="text-xl sm:text-2xl md:text-3xl font-bold text-lexis-text-light tabular-nums">RD$9,500</span>
                       </div>
-                      <p className="text-lexis-gold text-sm md:text-base font-semibold mt-2 text-center">🎁 Paga 10 meses y usa 12</p>
+                      <p className="text-lexis-gold text-xs sm:text-sm font-semibold mt-2 text-center">🎁 Paga 10 meses y usa 12</p>
                     </div>
                   </div>
                   <p className="text-sm md:text-base text-lexis-text-light italic break-words w-full">Si no simplifica tu vida, no pagas nada.</p>
