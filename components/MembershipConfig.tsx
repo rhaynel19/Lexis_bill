@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { CreditCard, Building2, Loader2, CheckCircle2, Upload, X } from "lucide-react";
+import { CreditCard, Building2, Loader2, CheckCircle2, Upload, X, Copy } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -18,8 +18,11 @@ export function MembershipConfig() {
     const [paymentInfo, setPaymentInfo] = useState<{ bankName: string; bankAccount: string; paypalEmail: string } | null>(null);
     const [subscription, setSubscription] = useState<any>(null);
     const [selectedPlan, setSelectedPlan] = useState<string>("pro");
+    const [selectedBilling, setSelectedBilling] = useState<"monthly" | "annual">("annual");
     const [selectedMethod, setSelectedMethod] = useState<"transferencia" | "paypal">("transferencia");
     const [comprobante, setComprobante] = useState<string | null>(null);
+    const [paypalConfirmed, setPaypalConfirmed] = useState(false);
+    const [userEmail, setUserEmail] = useState<string>("");
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -27,14 +30,16 @@ export function MembershipConfig() {
         const load = async () => {
             try {
                 const { api } = await import("@/lib/api-service");
-                const [plansRes, infoRes, statusRes] = await Promise.all([
+                const [plansRes, infoRes, statusRes, meRes] = await Promise.all([
                     api.getMembershipPlans(),
                     api.getMembershipPaymentInfo(),
                     api.getSubscriptionStatus().catch(() => null),
+                    api.getMe().catch(() => null),
                 ]);
                 setPlans(plansRes?.plans || []);
                 setPaymentInfo(infoRes || null);
                 setSubscription(statusRes || null);
+                setUserEmail(meRes?.email || "");
             } catch {
                 toast.error("Error al cargar planes.");
             } finally {
@@ -53,12 +58,17 @@ export function MembershipConfig() {
             toast.error("Debes subir el comprobante de transferencia para continuar.");
             return;
         }
+        if (selectedMethod === "paypal" && !paypalConfirmed) {
+            toast.error("Debes confirmar que realizaste el pago por PayPal.");
+            return;
+        }
         setIsSubmitting(true);
         try {
             const { api } = await import("@/lib/api-service");
-            await api.requestMembershipPayment(selectedPlan, selectedMethod, selectedMethod === "transferencia" ? comprobante || undefined : undefined);
+            await api.requestMembershipPayment(selectedPlan, selectedBilling, selectedMethod, selectedMethod === "transferencia" ? comprobante || undefined : undefined);
             toast.success("Tu solicitud fue registrada. Tu membresía será activada una vez validemos el pago.");
             setComprobante(null);
+            setPaypalConfirmed(false);
             const status = await api.getSubscriptionStatus();
             setSubscription(status);
         } catch (e: any) {
@@ -68,10 +78,15 @@ export function MembershipConfig() {
         }
     };
 
-    const canSubmit = selectedMethod === "paypal" || (selectedMethod === "transferencia" && !!comprobante);
+    const canSubmit =
+        (selectedMethod === "transferencia" && !!comprobante) ||
+        (selectedMethod === "paypal" && paypalConfirmed);
 
     const statusInfo = subscription?.status ? STATUS_LABELS[subscription.status] || STATUS_LABELS.pending : STATUS_LABELS.active;
-    const paidPlans = plans.filter((p: any) => p.price > 0);
+    const proPlan = plans.find((p: any) => p.id === "pro");
+    const premiumPlan = plans.find((p: any) => p.id === "premium");
+    const hasPro = proPlan?.available !== false;
+    const selectedPrice = selectedBilling === "annual" ? (proPlan?.priceAnnual ?? 9500) : (proPlan?.priceMonthly ?? 950);
     const hasPending = subscription?.status === "pending";
 
     if (isLoading) {
@@ -122,33 +137,70 @@ export function MembershipConfig() {
                     </div>
                 )}
 
-                {paidPlans.length > 0 && (
+                {hasPro && (
                     <>
                         <div>
                             <Label className="text-slate-700">Elige tu plan</Label>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                                {paidPlans.map((p: any) => (
-                                    <button
-                                        key={p.id}
-                                        type="button"
-                                        onClick={() => setSelectedPlan(p.id)}
-                                        className={`p-4 rounded-xl border-2 text-left transition-all ${
-                                            selectedPlan === p.id
-                                                ? "border-amber-500 bg-amber-50"
-                                                : "border-slate-200 hover:border-amber-200"
-                                        }`}
-                                    >
-                                        <p className="font-bold text-slate-800">{p.name}</p>
-                                        <p className="text-lg font-bold text-amber-600">
-                                            {p.price === 0 ? "Gratis" : `RD$ ${p.price}/mes`}
-                                        </p>
-                                        <ul className="text-xs text-slate-600 mt-2 space-y-1">
-                                            {p.features?.slice(0, 3).map((f: string, i: number) => (
+                            <div className="space-y-3 mt-2">
+                                {/* Plan Profesional: Mensual + Anual */}
+                                <div className="rounded-xl border-2 border-amber-200 bg-white overflow-hidden">
+                                    <div className="p-4 bg-amber-50/50 border-b border-amber-100">
+                                        <p className="font-bold text-slate-800">{proPlan?.name || "Profesional"}</p>
+                                        <ul className="text-xs text-slate-600 mt-1 space-y-0.5">
+                                            {(proPlan?.features || []).slice(0, 3).map((f: string, i: number) => (
                                                 <li key={i}>• {f}</li>
                                             ))}
                                         </ul>
-                                    </button>
-                                ))}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedBilling("monthly")}
+                                            className={`p-4 text-left transition-all border-r border-slate-200 ${
+                                                selectedBilling === "monthly"
+                                                    ? "bg-amber-50 border-amber-500 ring-2 ring-amber-500 ring-inset"
+                                                    : "hover:bg-slate-50"
+                                            }`}
+                                        >
+                                            <p className="text-sm font-medium text-slate-600">Mensual</p>
+                                            <p className="text-xl font-bold text-amber-600">RD$ {proPlan?.priceMonthly ?? 950}</p>
+                                            <p className="text-xs text-muted-foreground">/mes</p>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedBilling("annual")}
+                                            className={`p-4 text-left transition-all relative ${
+                                                selectedBilling === "annual"
+                                                    ? "bg-amber-50 ring-2 ring-amber-500 ring-inset"
+                                                    : "hover:bg-slate-50"
+                                            }`}
+                                        >
+                                            {proPlan?.annualPopular && (
+                                                <span className="absolute top-2 right-2 text-xs font-semibold text-amber-700 bg-amber-200/80 px-2 py-0.5 rounded">
+                                                    ⭐ Más popular
+                                                </span>
+                                            )}
+                                            <p className="text-sm font-medium text-slate-600">Anual</p>
+                                            <p className="text-xl font-bold text-amber-600">RD$ {proPlan?.priceAnnual ?? 9500}</p>
+                                            <p className="text-xs text-amber-700 font-medium">
+                                                🎁 {proPlan?.annualNote || "Paga 10 meses y usa 12"}
+                                            </p>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Premium: Próximamente */}
+                                {premiumPlan && (
+                                    <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-4 opacity-75 cursor-not-allowed">
+                                        <p className="font-bold text-slate-600">{premiumPlan.name}</p>
+                                        <p className="text-sm text-amber-700 font-medium mt-1">
+                                            {premiumPlan.comingSoonNote || "Próximamente"}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Se agregará en el futuro.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -160,7 +212,7 @@ export function MembershipConfig() {
                                         type="radio"
                                         name="method"
                                         checked={selectedMethod === "transferencia"}
-                                        onChange={() => { setSelectedMethod("transferencia"); setComprobante(null); }}
+                                        onChange={() => { setSelectedMethod("transferencia"); setComprobante(null); setPaypalConfirmed(false); }}
                                         className="accent-amber-600"
                                     />
                                     <span>🏦 Transferencia bancaria</span>
@@ -170,7 +222,7 @@ export function MembershipConfig() {
                                         type="radio"
                                         name="method"
                                         checked={selectedMethod === "paypal"}
-                                        onChange={() => { setSelectedMethod("paypal"); setComprobante(null); }}
+                                        onChange={() => { setSelectedMethod("paypal"); setComprobante(null); setPaypalConfirmed(false); }}
                                         className="accent-amber-600"
                                     />
                                     <span>💲 PayPal</span>
@@ -183,6 +235,10 @@ export function MembershipConfig() {
                                 <p className="font-medium text-slate-700 flex items-center gap-2">
                                     <Building2 className="w-4 h-4" /> Datos para transferencia
                                 </p>
+                                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                    <p className="text-sm text-amber-900 font-semibold">Monto a transferir</p>
+                                    <p className="text-2xl font-bold text-amber-700">RD$ {selectedPrice}</p>
+                                </div>
                                 <p className="text-sm"><strong>Banco:</strong> {paymentInfo.bankName}</p>
                                 <p className="text-sm font-mono"><strong>Cuenta:</strong> {paymentInfo.bankAccount}</p>
                                 <div className="space-y-2">
@@ -231,13 +287,79 @@ export function MembershipConfig() {
                         )}
 
                         {selectedMethod === "paypal" && paymentInfo && (
-                            <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-2">
+                            <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-4">
                                 <p className="font-medium text-slate-700 flex items-center gap-2">
                                     <CreditCard className="w-4 h-4" /> Envía a PayPal
                                 </p>
-                                <p className="text-sm font-mono"><strong>Email:</strong> {paymentInfo.paypalEmail}</p>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    Envía el pago y haz clic en &quot;He realizado el pago&quot;.
+
+                                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                    <p className="text-sm text-amber-900 font-semibold">Monto a enviar</p>
+                                    <p className="text-2xl font-bold text-amber-700 mt-0.5">
+                                        RD$ {selectedPrice}
+                                    </p>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <Label className="text-slate-600 text-sm">Email de PayPal</Label>
+                                    <div className="flex items-center gap-2">
+                                        <code className="flex-1 px-3 py-2 bg-slate-100 rounded-lg text-sm font-mono truncate">
+                                            {paymentInfo.paypalEmail}
+                                        </code>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            className="shrink-0"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(paymentInfo.paypalEmail);
+                                                toast.success("Email copiado");
+                                            }}
+                                        >
+                                            <Copy className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <Label className="text-slate-600 text-sm">Incluye en la nota del pago</Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Para identificar tu solicitud, escribe esto en el concepto/nota:
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <code className="flex-1 px-3 py-2 bg-slate-100 rounded-lg text-sm font-mono truncate">
+                                            LexisBill {selectedPlan} {userEmail ? `- ${userEmail}` : ""}
+                                        </code>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            className="shrink-0"
+                                            onClick={() => {
+                                                const note = `LexisBill ${selectedPlan}${userEmail ? ` - ${userEmail}` : ""}`;
+                                                navigator.clipboard.writeText(note);
+                                                toast.success("Nota copiada");
+                                            }}
+                                        >
+                                            <Copy className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-amber-200 bg-amber-50/50 hover:bg-amber-50 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={paypalConfirmed}
+                                        onChange={(e) => setPaypalConfirmed(e.target.checked)}
+                                        className="mt-0.5 accent-amber-600"
+                                    />
+                                    <span className="text-sm text-slate-700">
+                                        Confirmo que envié el pago por <strong>RD$ {selectedPrice}</strong> a{" "}
+                                        <strong>{paymentInfo.paypalEmail}</strong> e incluí mi correo en la nota del pago.
+                                    </span>
+                                </label>
+
+                                <p className="text-xs text-muted-foreground">
+                                    Debes confirmar antes de continuar.
                                 </p>
                             </div>
                         )}
@@ -256,7 +378,7 @@ export function MembershipConfig() {
                     </>
                 )}
 
-                {!hasPending && paidPlans.length === 0 && (
+                {!hasPending && !hasPro && (
                     <p className="text-sm text-muted-foreground">No hay planes disponibles en este momento.</p>
                 )}
             </CardContent>

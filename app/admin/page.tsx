@@ -103,7 +103,7 @@ export default function AdminPagosPendientes() {
                         Solicitudes pendientes de validación
                     </CardTitle>
                     <CardDescription>
-                        Estamos validando tu pago manualmente para mayor seguridad.
+                        Valida los comprobantes de transferencia antes de aprobar. PayPal no requiere adjunto.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -124,6 +124,7 @@ export default function AdminPagosPendientes() {
                                     <TableHead>Usuario</TableHead>
                                     <TableHead>Plan</TableHead>
                                     <TableHead>Método</TableHead>
+                                    <TableHead>Adjunto</TableHead>
                                     <TableHead>Fecha solicitud</TableHead>
                                     <TableHead className="text-right">Acciones</TableHead>
                                 </TableRow>
@@ -139,21 +140,27 @@ export default function AdminPagosPendientes() {
                                         </TableCell>
                                         <TableCell>
                                             <span className="font-medium capitalize">{p.plan}</span>
+                                            <p className="text-xs text-muted-foreground capitalize">
+                                                {p.billingCycle === "annual" ? "Anual" : "Mensual"}
+                                            </p>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <span className="capitalize">{p.paymentMethod}</span>
-                                                {p.paymentMethod === "transferencia" && p.comprobanteImage && (
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        className="h-7 text-xs"
-                                                        onClick={() => setComprobanteView(p.comprobanteImage)}
-                                                    >
-                                                        <ImageIcon className="w-3 h-3 mr-1" /> Ver
-                                                    </Button>
-                                                )}
-                                            </div>
+                                            <span className="capitalize">{p.paymentMethod}</span>
+                                        </TableCell>
+                                        <TableCell>
+                                            {p.comprobanteImage ? (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="gap-1.5"
+                                                    onClick={() => setComprobanteView(p.comprobanteImage)}
+                                                >
+                                                    <ImageIcon className="w-4 h-4" />
+                                                    Ver comprobante
+                                                </Button>
+                                            ) : (
+                                                <span className="text-muted-foreground text-sm">—</span>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-muted-foreground text-sm">
                                             {formatDate(p.requestedAt)}
@@ -200,9 +207,12 @@ export default function AdminPagosPendientes() {
             </Card>
 
             <Dialog open={!!comprobanteView} onOpenChange={() => setComprobanteView(null)}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh]">
                     <DialogHeader>
-                        <DialogTitle>Comprobante de transferencia</DialogTitle>
+                        <DialogTitle className="flex items-center gap-2">
+                            <ImageIcon className="w-5 h-5" />
+                            Comprobante de pago (adjunto)
+                        </DialogTitle>
                     </DialogHeader>
                     {comprobanteView && (
                         <div className="overflow-auto max-h-[70vh]">

@@ -72,10 +72,32 @@ app.use(async (req, res, next) => {
 });
 
 // --- PLANES DE MEMBRESÍA (Manual: Transferencia / PayPal) ---
+// Objetivo: maximizar flujo de caja, reducir churn, incentivar anuales
 const MEMBERSHIP_PLANS = {
     free: { id: 'free', name: 'Free', price: 0, currency: 'DOP', invoicesPerMonth: 5, features: ['5 facturas / mes', 'Reportes básicos'] },
-    pro: { id: 'pro', name: 'Pro', price: 950, currency: 'DOP', invoicesPerMonth: -1, features: ['Facturas ilimitadas', 'Reportes 606/607', 'Soporte prioritario'] },
-    premium: { id: 'premium', name: 'Premium', price: 2450, currency: 'DOP', invoicesPerMonth: -1, features: ['Todo Pro', 'Multi-negocio (futuro)', 'Soporte VIP'] }
+    pro: {
+        id: 'pro',
+        name: 'Profesional',
+        priceMonthly: 950,
+        priceAnnual: 9500,
+        currency: 'DOP',
+        invoicesPerMonth: -1,
+        available: true,
+        features: ['Facturas ilimitadas', 'Reportes 606/607', 'Soporte prioritario'],
+        annualNote: 'Paga 10 meses y usa 12',
+        annualPopular: true
+    },
+    premium: {
+        id: 'premium',
+        name: 'Premium',
+        price: 2450,
+        currency: 'DOP',
+        invoicesPerMonth: -1,
+        available: false,
+        comingSoon: true,
+        comingSoonNote: 'Próximamente: multi-negocio y más. Te avisaremos.',
+        features: ['Todo Pro', 'Multi-negocio', 'Soporte VIP']
+    }
 };
 
 // --- 2. MODELOS ---
@@ -122,6 +144,7 @@ const userSchema = new mongoose.Schema({
 const paymentRequestSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     plan: { type: String, enum: ['free', 'pro', 'premium'], required: true },
+    billingCycle: { type: String, enum: ['monthly', 'annual'], default: 'monthly' },
     paymentMethod: { type: String, enum: ['transferencia', 'paypal'], required: true },
     comprobanteImage: { type: String }, // base64 data URL del comprobante (obligatorio para transferencia)
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
@@ -612,10 +635,11 @@ app.get('/api/membership/payment-info', (req, res) => {
 
 app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
     try {
-        const { plan, paymentMethod, comprobanteImage } = req.body;
-        if (!plan || !['pro', 'premium'].includes(plan)) {
-            return res.status(400).json({ message: 'Plan inválido. Elige Pro o Premium.' });
+        const { plan, billingCycle, paymentMethod, comprobanteImage } = req.body;
+        if (!plan || plan !== 'pro') {
+            return res.status(400).json({ message: 'Por ahora solo el plan Profesional está disponible.' });
         }
+        const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
         if (!paymentMethod || !['transferencia', 'paypal'].includes(paymentMethod)) {
             return res.status(400).json({ message: 'Método de pago inválido. Elige Transferencia o PayPal.' });
         }
@@ -634,6 +658,7 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
         const pr = new PaymentRequest({
             userId: req.userId,
             plan,
+            billingCycle: cycle,
             paymentMethod,
             comprobanteImage: paymentMethod === 'transferencia' ? comprobanteImage : undefined,
             status: 'pending'
@@ -649,7 +674,7 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
 
         res.status(201).json({
             message: 'Tu solicitud fue registrada. Tu membresía será activada una vez validemos el pago.',
-            paymentRequest: { id: pr._id, plan, paymentMethod, status: 'pending' }
+            paymentRequest: { id: pr._id, plan, billingCycle: cycle, paymentMethod, status: 'pending' }
         });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -668,6 +693,7 @@ app.get('/api/admin/pending-payments', verifyToken, verifyAdmin, async (req, res
             userName: p.userId?.name,
             userEmail: p.userId?.email,
             plan: p.plan,
+            billingCycle: p.billingCycle || 'monthly',
             paymentMethod: p.paymentMethod,
             comprobanteImage: p.comprobanteImage,
             requestedAt: p.requestedAt
@@ -689,7 +715,8 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
 
         const now = new Date();
         const endDate = new Date(now);
-        endDate.setDate(endDate.getDate() + 30);
+        const daysToAdd = (pr.billingCycle === 'annual') ? 365 : 30;
+        endDate.setDate(endDate.getDate() + daysToAdd);
 
         if (!user.subscription) user.subscription = {};
         user.subscription.plan = pr.plan;

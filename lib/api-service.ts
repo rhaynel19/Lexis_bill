@@ -256,11 +256,11 @@ export const api = {
         return secureFetch<any>(`${API_URL}/membership/payment-info`);
     },
 
-    async requestMembershipPayment(plan: string, paymentMethod: "transferencia" | "paypal", comprobanteImage?: string) {
+    async requestMembershipPayment(plan: string, billingCycle: "monthly" | "annual", paymentMethod: "transferencia" | "paypal", comprobanteImage?: string) {
         const res = await secureFetch<any>(`${API_URL}/membership/request-payment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ plan, paymentMethod, comprobanteImage }),
+            body: JSON.stringify({ plan, billingCycle, paymentMethod, comprobanteImage }),
         });
         if (typeof localStorage !== "undefined") localStorage.removeItem("cache_subscription_status");
         return res;

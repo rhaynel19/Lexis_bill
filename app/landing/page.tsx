@@ -170,11 +170,25 @@ export default function LandingPage() {
                                 </span>
                             </div>
                             <CardHeader className="text-center pb-10 border-b border-[#D4AF37]/10">
-                                <CardTitle className="font-serif text-[#D4AF37] text-3xl mb-4">Plan Élite</CardTitle>
-                                <div className="flex flex-col items-center gap-2">
-                                    <div className="flex items-end gap-1">
-                                        <span className="text-5xl md:text-6xl font-bold text-[#F9F6EE]">RD$950</span>
-                                        <span className="text-[#D4AF37] text-xl md:text-2xl font-semibold mb-2 align-bottom">/mes</span>
+                                <CardTitle className="font-serif text-[#D4AF37] text-3xl mb-4">Plan Profesional</CardTitle>
+                                <div className="flex flex-col items-center gap-3">
+                                    <div className="flex items-end justify-center gap-4 flex-wrap">
+                                        <div className="text-center">
+                                            <p className="text-xs text-slate-500 uppercase tracking-wider">Mensual</p>
+                                            <div className="flex items-end gap-1">
+                                                <span className="text-3xl md:text-4xl font-bold text-[#F9F6EE]">RD$950</span>
+                                                <span className="text-[#D4AF37] text-lg font-semibold mb-1 align-bottom">/mes</span>
+                                            </div>
+                                        </div>
+                                        <span className="text-slate-500 hidden sm:inline">|</span>
+                                        <div className="text-center relative">
+                                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-[#D4AF37] bg-[#D4AF37]/20 px-2 py-0.5 rounded">⭐ Más popular</span>
+                                            <p className="text-xs text-slate-500 uppercase tracking-wider">Anual</p>
+                                            <div className="flex items-end gap-1">
+                                                <span className="text-3xl md:text-4xl font-bold text-[#F9F6EE]">RD$9,500</span>
+                                            </div>
+                                            <p className="text-[#D4AF37] text-sm font-semibold mt-0.5">🎁 Paga 10 meses y usa 12</p>
+                                        </div>
                                     </div>
                                     <p className="text-sm text-slate-400 italic">Si no simplifica tu vida, no pagas nada.</p>
                                 </div>
