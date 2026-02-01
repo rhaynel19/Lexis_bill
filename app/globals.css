@@ -63,13 +63,12 @@
 :root {
   --radius: 0.75rem;
 
-  /* --- Lexis Bill marca (un solo origen para landing/públicas) --- */
-  --lexis-bg-deep: #0a192f;
-  --lexis-bg-mid: #081221;
+  /* --- Lexis Bill marca (colores originales landing) --- */
+  --lexis-bg-deep: #1E2A47;
+  --lexis-bg-mid: #172238;
   --lexis-gold: #d4af37;
   --lexis-gold-hover: #b8962e;
-  --lexis-text-light: #f9f6ee;
-  /* Azul marino del logo para "Bill" (visible sobre fondo oscuro) */
+  --lexis-text-light: #ffffff;
   --lexis-brand-blue: #5b8fb9;
 
   /* --- LIGHT THEME (Default) --- */

@@ -43,7 +43,7 @@ export default function LandingPage() {
                         La distinción de un <br />
                         <span className="text-lexis-gold">negocio bien organizado.</span>
                     </h1>
-                    <p className="text-xl md:text-2xl text-slate-300 max-w-3xl mx-auto mb-14 leading-relaxed font-light italic">
+                    <p className="text-xl md:text-2xl text-lexis-text-light max-w-3xl mx-auto mb-14 leading-relaxed font-light italic">
                         Diseñado para quienes valoran su tiempo. Una plataforma de facturación que entiende el mercado dominicano y eleva el estándar de tu práctica profesional. Comienza hoy sin tarjetas.
                     </p>
                     <div className="flex flex-col items-center gap-6">
