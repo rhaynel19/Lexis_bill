@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, User, Lock, Mail, Building2, Briefcase, ShieldCheck, ArrowLeft } from "lucide-react";
+import { CheckCircle2, User, Lock, Mail, Building2, Briefcase, ShieldCheck, ArrowLeft, Handshake } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api-service";
 import { Suspense } from "react";
@@ -25,6 +25,8 @@ function RegisterForm() {
     const plan = searchParams.get("plan"); // 'pro' or null (trial)
     const ref = searchParams.get("ref") || ""; // Código de referido
     const invite = searchParams.get("invite") || ""; // Invitación partner
+    const tipoPartner = searchParams.get("tipo") === "partner"; // Vino desde "Crear cuenta" en /unirse-como-partner
+    const isPartnerFlow = !!invite || tipoPartner;
 
     const [form, setForm] = useState({
         email: "",
@@ -42,6 +44,20 @@ function RegisterForm() {
         loading: false,
         valid: null
     });
+    const [inviteValid, setInviteValid] = useState<boolean | null>(null);
+
+    // Validar token de invitación partner (cuando hay ?invite=)
+    useEffect(() => {
+        if (!invite) {
+            setInviteValid(false);
+            return;
+        }
+        let cancelled = false;
+        api.validateInviteToken(invite).then((res) => {
+            if (!cancelled) setInviteValid(res?.valid ?? false);
+        }).catch(() => { if (!cancelled) setInviteValid(false); });
+        return () => { cancelled = true; };
+    }, [invite]);
 
     // Silent RNC Validation
     useEffect(() => {
@@ -135,22 +151,45 @@ function RegisterForm() {
                     <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Volver atrás
                 </button>
 
-                <Card className="w-full bg-white/95 backdrop-blur border-none shadow-2xl overflow-hidden rounded-2xl">
-                    <div className="h-2 w-full bg-gradient-to-r from-blue-600 via-lexis-gold to-blue-950"></div>
+                <Card className={`w-full bg-white/95 backdrop-blur border-none shadow-2xl overflow-hidden rounded-2xl ${isPartnerFlow ? "ring-2 ring-amber-200 dark:ring-amber-800" : ""}`}>
+                    {/* Barra superior: partner (ámbar) cuando es flujo partner, sino azul */}
+                    <div className={`h-2 w-full ${isPartnerFlow ? "bg-gradient-to-r from-amber-500 via-lexis-gold to-amber-700" : "bg-gradient-to-r from-blue-600 via-lexis-gold to-blue-950"}`} />
                     <CardHeader className="text-center pb-2 pt-8">
-                        <CardTitle className="text-2xl font-black text-blue-950 tracking-tight uppercase">
-                            {plan === 'pro' ? 'ACTIVA TU PLAN PRO' : 'COMIENZA TU PRUEBA'}
-                        </CardTitle>
-                        <CardDescription className="text-slate-500 font-medium pt-1">
-                            {plan === 'pro'
-                                ? 'Suscripción automática por RD$950/mes'
-                                : 'Acceso total por 15 días. Sin tarjetas.'}
-                        </CardDescription>
-                        {ref && (
-                            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 text-xs font-semibold border border-amber-200">
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                Referido por un Partner Lexis Bill
-                            </div>
+                        {isPartnerFlow ? (
+                            <>
+                                <div className="flex justify-center mb-2">
+                                    <Handshake className="w-10 h-10 text-amber-500" />
+                                </div>
+                                <CardTitle className="text-2xl font-black text-amber-900 dark:text-amber-100 tracking-tight uppercase">
+                                    CREA TU CUENTA — INVITACIÓN PARTNER
+                                </CardTitle>
+                                <CardDescription className="text-slate-600 dark:text-slate-400 font-medium pt-1">
+                                    Completa el registro y luego termina tu solicitud como Partner con prioridad en aprobación.
+                                </CardDescription>
+                                {inviteValid === true && (
+                                    <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 text-xs font-semibold border border-amber-300 dark:border-amber-700">
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        Invitación Partner válida — Prioridad en aprobación
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <CardTitle className="text-2xl font-black text-blue-950 tracking-tight uppercase">
+                                    {plan === 'pro' ? 'ACTIVA TU PLAN PRO' : 'COMIENZA TU PRUEBA'}
+                                </CardTitle>
+                                <CardDescription className="text-slate-500 font-medium pt-1">
+                                    {plan === 'pro'
+                                        ? 'Suscripción automática por RD$950/mes'
+                                        : 'Acceso total por 15 días. Sin tarjetas.'}
+                                </CardDescription>
+                                {ref && (
+                                    <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 text-xs font-semibold border border-amber-200">
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        Referido por un Partner Lexis Bill
+                                    </div>
+                                )}
+                            </>
                         )}
                     </CardHeader>
                     <CardContent className="px-6 md:px-10 pb-10">
@@ -295,16 +334,29 @@ function RegisterForm() {
 
                             <Button
                                 type="submit"
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-7 text-lg shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98] rounded-xl"
+                                className={isPartnerFlow
+                                    ? "w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-7 text-lg shadow-xl shadow-amber-500/20 transition-all active:scale-[0.98] rounded-xl"
+                                    : "w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-7 text-lg shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98] rounded-xl"}
                                 disabled={isLoading || !acceptedTerms}
                                 aria-busy={isLoading}
                             >
-                                {isLoading ? "Creando cuenta…" : (plan === 'pro' ? 'Activar Plan Elite' : 'Empezar 15 Días Gratis')}
+                                {isLoading
+                                    ? "Creando cuenta…"
+                                    : isPartnerFlow
+                                        ? "Crear cuenta y continuar como Partner"
+                                        : plan === 'pro'
+                                            ? 'Activar Plan Elite'
+                                            : 'Empezar 15 Días Gratis'}
                             </Button>
 
+                            {isPartnerFlow && (
+                                <p className="text-xs text-center text-amber-700 dark:text-amber-300 font-medium">
+                                    Tras crear la cuenta serás redirigido a completar tu solicitud como Partner.
+                                </p>
+                            )}
                             <div className="pt-2 text-center">
                                 <p className="text-xs text-slate-400">
-                                    ¿Ya tienes cuenta? <Link href="/login" className="text-blue-600 font-bold hover:underline underline-offset-4">Inicia Sesión</Link>
+                                    ¿Ya tienes cuenta? <Link href={invite ? `/login?redirect=${encodeURIComponent(`/unirse-como-partner?invite=${invite}`)}` : tipoPartner ? `/login?redirect=${encodeURIComponent("/unirse-como-partner")}` : "/login"} className="text-blue-600 font-bold hover:underline underline-offset-4">Inicia Sesión</Link>
                                 </p>
                             </div>
                         </form>

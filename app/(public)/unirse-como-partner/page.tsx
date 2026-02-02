@@ -126,10 +126,10 @@ function UnirseComoPartnerContent() {
                                     </p>
                                 )}
                                 <div className="flex gap-3">
-                                    <Link href={inviteParam ? `/registro?invite=${inviteParam}` : "/registro"} className="flex-1">
+                                    <Link href={inviteParam ? `/registro?invite=${inviteParam}` : "/registro?tipo=partner"} className="flex-1">
                                         <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white">Crear cuenta</Button>
                                     </Link>
-                                    <Link href={inviteParam ? `/login?redirect=${encodeURIComponent(`/unirse-como-partner?invite=${inviteParam}`)}` : "/login"} className="flex-1">
+                                    <Link href={inviteParam ? `/login?redirect=${encodeURIComponent(`/unirse-como-partner?invite=${inviteParam}`)}` : "/login?redirect=%2Funirse-como-partner"} className="flex-1">
                                         <Button variant="outline" className="w-full">Ya tengo cuenta</Button>
                                     </Link>
                                 </div>
