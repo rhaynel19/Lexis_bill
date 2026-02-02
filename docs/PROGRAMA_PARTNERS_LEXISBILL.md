@@ -263,11 +263,11 @@ Un usuario puede ser `user` y `partner` a la vez (usa Lexis Bill y refiere). O c
 
 ### 8.1 Página: `/unirse-como-partner` (pública)
 
-Formulario:
-- Nombre, email, teléfono
-- ¿Por qué quieres ser partner?
-- Acepto términos (cartera es de Lexis Bill, comisión mientras activo)
-- Envía a POST /api/partners/apply
+Formulario completo (modelo híbrido recomendado):
+- **Beneficios**: sección con niveles (Starter/Growth/Elite) y ventajas del programa.
+- **Términos**: resumen + “Ver términos completos” expandible + checkbox obligatorio “Acepto los términos del Programa de Partners”.
+- **Tu solicitud**: nombre, teléfono (opcional), “¿Por qué quieres ser partner?” (textarea, opcional, máx. 2000 caracteres).
+- Envía a POST /api/partners/apply (name, phone, whyPartner, inviteToken). El backend guarda `whyPartner` en el documento Partner.
 
 ### 8.2 Admin aprueba
 

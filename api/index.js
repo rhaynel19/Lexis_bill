@@ -418,6 +418,7 @@ const partnerSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true },
     phone: { type: String },
+    whyPartner: { type: String },
     tier: { type: String, enum: ['starter', 'growth', 'elite'], default: 'starter' },
     commissionRate: { type: Number, default: 0.07 },
     bankName: { type: String },
@@ -931,7 +932,8 @@ app.post('/api/partners/apply', verifyToken, partnerApplyLimiter, async (req, re
         if (!existing) return res.status(404).json({ message: 'Usuario no encontrado' });
 
         const name = sanitizeString(req.body.name || existing.name, 100);
-        const phone = sanitizeString(req.body.phone, 30);
+        const phone = sanitizeString(req.body.phone || '', 30);
+        const whyPartner = sanitizeString(req.body.whyPartner || '', 2000);
         const inviteToken = sanitizeString(req.body.inviteToken || '', 50);
 
         const exists = await Partner.findOne({ userId });
@@ -965,6 +967,7 @@ app.post('/api/partners/apply', verifyToken, partnerApplyLimiter, async (req, re
             name,
             email: existing.email,
             phone,
+            whyPartner: whyPartner || undefined,
             status: 'pending',
             termsAcceptedAt: new Date()
         };

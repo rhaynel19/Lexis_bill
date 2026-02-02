@@ -355,7 +355,7 @@ export const api = {
         return secureFetch<{ valid: boolean; source?: string }>(`${API_URL}/referral/invite?token=${encodeURIComponent(token)}`);
     },
 
-    async applyPartner(data: { name: string; phone?: string; inviteToken?: string }) {
+    async applyPartner(data: { name: string; phone?: string; whyPartner?: string; inviteToken?: string }) {
         return secureFetch<any>(`${API_URL}/partners/apply`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
