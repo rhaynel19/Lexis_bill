@@ -1840,6 +1840,72 @@ app.get('/api/customers', verifyToken, async (req, res) => {
     }
 });
 
+// Importación masiva de clientes (CSV/JSON) - límites: 5MB body, 20,000 filas
+const CUSTOMER_IMPORT_MAX_ROWS = 20000;
+const CUSTOMER_IMPORT_MAX_BYTES = 5 * 1024 * 1024;
+
+app.post('/api/customers/import', verifyToken, async (req, res) => {
+    try {
+        const data = req.body;
+        if (!Array.isArray(data)) {
+            return res.status(400).json({ message: 'Se espera un arreglo de clientes.' });
+        }
+        if (data.length > CUSTOMER_IMPORT_MAX_ROWS) {
+            return res.status(400).json({ message: `Máximo ${CUSTOMER_IMPORT_MAX_ROWS.toLocaleString('es-DO')} clientes por importación. Divide tu archivo.` });
+        }
+        const bodyStr = JSON.stringify(data);
+        if (Buffer.byteLength(bodyStr, 'utf8') > CUSTOMER_IMPORT_MAX_BYTES) {
+            return res.status(400).json({ message: 'El archivo supera el límite de 5 MB.' });
+        }
+
+        let imported = 0;
+        let updated = 0;
+        const errors = [];
+
+        for (let i = 0; i < data.length; i++) {
+            const row = data[i];
+            if (!row || typeof row !== 'object') continue;
+            const rnc = String(row.rnc || '').replace(/[^0-9]/g, '');
+            const name = sanitizeString(row.name || row.nombre || '', 200);
+            if (!rnc || rnc.length < 9 || rnc.length > 11) {
+                errors.push(`Fila ${i + 2}: RNC inválido (9 u 11 dígitos).`);
+                continue;
+            }
+            if (!name) {
+                errors.push(`Fila ${i + 2}: Nombre requerido.`);
+                continue;
+            }
+            const sanitized = {
+                userId: req.userId,
+                name,
+                rnc,
+                phone: sanitizeString(row.phone || row.telefono || row.tel || '', 20).replace(/[^0-9+\-\s]/g, ''),
+                email: sanitizeEmail(row.email || row.correo || row.mail || ''),
+                notes: sanitizeString(row.notes || row.notas || '', 500)
+            };
+            try {
+                const existing = await Customer.findOne({ userId: req.userId, rnc });
+                await Customer.findOneAndUpdate(
+                    { userId: req.userId, rnc },
+                    sanitized,
+                    { upsert: true, new: true }
+                );
+                if (existing) updated++; else imported++;
+            } catch (err) {
+                errors.push(`Fila ${i + 2}: ${err.message || 'Error al guardar'}`);
+            }
+        }
+
+        const total = imported + updated;
+        const msg = total > 0
+            ? `${total.toLocaleString('es-DO')} cliente(s) procesados (${imported} nuevos, ${updated} actualizados).` + (errors.length > 0 ? ` ${errors.length} fila(s) con error.` : '')
+            : 'No se importó ningún cliente. Revisa el formato (RNC 9/11 dígitos, nombre obligatorio).';
+        res.json({ message: msg, imported, updated, errors: errors.slice(0, 10) });
+    } catch (error) {
+        res.status(500).json({ message: error.message || 'Error al importar clientes.' });
+    }
+});
+
 app.post('/api/customers', verifyToken, async (req, res) => {
     try {
         // === SANITIZACIÓN DE INPUTS ===
