@@ -1,75 +1,118 @@
 "use client";
 
-import { useState } from "react";
-import { MessageCircle, Headphones, CreditCard, X } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { MessageCircle, Headphones, CreditCard, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+const SUPPORT_PHONE = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "18095550000";
 
 export function SupportChat() {
     const [isOpen, setIsOpen] = useState(false);
+    const panelRef = useRef<HTMLDivElement>(null);
+    const pathname = usePathname();
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (isOpen && panelRef.current && !panelRef.current.contains(e.target as Node)) {
+                const target = e.target as HTMLElement;
+                if (!target.closest('[data-support-trigger]')) {
+                    setIsOpen(false);
+                }
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [isOpen]);
 
     const handleWhatsApp = (type: "tech" | "billing") => {
-        const phone = "18095550000"; // Reemplazar con real
-        let message = "";
-
-        // Try to get user name from local storage
         let userName = "Usuario";
         if (typeof window !== "undefined") {
-            const user = localStorage.getItem("user");
-            if (user) userName = JSON.parse(user).name || "Usuario";
+            try {
+                const user = localStorage.getItem("user");
+                if (user) userName = JSON.parse(user).name || "Usuario";
+            } catch {
+                // ignorar
+            }
         }
 
+        const pathLabel = pathname ? ` (pantalla: ${pathname.replace(/^\//, "") || "inicio"})` : "";
+        let message = "";
         if (type === "tech") {
-            message = `Hola, soy ${userName} de Lexis Bill y necesito Soporte Técnico Especializado con...`;
+            message = `Hola, soy ${userName} de Lexis Bill${pathLabel} y necesito Soporte Técnico con...`;
         } else {
-            message = `Hola, soy ${userName} de Lexis Bill y tengo una consulta de Facturación/Pagos sobre...`;
+            message = `Hola, soy ${userName} de Lexis Bill${pathLabel} y tengo una consulta de Facturación/Pagos sobre...`;
         }
 
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
+        window.open(`https://wa.me/${SUPPORT_PHONE}?text=${encodeURIComponent(message)}`, "_blank");
     };
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 hidden md:block">
+        <div
+            className="fixed z-50 bottom-24 left-4 md:bottom-6 md:left-auto md:right-6"
+            role="complementary"
+            aria-label="Widget de soporte"
+        >
             {isOpen ? (
-                <div className="bg-white rounded-lg shadow-2xl border border-gray-200 mb-4 w-72 overflow-hidden animate-in slide-in-from-bottom-5">
-                    <div className="bg-[#25D366] p-4 text-white flex justify-between items-center">
+                <div
+                    ref={panelRef}
+                    className="bg-card rounded-lg shadow-2xl border border-border mb-4 w-72 overflow-hidden animate-in slide-in-from-bottom-5"
+                    role="dialog"
+                    aria-labelledby="support-title"
+                    aria-modal="true"
+                >
+                    <div className="p-4 text-white flex justify-between items-center bg-[#25D366]">
                         <div>
-                            <h3 className="font-bold">Soporte Lexis Bill</h3>
-                            <p className="text-xs opacity-90">● En línea ahora</p>
+                            <h3 id="support-title" className="font-bold">
+                                Soporte Lexis Bill
+                            </h3>
+                            <p className="text-xs opacity-90 flex items-center gap-1.5 mt-0.5">
+                                <Clock className="w-3 h-3" aria-hidden />
+                                Lun–Vie 9:00–18:00
+                            </p>
                         </div>
-                        <button onClick={() => setIsOpen(false)} className="text-white hover:bg-white/20 rounded-full p-1">
+                        <button
+                            onClick={() => setIsOpen(false)}
+                            className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+                            aria-label="Cerrar soporte"
+                        >
                             <X className="h-4 w-4" />
                         </button>
                     </div>
-                    <div className="p-4 space-y-2">
+                    <div className="p-4 space-y-2 bg-background">
                         <Button
                             variant="outline"
-                            className="w-full justify-start gap-2 hover:bg-green-50 hover:text-green-700 hover:border-green-200"
+                            className="w-full justify-start gap-2 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
                             onClick={() => handleWhatsApp("tech")}
+                            aria-label="Abrir WhatsApp para Soporte Técnico"
                         >
-                            <Headphones className="h-4 w-4" />
+                            <Headphones className="h-4 w-4 shrink-0" aria-hidden />
                             Soporte Técnico
                         </Button>
                         <Button
                             variant="outline"
-                            className="w-full justify-start gap-2 hover:bg-green-50 hover:text-green-700 hover:border-green-200"
+                            className="w-full justify-start gap-2 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
                             onClick={() => handleWhatsApp("billing")}
+                            aria-label="Abrir WhatsApp para Facturación y Pagos"
                         >
-                            <CreditCard className="h-4 w-4" />
+                            <CreditCard className="h-4 w-4 shrink-0" aria-hidden />
                             Facturación y Pagos
                         </Button>
                     </div>
-                    <div className="bg-gray-50 p-2 text-center text-[10px] text-gray-400">
+                    <div className="bg-muted/50 p-2 text-center text-[10px] text-muted-foreground border-t border-border">
                         Respuesta estimada: &lt; 5 min
                     </div>
                 </div>
             ) : null}
 
             <button
+                data-support-trigger
                 onClick={() => setIsOpen(!isOpen)}
-                className="h-14 w-14 bg-[#25D366] text-white rounded-full shadow-xl shadow-green-500/30 flex items-center justify-center hover:scale-110 transition-all relative"
+                className="h-14 w-14 bg-[#25D366] text-white rounded-full shadow-xl shadow-green-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+                aria-label={isOpen ? "Cerrar soporte" : "Abrir soporte Lexis Bill"}
+                aria-expanded={isOpen ? "true" : "false"}
             >
-                <MessageCircle className="h-8 w-8" />
-                <span className="absolute top-0 right-0 h-3 w-3 bg-red-500 border-2 border-white rounded-full"></span>
+                <MessageCircle className="h-8 w-8" aria-hidden />
             </button>
         </div>
     );

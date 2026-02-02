@@ -45,6 +45,10 @@ PAYPAL_CLIENT_ID=
 PAYPAL_CLIENT_SECRET=
 PAYPAL_MODE=sandbox
 
+# Soporte (WhatsApp)
+# Número con código de país, sin + ni espacios (ej: 18095550000)
+NEXT_PUBLIC_SUPPORT_WHATSAPP=18095550000
+
 # APIs Fiscales (DGII)
 # Alanube
 ALANUBE_API_KEY=
