@@ -341,4 +341,57 @@ PARTNER_MIN_CLIENTS_ELITE=51
 
 ---
 
+## 13. Evitar duplicidad (cuentas y partners)
+
+### 13.1 Registro de cliente (/registro)
+
+- **Email único:** La API `POST /api/auth/register` comprueba si el correo ya existe (`User.findOne({ email })`). Si existe, responde 400 con "Este correo ya está registrado." También se captura el error 11000 de MongoDB (índice único) con mensaje "El correo o el RNC ya están registrados."
+- **Usuario ya logueado:** La página `/registro` comprueba sesión (`api.getMe()`). Si el usuario ya está logueado, se redirige a `/dashboard` o a `/unirse-como-partner` (si llegó con `?tipo=partner` o `?invite=`), evitando intentar crear una segunda cuenta.
+
+### 13.2 Solicitud de partner (POST /api/partners/apply)
+
+- **Solicitud pendiente:** Si ya existe un documento Partner con `status: 'pending'` para ese usuario, la API responde 400: "Ya tienes una solicitud pendiente."
+- **Partner activo:** Si `status: 'active'`, responde 400: "Ya eres partner activo." (incluye `referralCode`).
+- **Partner suspendido:** Si `status: 'suspended'`, responde 400: "Tu cuenta partner está suspendida. Contacta a soporte."
+- Un usuario (cliente) solo puede tener un documento Partner; no se permite duplicar la solicitud ni tener dos perfiles partner.
+
+---
+
+## 14. Sugerencias de implementación futura
+
+Priorizadas por **impacto** y **esfuerzo**. Lo que ya está hecho (registro, apply, dashboard, admin, invitaciones, duplicidad) no se repite.
+
+### 14.1 Programa Partners (alto impacto)
+
+| Sugerencia | Estado | Notas |
+|------------|--------|--------|
+| **Job/cron de comisiones mensuales** | ✅ Implementado | POST `/api/admin/partners/calculate-commissions` (admin). Botón "Calcular comisiones (mes anterior)" en Admin → Partners. Opcional: cron el día 1 que llame a este endpoint. |
+| **Email al aprobar partner** | ✅ Estructura lista | Tras aprobar se registra en log. Para enviar email: crear `api/mailer.js` con `sendPartnerApproved(email, name, referralCode, referralUrl)` y `SEND_PARTNER_APPROVED_EMAIL=true`. |
+| **Mostrar "¿Por qué quieres ser partner?" en admin** | ✅ Implementado | Columna "¿Por qué partner?" en lista de partners (Admin → Partners) con tooltip con texto completo. |
+| **Gráfica de evolución** | ✅ Implementado | En `/partners`, gráfica de barras (clientes activos por mes, últimos 12 meses). |
+
+### 14.2 Auth y seguridad (alto impacto)
+
+| Sugerencia | Estado | Notas |
+|------------|--------|--------|
+| **Recuperar contraseña** | ✅ Implementado | `/recuperar-contrasena` (solicitar enlace), `/restablecer-contrasena?token=` (nueva contraseña). API: POST `/api/auth/forgot-password`, POST `/api/auth/reset-password`. Login enlaza "¿Olvidó su contraseña?" a `/recuperar-contrasena`. Email: configurar `SEND_PASSWORD_RESET_EMAIL=true` y `api/mailer.js` con `sendPasswordReset(email, resetUrl)`. |
+| **Rate limit en login** | ✅ Ya existía | `authLimiter` (5 intentos / 15 min) aplicado a `/api/auth/login`. |
+| **Verificación de email (opcional)** | ✅ Estructura mínima | Campo `User.emailVerified`, colección `EmailVerify`, POST `/api/auth/verify-email` (token). Falta: enviar email con link al registrarse (integrar con mailer). |
+
+### 14.3 UX y operación
+
+| Sugerencia | Descripción | Esfuerzo |
+|------------|-------------|----------|
+| **Página pública de términos del programa** | Ruta tipo `/programa-partners` o `/terminos-partners` con el texto legal completo, enlazable desde "Ver términos completos" en `/unirse-como-partner`. | Bajo |
+| **Exportar lista de partners (admin)** | Botón en admin partners para descargar CSV/Excel (nombre, email, código, estado, clientes, comisiones) para reportes o contabilidad. | Bajo |
+| **Notificación in-app al partner** | Cuando el admin aprueba o suspende, mostrar un aviso/badge en el layout o en `/partners` ("Tu solicitud fue aprobada" / "Tu cuenta partner fue suspendida"). Puede complementar el email. | Bajo |
+
+### 14.4 Pendiente opcional
+
+- **Email real:** Crear `api/mailer.js` con `sendPasswordReset(email, resetUrl)` y `sendPartnerApproved(email, name, referralCode, referralUrl)`; configurar Resend/SendGrid y `SEND_PASSWORD_RESET_EMAIL=true`, `SEND_PARTNER_APPROVED_EMAIL=true`.
+- **Cron comisiones:** Llamar a POST `/api/admin/partners/calculate-commissions` el día 1 de cada mes (Vercel Cron, cron servidor, etc.).
+- **Verificación email al registrarse:** Crear token en registro, enviar link con mailer, opcionalmente bloquear acciones hasta verificar.
+
+---
+
 *Documento creado para implementación del Programa de Partners Lexis Bill - Revenue Share Recurrente*

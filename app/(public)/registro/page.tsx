@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, User, Lock, Mail, Building2, Briefcase, ShieldCheck, ArrowLeft, Handshake } from "lucide-react";
+import { CheckCircle2, User, Lock, Mail, Building2, Briefcase, ShieldCheck, ArrowLeft, Handshake, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api-service";
 import { Suspense } from "react";
@@ -45,6 +45,24 @@ function RegisterForm() {
         valid: null
     });
     const [inviteValid, setInviteValid] = useState<boolean | null>(null);
+    const [checkingAuth, setCheckingAuth] = useState(true);
+
+    // Si ya está logueado, redirigir (evitar duplicidad de cuenta)
+    useEffect(() => {
+        let cancelled = false;
+        api.getMe()
+            .then((me) => {
+                if (cancelled) return;
+                if (me) {
+                    if (tipoPartner || invite) router.replace("/unirse-como-partner" + (invite ? `?invite=${invite}` : ""));
+                    else router.replace("/dashboard");
+                } else {
+                    setCheckingAuth(false);
+                }
+            })
+            .catch(() => { if (!cancelled) setCheckingAuth(false); });
+        return () => { cancelled = true; };
+    }, [invite, tipoPartner, router]);
 
     // Validar token de invitación partner (cuando hay ?invite=)
     useEffect(() => {
@@ -120,7 +138,9 @@ function RegisterForm() {
             }));
 
             toast.success("Cuenta creada. Redirigiendo…");
-            router.push(invite ? `/unirse-como-partner?invite=${invite}` : "/dashboard");
+            if (invite) router.push(`/unirse-como-partner?invite=${invite}`);
+            else if (tipoPartner) router.push("/unirse-como-partner");
+            else router.push("/dashboard");
         } catch (err: any) {
             // Manejo de errores amigable
             if (err.message === "Failed to fetch") {
@@ -132,6 +152,14 @@ function RegisterForm() {
             setIsLoading(false);
         }
     };
+
+    if (checkingAuth) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#0F172A]">
+                <Loader2 className="w-10 h-10 animate-spin text-lexis-gold" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#0F172A] px-4 py-8 relative overflow-hidden">

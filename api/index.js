@@ -235,6 +235,7 @@ const userSchema = new mongoose.Schema({
         endDate: { type: Date }
     },
     role: { type: String, enum: ['user', 'admin', 'partner'], default: 'user' },
+    emailVerified: { type: Boolean, default: false },
 
     // Identidad Fiscal (Asistente Inteligente)
     suggestedFiscalName: { type: String },
@@ -496,6 +497,22 @@ function getPartnerTier(activeCount) {
     if (activeCount >= 51) return { tier: 'elite', rate: 0.10 };
     if (activeCount >= 21) return { tier: 'growth', rate: 0.09 };
     return { tier: 'starter', rate: 0.07 };
+}
+
+// Token para recuperar contraseña
+const passwordResetSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    token: { type: String, required: true, unique: true },
+    expiresAt: { type: Date, required: true },
+    usedAt: { type: Date },
+    createdAt: { type: Date, default: Date.now }
+});
+passwordResetSchema.index({ token: 1 });
+passwordResetSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+const PasswordReset = mongoose.models.PasswordReset || mongoose.model('PasswordReset', passwordResetSchema);
+
+function generateResetToken() {
+    return require('crypto').randomBytes(32).toString('hex');
 }
 
 const { validate607Format, validate606Format, validateNcfStructure } = require('./dgii-validator');
@@ -836,6 +853,88 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+// Recuperar contraseña: solicitar token por email
+app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
+    try {
+        const email = sanitizeEmail(req.body.email);
+        if (!email) return res.status(400).json({ message: 'Correo no válido.' });
+        const user = await User.findOne({ email });
+        if (!user) {
+            // No revelar si el email existe
+            return res.status(200).json({ message: 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.' });
+        }
+        const token = generateResetToken();
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+        await PasswordReset.deleteMany({ userId: user._id });
+        await PasswordReset.create({ userId: user._id, token, expiresAt });
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lexisbill.com.do';
+        const resetUrl = `${baseUrl}/restablecer-contrasena?token=${token}`;
+        try {
+            if (process.env.SEND_PASSWORD_RESET_EMAIL === 'true') {
+                const mailer = require('./mailer');
+                if (typeof mailer.sendPasswordReset === 'function') await mailer.sendPasswordReset(user.email, resetUrl);
+                else log.info({ email: user.email, resetUrl }, 'Password reset (mailer.sendPasswordReset no definido)');
+            } else {
+                log.info({ email: user.email, resetUrl }, 'Password reset (email no enviado; configurar SEND_PASSWORD_RESET_EMAIL en dev usar URL del log)');
+            }
+        } catch (e) { log.warn({ err: (e && e.message) || 'mailer no disponible' }, 'Email reset no enviado'); }
+        res.status(200).json({ message: 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.' });
+    } catch (e) {
+        log.error({ err: e.message }, 'Error forgot-password');
+        res.status(500).json({ message: 'Error al procesar la solicitud.' });
+    }
+});
+
+// Restablecer contraseña con token
+app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+        const token = sanitizeString(req.body.token || '', 200);
+        const newPassword = req.body.newPassword;
+        if (!token || !newPassword) return res.status(400).json({ message: 'Token y nueva contraseña son requeridos.' });
+        const pwValidation = validatePassword(newPassword);
+        if (!pwValidation.valid) return res.status(400).json({ message: pwValidation.error });
+        const reset = await PasswordReset.findOne({ token, usedAt: null });
+        if (!reset) return res.status(400).json({ message: 'Enlace inválido o expirado.' });
+        if (new Date() > reset.expiresAt) {
+            await PasswordReset.deleteOne({ _id: reset._id });
+            return res.status(400).json({ message: 'El enlace ha expirado. Solicita uno nuevo.' });
+        }
+        const user = await User.findById(reset.userId);
+        if (!user) return res.status(400).json({ message: 'Usuario no encontrado.' });
+        user.password = await bcrypt.hash(newPassword, 12);
+        await user.save();
+        reset.usedAt = new Date();
+        await reset.save();
+        log.info({ userId: user._id }, 'Contraseña restablecida');
+        res.status(200).json({ message: 'Contraseña actualizada. Ya puedes iniciar sesión.' });
+    } catch (e) {
+        log.error({ err: e.message }, 'Error reset-password');
+        res.status(500).json({ message: 'Error al restablecer la contraseña.' });
+    }
+});
+
+// Verificación de email (opcional): marcar email como verificado con token
+app.post('/api/auth/verify-email', async (req, res) => {
+    try {
+        const token = sanitizeString(req.body.token || '', 200);
+        if (!token) return res.status(400).json({ message: 'Token requerido.' });
+        const ev = await EmailVerify.findOne({ token });
+        if (!ev) return res.status(400).json({ message: 'Enlace inválido o expirado.' });
+        if (new Date() > ev.expiresAt) {
+            await EmailVerify.deleteOne({ _id: ev._id });
+            return res.status(400).json({ message: 'El enlace ha expirado.' });
+        }
+        const user = await User.findByIdAndUpdate(ev.userId, { emailVerified: true }, { new: true });
+        if (!user) return res.status(400).json({ message: 'Usuario no encontrado.' });
+        await EmailVerify.deleteOne({ _id: ev._id });
+        log.info({ userId: user._id }, 'Email verificado');
+        res.status(200).json({ message: 'Correo verificado correctamente.' });
+    } catch (e) {
+        log.error({ err: e.message }, 'Error verify-email');
+        res.status(500).json({ message: 'Error al verificar el correo.' });
+    }
+});
+
 // Logout: limpiar cookie HttpOnly
 app.post('/api/auth/logout', (req, res) => {
     res.clearCookie('lexis_auth', { path: '/', httpOnly: true });
@@ -940,6 +1039,7 @@ app.post('/api/partners/apply', verifyToken, partnerApplyLimiter, async (req, re
         if (exists) {
             if (exists.status === 'pending') return res.status(400).json({ message: 'Ya tienes una solicitud pendiente.' });
             if (exists.status === 'active') return res.status(400).json({ message: 'Ya eres partner activo.', referralCode: exists.referralCode });
+            if (exists.status === 'suspended') return res.status(400).json({ message: 'Tu cuenta partner está suspendida. Contacta a soporte.' });
         }
 
         let invitedBy = null;
@@ -1037,6 +1137,8 @@ app.get('/api/partners/dashboard', verifyToken, verifyPartner, async (req, res) 
             .sort({ year: -1, month: -1 }).limit(12).lean();
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lexisbill.com.do';
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const showWelcome = p.approvedAt && new Date(p.approvedAt) >= sevenDaysAgo;
         res.json({
             referralCode: p.referralCode,
             referralUrl: `${baseUrl}/registro?ref=${p.referralCode}`,
@@ -1047,6 +1149,8 @@ app.get('/api/partners/dashboard', verifyToken, verifyPartner, async (req, res) 
             churnedClients: churnedCount,
             totalRevenue,
             commissionThisMonth: commissionAmount,
+            approvedAt: p.approvedAt,
+            showWelcomeMessage: !!showWelcome,
             commissions: commissions.map(c => ({
                 month: c.month,
                 year: c.year,
@@ -1393,9 +1497,76 @@ app.post('/api/admin/partners/:id/approve', verifyToken, verifyAdmin, async (req
         p.approvedBy = req.userId;
         p.updatedAt = new Date();
         await p.save();
+        // Notificación por email al partner (placeholder: integrar Resend/SendGrid)
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lexisbill.com.do';
+        const referralUrl = `${baseUrl}/registro?ref=${p.referralCode}`;
+        log.info({ partnerId: p._id, email: p.email, referralCode: p.referralCode, referralUrl }, 'Partner aprobado (email no enviado; configurar SEND_PARTNER_APPROVED_EMAIL y mailer)');
+        try {
+            if (process.env.SEND_PARTNER_APPROVED_EMAIL === 'true') {
+                const mailer = require('./mailer');
+                if (typeof mailer.sendPartnerApproved === 'function') await mailer.sendPartnerApproved(p.email, p.name, p.referralCode, referralUrl);
+            }
+        } catch (mailErr) { log.warn({ err: (mailErr && mailErr.message) || 'mailer no disponible' }, 'Email partner aprobado no enviado'); }
         res.json({ message: 'Partner aprobado', referralCode: p.referralCode });
     } catch (e) {
         res.status(500).json({ error: e.message });
+    }
+});
+
+// Calcular comisiones mensuales (admin) — ejecutar el día 1 de cada mes o manual
+app.post('/api/admin/partners/calculate-commissions', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const now = new Date();
+        const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1);
+        const year = parseInt(req.body.year, 10) || prevMonth.getFullYear();
+        const monthNum = parseInt(req.body.month, 10) || (prevMonth.getMonth() + 1);
+        const monthStr = `${year}-${String(monthNum).padStart(2, '0')}`;
+
+        const partners = await Partner.find({ status: 'active' }).lean();
+        const pricePerClient = 950;
+        let created = 0;
+        let updated = 0;
+
+        for (const p of partners) {
+            const activeCount = await PartnerReferral.countDocuments({ partnerId: p._id, status: 'active' });
+            const tier = getPartnerTier(activeCount);
+            const totalRevenue = activeCount * pricePerClient;
+            const commissionAmount = Math.round(totalRevenue * tier.rate);
+
+            const existing = await PartnerCommission.findOne({ partnerId: p._id, month: monthStr });
+            if (existing) {
+                existing.activeClientsCount = activeCount;
+                existing.totalRevenue = totalRevenue;
+                existing.commissionRate = tier.rate;
+                existing.commissionAmount = commissionAmount;
+                existing.status = existing.status || 'pending';
+                await existing.save();
+                updated++;
+            } else {
+                await PartnerCommission.create({
+                    partnerId: p._id,
+                    month: monthStr,
+                    year,
+                    activeClientsCount: activeCount,
+                    totalRevenue,
+                    commissionRate: tier.rate,
+                    commissionAmount,
+                    status: 'pending'
+                });
+                created++;
+            }
+        }
+
+        res.json({
+            message: 'Comisiones calculadas',
+            month: monthStr,
+            partnersProcessed: partners.length,
+            created,
+            updated
+        });
+    } catch (e) {
+        log.error({ err: e.message }, 'Error calculando comisiones');
+        res.status(500).json({ message: 'Error al calcular comisiones', error: e.message });
     }
 });
 

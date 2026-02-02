@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, DollarSign, Loader2, CheckCircle, Ban, Handshake, TrendingUp, Link2, Copy, Wallet } from "lucide-react";
+import { Users, DollarSign, Loader2, CheckCircle, Ban, Handshake, TrendingUp, Link2, Copy, Wallet, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +13,12 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function AdminPartnersPage() {
     const [partners, setPartners] = useState<any[]>([]);
@@ -24,6 +30,7 @@ export default function AdminPartnersPage() {
     const [carteraModal, setCarteraModal] = useState<string | null>(null);
     const [carteraPartner, setCarteraPartner] = useState<{ partner: { name: string; referralCode: string }; cartera: any[] } | null>(null);
     const [loadingCartera, setLoadingCartera] = useState(false);
+    const [calculatingCommissions, setCalculatingCommissions] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -90,6 +97,47 @@ export default function AdminPartnersPage() {
         } finally {
             setIsCreatingInvite(false);
         }
+    };
+
+    const handleCalculateCommissions = async () => {
+        setCalculatingCommissions(true);
+        try {
+            const { api } = await import("@/lib/api-service");
+            const res = await api.calculatePartnerCommissions({});
+            toast.success(res?.message || "Comisiones calculadas");
+            if (res?.month) toast.info(`Mes: ${res.month}. Procesados: ${res.partnersProcessed ?? 0}. Creados: ${res.created ?? 0}. Actualizados: ${res.updated ?? 0}.`);
+            const [partnersData, statsData] = await Promise.all([api.getAdminPartners(), api.getAdminPartnersStats()]);
+            setPartners(partnersData || []);
+            setStats(statsData || {});
+        } catch (e: any) {
+            toast.error(e?.message || "Error al calcular comisiones");
+        } finally {
+            setCalculatingCommissions(false);
+        }
+    };
+
+    const handleExportCsv = () => {
+        const headers = ["Nombre", "Email", "Código", "Estado", "Clientes activos", "En prueba", "Churned", "Ganado (RD$)", "Pendiente (RD$)"];
+        const rows = partners.map((p) => [
+            p.name ?? "",
+            p.email ?? "",
+            p.referralCode ?? "",
+            p.status ?? "",
+            String(p.activeClients ?? 0),
+            String(p.trialClients ?? 0),
+            String(p.churnedClients ?? 0),
+            String(p.totalEarned ?? 0),
+            String(p.pendingPayout ?? 0),
+        ]);
+        const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
+        const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `partners-lexisbill-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("CSV descargado");
     };
 
     const handleVerCartera = async (partnerId: string) => {
@@ -259,6 +307,20 @@ export default function AdminPartnersPage() {
                 </Card>
             )}
 
+            {/* Calcular comisiones mensuales */}
+            <Card className="border-slate-200 dark:border-slate-700 mb-6">
+                <CardHeader>
+                    <CardTitle className="text-sm font-bold text-muted-foreground">Comisiones mensuales</CardTitle>
+                    <CardDescription>Ejecuta el cálculo para el mes anterior (o cron el día 1). Crea/actualiza PartnerCommission por partner activo.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button variant="outline" size="sm" onClick={handleCalculateCommissions} disabled={calculatingCommissions}>
+                        {calculatingCommissions ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <DollarSign className="w-4 h-4 mr-2" />}
+                        Calcular comisiones (mes anterior)
+                    </Button>
+                </CardContent>
+            </Card>
+
             {/* Invitaciones (modelo híbrido) */}
             <Card className="border-amber-200/50 dark:border-amber-900/30 bg-gradient-to-br from-amber-50/30 to-transparent dark:from-amber-950/20">
                 <CardHeader>
@@ -298,16 +360,24 @@ export default function AdminPartnersPage() {
 
             {/* Lista de Partners */}
             <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg font-bold">Lista de Partners</CardTitle>
-                    <CardDescription>Gestiona aprobaciones y suspensiones</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                    <div>
+                        <CardTitle className="text-lg font-bold">Lista de Partners</CardTitle>
+                        <CardDescription>Gestiona aprobaciones y suspensiones</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={partners.length === 0}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Exportar CSV
+                    </Button>
                 </CardHeader>
                 <CardContent>
                     {partners.length > 0 ? (
+                        <TooltipProvider>
                         <Table>
                             <TableHeader>
                                 <TableRow className="hover:bg-transparent">
                                     <TableHead>Partner</TableHead>
+                                    <TableHead className="max-w-[180px]">¿Por qué partner?</TableHead>
                                     <TableHead>Código</TableHead>
                                     <TableHead className="text-center">Activos</TableHead>
                                     <TableHead className="text-center">Prueba</TableHead>
@@ -325,6 +395,24 @@ export default function AdminPartnersPage() {
                                                 <p className="font-semibold">{p.name}</p>
                                                 <p className="text-xs text-muted-foreground">{p.email}</p>
                                             </div>
+                                        </TableCell>
+                                        <TableCell className="max-w-[180px]">
+                                            {p.whyPartner ? (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span className="line-clamp-2 text-xs text-muted-foreground cursor-default">
+                                                                {p.whyPartner}
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top" className="max-w-sm whitespace-pre-wrap">
+                                                            {p.whyPartner}
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground">—</span>
+                                            )}
                                         </TableCell>
                                         <TableCell className="font-mono text-sm">{p.referralCode}</TableCell>
                                         <TableCell>
@@ -375,6 +463,7 @@ export default function AdminPartnersPage() {
                                 ))}
                             </TableBody>
                         </Table>
+                        </TooltipProvider>
                     ) : (
                         <p className="text-center text-muted-foreground py-12">No hay partners registrados</p>
                     )}

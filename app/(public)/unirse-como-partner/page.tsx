@@ -203,14 +203,19 @@ function UnirseComoPartnerContent() {
                                 <FileText className="w-4 h-4" /> Términos del Programa
                             </h3>
                             <p className="text-sm text-slate-600 dark:text-muted-foreground mb-3">{TERMS_SUMMARY}</p>
-                            <button
-                                type="button"
-                                onClick={() => setTermsOpen(!termsOpen)}
-                                className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 hover:underline"
-                            >
-                                {termsOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                                {termsOpen ? "Ocultar términos completos" : "Ver términos completos"}
-                            </button>
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <button
+                                    type="button"
+                                    onClick={() => setTermsOpen(!termsOpen)}
+                                    className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 hover:underline"
+                                >
+                                    {termsOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                    {termsOpen ? "Ocultar términos completos" : "Ver términos completos"}
+                                </button>
+                                <Link href="/programa-partners" target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-amber-600 dark:text-amber-400 hover:underline">
+                                    Abrir en nueva pestaña
+                                </Link>
+                            </div>
                             {termsOpen && (
                                 <pre className="mt-3 p-3 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-sans max-h-48 overflow-y-auto">
                                     {TERMS_FULL}

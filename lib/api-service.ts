@@ -18,6 +18,24 @@ export const api = {
         return secureFetch<any>(`${API_URL}/auth/logout`, { method: "POST" });
     },
 
+    async forgotPassword(email: string) {
+        return secureFetch<{ message: string }>(`${API_URL}/auth/forgot-password`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+            cacheKey: undefined,
+        });
+    },
+
+    async resetPassword(token: string, newPassword: string) {
+        return secureFetch<{ message: string }>(`${API_URL}/auth/reset-password`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token, newPassword }),
+            cacheKey: undefined,
+        });
+    },
+
     async register(data: { [key: string]: unknown }) {
         return secureFetch<any>(`${API_URL}/auth/register`, {
             method: "POST",
@@ -397,5 +415,13 @@ export const api = {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data || {}),
         });
-    }
+    },
+
+    async calculatePartnerCommissions(data?: { year?: number; month?: number }) {
+        return secureFetch<{ message: string; month: string; partnersProcessed: number; created: number; updated: number }>(`${API_URL}/admin/partners/calculate-commissions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data || {}),
+        });
+    },
 };

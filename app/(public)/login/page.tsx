@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { CheckCircle2, Fingerprint, Lock, Mail, MessageCircle, AlertCircle, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
@@ -156,13 +157,9 @@ export default function LoginPage() {
                         )}
 
                         <div className="flex justify-end">
-                            <button
-                                type="button"
-                                onClick={() => setShowRecovery(true)}
-                                className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                            >
+                            <Link href="/recuperar-contrasena" className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors">
                                 ¿Olvidó su contraseña?
-                            </button>
+                            </Link>
                         </div>
 
                         <Button

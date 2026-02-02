@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Users, DollarSign, TrendingUp, Link2, Loader2, Crown, Zap, Star } from "lucide-react";
+import { Copy, Users, DollarSign, TrendingUp, Link2, Loader2, Crown, Zap, Star, CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -69,6 +69,14 @@ export default function PartnerDashboardPage() {
     return (
         <div className="container mx-auto px-4 py-8 max-w-5xl">
             <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Partner" }]} className="mb-4 text-slate-500" />
+            {data.showWelcomeMessage && (
+                <div className="mb-6 p-4 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 shrink-0 text-green-600 dark:text-green-400" />
+                    <p className="text-sm font-medium">
+                        Tu solicitud fue aprobada. Ya puedes compartir tu link de referido y empezar a ganar comisiones.
+                    </p>
+                </div>
+            )}
             <div className="flex justify-between items-start mb-8">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 dark:text-foreground font-serif lowercase tracking-tighter">
@@ -114,6 +122,38 @@ export default function PartnerDashboardPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Gráfica evolución (últimos meses) */}
+            {data.commissions && data.commissions.length > 0 && (
+                <Card className="mb-8">
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4 text-amber-500" />
+                            Evolución — Clientes activos por mes
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-end gap-2 h-32">
+                            {[...(data.commissions || [])].reverse().slice(0, 12).map((c: any, i: number) => {
+                                const max = Math.max(...(data.commissions || []).map((x: any) => x.activeClients || 0), 1);
+                                const h = max ? ((c.activeClients || 0) / max) * 100 : 0;
+                                return (
+                                    <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+                                        <div
+                                            className="w-full rounded-t bg-amber-500/80 dark:bg-amber-500/60 min-h-[4px] transition-all"
+                                            style={{ height: `${Math.max(h, 4)}%` }}
+                                            title={`${c.activeClients} clientes — ${MONTH_NAMES[parseInt(c.month?.split("-")[1] || "1") - 1]} ${c.year}`}
+                                        />
+                                        <span className="text-[10px] text-muted-foreground truncate w-full text-center">
+                                            {MONTH_NAMES[parseInt(c.month?.split("-")[1] || "1") - 1]}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Métricas */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
