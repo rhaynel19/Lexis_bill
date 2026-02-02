@@ -151,7 +151,7 @@ export default function ProtectedLayout({
             {/* Mobile FAB (Floating Action Button) */}
             <div className="fixed bottom-24 right-6 md:hidden z-50">
                 <Link href="/nueva-factura">
-                    <button className="h-14 w-14 bg-[#D4AF37] text-white rounded-full shadow-xl shadow-amber-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all" aria-label="Nueva factura" title="Nueva factura">
+                    <button className="h-14 w-14 bg-accent text-accent-foreground rounded-full shadow-xl shadow-amber-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all" aria-label="Nueva factura" title="Nueva factura">
                         <Plus className="h-8 w-8" />
                     </button>
                 </Link>
@@ -200,61 +200,57 @@ function AdminNavLink({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function SidebarLinks({ isMobile = false, isAdmin = false, isPartner = false, onLogout, onNavigate }: { isMobile?: boolean; isAdmin?: boolean; isPartner?: boolean; onLogout?: () => void; onNavigate?: () => void }) {
-    const NavLink = ({ href, children, ...props }: { href: string; children: React.ReactNode; [k: string]: unknown }) => (
-        <Link href={href} onClick={onNavigate} className={props.className as string} {...props}>
-            {children}
-        </Link>
-    );
+    const linkProps = (className: string) => ({ className, onClick: onNavigate });
     return (
         <div className="flex flex-col h-full justify-between">
             <div className="space-y-2">
-                <NavLink href="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-primary/10 transition-colors group">
+                <Link href="/dashboard" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-primary/10 transition-colors group")}>
                     <LayoutDashboard className="w-5 h-5 text-sidebar-primary" />
                     <span className="font-medium">Dashboard</span>
-                </NavLink>
-                <NavLink href="/nueva-factura" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold shadow-lg shadow-sidebar-primary/20 hover:scale-[1.02] transition-all">
+                </Link>
+                <Link href="/nueva-factura" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold shadow-lg shadow-sidebar-primary/20 hover:scale-[1.02] transition-all")}>
                     <Plus className="w-5 h-5" />
                     <span>Nueva Factura</span>
-                </NavLink>
+                </Link>
                 <div className="pt-4 pb-2 px-4 text-[10px] text-sidebar-foreground/50 uppercase tracking-widest font-bold border-t border-sidebar-border/30 mt-2">Documentos</div>
-                <NavLink href="/nueva-cotizacion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                <Link href="/nueva-cotizacion" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors")}>
                     <FileText className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Nueva Cotización</span>
-                </NavLink>
-                <NavLink href="/cotizaciones" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                </Link>
+                <Link href="/cotizaciones" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors")}>
                     <FileText className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Ver Cotizaciones</span>
-                </NavLink>
+                </Link>
                 <div className="pt-4 pb-2 px-4 text-[10px] text-sidebar-foreground/50 uppercase tracking-widest font-bold border-t border-sidebar-border/30 mt-2">Gestión</div>
-                <NavLink href="/clientes" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                <Link href="/clientes" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors")}>
                     <Users className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Clientes / Migrar</span>
-                </NavLink>
-                <NavLink href="/gastos" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                </Link>
+                <Link href="/gastos" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors")}>
                     <Receipt className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Gastos (606)</span>
-                </NavLink>
-                <NavLink href="/reportes" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                </Link>
+                <Link href="/reportes" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors")}>
                     <Download className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Reportes Fiscales</span>
-                </NavLink>
-                <NavLink href="/pagos" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 transition-colors text-amber-600 border-l-2 border-amber-500/40">
+                </Link>
+                <Link href="/pagos" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 transition-colors text-amber-600 border-l-2 border-amber-500/40")}>
                     <CreditCard className="w-5 h-5 text-amber-600" />
                     <span className="text-sm font-semibold">Pagar</span>
-                </NavLink>
-                <NavLink href="/documentos" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                </Link>
+                <Link href="/documentos" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors")}>
                     <FolderLock className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Documentos</span>
-                </NavLink>
-                <NavLink href="/configuracion" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors">
+                </Link>
+                <Link href="/configuracion" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors")}>
                     <Settings className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Configuración</span>
-                </NavLink>
+                </Link>
                 {isPartner && (
-                    <NavLink href="/partners" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-amber-500/20 transition-colors text-amber-600 border-l-2 border-amber-500/50 mt-2">
+                    <Link href="/partners" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-amber-500/20 transition-colors text-amber-600 border-l-2 border-amber-500/50 mt-2")}>
                         <Handshake className="w-5 h-5" />
                         <span className="text-sm font-medium">Partner</span>
-                    </NavLink>
+                    </Link>
                 )}
                 <AdminNavLink isAdmin={isAdmin} />
             </div>

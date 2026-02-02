@@ -2,13 +2,45 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import partnersStyles from "./partners.module.css";
 import { Copy, Users, DollarSign, TrendingUp, Link2, Loader2, Crown, Zap, Star, CheckCircle } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+function BarChartBar({ heightPercent, title }: { heightPercent: number; title: string }) {
+    const ref = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (ref.current) {
+            ref.current.style.setProperty("--bar-height", `${Math.max(heightPercent, 4)}%`);
+        }
+    }, [heightPercent]);
+    return <div ref={ref} className={partnersStyles.bar} title={title} />;
+}
+
+interface PartnerCommission {
+    month?: string;
+    year?: number;
+    activeClients?: number;
+    amount?: number;
+    status?: string;
+}
+
+interface PartnerDashboard {
+    tier?: string;
+    referralCode?: string;
+    referralUrl?: string;
+    commissionRate?: number;
+    activeClients?: number;
+    trialClients?: number;
+    totalRevenue?: number;
+    commissionThisMonth?: number;
+    showWelcomeMessage?: boolean;
+    commissions?: PartnerCommission[];
+}
 
 const TIER_LABELS: Record<string, { label: string; icon: typeof Star; color: string }> = {
     starter: { label: "Starter", icon: Star, color: "text-slate-600" },
@@ -18,26 +50,31 @@ const TIER_LABELS: Record<string, { label: string; icon: typeof Star; color: str
 
 export default function PartnerDashboardPage() {
     const router = useRouter();
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<PartnerDashboard | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
+
+    const fetchData = async () => {
+        setIsLoading(true);
+        setLoadError(null);
+        try {
+            const { api } = await import("@/lib/api-service");
+            const d = await api.getPartnerDashboard();
+            setData(d);
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : "";
+            if (msg.includes("403") || msg.includes("Acceso denegado")) {
+                toast.error("No eres partner activo. Aplica en /unirse-como-partner");
+                router.replace("/dashboard");
+            } else {
+                setLoadError("No se pudo cargar el dashboard. Revisa tu conexión e intenta de nuevo.");
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const { api } = await import("@/lib/api-service");
-                const d = await api.getPartnerDashboard();
-                setData(d);
-            } catch (e: any) {
-                if (e?.message?.includes("403") || e?.message?.includes("Acceso denegado")) {
-                    toast.error("No eres partner activo. Aplica en /unirse-como-partner");
-                    router.replace("/dashboard");
-                } else {
-                    toast.error("Error al cargar el dashboard");
-                }
-            } finally {
-                setIsLoading(false);
-            }
-        };
         fetchData();
     }, [router]);
 
@@ -61,9 +98,24 @@ export default function PartnerDashboardPage() {
         );
     }
 
+    if (loadError) {
+        return (
+            <div className="container mx-auto px-4 py-8 max-w-5xl">
+                <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Partner" }]} className="mb-4 text-slate-500" />
+                <div className="flex flex-col items-center justify-center min-h-[300px] gap-4 p-8 rounded-xl bg-destructive/5 border border-destructive/20">
+                    <p className="text-destructive font-medium text-center">{loadError}</p>
+                    <Button onClick={fetchData} variant="outline" className="gap-2">
+                        <Loader2 className="w-4 h-4" />
+                        Reintentar
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
     if (!data) return null;
 
-    const tierInfo = TIER_LABELS[data.tier] || TIER_LABELS.starter;
+    const tierInfo = TIER_LABELS[data.tier ?? "starter"] ?? TIER_LABELS.starter;
     const TierIcon = tierInfo.icon;
 
     return (
@@ -96,7 +148,7 @@ export default function PartnerDashboardPage() {
                             <TierIcon className={`w-4 h-4 ${tierInfo.color}`} />
                             Nivel {tierInfo.label}
                         </CardTitle>
-                        <CardDescription>Comisión {(data.commissionRate * 100).toFixed(0)}% por cliente activo</CardDescription>
+                        <CardDescription>Comisión {((data.commissionRate ?? 0) * 100).toFixed(0)}% por cliente activo</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-2xl font-bold text-foreground">{data.referralCode}</p>
@@ -134,18 +186,18 @@ export default function PartnerDashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="flex items-end gap-2 h-32">
-                            {[...(data.commissions || [])].reverse().slice(0, 12).map((c: any, i: number) => {
-                                const max = Math.max(...(data.commissions || []).map((x: any) => x.activeClients || 0), 1);
+                            {[...(data.commissions || [])].reverse().slice(0, 12).map((c, i) => {
+                                const commissions = data.commissions || [];
+                                const max = Math.max(...commissions.map((x) => x.activeClients || 0), 1);
                                 const h = max ? ((c.activeClients || 0) / max) * 100 : 0;
                                 return (
                                     <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
-                                        <div
-                                            className="w-full rounded-t bg-amber-500/80 dark:bg-amber-500/60 min-h-[4px] transition-all"
-                                            style={{ height: `${Math.max(h, 4)}%` }}
-                                            title={`${c.activeClients} clientes — ${MONTH_NAMES[parseInt(c.month?.split("-")[1] || "1") - 1]} ${c.year}`}
+                                        <BarChartBar
+                                            heightPercent={h}
+                                            title={`${c.activeClients} clientes — ${MONTH_NAMES[parseInt((c.month || "01").split("-")[1] || "1") - 1]} ${c.year}`}
                                         />
                                         <span className="text-[10px] text-muted-foreground truncate w-full text-center">
-                                            {MONTH_NAMES[parseInt(c.month?.split("-")[1] || "1") - 1]}
+                                            {MONTH_NAMES[parseInt((c.month || "01").split("-")[1] || "1") - 1]}
                                         </span>
                                     </div>
                                 );
@@ -204,7 +256,7 @@ export default function PartnerDashboardPage() {
                     <CardDescription>Comisiones calculadas mensualmente. Pago 30 días después del cobro.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {data.commissions?.length > 0 ? (
+                    {(data.commissions?.length ?? 0) > 0 ? (
                         <Table>
                             <TableHeader>
                                 <TableRow className="hover:bg-transparent">
@@ -215,13 +267,13 @@ export default function PartnerDashboardPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {data.commissions.map((c: any, i: number) => (
+                                {(data.commissions || []).map((c, i) => (
                                     <TableRow key={i}>
                                         <TableCell className="font-medium">
-                                            {MONTH_NAMES[parseInt(c.month?.split("-")[1] || "1") - 1]} {c.year}
+                                            {MONTH_NAMES[parseInt((c.month || "01").split("-")[1] || "1") - 1]} {c.year}
                                         </TableCell>
                                         <TableCell className="text-center">{c.activeClients}</TableCell>
-                                        <TableCell className="text-right font-semibold">{formatCurrency(c.amount)}</TableCell>
+                                        <TableCell className="text-right font-semibold">{formatCurrency(c.amount ?? 0)}</TableCell>
                                         <TableCell className="text-right">
                                             <span className={`text-xs px-2 py-1 rounded-full ${
                                                 c.status === "paid" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :

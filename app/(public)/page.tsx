@@ -1,21 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, ShieldCheck, Zap, Smartphone, ArrowRight, Menu } from "lucide-react";
+import { CheckCircle2, ShieldCheck, Zap, Smartphone, Menu } from "lucide-react";
 import Link from "next/link";
 
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export default function LandingPage() {
-  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    setIsLoggedIn(!!token);
+    queueMicrotask(() => setIsLoggedIn(!!token));
   }, []);
 
   return (
@@ -122,7 +120,7 @@ export default function LandingPage() {
       </header>
 
       {/* Section: Dolor (La Realidad) */}
-      <section className="py-32 bg-[#081221] border-y border-lexis-gold/5">
+      <section className="py-32 bg-lexis-bg-darker border-y border-lexis-gold/5">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="font-serif text-4xl md:text-5xl font-bold mb-8 text-lexis-text-light">
@@ -189,7 +187,7 @@ export default function LandingPage() {
       </section>
 
       {/* New Section: Cómo Funciona */}
-      <section className="py-32 bg-[#081221] border-y border-lexis-gold/5">
+      <section className="py-32 bg-lexis-bg-darker border-y border-lexis-gold/5">
         <div className="container mx-auto px-4 sm:px-6 text-center">
           <h2 className="font-serif text-4xl md:text-5xl font-bold mb-20 text-lexis-text-light">Tranquilidad en <span className="text-lexis-gold">3 pasos.</span></h2>
           <div className="grid md:grid-cols-3 gap-12">
@@ -257,7 +255,7 @@ export default function LandingPage() {
       </section>
 
       {/* Section: Nuestra Misión */}
-      <section className="py-24 bg-[#081221]">
+      <section className="py-24 bg-lexis-bg-darker">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <span className="text-lexis-gold text-xs font-bold tracking-[0.4em] uppercase">El Porqué de Lexis Bill</span>
@@ -298,7 +296,7 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section (La Invitación) */}
-      <section id="precio" className="py-24 sm:py-40 bg-gradient-to-b from-transparent to-[#081221] overflow-x-hidden">
+      <section id="precio" className="py-24 sm:py-40 bg-gradient-to-b from-transparent to-lexis-bg-darker overflow-x-hidden">
         <div className="container mx-auto px-4 sm:px-6 text-center">
           <h2 className="font-serif text-4xl md:text-5xl font-bold mb-16 sm:mb-24 underline decoration-lexis-gold/30 underline-offset-8 italic">
             15 días para recuperar tu <br className="hidden md:block" />
@@ -385,7 +383,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-20 border-t border-lexis-gold/10 bg-[#081221]">
+      <footer className="py-20 border-t border-lexis-gold/10 bg-lexis-bg-darker">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-2">
