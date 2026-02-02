@@ -50,33 +50,33 @@ export default function AdminLayout({
     return (
         <div className="min-h-screen bg-background">
             <header className="border-b border-border/20 bg-card sticky top-0 z-40">
-                <div className="container mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <Link href="/admin">
+                <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
+                        <Link href="/admin" className="shrink-0">
                             <h1 className="text-xl font-bold flex items-center gap-2">
                                 <ShieldAlert className="w-6 h-6 text-amber-500" />
                                 Panel Admin
                             </h1>
                         </Link>
-                        <nav className="flex gap-2">
-                            <Link href="/admin">
-                                <Button variant="outline" size="sm" className="gap-2">
-                                    <CreditCard className="w-4 h-4" /> Pagos Pendientes
+                        <nav className="flex gap-2 overflow-x-auto overflow-y-hidden min-w-0 flex-1 md:flex-initial md:overflow-visible pb-1 -mb-1 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 [&::-webkit-scrollbar-thumb]:rounded-full">
+                            <Link href="/admin" className="shrink-0">
+                                <Button variant="outline" size="sm" className="gap-2 whitespace-nowrap">
+                                    <CreditCard className="w-4 h-4 shrink-0" /> Pagos Pendientes
                                 </Button>
                             </Link>
-                            <Link href="/admin/partners">
-                                <Button variant="outline" size="sm" className="gap-2">
-                                    <Users className="w-4 h-4" /> Partners
+                            <Link href="/admin/partners" className="shrink-0">
+                                <Button variant="outline" size="sm" className="gap-2 whitespace-nowrap">
+                                    <Users className="w-4 h-4 shrink-0" /> Partners
                                 </Button>
                             </Link>
-                            <Link href="/admin/dashboard">
-                                <Button variant="outline" size="sm" className="gap-2">
-                                    <LayoutDashboard className="w-4 h-4" /> Estadísticas CEO
+                            <Link href="/admin/dashboard" className="shrink-0">
+                                <Button variant="outline" size="sm" className="gap-2 whitespace-nowrap">
+                                    <LayoutDashboard className="w-4 h-4 shrink-0" /> Estadísticas CEO
                                 </Button>
                             </Link>
                         </nav>
                     </div>
-                    <Link href="/dashboard">
+                    <Link href="/dashboard" className="shrink-0 self-start sm:self-center">
                         <Button variant="ghost" size="sm" className="gap-2">
                             <ArrowLeft className="w-4 h-4" /> Volver a LexisBill
                         </Button>
