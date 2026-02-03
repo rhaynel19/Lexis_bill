@@ -12,6 +12,7 @@ import { SupportChat } from "@/components/support-chat";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
+import { LexisWord } from "@/components/LexisWord";
 
 export default function ProtectedLayout({
     children,
@@ -87,10 +88,8 @@ export default function ProtectedLayout({
             <div className="min-h-screen bg-background">
                 <header className="border-b border-border/20 bg-card sticky top-0 z-40">
                     <div className="container mx-auto px-4 py-4">
-                        <Link href="/dashboard">
-                            <h1 className="text-xl font-extrabold tracking-tight">
-                                <span className="text-accent">LEXIS</span> <span className="text-foreground font-light">BILL</span>
-                            </h1>
+                        <Link href="/dashboard" className="flex items-baseline gap-1">
+                            <LexisWord className="text-xl text-accent" /> <span className="text-foreground font-light font-serif">BILL</span>
                         </Link>
                     </div>
                 </header>
@@ -105,8 +104,8 @@ export default function ProtectedLayout({
                 <div className="container mx-auto px-4 py-4 flex justify-between items-center">
                     <Link href="/dashboard">
                         <div className="group">
-                            <h1 className="text-2xl font-extrabold tracking-tight cursor-pointer transition-transform group-hover:scale-105">
-                                <span className="text-accent">LEXIS</span> <span className="text-foreground font-light">BILL</span>
+                            <h1 className="text-2xl font-extrabold tracking-tight cursor-pointer transition-transform group-hover:scale-105 flex items-baseline gap-1">
+                                <LexisWord className="text-2xl text-accent" /> <span className="text-foreground font-light font-serif">BILL</span>
                             </h1>
                             <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-medium group-hover:text-accent transition-colors">
                                 El orden que te deja tranquilo

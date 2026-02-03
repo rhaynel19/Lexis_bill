@@ -7,6 +7,7 @@ import { CheckCircle2, ShieldCheck, Zap, Smartphone, Menu } from "lucide-react";
 import Link from "next/link";
 
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { LexisWord } from "@/components/LexisWord";
 
 export default function LandingPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -21,10 +22,10 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-lexis-bg-deep/80 backdrop-blur-md border-b-2 border-lexis-gold/40">
         <div className="container mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
-          <div className="text-2xl font-serif font-bold tracking-tighter">
-            <span className="text-lexis-gold">Lexis</span>{" "}
+          <Link href="/" className="text-2xl font-serif font-bold tracking-tighter flex items-baseline gap-1">
+            <LexisWord className="text-2xl" />{" "}
             <span className="text-lexis-text-light">Bill</span>
-          </div>
+          </Link>
           <div className="hidden md:flex items-center gap-8">
             <Link href="#beneficios" className="text-sm font-medium hover:text-lexis-gold transition-colors">Beneficios</Link>
             <Link href="#precio" className="text-sm font-medium hover:text-lexis-gold transition-colors">Precio</Link>
@@ -396,8 +397,8 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-2">
-              <div className="font-serif text-2xl font-bold mb-6">
-                <span className="text-lexis-gold">Lexis</span>{" "}
+              <div className="font-serif text-2xl font-bold mb-6 flex items-baseline gap-1">
+                <LexisWord className="text-2xl" />{" "}
                 <span className="text-lexis-text-light">Bill</span>
               </div>
               <p className="text-slate-400 max-w-sm mb-6">

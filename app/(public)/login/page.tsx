@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Fingerprint, Lock, Mail, MessageCircle, AlertCircle, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { LexisWord } from "@/components/LexisWord";
 
 const LAST_EMAIL_KEY = "lexis_last_email";
 
@@ -118,8 +119,8 @@ export default function LoginPage() {
                     <div className="mx-auto w-16 h-16 bg-blue-950 rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-blue-900/20 transform rotate-3">
                         <span className="text-3xl font-bold text-lexis-gold">L</span>
                     </div>
-                    <CardTitle className="text-3xl font-serif font-bold tracking-tighter">
-                        <span className="text-lexis-gold">LEXIS</span>{" "}
+                    <CardTitle className="text-3xl font-serif font-bold tracking-tighter flex items-baseline gap-1">
+                        <LexisWord className="text-3xl text-lexis-gold" />{" "}
                         <span className="text-blue-950">BILL</span>
                     </CardTitle>
                     <CardDescription className="text-slate-500 font-medium">Oficina Fiscal Inteligente</CardDescription>
