@@ -36,11 +36,18 @@ export default function LandingPage() {
                 </Button>
               </Link>
             ) : (
-              <Link href="/login">
-                <Button variant="outline" className="text-lexis-gold border-lexis-gold hover:bg-lexis-gold hover:text-lexis-bg-deep transition-all text-xs font-bold uppercase tracking-widest px-6 rounded-md shadow-none bg-transparent">
-                  Entrar
-                </Button>
-              </Link>
+              <div className="flex items-center gap-4">
+                <Link href="/login">
+                  <Button variant="outline" className="text-lexis-gold border-lexis-gold hover:bg-lexis-gold hover:text-lexis-bg-deep transition-all text-xs font-bold uppercase tracking-widest px-6 rounded-md shadow-none bg-transparent">
+                    Entrar
+                  </Button>
+                </Link>
+                <Link href="/registro">
+                  <Button className="bg-lexis-gold text-lexis-bg-deep hover:bg-lexis-gold-hover transition-all text-sm font-bold uppercase tracking-widest px-6 rounded-md shadow-lg shadow-lexis-gold/20">
+                    Crear cuenta gratis
+                  </Button>
+                </Link>
+              </div>
             )}
           </div>
           {/* Mobile Menu */}
@@ -94,12 +101,14 @@ export default function LandingPage() {
           <span className="inline-block text-lexis-gold text-xs font-bold tracking-[0.2em] sm:tracking-[0.3em] uppercase mb-6 sm:mb-8 animate-fade-in bg-lexis-gold/10 px-3 sm:px-4 py-2 rounded-full border border-lexis-gold/20">
             EL ÚNICO SISTEMA QUE HABLA DOMINICANO 🇩🇴
           </span>
-          <h1 className="font-serif text-5xl md:text-8xl font-bold leading-tight mb-8 max-w-5xl mx-auto tracking-tight">
-            Tu talento merece orden, <br />
-            <span className="text-lexis-gold">tu tiempo merece paz.</span>
+          <h1 className="font-serif text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold leading-tight mb-6 md:mb-8 max-w-5xl mx-auto tracking-tight">
+            Ponemos orden a tu facturación fiscal para que dejes de perder tiempo y <span className="text-lexis-gold">vuelvas a tener control.</span>
           </h1>
-          <p className="text-xl md:text-2xl text-lexis-text-light max-w-3xl mx-auto mb-14 leading-relaxed font-light italic">
-            La asistencia de lujo para el profesional que factura con su RNC y desea delegar el caos. Lexis Bill organiza tus comprobantes autorizados y prepara tus reportes, hablando el único idioma que importa: el dominicano.
+          <p className="text-lg md:text-xl lg:text-2xl text-lexis-text-light max-w-3xl mx-auto mb-4 leading-relaxed font-light">
+            Facturas, NCF y cumplimiento DGII en un solo lugar. Pensado para profesionales dominicanos.
+          </p>
+          <p className="text-base md:text-lg text-slate-400 max-w-2xl mx-auto mb-10 md:mb-14">
+            Configura en minutos. Sin contratos. Prueba gratis.
           </p>
           <div className="flex flex-col items-center gap-6">
             <Link href="/registro">
@@ -109,7 +118,7 @@ export default function LandingPage() {
             </Link>
             <div className="space-y-2">
               <p className="text-sm text-lexis-gold/60 font-medium tracking-widest uppercase">
-                Activación inmediata. No requiere tarjeta de crédito.
+                RD$950/mes después del trial • Sin tarjeta para empezar
               </p>
               <p className="text-xs text-slate-500 font-light">
                 Únete a cientos de profesionales y técnicos dominicanos que ya recuperaron su tranquilidad.
