@@ -114,21 +114,24 @@ export default function LoginPage() {
             </div>
 
             <Card className="w-full max-w-md bg-white/95 backdrop-blur border-none shadow-2xl relative z-10 overflow-hidden">
-                <div className="h-2 w-full bg-gradient-to-r from-blue-900 via-lexis-gold to-blue-900" />
+                <div className="w-full">
+                    <div className="h-1 w-full bg-lexis-bg-deep" />
+                    <div className="h-1 w-full bg-lexis-gold" />
+                </div>
                 <CardHeader className="text-center pb-2 pt-8">
                     <div className="mx-auto w-16 h-16 bg-blue-950 rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-blue-900/20 transform rotate-3">
                         <span className="text-3xl font-bold text-lexis-gold">L</span>
                     </div>
-                    <CardTitle className="text-3xl font-serif font-bold tracking-tighter flex items-baseline gap-1">
+                    <CardTitle className="text-3xl font-serif font-bold tracking-tighter flex items-baseline justify-center gap-1">
                         <LexisWord className="text-3xl text-lexis-gold" />{" "}
-                        <span className="text-blue-950">BILL</span>
+                        <span className="text-slate-900 font-sans">BILL</span>
                     </CardTitle>
                     <CardDescription className="text-slate-500 font-medium">Oficina Fiscal Inteligente</CardDescription>
                 </CardHeader>
                 <CardContent className="px-8 pb-8">
                     <form onSubmit={handleLogin} className="space-y-5">
                         <div className="space-y-2">
-                            <label htmlFor="login-email" className="text-xs font-semibold text-blue-900 uppercase tracking-wider">Credenciales de Acceso</label>
+                            <label htmlFor="login-email" className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Credenciales de Acceso</label>
                             <Input
                                 id="login-email"
                                 type="email"
@@ -177,8 +180,8 @@ export default function LoginPage() {
                         </Button>
 
                         <div className="pt-2 text-center">
-                            <p className="text-[10px] text-slate-400 uppercase tracking-widest">
-                                <CheckCircle2 className="w-3 h-3 inline mr-1 text-green-500" />
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest flex items-center justify-center gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
                                 Conexión Encriptada • Grado Bancario
                             </p>
                         </div>
