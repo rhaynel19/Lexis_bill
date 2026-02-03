@@ -157,7 +157,8 @@ const connectDB = async () => {
         log.info('Conectando a MongoDB...');
         return await mongoose.connect(MONGODB_URI, {
             serverSelectionTimeoutMS: 15000,
-            dbName: 'lexis_bill' // Forzamos el nombre de la DB aquí también
+            dbName: 'lexis_bill',
+            maxPoolSize: 25
         });
     } catch (err) {
         console.error('❌ Error fatal de conexión:', err.message);
@@ -243,6 +244,9 @@ const userSchema = new mongoose.Schema({
 
     // Preferencias de Facturación
     hasElectronicBilling: { type: Boolean, default: false },
+
+    // Onboarding obligatorio (First-Run Experience)
+    onboardingCompleted: { type: Boolean, default: false },
 
     paymentHistory: [{
         date: { type: Date, default: Date.now },
@@ -769,7 +773,8 @@ app.post('/api/auth/register', async (req, res) => {
                 startDate: new Date(),
                 endDate: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000)
             },
-            suggestedFiscalName: req.body.suggestedName || ""
+            suggestedFiscalName: req.body.suggestedName || "",
+            onboardingCompleted: false
         });
 
         await newUser.save();
@@ -948,6 +953,10 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
         let partner = null;
         const p = await Partner.findOne({ userId: user._id });
         if (p) partner = { referralCode: p.referralCode, status: p.status, tier: p.tier };
+        // Usuarios existentes (antes del deploy): considerar onboarded para no bloquearlos
+        const createdBeforeOnboarding = user.createdAt && new Date(user.createdAt) < new Date('2026-02-01');
+        const onboardingCompleted = user.onboardingCompleted === true || createdBeforeOnboarding;
+
         res.json({
             id: user._id,
             email: user.email,
@@ -957,10 +966,33 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
             role: user.role || 'user',
             subscription: sub,
             fiscalStatus: { suggested: user.suggestedFiscalName, confirmed: user.confirmedFiscalName },
-            partner
+            partner,
+            onboardingCompleted
         });
     } catch (e) {
         res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/onboarding/complete', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
+
+        const { name, rnc, address, phone, confirmedFiscalName, logo } = req.body;
+        if (name) user.name = sanitizeString(name, 200);
+        if (rnc) user.rnc = String(rnc).replace(/[^0-9]/g, '').slice(0, 20);
+        if (address !== undefined) user.address = sanitizeString(address, 300);
+        if (phone !== undefined) user.phone = sanitizeString(phone, 20).replace(/[^0-9+\-\s]/g, '');
+        if (confirmedFiscalName) user.confirmedFiscalName = sanitizeString(confirmedFiscalName, 200);
+        if (logo) user.logo = logo;
+
+        user.onboardingCompleted = true;
+        await user.save();
+
+        res.json({ success: true, message: 'Onboarding completado' });
+    } catch (error) {
+        res.status(500).json({ message: error.message || 'Error al completar onboarding' });
     }
 });
 
@@ -1833,7 +1865,9 @@ app.post('/api/ncf-settings', verifyToken, async (req, res) => {
 
 app.get('/api/customers', verifyToken, async (req, res) => {
     try {
-        const customers = await Customer.find({ userId: req.userId }).sort({ name: 1 });
+        const customers = await Customer.find({ userId: req.userId }, "name rnc phone email lastInvoiceDate")
+            .sort({ name: 1 })
+            .lean();
         res.json(customers);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -2093,6 +2127,14 @@ app.get('/api/invoices', verifyToken, async (req, res) => {
 });
 
 app.post('/api/invoices', verifyToken, async (req, res) => {
+    // Bloqueo: Onboarding obligatorio
+    const createdBeforeOnboarding = req.user.createdAt && new Date(req.user.createdAt) < new Date('2026-02-01');
+    if (!req.user.onboardingCompleted && !createdBeforeOnboarding) {
+        return res.status(403).json({
+            message: 'Completa la configuración inicial antes de emitir facturas.',
+            code: 'ONBOARDING_REQUIRED'
+        });
+    }
     // Bloqueo Inteligente: Requiere nombre fiscal confirmado
     if (!req.user.confirmedFiscalName) {
         return res.status(403).json({

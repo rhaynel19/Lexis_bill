@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ShieldAlert } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { CommandMenu } from "@/components/command-menu";
 import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt, CreditCard, FolderLock, Users, Handshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,9 +19,10 @@ export default function ProtectedLayout({
     children: React.ReactNode;
 }>) {
     const router = useRouter();
+    const pathname = usePathname();
     const [isLoading, setIsLoading] = useState(true);
     const [menuOpen, setMenuOpen] = useState(false);
-    const [userFromApi, setUserFromApi] = useState<{ role?: string; partner?: { referralCode: string; status: string } } | null>(null);
+    const [userFromApi, setUserFromApi] = useState<{ role?: string; partner?: { referralCode: string; status: string }; onboardingCompleted?: boolean } | null>(null);
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -30,15 +31,17 @@ export default function ProtectedLayout({
                 const me = await api.getMe();
                 setUserFromApi(me || null);
                 if (me) {
-                    // Solo actualizamos datos mínimos en localStorage (name, role para UI)
-                    // Datos sensibles (email, rnc, subscription) se obtienen de la API cuando se necesitan
                     const current = JSON.parse(localStorage.getItem("user") || "{}");
                     localStorage.setItem("user", JSON.stringify({
                         ...current,
                         name: me.name,
-                        role: me.role
-                        // NO guardamos: email, rnc, subscription, fiscalStatus (seguridad)
+                        role: me.role,
+                        onboardingCompleted: me.onboardingCompleted
                     }));
+                    if (me.onboardingCompleted === false && !window.location.pathname.startsWith("/onboarding")) {
+                        router.replace("/onboarding");
+                        return;
+                    }
                 }
             } catch {
                 localStorage.removeItem("user");
@@ -76,6 +79,26 @@ export default function ProtectedLayout({
             </div>
         );
     }
+
+    const isOnboardingPage = pathname?.startsWith("/onboarding");
+
+    if (isOnboardingPage) {
+        return (
+            <div className="min-h-screen bg-background">
+                <header className="border-b border-border/20 bg-card sticky top-0 z-40">
+                    <div className="container mx-auto px-4 py-4">
+                        <Link href="/dashboard">
+                            <h1 className="text-xl font-extrabold tracking-tight">
+                                <span className="text-accent">LEXIS</span> <span className="text-foreground font-light">BILL</span>
+                            </h1>
+                        </Link>
+                    </div>
+                </header>
+                <main>{children}</main>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col h-screen bg-background text-foreground transition-colors duration-300">
             <div className="flex-none border-b border-border/20 bg-secondary shadow-lg sticky top-0 z-50 transition-colors duration-300">

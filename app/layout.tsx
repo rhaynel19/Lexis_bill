@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { PreferencesProvider } from "@/components/providers/PreferencesContext";
 
@@ -31,6 +32,7 @@ export default function RootLayout({
           <PreferencesProvider>
             {children}
             <Toaster />
+            <Analytics />
           </PreferencesProvider>
         </ThemeProvider>
       </body>

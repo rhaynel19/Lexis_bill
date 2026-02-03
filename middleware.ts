@@ -7,6 +7,7 @@ import type { NextRequest } from "next/server";
  * Las rutas en app/(protected)/ se sirven bajo el mismo path, por eso usamos matcher.
  */
 const PROTECTED_PATHS = [
+    "/onboarding",
     "/dashboard",
     "/nueva-factura",
     "/nueva-cotizacion",
@@ -39,6 +40,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
+        "/onboarding/:path*",
         "/dashboard/:path*",
         "/nueva-factura/:path*",
         "/nueva-cotizacion/:path*",

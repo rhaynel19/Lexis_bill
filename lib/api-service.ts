@@ -44,6 +44,18 @@ export const api = {
         });
     },
 
+    async completeOnboarding(data: { name?: string; rnc?: string; address?: string; phone?: string; confirmedFiscalName?: string; logo?: string }) {
+        const res = await secureFetch<any>(`${API_URL}/onboarding/complete`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        if (typeof localStorage !== "undefined") {
+            localStorage.removeItem("cache_auth_me");
+        }
+        return res;
+    },
+
     async confirmFiscalName(confirmedName: string) {
         return secureFetch<any>(`${API_URL}/auth/confirm-fiscal-name`, {
             method: "POST",
