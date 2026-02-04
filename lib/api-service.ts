@@ -379,6 +379,14 @@ export const api = {
         );
     },
 
+    async activateUser(userId: string) {
+        return secureFetch<{ message: string }>(`${API_URL}/admin/users/${userId}/activate`, { method: "POST" });
+    },
+
+    async deactivateUser(userId: string) {
+        return secureFetch<{ message: string }>(`${API_URL}/admin/users/${userId}/deactivate`, { method: "POST" });
+    },
+
     async getAlerts() {
         return secureFetch<{ alerts: Array<{ type: string; message: string; severity: string }> }>(`${API_URL}/alerts`);
     },

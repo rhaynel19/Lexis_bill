@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserCircle, Search, Download, Filter } from "lucide-react";
+import { UserCircle, Search, Download, Filter, Check, Ban, Loader2 } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -28,6 +28,7 @@ export default function AdminUsuariosPage() {
     const [planFilter, setPlanFilter] = useState<string>("all");
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [isLoading, setIsLoading] = useState(true);
+    const [actioningId, setActioningId] = useState<string | null>(null);
 
     const fetchUsers = useCallback(async () => {
         setIsLoading(true);
@@ -60,6 +61,37 @@ export default function AdminUsuariosPage() {
         e.preventDefault();
         setSearch(searchInput.trim());
         setPage(1);
+    };
+
+    const isUserActive = (u: AdminUser) =>
+        u.subscriptionStatus === "Activo" || u.subscriptionStatus === "active";
+
+    const handleActivate = async (id: string) => {
+        setActioningId(id);
+        try {
+            const { api } = await import("@/lib/api-service");
+            const res = await api.activateUser(id);
+            toast.success(res?.message || "Membresía activada.");
+            fetchUsers();
+        } catch (e: any) {
+            toast.error(e?.message || "Error al activar.");
+        } finally {
+            setActioningId(null);
+        }
+    };
+
+    const handleDeactivate = async (id: string) => {
+        setActioningId(id);
+        try {
+            const { api } = await import("@/lib/api-service");
+            const res = await api.deactivateUser(id);
+            toast.success(res?.message || "Membresía bloqueada.");
+            fetchUsers();
+        } catch (e: any) {
+            toast.error(e?.message || "Error al bloquear.");
+        } finally {
+            setActioningId(null);
+        }
     };
 
     const displayName = (u: AdminUser) => {
@@ -220,6 +252,7 @@ export default function AdminUsuariosPage() {
                                             <TableHead>Onboarding</TableHead>
                                             <TableHead>Partner</TableHead>
                                             <TableHead>Registro</TableHead>
+                                            <TableHead className="text-right">Acciones</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -252,6 +285,21 @@ export default function AdminUsuariosPage() {
                                                     ) : "—"}
                                                 </TableCell>
                                                 <TableCell className="text-muted-foreground text-xs whitespace-nowrap">{formatDate(u.createdAt)}</TableCell>
+                                                <TableCell className="text-right">
+                                                    {u.role === "admin" ? (
+                                                        <span className="text-muted-foreground text-xs">—</span>
+                                                    ) : actioningId === u.id ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin inline-block text-muted-foreground" />
+                                                    ) : isUserActive(u) ? (
+                                                        <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeactivate(u.id)}>
+                                                            <Ban className="w-3.5 h-3.5 mr-1" /> Bloquear
+                                                        </Button>
+                                                    ) : (
+                                                        <Button variant="outline" size="sm" className="text-green-600 hover:bg-green-500/10 border-green-500/50" onClick={() => handleActivate(u.id)}>
+                                                            <Check className="w-3.5 h-3.5 mr-1" /> Activar
+                                                        </Button>
+                                                    )}
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>

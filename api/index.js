@@ -1604,6 +1604,54 @@ app.get('/api/admin/users', verifyToken, verifyAdmin, async (req, res) => {
     }
 });
 
+// --- ADMIN: Activar / Desactivar membresía de usuario ---
+app.post('/api/admin/users/:id/activate', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID de usuario inválido.' });
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
+        if (user.role === 'admin') return res.status(400).json({ message: 'No se puede modificar la membresía de un admin.' });
+
+        const now = new Date();
+        const endDate = new Date(now);
+        endDate.setDate(endDate.getDate() + 30);
+
+        if (!user.subscription) user.subscription = {};
+        user.subscription.plan = user.subscription.plan || user.membershipLevel || 'pro';
+        user.subscription.status = 'active';
+        user.subscription.startDate = now;
+        user.subscription.endDate = endDate;
+        user.expiryDate = endDate;
+        user.subscriptionStatus = 'Activo';
+        user.membershipLevel = user.subscription.plan;
+        await user.save();
+
+        res.json({ message: 'Membresía activada. 30 días desde hoy.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/admin/users/:id/deactivate', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID de usuario inválido.' });
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
+        if (user.role === 'admin') return res.status(400).json({ message: 'No se puede modificar la membresía de un admin.' });
+
+        if (!user.subscription) user.subscription = {};
+        user.subscription.status = 'expired';
+        user.subscription.endDate = new Date();
+        user.expiryDate = new Date();
+        user.subscriptionStatus = 'Bloqueado';
+        await user.save();
+
+        res.json({ message: 'Membresía bloqueada. El usuario ya no tendrá acceso Pro.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // --- ADMIN: Programa Partners ---
 app.get('/api/admin/partners', verifyToken, verifyAdmin, async (req, res) => {
     try {
