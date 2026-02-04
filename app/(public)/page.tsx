@@ -92,43 +92,72 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* Hero Section — Posicionamiento: "habla dominicano" como argumento de venta */}
       <header className="relative pt-32 pb-20 sm:pt-40 sm:pb-24 md:pt-56 md:pb-40 overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 opacity-20">
           <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-lexis-gold rounded-full blur-[140px]"></div>
           <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600 rounded-full blur-[120px]"></div>
         </div>
 
-        <div className="container mx-auto px-4 sm:px-6 text-center max-w-6xl mx-auto">
-          <span className="inline-block text-lexis-gold text-xs font-bold tracking-[0.2em] sm:tracking-[0.3em] uppercase mb-6 sm:mb-8 animate-fade-in bg-lexis-gold/10 px-3 sm:px-4 py-2 rounded-full border border-lexis-gold/20">
-            EL ÚNICO SISTEMA QUE HABLA DOMINICANO 🇩🇴
-          </span>
-          <h1 className="font-serif text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold leading-tight mb-6 md:mb-8 max-w-5xl mx-auto tracking-tight">
-            Ponemos orden a tu facturación fiscal para que dejes de perder tiempo y <span className="text-lexis-gold">vuelvas a tener control.</span>
+        <div className="container mx-auto px-4 sm:px-6 text-center max-w-6xl">
+          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 md:mb-8 max-w-4xl mx-auto tracking-tight text-lexis-text-light">
+            El sistema de facturación creado para el profesional independiente dominicano.
           </h1>
-          <p className="text-lg md:text-xl lg:text-2xl text-lexis-text-light max-w-3xl mx-auto mb-4 leading-relaxed font-light">
-            Facturas, NCF y cumplimiento DGII en un solo lugar. Pensado para profesionales dominicanos.
+          <p className="text-xl md:text-2xl lg:text-3xl text-lexis-gold font-semibold mb-6 md:mb-8 max-w-2xl mx-auto">
+            El único sistema que habla dominicano.
           </p>
-          <p className="text-base md:text-lg text-slate-400 max-w-2xl mx-auto mb-10 md:mb-14">
-            Configura en minutos. Sin contratos. Prueba gratis.
+          <p className="text-base md:text-lg text-slate-400 max-w-2xl mx-auto mb-10 md:mb-12 font-light">
+            Sin tecnicismos. Sin procesos complicados. Sin parecer una empresa gigante.
           </p>
           <div className="flex flex-col items-center gap-6">
             <Link href="/registro">
-              <Button size="lg" className="h-20 px-12 text-xl bg-lexis-gold hover:bg-lexis-gold-hover text-lexis-bg-deep font-bold rounded-lg shadow-2xl shadow-lexis-gold/20 transition-all hover:scale-105 animate-shimmer relative overflow-hidden">
-                Probar 15 días GRATIS
+              <Button size="lg" className="h-16 sm:h-20 px-10 sm:px-12 text-lg sm:text-xl bg-lexis-gold hover:bg-lexis-gold-hover text-lexis-bg-deep font-bold rounded-lg shadow-2xl shadow-lexis-gold/20 transition-all hover:scale-105">
+                Empieza gratis — 15 días sin tarjeta
               </Button>
             </Link>
-            <div className="space-y-2">
-              <p className="text-sm text-lexis-gold/60 font-medium tracking-widest uppercase">
-                RD$950/mes después del trial • Sin tarjeta para empezar
-              </p>
-              <p className="text-xs text-slate-500 font-light">
-                Únete a cientos de profesionales y técnicos dominicanos que ya recuperaron su tranquilidad.
-              </p>
-            </div>
+            <p className="text-sm text-slate-500 font-light">
+              Sin tarjeta. Sin compromiso. Cancela cuando quieras.
+            </p>
           </div>
         </div>
       </header>
+
+      {/* Sección diferenciadora — "Habla dominicano" como argumento emocional */}
+      <section className="py-24 sm:py-32 bg-lexis-bg-darker border-y border-lexis-gold/5">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold leading-tight mb-8 text-lexis-text-light">
+              No eres una empresa gigante.<br />
+              Eres un profesional independiente.<br />
+              <span className="text-lexis-gold">Y tu sistema debe hablar tu mismo idioma.</span>
+            </h2>
+            <p className="text-xl md:text-2xl text-lexis-gold font-semibold mb-12">
+              Lexis Bill — El único sistema que habla dominicano.
+            </p>
+            <ul className="space-y-4 text-left max-w-md mx-auto">
+              <li className="flex items-center gap-3 text-slate-300">
+                <CheckCircle2 className="w-6 h-6 text-lexis-gold shrink-0" />
+                Hecho para cómo trabajas realmente
+              </li>
+              <li className="flex items-center gap-3 text-slate-300">
+                <CheckCircle2 className="w-6 h-6 text-lexis-gold shrink-0" />
+                Pensado para la DGII
+              </li>
+              <li className="flex items-center gap-3 text-slate-300">
+                <CheckCircle2 className="w-6 h-6 text-lexis-gold shrink-0" />
+                Sin palabras técnicas innecesarias
+              </li>
+              <li className="flex items-center gap-3 text-slate-300">
+                <CheckCircle2 className="w-6 h-6 text-lexis-gold shrink-0" />
+                Fácil desde el primer minuto
+              </li>
+            </ul>
+            <p className="mt-10 text-slate-400 font-light italic">
+              Hecho para independientes, no para corporaciones.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* Section: Dolor (La Realidad) */}
       <section className="py-32 bg-lexis-bg-darker border-y border-lexis-gold/5">
@@ -137,9 +166,10 @@ export default function LandingPage() {
             <h2 className="font-serif text-4xl md:text-5xl font-bold mb-8 text-lexis-text-light">
               Recupera tus noches y tus <span className="text-lexis-gold">fines de semana.</span>
             </h2>
-            <p className="text-xl text-slate-400 leading-relaxed mb-16 font-light">
+            <p className="text-xl text-slate-400 leading-relaxed mb-8 font-light">
               Mientras otros se pierden en formularios de la DGII y cálculos manuales, tú ya terminaste. Lexis Bill automatiza la burocracia para que tu única preocupación sea la excelencia en tu servicio.
             </p>
+            <p className="text-lexis-gold/90 font-medium mb-16">Facturar no debería ser complicado.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 text-left">
               <div className="flex items-start gap-6 p-8 rounded-2xl bg-white/[0.02] border border-white/5">
                 <Zap className="w-7 h-7 text-lexis-gold stroke-[1px]" />
@@ -189,9 +219,10 @@ export default function LandingPage() {
             </div>
             <div className="p-8 rounded-3xl bg-gradient-to-br from-white/5 to-transparent border border-white/10">
               <h4 className="font-serif text-xl font-bold mb-4 text-lexis-gold">La realidad local</h4>
-              <p className="text-slate-400 leading-relaxed font-light">
-                Mientras otros sistemas usan lenguaje extraño, Lexis Bill entiende que tu prioridad es servir a tu cliente, no pelear con formularios electrónicos. Nosotros preparamos el camino para que la Facturación Electrónica sea un paso natural, no un trauma.
+              <p className="text-slate-400 leading-relaxed font-light mb-4">
+                Mientras otros sistemas usan lenguaje extraño, Lexis Bill entiende que tu prioridad es servir a tu cliente, no pelear con formularios electrónicos.
               </p>
+              <p className="text-lexis-gold/90 font-medium">Tu negocio es serio — tu sistema también debe serlo. Profesional por fuera. Simple por dentro.</p>
             </div>
           </div>
         </div>
@@ -381,12 +412,13 @@ export default function LandingPage() {
                     </div>
                   </li>
                 </ul>
-                <Link href="/registro" className="block pt-8 w-full min-w-0">
+                <p className="text-lexis-gold font-semibold text-center pt-4">El único sistema que habla dominicano.</p>
+                <Link href="/registro" className="block pt-6 w-full min-w-0">
                   <Button className="w-full min-h-[4rem] px-4 sm:px-6 md:px-8 py-4 text-sm sm:text-base md:text-lg bg-lexis-gold hover:bg-lexis-gold-hover text-lexis-bg-deep font-bold rounded-xl transition-all shadow-xl shadow-lexis-gold/10 flex items-center justify-center text-center whitespace-normal leading-tight">
-                    Comenzar mi Prueba sin Tarjetas
+                    Empieza gratis — 15 días sin tarjeta
                   </Button>
                 </Link>
-                <p className="text-xs text-slate-400 mt-8 uppercase tracking-[0.15em] font-medium text-center leading-relaxed break-words">Sin contratos. Sin tarjetas iniciales. Sin fricción.</p>
+                <p className="text-xs text-slate-400 mt-6 uppercase tracking-[0.15em] font-medium text-center leading-relaxed break-words">Sin tarjeta. Sin compromiso. Cancela cuando quieras.</p>
               </CardContent>
             </Card>
           </div>
