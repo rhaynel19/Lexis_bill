@@ -44,7 +44,7 @@ import { ContextualHelp } from "@/components/ui/contextual-help";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import jsQR from "jsqr";
-import { ZoomIn, ZoomOut, Maximize2, Layers } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize2, Layers, Keyboard, Upload } from "lucide-react";
 import styles from "./gastos.module.css";
 
 const EXPENSE_CATEGORIES = [
@@ -84,6 +84,7 @@ export default function GastosPage() {
     const [scannedImage, setScannedImage] = useState<string | null>(null);
     const [zoom, setZoom] = useState(1);
     const [extraPhotos, setExtraPhotos] = useState<string[]>([]);
+    const [dataFromScan, setDataFromScan] = useState(false); // true cuando los datos vienen del escaneo (aviso de verificación)
     const invoiceImgRef = useRef<HTMLImageElement>(null);
 
     useEffect(() => {
@@ -146,12 +147,16 @@ export default function GastosPage() {
         }
     };
 
-    const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleScan = async (e: React.ChangeEvent<HTMLInputElement>, dialogAlreadyOpen = false) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        e.target.value = "";
 
         setIsScanning(true);
-        setScannedImage(URL.createObjectURL(file));
+        setScannedImage((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return URL.createObjectURL(file);
+        });
 
         // 1. Try QR Scanning first
         try {
@@ -163,24 +168,24 @@ export default function GastosPage() {
                         supplierName: "Detectado por QR",
                         supplierRnc: parsed.supplierRnc,
                         ncf: parsed.ncf,
-                        amount: parsed.amount,
-                        itbis: parsed.itbis,
+                        amount: parsed.amount ?? "",
+                        itbis: parsed.itbis ?? "",
                         category: "02",
-                        date: parsed.date ? parsed.date.split('-').reverse().join('-') : new Date().toISOString().split('T')[0]
+                        date: parsed.date ? parsed.date.split("-").reverse().join("-") : new Date().toISOString().split("T")[0],
                     });
-                    setIsAddOpen(true);
-                    toast.success("✨ Factura electrónica detectada por QR");
+                    setDataFromScan(true);
+                    if (!dialogAlreadyOpen) setIsAddOpen(true);
+                    toast.success("Factura detectada por QR. Revisa los datos antes de guardar.");
                     setIsScanning(false);
                     return;
                 }
             }
-        } catch (e) {
+        } catch (err) {
             console.warn("QR no detectado, intentando leer texto de la tirilla...");
         }
 
-        // 2. OCR con Tesseract (tirilla sin QR): leer texto y extraer datos
-        toast.info("Leyendo texto de la tirilla...");
-
+        // 2. OCR con Tesseract (tirilla sin QR)
+        toast.info("Leyendo texto del comprobante...");
         try {
             const { createWorker } = await import("tesseract.js");
             const worker = await createWorker("spa");
@@ -200,17 +205,18 @@ export default function GastosPage() {
                         category: parsed.category,
                         date: parsed.date || new Date().toISOString().split("T")[0],
                     });
-                    setIsAddOpen(true);
-                    toast.success("Datos extraídos de la tirilla. Revisa y completa si falta algo.");
+                    setDataFromScan(true);
+                    if (!dialogAlreadyOpen) setIsAddOpen(true);
+                    toast.success("Datos extraídos. Revisa y corrige si hay errores antes de guardar.");
                     setIsScanning(false);
                     return;
                 }
             }
         } catch (ocrErr) {
-            console.warn("OCR tirilla falló, usando datos de ejemplo:", ocrErr);
+            console.warn("OCR falló:", ocrErr);
         }
 
-        // 3. Fallback: datos de ejemplo para completar manualmente
+        // 3. Fallback IA / manual
         toast.info("Completa los datos del comprobante...");
         try {
             const result = await AIService.extractExpenseData(file);
@@ -223,11 +229,12 @@ export default function GastosPage() {
                 category: result.category,
                 date: new Date().toISOString().split("T")[0],
             });
-            setIsAddOpen(true);
-            toast.success("Formulario listo. Ajusta los datos si es necesario.");
+            setDataFromScan(true);
+            if (!dialogAlreadyOpen) setIsAddOpen(true);
+            toast.success("Formulario listo. Verifica y corrige los datos antes de guardar.");
         } catch (error) {
-            toast.error("No se pudo leer el comprobante. Llena el formulario manualmente.");
-            setIsAddOpen(true);
+            toast.error("No se pudo leer el comprobante. Completa el formulario manualmente.");
+            if (!dialogAlreadyOpen) setIsAddOpen(true);
         } finally {
             setIsScanning(false);
         }
@@ -279,8 +286,23 @@ export default function GastosPage() {
             amount: "",
             itbis: "",
             category: "02",
-            date: new Date().toISOString().split('T')[0]
+            date: new Date().toISOString().split("T")[0],
         });
+        setDataFromScan(false);
+        if (scannedImage) {
+            URL.revokeObjectURL(scannedImage);
+            setScannedImage(null);
+        }
+        setExtraPhotos((prev) => {
+            prev.forEach((url) => URL.revokeObjectURL(url));
+            return [];
+        });
+        setZoom(1);
+    };
+
+    const openManualForm = () => {
+        resetForm();
+        setIsAddOpen(true);
     };
 
     const filteredExpenses = expenses.filter(exp =>
@@ -310,7 +332,7 @@ export default function GastosPage() {
                         <input
                             type="file"
                             accept="image/*,application/pdf"
-                            onChange={handleScan}
+                            onChange={(e) => handleScan(e, false)}
                             className="absolute inset-0 opacity-0 cursor-pointer z-10"
                             disabled={isScanning}
                             aria-label="Subir imagen de factura o tirilla (QR o lectura de texto)"
@@ -324,51 +346,73 @@ export default function GastosPage() {
                             {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <ScanLine className="w-5 h-5" />}
                             Escaneo QR / Tirilla
                         </Button>
-                        <p className="text-[10px] text-muted-foreground mt-1 px-1">Tirillas sin QR: leemos el texto. Foto clara = mejor resultado.</p>
+                        <p className="text-[10px] text-muted-foreground mt-1 px-1">Sube foto o PDF. Los datos extraídos son orientativos; revisa antes de guardar.</p>
                     </div>
 
                     <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) resetForm(); }}>
                         <Button
-                            className="w-full sm:w-auto bg-primary text-primary-foreground h-12 px-10 font-bold shadow-lg shadow-primary/20 hover:scale-[1.05] transition-all"
-                            onClick={() => setIsAddOpen(true)}
+                            variant="secondary"
+                            className="w-full sm:w-auto h-12 px-6 font-bold flex items-center gap-2 border-2 border-dashed"
+                            onClick={openManualForm}
                         >
-                            <Plus className="w-5 h-5 mr-2" />
-                            Registrar Gasto
+                            <Keyboard className="w-5 h-5" />
+                            Entrada manual (sin escanear)
                         </Button>
-                        <DialogContent className="max-w-4xl bg-background border-border/20 shadow-2xl">
+                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background border-border/20 shadow-2xl">
                             <DialogHeader>
-                                <DialogTitle className="text-2xl font-serif">Registrar Gasto</DialogTitle>
+                                <DialogTitle className="text-2xl font-serif">Registrar Gasto 606</DialogTitle>
                                 <DialogDescription>
-                                    Ingresa los datos de la factura de tu suplidor para el reporte 606.
+                                    Completa los datos del comprobante. Puedes subir una foto o PDF después (opcional) o escanear primero y corregir aquí.
                                 </DialogDescription>
                             </DialogHeader>
 
+                            {dataFromScan && (
+                                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+                                    Los datos del escaneo son orientativos y pueden tener errores. Verifica suplidor, RNC, NCF, monto e ITBIS antes de guardar.
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
-                                {/* Left Side: Preview (Improved for long invoices) */}
-                                <div className="space-y-4">
-                                    <div className="relative border rounded-xl overflow-hidden bg-slate-50 min-h-[400px] flex flex-col">
+                                {/* Vista previa / subir comprobante: en móvil abajo, en desktop izquierda */}
+                                <div className="space-y-4 order-2 md:order-1">
+                                    <div className="relative border rounded-xl overflow-hidden bg-slate-50 min-h-[200px] md:min-h-[400px] flex flex-col">
                                         <div className="flex items-center justify-between p-2 border-b bg-white">
-                                            <span className="text-[10px] font-bold uppercase text-slate-400 px-2 tracking-widest">Vista Previa</span>
-                                            <div className="flex gap-1">
-                                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(prev => Math.max(0.5, prev - 0.25))}><ZoomOut className="w-4 h-4" /></Button>
-                                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(prev => Math.min(3, prev + 0.25))}><ZoomIn className="w-4 h-4" /></Button>
-                                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(1)}><Maximize2 className="w-4 h-4" /></Button>
-                                            </div>
+                                            <span className="text-[10px] font-bold uppercase text-slate-400 px-2 tracking-widest">Comprobante (opcional)</span>
+                                            {scannedImage && (
+                                                <div className="flex gap-1">
+                                                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((prev) => Math.max(0.5, prev - 0.25))}><ZoomOut className="w-4 h-4" /></Button>
+                                                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((prev) => Math.min(3, prev + 0.25))}><ZoomIn className="w-4 h-4" /></Button>
+                                                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom(1)}><Maximize2 className="w-4 h-4" /></Button>
+                                                </div>
+                                            )}
                                         </div>
 
-                                        <div className="flex-1 overflow-auto p-4 flex items-start justify-center cursor-move">
+                                        <div className="flex-1 overflow-auto p-4 flex items-start justify-center min-h-[160px]">
                                             {scannedImage ? (
                                                 <img
                                                     ref={invoiceImgRef}
                                                     src={scannedImage}
-                                                    alt="Factura Principal"
+                                                    alt="Comprobante"
                                                     className={cn(styles.invoicePreviewImg, "shadow-md rounded shadow-black/10 max-w-full")}
                                                 />
                                             ) : (
-                                                <div className="flex flex-col items-center justify-center h-full text-slate-300 gap-3 py-20">
-                                                    <Receipt className="w-12 h-12 opacity-20" />
-                                                    <p className="text-xs italic">Sin imagen adjunta</p>
-                                                </div>
+                                                <label className="flex flex-col items-center justify-center w-full text-slate-400 gap-3 py-6 cursor-pointer" htmlFor="gastos-upload-comprobante">
+                                                    <Upload className="w-10 h-10 opacity-50" />
+                                                    <p className="text-xs font-medium">Subir comprobante o factura (opcional)</p>
+                                                    <span className="inline-flex items-center gap-2 rounded-md border border-dashed px-4 py-2 text-sm font-medium hover:bg-muted/50">
+                                                        {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                                        {isScanning ? "Leyendo…" : "Elegir archivo"}
+                                                    </span>
+                                                    <input
+                                                        id="gastos-upload-comprobante"
+                                                        type="file"
+                                                        accept="image/*,application/pdf"
+                                                        className="hidden"
+                                                        disabled={isScanning}
+                                                        onChange={(e) => handleScan(e, true)}
+                                                        aria-label="Subir comprobante"
+                                                    />
+                                                </label>
                                             )}
                                         </div>
 
@@ -376,7 +420,7 @@ export default function GastosPage() {
                                             <div className="p-3 border-t bg-white flex gap-2 overflow-x-auto">
                                                 {extraPhotos.map((img, idx) => (
                                                     <div key={idx} className="relative w-12 h-12 rounded border overflow-hidden flex-shrink-0 group cursor-pointer" onClick={() => setScannedImage(img)}>
-                                                        <img src={img} alt={`Foto adicional del comprobante ${idx + 1}`} className="w-full h-full object-cover" title={`Ver foto adicional ${idx + 1}`} />
+                                                        <img src={img} alt={`Foto adicional ${idx + 1}`} className="w-full h-full object-cover" />
                                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                                             <ScanLine className="w-4 h-4 text-white" />
                                                         </div>
@@ -386,16 +430,18 @@ export default function GastosPage() {
                                         )}
                                     </div>
 
-                                    <div className="relative">
-                                        <input type="file" accept="image/*" onChange={handleAddExtraPhoto} className="absolute inset-0 opacity-0 cursor-pointer" aria-label="Añadir página o foto adicional" title="Añadir foto" />
-                                        <Button variant="outline" className="w-full border-dashed gap-2 h-10 text-xs">
-                                            <Layers className="w-4 h-4" /> Añadir página/foto adicional
-                                        </Button>
-                                    </div>
+                                    {scannedImage && (
+                                        <div className="relative">
+                                            <input type="file" accept="image/*" onChange={handleAddExtraPhoto} className="absolute inset-0 opacity-0 cursor-pointer" aria-label="Añadir página o foto adicional" />
+                                            <Button variant="outline" className="w-full border-dashed gap-2 h-10 text-xs">
+                                                <Layers className="w-4 h-4" /> Añadir página/foto adicional
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* Right Side: Form */}
-                                <div className="space-y-4">
+                                {/* Formulario: en móvil arriba para ver todas las opciones (Tipo de Gasto, Fecha, etc.) */}
+                                <div className="space-y-4 order-1 md:order-2">
                                     <div className="space-y-2">
                                         <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Suplidor / Comercio</label>
                                         <Input
