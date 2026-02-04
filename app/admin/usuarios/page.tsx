@@ -4,7 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserCircle, Search, Loader2, Download } from "lucide-react";
+import { UserCircle, Search, Download, Filter } from "lucide-react";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,13 +24,23 @@ export default function AdminUsuariosPage() {
     const [limit] = useState(50);
     const [search, setSearch] = useState("");
     const [searchInput, setSearchInput] = useState("");
+    const [roleFilter, setRoleFilter] = useState<string>("");
+    const [planFilter, setPlanFilter] = useState<string>("");
+    const [statusFilter, setStatusFilter] = useState<string>("");
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchUsers = useCallback(async () => {
         setIsLoading(true);
         try {
             const { api } = await import("@/lib/api-service");
-            const res = await api.getAdminUsers({ q: search || undefined, page, limit });
+            const res = await api.getAdminUsers({
+                q: search || undefined,
+                role: roleFilter || undefined,
+                plan: planFilter || undefined,
+                status: statusFilter || undefined,
+                page,
+                limit
+            });
             setList(res?.list ?? []);
             setTotal(res?.total ?? 0);
         } catch (e) {
@@ -33,7 +50,7 @@ export default function AdminUsuariosPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [search, page, limit]);
+    }, [search, roleFilter, planFilter, statusFilter, page, limit]);
 
     useEffect(() => {
         fetchUsers();
@@ -43,6 +60,14 @@ export default function AdminUsuariosPage() {
         e.preventDefault();
         setSearch(searchInput.trim());
         setPage(1);
+    };
+
+    const displayName = (u: AdminUser) => {
+        const name = (u.name || "").trim();
+        if (!name || name.toUpperCase() === "CONTRIBUYENTE REGISTRADO") {
+            return u.email ? `Sin nombre fiscal (${u.email})` : "Sin nombre fiscal";
+        }
+        return name;
     };
 
     const formatDate = (d: string | undefined) => {
@@ -115,9 +140,9 @@ export default function AdminUsuariosPage() {
             </div>
 
             <Card>
-                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="flex-1 w-full sm:max-w-sm">
-                        <form onSubmit={handleSearch} className="flex gap-2">
+                <CardHeader className="flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <form onSubmit={handleSearch} className="flex gap-2 flex-1 w-full sm:max-w-sm">
                             <Input
                                 placeholder="Buscar por nombre, email o RNC..."
                                 value={searchInput}
@@ -128,21 +153,57 @@ export default function AdminUsuariosPage() {
                                 <Search className="w-4 h-4" />
                             </Button>
                         </form>
+                        <Button variant="outline" size="sm" className="gap-2 shrink-0" onClick={handleExportCsv} disabled={list.length === 0}>
+                            <Download className="w-4 h-4" />
+                            Exportar CSV
+                        </Button>
                     </div>
-                    <Button variant="outline" size="sm" className="gap-2 shrink-0" onClick={handleExportCsv} disabled={list.length === 0}>
-                        <Download className="w-4 h-4" />
-                        Exportar CSV
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <Select value={roleFilter} onValueChange={(v) => { setRoleFilter(v); setPage(1); }}>
+                            <SelectTrigger className="w-[130px]">
+                                <SelectValue placeholder="Rol" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">Todos los roles</SelectItem>
+                                <SelectItem value="user">Usuario</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="partner">Partner</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select value={planFilter} onValueChange={(v) => { setPlanFilter(v); setPage(1); }}>
+                            <SelectTrigger className="w-[130px]">
+                                <SelectValue placeholder="Plan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">Todos los planes</SelectItem>
+                                <SelectItem value="free">Gratis</SelectItem>
+                                <SelectItem value="pro">Pro</SelectItem>
+                                <SelectItem value="premium">Premium</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+                            <SelectTrigger className="w-[140px]">
+                                <SelectValue placeholder="Estado" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">Todos</SelectItem>
+                                <SelectItem value="active">Activo</SelectItem>
+                                <SelectItem value="trial">Trial</SelectItem>
+                                <SelectItem value="expired">Expirado</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <p className="text-sm text-muted-foreground mb-4">
                         {total} usuario{total !== 1 ? "s" : ""} en total
-                        {search ? ` (filtro: "${search}")` : ""}
+                        {(search || roleFilter || planFilter || statusFilter) ? " (filtros aplicados)" : ""}
                     </p>
 
                     {list.length === 0 ? (
                         <div className="py-12 text-center text-muted-foreground">
-                            {search ? "No hay usuarios que coincidan con la búsqueda." : "No hay usuarios registrados."}
+                            {(search || roleFilter || planFilter || statusFilter) ? "No hay usuarios con los filtros aplicados." : "No hay usuarios registrados."}
                         </div>
                     ) : (
                         <>

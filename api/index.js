@@ -1524,18 +1524,44 @@ app.post('/api/admin/reject-payment/:id', verifyToken, verifyAdmin, async (req, 
 app.get('/api/admin/users', verifyToken, verifyAdmin, async (req, res) => {
     try {
         const q = (req.query.q || '').trim();
+        const role = (req.query.role || '').trim().toLowerCase();
+        const plan = (req.query.plan || '').trim().toLowerCase();
+        const statusFilter = (req.query.status || '').trim().toLowerCase(); // active | trial | expired
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
         const limit = Math.min(100, Math.max(10, parseInt(req.query.limit, 10) || 50));
         const skip = (page - 1) * limit;
 
-        const filter = {};
+        const conditions = [];
         if (q) {
-            filter.$or = [
-                { name: new RegExp(q, 'i') },
-                { email: new RegExp(q, 'i') },
-                { rnc: new RegExp(q, 'i') }
-            ];
+            conditions.push({
+                $or: [
+                    { name: new RegExp(q, 'i') },
+                    { email: new RegExp(q, 'i') },
+                    { rnc: new RegExp(q, 'i') }
+                ]
+            });
         }
+        if (role && ['user', 'admin', 'partner'].includes(role)) {
+            conditions.push({ role });
+        }
+        if (plan && ['free', 'pro', 'premium'].includes(plan)) {
+            conditions.push({ $or: [{ membershipLevel: plan }, { 'subscription.plan': plan }] });
+        }
+        if (statusFilter === 'trial') {
+            conditions.push({ subscriptionStatus: 'Trial' });
+        } else if (statusFilter === 'active') {
+            conditions.push({ $or: [{ subscriptionStatus: 'Activo' }, { 'subscription.status': 'active' }] });
+        } else if (statusFilter === 'expired') {
+            conditions.push({
+                $or: [
+                    { subscriptionStatus: 'Bloqueado' },
+                    { 'subscription.status': 'expired' },
+                    { expiryDate: { $lt: new Date() } },
+                    { 'subscription.endDate': { $lt: new Date() } }
+                ]
+            });
+        }
+        const filter = conditions.length ? { $and: conditions } : {};
 
         const [users, total] = await Promise.all([
             User.find(filter)

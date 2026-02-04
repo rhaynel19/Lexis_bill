@@ -365,9 +365,12 @@ export const api = {
         );
     },
 
-    async getAdminUsers(params?: { q?: string; page?: number; limit?: number }) {
+    async getAdminUsers(params?: { q?: string; role?: string; plan?: string; status?: string; page?: number; limit?: number }) {
         const sp = new URLSearchParams();
         if (params?.q) sp.set("q", params.q);
+        if (params?.role) sp.set("role", params.role);
+        if (params?.plan) sp.set("plan", params.plan);
+        if (params?.status) sp.set("status", params.status);
         if (params?.page) sp.set("page", String(params.page));
         if (params?.limit) sp.set("limit", String(params.limit));
         const query = sp.toString();
