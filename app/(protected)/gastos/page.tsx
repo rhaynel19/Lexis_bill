@@ -37,7 +37,6 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-service";
-import { AIService } from "@/lib/ai-service-mock";
 import { DGIIQRParser } from "@/lib/qr-parser";
 import { parseTirillaText, hasUsefulData } from "@/lib/tirilla-ocr-parser";
 import { ContextualHelp } from "@/components/ui/contextual-help";
@@ -216,28 +215,20 @@ export default function GastosPage() {
             console.warn("OCR falló:", ocrErr);
         }
 
-        // 3. Fallback IA / manual
-        toast.info("Completa los datos del comprobante...");
-        try {
-            const result = await AIService.extractExpenseData(file);
-            setFormData({
-                supplierName: result.supplierName,
-                supplierRnc: result.supplierRnc,
-                ncf: result.ncf,
-                amount: result.amount.toString(),
-                itbis: result.itbis.toString(),
-                category: result.category,
-                date: new Date().toISOString().split("T")[0],
-            });
-            setDataFromScan(true);
-            if (!dialogAlreadyOpen) setIsAddOpen(true);
-            toast.success("Formulario listo. Verifica y corrige los datos antes de guardar.");
-        } catch (error) {
-            toast.error("No se pudo leer el comprobante. Completa el formulario manualmente.");
-            if (!dialogAlreadyOpen) setIsAddOpen(true);
-        } finally {
-            setIsScanning(false);
-        }
+        // 3. No usar datos aleatorios: abrir formulario vacío para entrada manual
+        toast.warning("No se pudo extraer datos del comprobante. Completa el formulario manualmente.");
+        setDataFromScan(false);
+        setFormData({
+            supplierName: "",
+            supplierRnc: "",
+            ncf: "",
+            amount: "",
+            itbis: "",
+            category: "02",
+            date: new Date().toISOString().split("T")[0],
+        });
+        if (!dialogAlreadyOpen) setIsAddOpen(true);
+        setIsScanning(false);
     };
 
     const scanForQR = (file: File): Promise<string | null> => {

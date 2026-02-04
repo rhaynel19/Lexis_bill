@@ -19,15 +19,33 @@ function cleanNumber(s: string): string {
 
 function parseAmountFromText(text: string): number {
     const normalized = text.toUpperCase().replace(/\s+/g, " ");
-    // Patrones comunes en tirillas RD: "Total 1,234.56", "TOTAL RD$ 1234.56", "Monto: 500.00", "Grand Total 100"
+    // 1) Pago / Total facturado (más fiable)
+    const pagoMatch = text.match(/(?:PAGO|TOTAL\s*FACTURADO|TOTAL\s*FACTURA)\s*[:\s]*R?D?\$?\s*([\d.,]+)/i);
+    if (pagoMatch) {
+        const n = parseFloat(cleanNumber(pagoMatch[1]));
+        if (!isNaN(n) && n > 0) return n;
+    }
+    // 2) TOTAL RD$, Monto, Grand Total
     const totalMatch = normalized.match(
-        /(?:TOTAL|MONTO|TOTAL\s*RD\$?|R\.?D\.?\s*\$?|GRAND\s*TOTAL)\s*[:\s]*([\d.,]+)/i
+        /(?:TOTAL|MONTO|TOTAL\s*RD\$?|R\.?D\.?\s*\$?|GRAND\s*TOTAL|TOTAL)\s*[:\s]*([\d.,]+)/i
     );
     if (totalMatch) {
         const num = parseFloat(cleanNumber(totalMatch[1]));
         if (!isNaN(num) && num > 0) return num;
     }
-    // Último número que parezca monto (2+ dígitos, opcional decimal)
+    // 3) "Food" / "Subtotal" + RD$ (tirillas en inglés)
+    const foodMatch = text.match(/(?:FOOD|SUBTOTAL|SUBTOTAL\s*NETO)\s*[:\s]*R?D?\$?\s*([\d.,]+)/i);
+    if (foodMatch) {
+        const n = parseFloat(cleanNumber(foodMatch[1]));
+        if (!isNaN(n) && n > 0) return n;
+    }
+    // 4) Cualquier RD$ 123.45
+    const rdMatch = text.match(/R\.?D\.?\s*\$?\s*([\d.,]+)/gi);
+    if (rdMatch && rdMatch.length > 0) {
+        const amounts = rdMatch.map((m) => parseFloat(cleanNumber(m.replace(/R\.?D\.?\s*\$?/gi, "")))).filter((n) => !isNaN(n) && n > 0);
+        if (amounts.length > 0) return Math.max(...amounts);
+    }
+    // 5) Último número que parezca monto
     const numbers = text.match(/[\d.,]+/g) || [];
     for (let i = numbers.length - 1; i >= 0; i--) {
         const n = parseFloat(cleanNumber(numbers[i]));
@@ -38,13 +56,19 @@ function parseAmountFromText(text: string): number {
 
 function parseItbisFromText(text: string): number {
     const normalized = text.toUpperCase();
-    const itbisMatch = normalized.match(/(?:ITBIS|IMPUESTO|TAX)\s*[:\s]*([\d.,]+)/i);
+    // ITBIS 18% RD$ 81.00 o ITBIS: 81
+    const itbisMatch = normalized.match(/(?:ITBIS|IMPUESTO|TAX)\s*(?:18\s*%?\s*)?[:\s]*R?D?\$?\s*([\d.,]+)/i);
     if (itbisMatch) {
         const n = parseFloat(cleanNumber(itbisMatch[1]));
         if (!isNaN(n)) return n;
     }
-    // Buscar "18%" y un número cercano
-    const pctMatch = text.match(/18\s*%?\s*[\s:]*([\d.,]+)/i);
+    const itbisRd = text.match(/ITBIS\s*18\s*%?\s*R?D?\$?\s*([\d.,]+)/i);
+    if (itbisRd) {
+        const n = parseFloat(cleanNumber(itbisRd[1]));
+        if (!isNaN(n)) return n;
+    }
+    // 18% y número cercano
+    const pctMatch = text.match(/18\s*%?\s*[\s:]*R?D?\$?\s*([\d.,]+)/i);
     if (pctMatch) {
         const n = parseFloat(cleanNumber(pctMatch[1]));
         if (!isNaN(n)) return n;
@@ -53,7 +77,12 @@ function parseItbisFromText(text: string): number {
 }
 
 function parseRncFromText(text: string): string {
-    // RNC empresa: 9 dígitos; cédula: 11 dígitos. Evitar números de NCF (más largos o con letras)
+    // Preferir RNC que aparece explícitamente (RNC: 123456789 o RNC 123456789)
+    const rncLabel = text.match(/\bRNC\s*[:\-]?\s*(\d{9})\b/i);
+    if (rncLabel) return rncLabel[1];
+    const rncLabel11 = text.match(/\bRNC\s*[:\-]?\s*(\d{11})\b/i);
+    if (rncLabel11) return rncLabel11[1];
+    // RNC empresa: 9 dígitos; cédula: 11 dígitos (evitar NCF que suele tener letra B/E al inicio)
     const nine = text.match(/\b(\d{9})\b/);
     if (nine) return nine[1];
     const eleven = text.match(/\b(\d{11})\b/);
@@ -70,8 +99,18 @@ function parseNcfFromText(text: string): string {
     return "";
 }
 
+const MONTH_NAMES: Record<string, string> = { jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06", jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12" };
+
 function parseDateFromText(text: string): string {
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const today = new Date().toISOString().split("T")[0];
+    // "3 Feb '26" / "03 Feb 2026" (tirillas en inglés)
+    const enDate = text.match(/\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+['']?(\d{2,4})\b/i);
+    if (enDate) {
+        const [, day, monthName, year] = enDate;
+        const month = MONTH_NAMES[monthName.slice(0, 3).toLowerCase()] || "01";
+        const y = year.length === 2 ? `20${year}` : year;
+        return `${y}-${month}-${day.padStart(2, "0")}`;
+    }
     // DD/MM/YYYY o DD-MM-YYYY
     const d1 = text.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
     if (d1) {
@@ -79,26 +118,30 @@ function parseDateFromText(text: string): string {
         const y = year.length === 2 ? `20${year}` : year;
         return `${y}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
     }
-    // YYYY-MM-DD
     const d2 = text.match(/\b(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\b/);
     if (d2) return `${d2[1]}-${d2[2].padStart(2, "0")}-${d2[3].padStart(2, "0")}`;
     return today;
 }
 
+const RECEIPT_NOISE = /^(CHK|TBL|CHECK|CLOSED|SERVICE|CHARGE|ROOM|DUE|EXEMPT|FECHA|TOTAL|ITBIS|PAGO|FOOD|DESCRIPCIÓN|CANTIDAD|PRECIO|SUBTOTAL)$/i;
+
 function parseSupplierNameFromText(text: string): string {
     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    // Evitar líneas que son solo números o códigos
-    const skip = /^[\d\s\-\/\.\$]+$|^RNC\s*:|^NCF\s*:|^TOTAL|^ITBIS|^FECHA/i;
+    const skip = /^[\d\s\-\/\.\$]+$|^RNC\s*:|^NCF\s*:|^TOTAL|^ITBIS|^FECHA|^PAGO|^FOOD/i;
     for (const line of lines) {
-        if (line.length < 3 || skip.test(line)) continue;
-        // Si la línea tiene solo letras y espacios (nombre de negocio), usarla
-        if (line.length <= 60 && /^[a-záéíóúñü\s\.\-]+$/i.test(line)) return line;
-        // Si contiene "RNC" o "NCF", el nombre suele estar antes (líneas anteriores)
+        if (line.length < 3 || skip.test(line) || RECEIPT_NOISE.test(line)) continue;
+        // Nombre de negocio: letras, espacios, puntos, guiones, acentos (y opcional S.A., etc.)
+        if (line.length <= 70 && /^[a-záéíóúñü\s\.\-]+(?:S\.?A\.?|S\.?R\.?L\.?|INC\.?)?$/i.test(line)) return line;
+        // Línea que parece nombre (empieza con letras, puede tener números al final como dirección)
+        if (line.length >= 4 && line.length <= 70 && /^[a-záéíóúñü]/i.test(line) && !/^\d+$/.test(line)) {
+            const withoutTrailingNumbers = line.replace(/\s*\d[\d\s\-]*$/, "").trim();
+            if (withoutTrailingNumbers.length >= 3) return withoutTrailingNumbers;
+            return line;
+        }
         if (/RNC|NCF/i.test(line)) break;
     }
-    // Primera línea no numérica como fallback
     for (const line of lines) {
-        if (line.length >= 2 && line.length <= 60 && !/^\d+$/.test(line)) return line;
+        if (line.length >= 2 && line.length <= 60 && !/^\d+$/.test(line) && !RECEIPT_NOISE.test(line)) return line;
     }
     return "Suplidor (revisar)";
 }
