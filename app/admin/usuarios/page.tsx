@@ -24,9 +24,9 @@ export default function AdminUsuariosPage() {
     const [limit] = useState(50);
     const [search, setSearch] = useState("");
     const [searchInput, setSearchInput] = useState("");
-    const [roleFilter, setRoleFilter] = useState<string>("");
-    const [planFilter, setPlanFilter] = useState<string>("");
-    const [statusFilter, setStatusFilter] = useState<string>("");
+    const [roleFilter, setRoleFilter] = useState<string>("all");
+    const [planFilter, setPlanFilter] = useState<string>("all");
+    const [statusFilter, setStatusFilter] = useState<string>("all");
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchUsers = useCallback(async () => {
@@ -165,7 +165,7 @@ export default function AdminUsuariosPage() {
                                 <SelectValue placeholder="Rol" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">Todos los roles</SelectItem>
+                                <SelectItem value="all">Todos los roles</SelectItem>
                                 <SelectItem value="user">Usuario</SelectItem>
                                 <SelectItem value="admin">Admin</SelectItem>
                                 <SelectItem value="partner">Partner</SelectItem>
@@ -187,7 +187,7 @@ export default function AdminUsuariosPage() {
                                 <SelectValue placeholder="Estado" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">Todos</SelectItem>
+                                <SelectItem value="all">Todos</SelectItem>
                                 <SelectItem value="active">Activo</SelectItem>
                                 <SelectItem value="trial">Trial</SelectItem>
                                 <SelectItem value="expired">Expirado</SelectItem>
@@ -203,7 +203,7 @@ export default function AdminUsuariosPage() {
 
                     {list.length === 0 ? (
                         <div className="py-12 text-center text-muted-foreground">
-                            {(search || roleFilter || planFilter || statusFilter) ? "No hay usuarios con los filtros aplicados." : "No hay usuarios registrados."}
+                            {(search || (roleFilter && roleFilter !== "all") || (planFilter && planFilter !== "all") || (statusFilter && statusFilter !== "all")) ? "No hay usuarios con los filtros aplicados." : "No hay usuarios registrados."}
                         </div>
                     ) : (
                         <>
