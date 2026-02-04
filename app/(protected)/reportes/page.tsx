@@ -41,6 +41,13 @@ export default function ReportsPage() {
         loadSummary();
     }, [selectedMonth, selectedYear]);
 
+    // Recordatorio 606/607 por email al entrar (máx. 1 por periodo)
+    useEffect(() => {
+        api.sendReportReminder().then((r) => {
+            if (r.sent) toast.info("Te enviamos un recordatorio por email para presentar tus reportes 606/607.");
+        }).catch(() => {});
+    }, []);
+
     const loadSummary = async () => {
         setIsLoading(true);
         try {

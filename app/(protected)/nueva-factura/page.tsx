@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { handleNumericKeyDown } from "@/lib/input-validators";
 import { InvoicePreview } from "@/components/invoice/InvoicePreview";
 import { usePreferences } from "@/components/providers/PreferencesContext";
+import { useAuth } from "@/components/providers/AuthContext";
 import { AIService } from "@/lib/ai-service-mock";
 import { ValidatorService } from "@/lib/validator-service";
 import { SuggestionWidget } from "@/components/ui/suggestion-widget";
@@ -56,6 +57,7 @@ export default function NewInvoice() {
     const [isClientLocked, setIsClientLocked] = useState(false);
 
     const { profession, setProfession } = usePreferences();
+    const { user: authUser } = useAuth();
 
     // ... (Existing states) ...
 
@@ -169,15 +171,12 @@ export default function NewInvoice() {
 
     // Load CRM Data and Check for Cloned Invoice
     useEffect(() => {
-        // 0. Security / Setup Check (auth validada por layout vía cookie)
-        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-
-        if (!storedUser.email) {
+        // 0. Security / Setup Check (auth desde contexto, cookie HttpOnly)
+        if (!authUser?.email) {
             router.push("/login");
             return;
         }
-
-        if (!storedUser.fiscalStatus?.confirmed) {
+        if (!authUser.fiscalStatus?.confirmed) {
             router.push("/dashboard?setup=required");
             return;
         }
@@ -205,9 +204,20 @@ export default function NewInvoice() {
             if (qRnc || qName) setIsClientLocked(true);
         }
 
-        // Services (Still localStorage for now or default)
-        const services = localStorage.getItem("services");
-        if (services) setSavedServices(JSON.parse(services));
+        // Services: API primero, fallback localStorage
+        const fetchServices = async () => {
+            try {
+                const { api } = await import("@/lib/api-service");
+                const list = await api.getServices();
+                if (list && list.length > 0) setSavedServices(list);
+                return;
+            } catch {
+                // fallback
+            }
+            const local = localStorage.getItem("services");
+            if (local) setSavedServices(JSON.parse(local));
+        };
+        fetchServices();
 
         // Templates from API
         const fetchTemplates = async () => {
@@ -283,9 +293,8 @@ export default function NewInvoice() {
 
         // Load Profession and User Details from Config/User
         const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
-        // Profession handled by Context now
         if (config.exequatur) setExequatur(config.exequatur);
-    }, []);
+    }, [authUser]);
 
     // Save Draft on Change (API + localStorage backup)
     useEffect(() => {
@@ -584,7 +593,8 @@ export default function NewInvoice() {
             total: invoiceTotal,
         };
 
-        await previewInvoicePDF(invoiceData);
+        const companyOverride = authUser ? { companyName: authUser.fiscalStatus?.confirmed, rnc: authUser.rnc } : undefined;
+        await previewInvoicePDF(invoiceData, companyOverride);
     };
 
     const handlePreSubmit = (e: React.FormEvent) => {
@@ -653,7 +663,8 @@ export default function NewInvoice() {
                 total: invoiceTotal,
             };
 
-            await downloadInvoicePDF(pdfData);
+            const companyOverride = authUser ? { companyName: authUser.fiscalStatus?.confirmed, rnc: authUser.rnc } : undefined;
+            await downloadInvoicePDF(pdfData, companyOverride);
 
             // CRM: Guardar Cliente en Backend
             if (saveClient) {

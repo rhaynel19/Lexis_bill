@@ -42,6 +42,7 @@ import { AlertsBanner } from "@/components/AlertsBanner";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
 import { usePreferences } from "@/components/providers/PreferencesContext";
+import { useAuth } from "@/components/providers/AuthContext";
 import { cn } from "@/lib/utils";
 
 // Interfaz para definir la estructura de una factura
@@ -123,6 +124,7 @@ export default function Dashboard() {
   const [error, setError] = useState("");
 
   const { mode, profession } = usePreferences();
+  const { user: authUser, refresh } = useAuth();
   const [showCreditNote, setShowCreditNote] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
@@ -134,16 +136,7 @@ export default function Dashboard() {
   const [fiscalState, setFiscalState] = useState<{ suggested: string; confirmed: string | null }>({ suggested: "", confirmed: null });
   const [isFiscalHealthy, setIsFiscalHealthy] = useState(true);
   const [lowNcfType, setLowNcfType] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string>(() => {
-    if (typeof window === "undefined") return "";
-    try {
-      const u = JSON.parse(localStorage.getItem("user") || "{}");
-      return u.name || "";
-    } catch {
-      return "";
-    }
-  });
-  // Profession is now from context
+  const userName = authUser?.name ?? "";
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -151,27 +144,18 @@ export default function Dashboard() {
       setError("");
 
       try {
-        // 0. Security Check (auth via cookie lexis_auth; user en localStorage para UI)
-        const user = localStorage.getItem("user");
-        if (!user) {
+        if (!authUser) {
           router.push("/login");
           return;
         }
 
-        // 1. Check first login/config (still local for UI state)
-        // Handled by OnboardingWizard now
-
+        setFiscalState({
+          suggested: authUser.fiscalStatus?.suggested || "",
+          confirmed: authUser.fiscalStatus?.confirmed || null
+        });
 
         // 2. Fetch subscription & fiscal status
         const { api } = await import("@/lib/api-service");
-
-        // Get user data from local storage to check fiscal status initially
-        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-        setUserName(storedUser.name || "");
-        setFiscalState({
-          suggested: storedUser.fiscalStatus?.suggested || "",
-          confirmed: storedUser.fiscalStatus?.confirmed || null
-        });
 
         const status = await api.getSubscriptionStatus().catch(() => null);
 
@@ -281,7 +265,7 @@ export default function Dashboard() {
         duration: 5000
       });
     }
-  }, []);
+  }, [authUser]);
 
   const handleRefresh = () => {
     const refresh = async () => {
@@ -398,11 +382,11 @@ export default function Dashboard() {
             <div className="mb-8 animate-in slide-in-from-top-4 duration-500">
               <FiscalNamePrompt
                 initialSuggestedName={fiscalState.suggested}
-                onConfirmed={(name) => {
+                onConfirmed={async (name) => {
                   setFiscalState(prev => ({ ...prev, confirmed: name }));
-                  const user = JSON.parse(localStorage.getItem("user") || "{}");
-                  user.fiscalStatus = { ...user.fiscalStatus, confirmed: name };
-                  localStorage.setItem("user", JSON.stringify(user));
+                  const { api } = await import("@/lib/api-service");
+                  await api.confirmFiscalName(name);
+                  await refresh();
                   const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
                   config.companyName = name;
                   localStorage.setItem("appConfig", JSON.stringify(config));

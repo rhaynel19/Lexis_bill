@@ -7,18 +7,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/components/providers/AuthContext";
 
 export function SupportTicketForm() {
     const [type, setType] = useState("problem");
     const [description, setDescription] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { user } = useAuth();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const userStr = localStorage.getItem("user");
-            const rnc = userStr ? JSON.parse(userStr).rnc : "ANONIMO";
+            const rnc = user?.rnc || "ANONIMO";
 
             // Call API (Needs to be implemented in api-service but fetch works for now)
             const res = await fetch("/api/tickets", {

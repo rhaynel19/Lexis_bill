@@ -1,39 +1,49 @@
-# 💼 Billig DGII - Sistema de Facturación Electrónica
+# 💼 Lexis Bill — Sistema de Facturación DGII
 
-Sistema de facturación electrónica diseñado específicamente para el mercado de República Dominicana, cumpliendo con los requisitos de la DGII (Dirección General de Impuestos Internos).
+Sistema de facturación para República Dominicana: facturas, cotizaciones, reportes 606/607 DGII, clientes, membresías y panel CEO.
 
 ## 🚀 Características
 
-- ✅ **Dashboard Intuitivo**: Visualiza total facturado, facturas pendientes y clientes
-- ✅ **Comprobantes Fiscales Electrónicos (e-CF)**: Soporte para tipos 31, 32, 33, 34
-- ✅ **Cálculos Automáticos**: ITBIS (18%) y Retención ISR (10%)
-- ✅ **Diseño Mobile-First**: Optimizado para dispositivos móviles
-- ✅ **Código Comentado**: Ideal para aprender Next.js y TypeScript
+- **Dashboard**: Total facturado, facturas pendientes, clientes
+- **Facturas y NCF**: Tipos B01/B02/E31/E32, límites por plan
+- **Cotizaciones**: CRUD y conversión a factura
+- **Reportes 606/607**: Formato DGII con retenciones y forma de pago
+- **Membresías**: Planes Free/Pro/Premium, pago manual (transferencia/PayPal)
+- **Panel Admin/CEO**: Estadísticas, gráficos, export CSV, partners
+- **Auth**: Login, registro, recuperación de contraseña, JWT en cookie HttpOnly
+- **Validación RNC**: API externa configurable (`DGII_RNC_API_URL`) o mock
 
 ## 🛠️ Tecnologías
 
-- **Next.js 14+** - Framework React con App Router
-- **TypeScript** - Tipado estático
-- **Tailwind CSS** - Diseño moderno y responsive
-- **Shadcn UI** - Componentes de interfaz de alta calidad
+- **Next.js 16** (App Router), **TypeScript**, **Tailwind**, **Shadcn UI**
+- **API Express** (Node), **MongoDB** (Mongoose)
+- **Recharts** (gráficos CEO), **Vitest** (unit), **Playwright** (E2E)
 
 ## 📦 Instalación
-
-Las dependencias ya están instaladas. Si necesitas reinstalar:
 
 ```bash
 npm install
 ```
 
+Copia `env_example` a `.env` y configura al menos:
+
+- `MONGODB_URI` — conexión MongoDB
+- `JWT_SECRET` — mínimo 32 caracteres
+- `CORS_ORIGIN` — en dev: `http://localhost:3000`
+- `NEXT_PUBLIC_API_URL` — en dev: `http://localhost:3001/api`
+
 ## 🚀 Uso
 
-### Iniciar el servidor de desarrollo
+### Desarrollo (front + API)
 
 ```bash
-npm run dev
+npm run dev:all
 ```
 
-Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+- Frontend: [http://localhost:3000](http://localhost:3000)
+- API: [http://localhost:3001](http://localhost:3001) (proxy desde `/api` en dev)
+
+Solo frontend: `npm run dev`. Solo API: `npm run dev:backend`.
 
 ### Crear una factura de prueba
 
@@ -79,11 +89,11 @@ La aplicación se adapta automáticamente a:
 - 📱 Tablets (768px+)
 - 💻 Desktop (1024px+)
 
-## 💾 Almacenamiento de Datos
+## 💾 Base de datos y API
 
-Actualmente usa **localStorage** para demostración. Los datos persisten en el navegador.
-
-> **Nota**: Para producción, necesitarás implementar un backend con base de datos y conectar con el sistema oficial de DGII.
+- **MongoDB**: Usuarios, facturas, cotizaciones, clientes, gastos (606), membresías, NCF, borradores y plantillas.
+- **API** (`api/index.js`): Auth, facturas, cotizaciones, reportes 606/607, admin, webhooks. Ver `env_example` para variables.
+- **Membresías**: Planes Free/Pro/Premium; pagos manuales (transferencia/PayPal). Ver `MEMBRESIAS_SETUP.md`.
 
 ## 📂 Estructura del Proyecto
 
@@ -110,14 +120,25 @@ El código está completamente comentado en español para facilitar el aprendiza
 - Tailwind CSS
 - Componentes reutilizables
 
-## 🔧 Scripts Disponibles
+## 🔧 Scripts
 
 ```bash
-npm run dev      # Servidor de desarrollo
-npm run build    # Build de producción
-npm run start    # Servidor de producción
-npm run lint     # Linter ESLint
+npm run dev        # Solo frontend
+npm run dev:backend # Solo API
+npm run dev:all     # Frontend + API (recomendado en dev)
+npm run build      # Build Next.js
+npm run start      # Servidor de producción (Next)
+npm run test       # Tests unitarios (Vitest)
+npm run test:e2e   # Tests E2E (Playwright; requiere app + API corriendo)
+npm run promote-admin  # Promover usuario a admin (ver script)
 ```
+
+## 📄 Documentación
+
+- **Despliegue:** [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md) — Vercel + API + MongoDB
+- **Recuperación de contraseña:** [docs/RECUPERACION_CONTRASENA.md](docs/RECUPERACION_CONTRASENA.md)
+- **Validación RNC:** [docs/RNC_VALIDACION.md](docs/RNC_VALIDACION.md)
+- **Formato 606/607:** [docs/FORMATO_606_607_DGII.md](docs/FORMATO_606_607_DGII.md)
 
 ## 📝 Próximos Pasos
 

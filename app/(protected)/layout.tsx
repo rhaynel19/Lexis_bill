@@ -13,6 +13,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { LexisWord } from "@/components/LexisWord";
+import { useAuth } from "@/components/providers/AuthContext";
 
 export default function ProtectedLayout({
     children,
@@ -21,51 +22,38 @@ export default function ProtectedLayout({
 }>) {
     const router = useRouter();
     const pathname = usePathname();
+    const { user: userFromApi, setUser, setLoading, refresh, logout } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
     const [menuOpen, setMenuOpen] = useState(false);
-    const [userFromApi, setUserFromApi] = useState<{ role?: string; partner?: { referralCode: string; status: string }; onboardingCompleted?: boolean } | null>(null);
 
     useEffect(() => {
         const checkAuth = async () => {
+            setLoading(true);
             try {
-                const { api } = await import("@/lib/api-service");
-                const me = await api.getMe();
-                setUserFromApi(me || null);
+                const me = await refresh();
                 if (me) {
-                    const current = JSON.parse(localStorage.getItem("user") || "{}");
-                    localStorage.setItem("user", JSON.stringify({
-                        ...current,
-                        name: me.name,
-                        role: me.role,
-                        onboardingCompleted: me.onboardingCompleted
-                    }));
                     if (me.onboardingCompleted === false && !window.location.pathname.startsWith("/onboarding")) {
                         router.replace("/onboarding");
                         return;
                     }
+                } else {
+                    router.push("/login");
+                    return;
                 }
             } catch {
-                localStorage.removeItem("user");
+                setUser(null);
                 router.push("/login");
                 return;
             } finally {
                 setIsLoading(false);
+                setLoading(false);
             }
         };
         checkAuth();
-    }, [router]);
+    }, [router, refresh, setUser, setLoading]);
 
     const handleLogout = async () => {
-        try {
-            const { api } = await import("@/lib/api-service");
-            await api.logout();
-        } catch {
-            // Ignorar si falla (ej. offline)
-        }
-        localStorage.removeItem("user");
-        Object.keys(localStorage).forEach(key => {
-            if (key.startsWith("cache_")) localStorage.removeItem(key);
-        });
+        await logout();
         toast.success("Sesión cerrada correctamente");
         router.push("/login");
     };

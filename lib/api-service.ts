@@ -219,6 +219,14 @@ export const api = {
         return res.blob();
     },
 
+    /** Envía recordatorio 606/607 por email (máx. 1 por periodo). Llamar al entrar a Reportes. */
+    async sendReportReminder(): Promise<{ sent: boolean; period?: string; reason?: string }> {
+        const res = await fetch(`${API_URL}/reports/reminder`, { method: "POST", credentials: "include" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return { sent: false, reason: (data as { error?: string }).error || "error" };
+        return data as { sent: boolean; period?: string; reason?: string };
+    },
+
     async getQuotes() {
         return secureFetch<any[]>(`${API_URL}/quotes`, { cacheKey: "quotes_list" });
     },
@@ -287,11 +295,29 @@ export const api = {
         return secureFetch<any>(`${API_URL}/membership/payment-info`);
     },
 
-    async requestMembershipPayment(plan: string, billingCycle: "monthly" | "annual", paymentMethod: "transferencia" | "paypal", comprobanteImage?: string) {
+    /** Obtiene referencia única LEX-XXXX para que el cliente la ponga en la transferencia (antes de pagar) */
+    async prepareTransfer(plan: string, billingCycle: "monthly" | "annual") {
+        return secureFetch<{ reference: string; paymentRequestId: string }>(`${API_URL}/membership/prepare-transfer`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ plan, billingCycle }),
+        });
+    },
+
+    async requestMembershipPayment(
+        plan: string,
+        billingCycle: "monthly" | "annual",
+        paymentMethod: "transferencia" | "paypal",
+        comprobanteImage?: string,
+        paymentRequestId?: string
+    ) {
+        const body: Record<string, unknown> = { plan, billingCycle, paymentMethod };
+        if (comprobanteImage) body.comprobanteImage = comprobanteImage;
+        if (paymentRequestId) body.paymentRequestId = paymentRequestId;
         const res = await secureFetch<any>(`${API_URL}/membership/request-payment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ plan, billingCycle, paymentMethod, comprobanteImage }),
+            body: JSON.stringify(body),
         });
         if (typeof localStorage !== "undefined") localStorage.removeItem("cache_subscription_status");
         return res;
@@ -310,12 +336,18 @@ export const api = {
         return secureFetch<any>(`${API_URL}/admin/reject-payment/${id}`, { method: "POST" });
     },
 
-    async getAdminStats() {
-        return secureFetch<any>(`${API_URL}/admin/stats`);
+    async getAdminStats(query?: string) {
+        return secureFetch<any>(`${API_URL}/admin/stats${query || ""}`);
     },
 
-    async getAdminMetrics() {
-        return secureFetch<any>(`${API_URL}/admin/metrics`);
+    async getAdminMetrics(query?: string) {
+        return secureFetch<any>(`${API_URL}/admin/metrics${query || ""}`);
+    },
+
+    async getAdminChartData(months?: number) {
+        return secureFetch<{ monthly: Array<{ month: string; revenue: number; invoices: number }>; usersByPlan: { free: number; pro: number; premium: number } }>(
+            `${API_URL}/admin/chart-data${months ? `?months=${months}` : ""}`
+        );
     },
 
     async getAlerts() {
@@ -337,6 +369,18 @@ export const api = {
 
     async deleteInvoiceDraft() {
         return secureFetch<any>(`${API_URL}/invoice-draft`, { method: "DELETE" });
+    },
+
+    async getServices() {
+        return secureFetch<any[]>(`${API_URL}/services`);
+    },
+
+    async saveServices(services: Array<{ description?: string; quantity?: number; price?: number; isExempt?: boolean }>) {
+        return secureFetch<{ services: unknown[] }>(`${API_URL}/services`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ services }),
+        });
     },
 
     async getInvoiceTemplates() {

@@ -25,6 +25,7 @@ export function MembershipConfig() {
     const [userEmail, setUserEmail] = useState<string>("");
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [transferReference, setTransferReference] = useState<{ reference: string; paymentRequestId: string } | null>(null);
 
     useEffect(() => {
         const load = async () => {
@@ -49,6 +50,29 @@ export function MembershipConfig() {
         load();
     }, []);
 
+    const statusInfo = subscription?.status ? STATUS_LABELS[subscription.status] || STATUS_LABELS.pending : STATUS_LABELS.active;
+    const proPlan = plans.find((p: any) => p.id === "pro");
+    const hasPro = proPlan?.available !== false;
+    const selectedPrice = selectedBilling === "annual" ? (proPlan?.priceAnnual ?? 9500) : (proPlan?.priceMonthly ?? 950);
+    const hasPending = subscription?.status === "pending";
+
+    useEffect(() => {
+        if (selectedMethod !== "transferencia" || selectedPlan === "free" || hasPending) {
+            setTransferReference(null);
+            return;
+        }
+        const prepare = async () => {
+            try {
+                const { api } = await import("@/lib/api-service");
+                const data = await api.prepareTransfer(selectedPlan, selectedBilling);
+                setTransferReference({ reference: data.reference, paymentRequestId: data.paymentRequestId });
+            } catch {
+                setTransferReference(null);
+            }
+        };
+        prepare();
+    }, [selectedMethod, selectedPlan, selectedBilling, hasPending]);
+
     const handleRequestPayment = async () => {
         if (selectedPlan === "free") {
             toast.info("El plan Free ya está incluido.");
@@ -65,29 +89,31 @@ export function MembershipConfig() {
         setIsSubmitting(true);
         try {
             const { api } = await import("@/lib/api-service");
-            await api.requestMembershipPayment(selectedPlan, selectedBilling, selectedMethod, selectedMethod === "transferencia" ? comprobante || undefined : undefined);
-            toast.success("Solicitud registrada. Validamos tu pago en 24-48 horas.");
+            const paymentRequestId = selectedMethod === "transferencia" ? transferReference?.paymentRequestId : undefined;
+            await api.requestMembershipPayment(
+                selectedPlan,
+                selectedBilling,
+                selectedMethod,
+                selectedMethod === "transferencia" ? comprobante || undefined : undefined,
+                paymentRequestId
+            );
+            toast.success("Solicitud registrada. Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).");
             setComprobante(null);
             setPaypalConfirmed(false);
             const status = await api.getSubscriptionStatus();
             setSubscription(status);
-        } catch (e: any) {
-            toast.error(e.message || "Error al registrar solicitud.");
+        } catch (e: unknown) {
+            const msg = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "Error al registrar solicitud.";
+            toast.error(msg);
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const canSubmit =
-        (selectedMethod === "transferencia" && !!comprobante) ||
-        (selectedMethod === "paypal" && paypalConfirmed);
-
-    const statusInfo = subscription?.status ? STATUS_LABELS[subscription.status] || STATUS_LABELS.pending : STATUS_LABELS.active;
-    const proPlan = plans.find((p: any) => p.id === "pro");
     const premiumPlan = plans.find((p: any) => p.id === "premium");
-    const hasPro = proPlan?.available !== false;
-    const selectedPrice = selectedBilling === "annual" ? (proPlan?.priceAnnual ?? 9500) : (proPlan?.priceMonthly ?? 950);
-    const hasPending = subscription?.status === "pending";
+    const canSubmit =
+        (selectedMethod === "transferencia" && !!comprobante && !!transferReference) ||
+        (selectedMethod === "paypal" && paypalConfirmed);
 
     if (isLoading) {
         return (
@@ -239,6 +265,29 @@ export function MembershipConfig() {
                                     <p className="text-sm text-amber-900 font-semibold">Monto a transferir</p>
                                     <p className="text-2xl font-bold text-amber-700">RD$ {selectedPrice}</p>
                                 </div>
+                                {transferReference && (
+                                    <div className="p-3 bg-slate-900 rounded-lg border border-slate-700 space-y-1">
+                                        <p className="text-xs text-slate-300 uppercase tracking-wider font-semibold">Referencia (ponla en el concepto de la transferencia)</p>
+                                        <div className="flex items-center gap-2">
+                                            <code className="flex-1 px-3 py-2 bg-slate-800 rounded text-lg font-bold text-amber-400 font-mono tracking-wider">
+                                                {transferReference.reference}
+                                            </code>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                className="shrink-0 border-slate-600 text-slate-300 hover:bg-slate-700"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(transferReference.reference);
+                                                    toast.success("Referencia copiada");
+                                                }}
+                                            >
+                                                <Copy className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                        <p className="text-xs text-slate-400">Sin esta referencia no podemos activar tu plan automáticamente.</p>
+                                    </div>
+                                )}
                                 <p className="text-sm"><strong>Banco:</strong> {paymentInfo.bankName}</p>
                                 <p className="text-sm font-mono"><strong>Cuenta:</strong> {paymentInfo.bankAccount}</p>
                                 <div className="space-y-2">
@@ -282,6 +331,9 @@ export function MembershipConfig() {
                                 </div>
                                 <p className="text-xs text-muted-foreground">
                                     Debes subir el comprobante antes de continuar.
+                                </p>
+                                <p className="text-xs text-slate-500 italic border-l-2 border-amber-300 pl-3">
+                                    Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).
                                 </p>
                             </div>
                         )}
@@ -361,6 +413,9 @@ export function MembershipConfig() {
                                 <p className="text-xs text-muted-foreground">
                                     Debes confirmar antes de continuar.
                                 </p>
+                                <p className="text-xs text-slate-500 italic border-l-2 border-amber-300 pl-3">
+                                    Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).
+                                </p>
                             </div>
                         )}
 
@@ -368,7 +423,7 @@ export function MembershipConfig() {
                             <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/50 space-y-1 text-sm">
                                 <p className="font-medium text-slate-700">Resumen de tu solicitud</p>
                                 <p className="text-slate-600">Plan Profesional • {selectedBilling === "annual" ? "Anual" : "Mensual"} • RD$ {selectedPrice.toLocaleString()} • {selectedMethod === "transferencia" ? "Transferencia" : "PayPal"}</p>
-                                <p className="text-xs text-amber-700 mt-1">✓ Validamos en 24-48 horas</p>
+                                <p className="text-xs text-amber-700 mt-1">Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).</p>
                             </div>
                         )}
                         <Button

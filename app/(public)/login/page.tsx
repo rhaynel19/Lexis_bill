@@ -9,11 +9,13 @@ import Link from "next/link";
 import { CheckCircle2, Fingerprint, Lock, Mail, MessageCircle, AlertCircle, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { LexisWord } from "@/components/LexisWord";
+import { useAuth } from "@/components/providers/AuthContext";
 
 const LAST_EMAIL_KEY = "lexis_last_email";
 
 export default function LoginPage() {
     const router = useRouter();
+    const { setUser } = useAuth();
     const [email, setEmail] = useState(() => {
         if (typeof window === "undefined") return "";
         return localStorage.getItem(LAST_EMAIL_KEY) || "";
@@ -39,19 +41,11 @@ export default function LoginPage() {
 
         try {
             const { api } = await import("@/lib/api-service");
-            const data = await api.login(email, password);
-
+            await api.login(email, password);
             localStorage.setItem(LAST_EMAIL_KEY, email);
-            // Usuario - SOLO datos mínimos para UI (token en cookie HttpOnly, datos sensibles desde API)
-            // NO guardamos: email completo, rnc, detalles de subscription (seguridad)
-            localStorage.setItem("user", JSON.stringify({
-                name: data.name,
-                role: data.role || "user",
-                biometric: false
-            }));
-
-            // Biometric Prompt Mock (only if first time or configured)
-            // For now, redirect directly or show prompt
+            // Usuario desde API (cookie HttpOnly; no guardamos user en localStorage)
+            const me = await api.getMe();
+            setUser(me || null);
             setShowBiometric(true);
 
         } catch (err: any) {
@@ -66,15 +60,8 @@ export default function LoginPage() {
         }
     };
 
-    const handleBiometricDecision = (decision: boolean) => {
-        // Here we would save the preference
+    const handleBiometricDecision = (_decision: boolean) => {
         setShowBiometric(false);
-        const userStr = localStorage.getItem("user");
-        if (userStr) {
-            const user = JSON.parse(userStr);
-            user.biometric = decision;
-            localStorage.setItem("user", JSON.stringify(user));
-        }
         router.push("/dashboard");
     };
 

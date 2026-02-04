@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { MessageCircle, Headphones, CreditCard, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/components/providers/AuthContext";
 
 const SUPPORT_PHONE = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "18095550000";
 
@@ -11,6 +12,7 @@ export function SupportChat() {
     const [isOpen, setIsOpen] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
     const pathname = usePathname();
+    const { user } = useAuth();
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -26,15 +28,7 @@ export function SupportChat() {
     }, [isOpen]);
 
     const handleWhatsApp = (type: "tech" | "billing") => {
-        let userName = "Usuario";
-        if (typeof window !== "undefined") {
-            try {
-                const user = localStorage.getItem("user");
-                if (user) userName = JSON.parse(user).name || "Usuario";
-            } catch {
-                // ignorar
-            }
-        }
+        const userName = user?.name || "Usuario";
 
         const pathLabel = pathname ? ` (pantalla: ${pathname.replace(/^\//, "") || "inicio"})` : "";
         let message = "";

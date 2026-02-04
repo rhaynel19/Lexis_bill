@@ -1,40 +1,88 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, FileText, DollarSign, BarChart3, CreditCard, Loader2, Handshake, TrendingUp } from "lucide-react";
+import { Users, FileText, DollarSign, BarChart3, CreditCard, Loader2, Handshake, TrendingUp, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+
+type PeriodFilter = "current" | "last";
+
+const CHART_COLORS = ["#0A192F", "#D4AF37", "#1e3a5f", "#2d5a87", "#3d7ab5"];
+const PIE_COLORS = ["#94a3b8", "#D4AF37", "#0A192F"];
 
 export default function AdminCEODashboard() {
     const [stats, setStats] = useState<any>(null);
     const [metrics, setMetrics] = useState<any>(null);
     const [partnerStats, setPartnerStats] = useState<any>(null);
+    const [chartData, setChartData] = useState<{ monthly: Array<{ month: string; revenue: number; invoices: number }>; usersByPlan: { free: number; pro: number; premium: number } } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [period, setPeriod] = useState<PeriodFilter>("current");
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const { api } = await import("@/lib/api-service");
-                const [statsData, metricsData, partnerStatsData] = await Promise.all([
-                    api.getAdminStats(),
-                    api.getAdminMetrics().catch(() => null),
-                    api.getAdminPartnersStats().catch(() => null)
+                const params = period === "last" ? "?period=last_month" : "";
+                const [statsData, metricsData, partnerStatsData, chartDataRes] = await Promise.all([
+                    api.getAdminStats(params),
+                    api.getAdminMetrics(params).catch(() => null),
+                    api.getAdminPartnersStats().catch(() => null),
+                    api.getAdminChartData(12).catch(() => null)
                 ]);
                 setStats(statsData);
                 setMetrics(metricsData);
                 setPartnerStats(partnerStatsData);
+                setChartData(chartDataRes || null);
             } catch (e) {
                 toast.error("Error al cargar estadísticas.");
             } finally {
                 setIsLoading(false);
             }
         };
+        setIsLoading(true);
         fetchData();
-    }, []);
+    }, [period]);
 
     const formatCurrency = (n: number) =>
         new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 0 }).format(n || 0);
+
+    const handleExportCSV = () => {
+        const rows: string[][] = [
+            ["Estadísticas CEO", "Valor"],
+            ["Usuarios totales", String(users?.total ?? 0)],
+            ["Usuarios nuevos este mes", String(users?.newThisMonth ?? 0)],
+            ["Facturación mensual (DOP)", String(invoicing?.monthlyTotal ?? 0)],
+            ["Facturas este mes", String(invoicing?.monthlyInvoices ?? 0)],
+            ["Total facturas emitidas", String(invoicing?.totalInvoices ?? 0)],
+            ["ITBIS total", String(invoicing?.totalItbis ?? 0)],
+            ["Reportes 606", String(fiscal?.report606 ?? 0)],
+            ["Reportes 607", String(fiscal?.report607 ?? 0)],
+            ["Usuarios Free", String(business?.freeUsers ?? 0)],
+            ["Usuarios Pro", String(business?.proUsers ?? 0)],
+            ["Membresías activas", String(business?.activeMemberships ?? 0)],
+            ["Pagos pendientes", String(business?.pendingPayments ?? 0)],
+        ];
+        if (metrics) {
+            rows.push(["MRR (DOP)", String(metrics.mrr ?? 0)]);
+            rows.push(["Revenue total (DOP)", String(metrics.revenueTotal ?? 0)]);
+            rows.push(["ARPU (DOP)", String(metrics.arpu ?? 0)]);
+            rows.push(["Churn %", String(metrics.churn ?? 0)]);
+            rows.push(["Growth %", String(metrics.growthRate ?? 0)]);
+        }
+        const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+        const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `lexisbill-ceo-stats-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("CSV descargado.");
+    };
 
     if (isLoading || !stats) {
         return (
@@ -48,9 +96,25 @@ export default function AdminCEODashboard() {
 
     return (
         <div className="space-y-8">
-            <div>
-                <h1 className="text-2xl font-bold">Estadísticas CEO</h1>
-                <p className="text-muted-foreground text-sm">Métricas clave del negocio LexisBill</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold">Estadísticas CEO</h1>
+                    <p className="text-muted-foreground text-sm">Métricas clave del negocio LexisBill</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Select value={period} onValueChange={(v: PeriodFilter) => setPeriod(v)}>
+                        <SelectTrigger className="w-[160px]">
+                            <SelectValue placeholder="Periodo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="current">Este mes</SelectItem>
+                            <SelectItem value="last">Mes pasado</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={handleExportCSV}>
+                        <Download className="w-4 h-4" /> Exportar CSV
+                    </Button>
+                </div>
             </div>
 
             {/* Métricas SaaS (MRR, Churn, ARPU, etc.) */}
@@ -109,6 +173,77 @@ export default function AdminCEODashboard() {
                             </CardContent>
                         </Card>
                     </div>
+                </div>
+            )}
+
+            {/* Gráficos */}
+            {chartData && (chartData.monthly?.length > 0 || (chartData.usersByPlan?.free !== undefined)) && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <TrendingUp className="w-4 h-4" /> Ingresos y facturas por mes
+                            </CardTitle>
+                            <CardDescription>Últimos 12 meses (DOP)</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="h-[280px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={chartData.monthly || []} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                                        <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                                        <Tooltip formatter={(value: number, name: string) => [name === "revenue" ? formatCurrency(value) : value, name === "revenue" ? "Ingresos" : "Facturas"]} labelFormatter={(l) => l} />
+                                        <Bar dataKey="revenue" fill={CHART_COLORS[0]} name="Ingresos" radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="invoices" fill={CHART_COLORS[1]} name="Facturas" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <Users className="w-4 h-4" /> Usuarios por plan
+                            </CardTitle>
+                            <CardDescription>Distribución Free / Pro / Premium</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="h-[280px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={[
+                                                { name: "Free", value: chartData.usersByPlan?.free ?? 0 },
+                                                { name: "Pro", value: chartData.usersByPlan?.pro ?? 0 },
+                                                { name: "Premium", value: chartData.usersByPlan?.premium ?? 0 }
+                                            ].filter((d) => d.value > 0)}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={90}
+                                            paddingAngle={2}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            label={({ name, value }) => `${name}: ${value}`}
+                                        >
+                                            {[
+                                                { name: "Free", value: chartData.usersByPlan?.free ?? 0 },
+                                                { name: "Pro", value: chartData.usersByPlan?.pro ?? 0 },
+                                                { name: "Premium", value: chartData.usersByPlan?.premium ?? 0 }
+                                            ]
+                                                .filter((d) => d.value > 0)
+                                                .map((_, i) => (
+                                                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                                                ))}
+                                        </Pie>
+                                        <Tooltip formatter={(value: number) => [value, "Usuarios"]} />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             )}
 

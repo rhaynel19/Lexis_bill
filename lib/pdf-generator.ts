@@ -70,10 +70,16 @@ function formatCurrency(amount: number): string {
     }).format(amount);
 }
 
+/** Override de datos de empresa (cuando el usuario viene del contexto, no de localStorage) */
+export interface CompanyOverride {
+    companyName?: string;
+    rnc?: string;
+}
+
 /**
  * Genera un PDF profesional de la factura
  */
-export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<jsPDF> {
+export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverride?: CompanyOverride): Promise<jsPDF> {
     // Crear nuevo documento PDF (tamaño carta)
     const doc = new jsPDF({
         orientation: "portrait",
@@ -87,16 +93,16 @@ export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<jsPD
 
     let yPosition = margin.top;
 
-    // Cargar configuración dinámica
-    const storedConfig = localStorage.getItem("appConfig");
-    const storedUser = localStorage.getItem("user");
+    // Cargar configuración dinámica (contexto o localStorage)
+    const storedConfig = typeof localStorage !== "undefined" ? localStorage.getItem("appConfig") : null;
+    const storedUser = typeof localStorage !== "undefined" ? localStorage.getItem("user") : null;
 
     const appConfig = storedConfig ? JSON.parse(storedConfig) : { ...APP_CONFIG.company };
     const user = storedUser ? JSON.parse(storedUser) : null;
 
-    // Prioridad: Nombre Fiscal Confirmado > Nombre Configuración > Nombre Default
-    const companyName = user?.fiscalStatus?.confirmed || appConfig.companyName || appConfig.name || APP_CONFIG.company.name;
-    const companyRnc = user?.rnc || appConfig.rnc || APP_CONFIG.company.rnc;
+    // Prioridad: override (contexto) > Nombre Fiscal Confirmado > Config > Default
+    const companyName = companyOverride?.companyName || user?.fiscalStatus?.confirmed || appConfig.companyName || appConfig.name || APP_CONFIG.company.name;
+    const companyRnc = companyOverride?.rnc ?? user?.rnc ?? appConfig.rnc ?? APP_CONFIG.company.rnc;
 
     appConfig.companyName = companyName;
     appConfig.rnc = companyRnc;
@@ -376,8 +382,8 @@ export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<jsPD
 /**
  * Descarga el PDF de la factura
  */
-export async function downloadInvoicePDF(invoiceData: InvoiceData): Promise<void> {
-    const pdf = await generateInvoicePDF(invoiceData);
+export async function downloadInvoicePDF(invoiceData: InvoiceData, companyOverride?: CompanyOverride): Promise<void> {
+    const pdf = await generateInvoicePDF(invoiceData, companyOverride);
     const fileName = `Factura_${invoiceData.sequenceNumber}.pdf`;
     pdf.save(fileName);
 }
@@ -385,8 +391,8 @@ export async function downloadInvoicePDF(invoiceData: InvoiceData): Promise<void
 /**
  * Abre el PDF en una nueva ventana para vista previa
  */
-export async function previewInvoicePDF(invoiceData: InvoiceData): Promise<void> {
-    const pdf = await generateInvoicePDF(invoiceData);
+export async function previewInvoicePDF(invoiceData: InvoiceData, companyOverride?: CompanyOverride): Promise<void> {
+    const pdf = await generateInvoicePDF(invoiceData, companyOverride);
     const pdfBlob = pdf.output("blob");
     const pdfUrl = URL.createObjectURL(pdfBlob);
     window.open(pdfUrl, "_blank");

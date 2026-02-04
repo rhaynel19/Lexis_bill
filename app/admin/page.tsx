@@ -10,9 +10,10 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
-import { CreditCard, Check, X, Loader2, RefreshCw, AlertCircle, ImageIcon } from "lucide-react";
+import { CreditCard, Check, X, Loader2, RefreshCw, AlertCircle, ImageIcon, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useState, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -21,6 +22,7 @@ export default function AdminPagosPendientes() {
     const [isLoading, setIsLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [comprobanteView, setComprobanteView] = useState<string | null>(null);
+    const [searchRef, setSearchRef] = useState("");
 
     const fetchPayments = async () => {
         try {
@@ -77,6 +79,12 @@ export default function AdminPagosPendientes() {
         });
     };
 
+    const filteredPayments = useMemo(() => {
+        if (!searchRef.trim()) return payments;
+        const q = searchRef.trim().toUpperCase();
+        return payments.filter((p) => (p.reference || "").toUpperCase().includes(q));
+    }, [payments, searchRef]);
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -103,24 +111,36 @@ export default function AdminPagosPendientes() {
                         Solicitudes pendientes de validación
                     </CardTitle>
                     <CardDescription>
-                        Valida los comprobantes de transferencia antes de aprobar. PayPal no requiere adjunto.
+                        Valida los comprobantes de transferencia antes de aprobar. Busca por referencia (ej. LEX-1024) para localizar el pago.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
+                    {payments.length > 0 && (
+                        <div className="mb-4 flex items-center gap-2">
+                            <Search className="w-4 h-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Buscar por referencia (ej. LEX-1024)"
+                                value={searchRef}
+                                onChange={(e) => setSearchRef(e.target.value)}
+                                className="max-w-xs"
+                            />
+                        </div>
+                    )}
                     {isLoading ? (
                         <div className="py-12 flex justify-center text-muted-foreground">
                             <Loader2 className="w-8 h-8 animate-spin" />
                         </div>
-                    ) : payments.length === 0 ? (
+                    ) : filteredPayments.length === 0 ? (
                         <div className="py-12 text-center text-muted-foreground space-y-2">
                             <AlertCircle className="w-12 h-12 mx-auto opacity-50" />
-                            <p>No hay pagos pendientes en este momento.</p>
-                            <p className="text-sm">Las nuevas solicitudes aparecerán aquí.</p>
+                            <p>{searchRef.trim() ? "Ningún pago coincide con esa referencia." : "No hay pagos pendientes en este momento."}</p>
+                            <p className="text-sm">{searchRef.trim() ? "Prueba con otra referencia (ej. LEX-1024)." : "Las nuevas solicitudes aparecerán aquí."}</p>
                         </div>
                     ) : (
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>Referencia</TableHead>
                                     <TableHead>Usuario</TableHead>
                                     <TableHead>Plan</TableHead>
                                     <TableHead>Método</TableHead>
@@ -130,8 +150,15 @@ export default function AdminPagosPendientes() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {payments.map((p) => (
+                                {filteredPayments.map((p) => (
                                     <TableRow key={p.id}>
+                                        <TableCell>
+                                            {p.reference ? (
+                                                <code className="px-2 py-1 bg-muted rounded text-sm font-mono font-semibold">{p.reference}</code>
+                                            ) : (
+                                                <span className="text-muted-foreground text-sm">—</span>
+                                            )}
+                                        </TableCell>
                                         <TableCell>
                                             <div>
                                                 <p className="font-medium">{p.userName || "—"}</p>

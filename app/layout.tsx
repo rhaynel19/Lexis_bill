@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { PreferencesProvider } from "@/components/providers/PreferencesContext";
+import { AuthProvider } from "@/components/providers/AuthContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -30,9 +31,11 @@ export default function RootLayout({
       <body className={`${inter.className} bg-slate-50 antialiased`}>
         <ThemeProvider defaultTheme="system" storageKey="lexis-theme">
           <PreferencesProvider>
-            {children}
-            <Toaster />
-            <Analytics />
+            <AuthProvider>
+              {children}
+              <Toaster />
+              <Analytics />
+            </AuthProvider>
           </PreferencesProvider>
         </ThemeProvider>
       </body>

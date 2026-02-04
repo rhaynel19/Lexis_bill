@@ -45,11 +45,31 @@ PAYPAL_CLIENT_ID=
 PAYPAL_CLIENT_SECRET=
 PAYPAL_MODE=sandbox
 
+# Recuperación de contraseña (email real)
+# true = enviar enlace por correo (requiere api/mailer.js + SMTP o nodemailer). false = solo loguear URL en logs.
+SEND_PASSWORD_RESET_EMAIL=false
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+# SMTP para enviar emails (recuperar contraseña, notificaciones). Ver docs/RECUPERACION_CONTRASENA.md
+# SMTP_HOST=smtp.ejemplo.com
+# SMTP_PORT=587
+# SMTP_USER=
+# SMTP_PASS=
+# SMTP_FROM=noreply@lexisbill.com.do
+# npm install nodemailer  (para enviar correos)
+
 # Soporte (WhatsApp)
 # Número con código de país, sin + ni espacios (ej: 18095550000)
 NEXT_PUBLIC_SUPPORT_WHATSAPP=18095550000
 
 # APIs Fiscales (DGII)
+# Consulta RNC/Cédula real: si está definido, el API consulta este endpoint (ej. MegaPlus: https://rnc.megaplus.com.do/api/consulta)
+# Respuesta esperada: JSON con razonSocial o name o nombre. Sin definir se usa base mock.
+DGII_RNC_API_URL=
+
+# Tests E2E (Playwright): usuario de prueba para login/factura/cotización
+# E2E_EMAIL=test@lexisbill.com
+# E2E_PASSWORD=Test123!@#
+
 # Alanube
 ALANUBE_API_KEY=
 ALANUBE_ENDPOINT=https://api.alanube.co/v1

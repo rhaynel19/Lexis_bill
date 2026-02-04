@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, ShieldCheck, Zap, Smartphone, Menu } from "lucide-react";
@@ -8,14 +8,15 @@ import Link from "next/link";
 
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { LexisWord } from "@/components/LexisWord";
+import { useAuth } from "@/components/providers/AuthContext";
 
 export default function LandingPage() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user, refresh } = useAuth();
+  const isLoggedIn = !!user;
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    queueMicrotask(() => setIsLoggedIn(!!token));
-  }, []);
+    refresh();
+  }, [refresh]);
 
   return (
     <div className="min-h-screen bg-lexis-bg-deep text-lexis-text-light font-sans selection:bg-lexis-gold/30">

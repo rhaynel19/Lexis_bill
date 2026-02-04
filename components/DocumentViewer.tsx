@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { generateQuoteWhatsAppMessage, generateInvoiceWhatsAppMessage } from "@/lib/whatsapp-utils";
+import { useAuth } from "@/components/providers/AuthContext";
 
 // Interfaz para cotizaciones
 export interface Quote {
@@ -109,49 +110,22 @@ export function DocumentViewer({
         });
     };
 
-    // Obtener nombre de la empresa desde localStorage
-    const getCompanyName = () => {
-        if (typeof window === "undefined") return "Lexis Bill";
-
+    // Nombre y RNC desde contexto de auth (o fallback appConfig/localStorage)
+    const { user: authUser } = useAuth();
+    const companyName = authUser?.fiscalStatus?.confirmed
+        || (typeof window !== "undefined" && (() => {
+            try {
+                const c = localStorage.getItem("appConfig");
+                return c ? JSON.parse(c).companyName : null;
+            } catch { return null; }
+        })())
+        || "Lexis Bill";
+    const companyRnc = authUser?.rnc || (typeof window !== "undefined" && (() => {
         try {
-            const storedConfig = localStorage.getItem("appConfig");
-            const storedUser = localStorage.getItem("user");
-
-            if (storedUser) {
-                const user = JSON.parse(storedUser);
-                if (user?.fiscalStatus?.confirmed) {
-                    return user.fiscalStatus.confirmed;
-                }
-            }
-
-            if (storedConfig) {
-                const config = JSON.parse(storedConfig);
-                return config.companyName || "Lexis Bill";
-            }
-
-            return "Lexis Bill";
-        } catch {
-            return "Lexis Bill";
-        }
-    };
-
-    const getCompanyRnc = () => {
-        if (typeof window === "undefined") return "N/A";
-
-        try {
-            const storedUser = localStorage.getItem("user");
-            if (storedUser) {
-                const user = JSON.parse(storedUser);
-                return user?.rnc || "N/A";
-            }
-            return "N/A";
-        } catch {
-            return "N/A";
-        }
-    };
-
-    const companyName = getCompanyName();
-    const companyRnc = getCompanyRnc();
+            const c = localStorage.getItem("appConfig");
+            return c ? JSON.parse(c).rnc : null;
+        } catch { return null; }
+    })()) || "N/A";
     const documentNumber = type === "quote"
         ? `COT-${(document as Quote).id.slice(-8)}`
         : (document as Invoice).ncfSequence || (document as Invoice).id;

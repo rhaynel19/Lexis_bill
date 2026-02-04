@@ -245,6 +245,9 @@ const userSchema = new mongoose.Schema({
     // Preferencias de Facturación
     hasElectronicBilling: { type: Boolean, default: false },
 
+    // Recordatorio 606/607: último periodo por el que se envió (YYYYMM)
+    lastReportReminderPeriod: { type: String },
+
     // Onboarding obligatorio (First-Run Experience)
     onboardingCompleted: { type: Boolean, default: false },
 
@@ -261,6 +264,7 @@ const paymentRequestSchema = new mongoose.Schema({
     plan: { type: String, enum: ['free', 'pro', 'premium'], required: true },
     billingCycle: { type: String, enum: ['monthly', 'annual'], default: 'monthly' },
     paymentMethod: { type: String, enum: ['transferencia', 'paypal'], required: true },
+    reference: { type: String, unique: true, sparse: true }, // LEX-XXXX para que el cliente ponga en la transferencia
     comprobanteImage: { type: String }, // base64 data URL del comprobante (obligatorio para transferencia)
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     requestedAt: { type: Date, default: Date.now },
@@ -268,6 +272,7 @@ const paymentRequestSchema = new mongoose.Schema({
     processedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 });
 paymentRequestSchema.index({ status: 1, requestedAt: -1 });
+paymentRequestSchema.index({ reference: 1 });
 
 const ncfSettingsSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -299,7 +304,10 @@ const invoiceSchema = new mongoose.Schema({
     date: { type: Date, default: Date.now },
     status: { type: String, enum: ['pending', 'paid', 'cancelled', 'modified'], default: 'pending' },
     modifiedNcf: { type: String },
-    annulledBy: { type: String }
+    annulledBy: { type: String },
+    // Retenciones practicadas por terceros (formato 607 DGII)
+    isrRetention: { type: Number, default: 0 },
+    itbisRetention: { type: Number, default: 0 }
 });
 invoiceSchema.index({ userId: 1, date: -1 });
 invoiceSchema.index({ userId: 1, ncfSequence: 1 });
@@ -335,6 +343,7 @@ const expenseSchema = new mongoose.Schema({
     category: { type: String, required: true }, // DGII Expense Codes (01-11)
     date: { type: Date, default: Date.now },
     imageUrl: { type: String },
+    paymentMethod: { type: String, default: '01' }, // DGII 606: 01 Efectivo, 02 Cheque, 03 Tarjeta, etc.
     createdAt: { type: Date, default: Date.now }
 });
 expenseSchema.index({ userId: 1, date: -1 });
@@ -358,6 +367,13 @@ const invoiceTemplateSchema = new mongoose.Schema({
     rnc: String,
     createdAt: { type: Date, default: Date.now }
 });
+
+const userServicesSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    services: [{ description: String, quantity: Number, price: Number, isExempt: Boolean }],
+    updatedAt: { type: Date, default: Date.now }
+});
+userServicesSchema.index({ userId: 1 }, { unique: true });
 
 const userDocumentSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -407,6 +423,7 @@ const User = mongoose.models.User || mongoose.model('User', userSchema);
 const PaymentRequest = mongoose.models.PaymentRequest || mongoose.model('PaymentRequest', paymentRequestSchema);
 const InvoiceDraft = mongoose.models.InvoiceDraft || mongoose.model('InvoiceDraft', invoiceDraftSchema);
 const InvoiceTemplate = mongoose.models.InvoiceTemplate || mongoose.model('InvoiceTemplate', invoiceTemplateSchema);
+const UserServices = mongoose.models.UserServices || mongoose.model('UserServices', userServicesSchema);
 const NCFSettings = mongoose.models.NCFSettings || mongoose.model('NCFSettings', ncfSettingsSchema);
 const Invoice = mongoose.models.Invoice || mongoose.model('Invoice', invoiceSchema);
 const Customer = mongoose.models.Customer || mongoose.model('Customer', customerSchema);
@@ -674,6 +691,37 @@ function validateTaxId(id) {
     }
     return false;
 }
+
+/** Consulta RNC/Cédula en API externa DGII o proveedor (MegaPlus, etc.). Si DGII_RNC_API_URL está definido, hace GET a ?rnc=XXX. */
+async function fetchRncFromExternalApi(cleanNumber) {
+    const baseUrl = process.env.DGII_RNC_API_URL;
+    if (!baseUrl || typeof cleanNumber !== 'string') return null;
+    const url = baseUrl.includes('?') ? `${baseUrl}&rnc=${cleanNumber}` : `${baseUrl}?rnc=${cleanNumber}`;
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(url, { signal: controller.signal, headers: { 'Accept': 'application/json' } });
+        clearTimeout(timeout);
+        if (!res.ok) return null;
+        const data = await res.json();
+        // Formatos comunes: { razonSocial, nombreComercial }, { name }, { nombre }, { RazonSocial }
+        const name = data.razonSocial || data.nombreRazonSocial || data.name || data.nombre || data.RazonSocial || data.nombreComercial || null;
+        if (!name) return null;
+        const type = cleanNumber.length === 9 ? 'JURIDICA' : 'FISICA';
+        return { valid: true, rnc: cleanNumber, name: String(name).trim(), type };
+    } catch (e) {
+        log.warn({ err: e.message, rnc: cleanNumber }, 'RNC external API failed');
+        return null;
+    }
+}
+
+const RNC_MOCK_DB = {
+    '101010101': 'JUAN PEREZ',
+    '131888444': 'LEXIS BILL SOLUTIONS S.R.L.',
+    '40222222222': 'DRA. MARIA RODRIGUEZ (DEMO)',
+    '130851255': 'ASOCIACION DE ESPECIALISTAS FISCALES',
+    '22301650929': 'ASOCIACION PROFESIONAL DE SANTO DOMINGO'
+};
 
 // --- 5. ENDPOINTS ---
 
@@ -1226,6 +1274,18 @@ app.post('/api/auth/profile', verifyToken, async (req, res) => {
     }
 });
 
+// --- Referencia única LEX-XXXX para transferencias ---
+async function generateUniquePaymentReference() {
+    for (let attempt = 0; attempt < 20; attempt++) {
+        const num = Math.floor(1000 + Math.random() * 9000);
+        const ref = `LEX-${num}`;
+        const exists = await PaymentRequest.findOne({ reference: ref });
+        if (!exists) return ref;
+    }
+    const fallback = `LEX-${Date.now().toString().slice(-4)}`;
+    return fallback;
+}
+
 // --- MEMBRESÍAS (Manual: Transferencia / PayPal) ---
 app.get('/api/membership/plans', (req, res) => {
     res.json({ plans: Object.values(MEMBERSHIP_PLANS) });
@@ -1239,9 +1299,73 @@ app.get('/api/membership/payment-info', (req, res) => {
     });
 });
 
+// Preparar transferencia: devuelve referencia única para que el cliente la ponga en el concepto (antes de transferir)
+app.post('/api/membership/prepare-transfer', verifyToken, async (req, res) => {
+    try {
+        const { plan, billingCycle } = req.body;
+        if (!plan || plan !== 'pro') {
+            return res.status(400).json({ message: 'Por ahora solo el plan Profesional está disponible.' });
+        }
+        const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
+
+        let pr = await PaymentRequest.findOne({
+            userId: req.userId,
+            status: 'pending',
+            paymentMethod: 'transferencia',
+            plan,
+            billingCycle: cycle
+        });
+        if (pr && pr.reference) {
+            return res.json({ reference: pr.reference, paymentRequestId: pr._id.toString() });
+        }
+        if (pr && !pr.reference) {
+            pr.reference = await generateUniquePaymentReference();
+            await pr.save();
+            return res.json({ reference: pr.reference, paymentRequestId: pr._id.toString() });
+        }
+
+        const reference = await generateUniquePaymentReference();
+        pr = new PaymentRequest({
+            userId: req.userId,
+            plan,
+            billingCycle: cycle,
+            paymentMethod: 'transferencia',
+            reference,
+            status: 'pending'
+        });
+        await pr.save();
+
+        const user = req.user;
+        if (!user.subscription) user.subscription = {};
+        user.subscription.plan = plan;
+        user.subscription.status = 'pending';
+        user.subscription.paymentMethod = 'transferencia';
+        await user.save();
+
+        res.json({ reference, paymentRequestId: pr._id.toString() });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
     try {
-        const { plan, billingCycle, paymentMethod, comprobanteImage } = req.body;
+        const { plan, billingCycle, paymentMethod, comprobanteImage, paymentRequestId } = req.body;
+
+        // Flujo transferencia: ya tenemos solicitud con referencia; solo adjuntar comprobante
+        if (paymentRequestId && comprobanteImage && comprobanteImage.startsWith('data:image/')) {
+            const pr = await PaymentRequest.findOne({ _id: paymentRequestId, userId: req.userId, status: 'pending' });
+            if (!pr) {
+                return res.status(400).json({ message: 'Solicitud no encontrada o ya procesada.' });
+            }
+            pr.comprobanteImage = comprobanteImage;
+            await pr.save();
+            return res.status(200).json({
+                message: 'Comprobante recibido. Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).',
+                paymentRequest: { id: pr._id, reference: pr.reference, status: 'pending' }
+            });
+        }
+
         if (!plan || plan !== 'pro') {
             return res.status(400).json({ message: 'Por ahora solo el plan Profesional está disponible.' });
         }
@@ -1261,11 +1385,13 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
             return res.status(400).json({ message: 'Ya tienes una solicitud de pago pendiente. Espera a que la validemos.' });
         }
 
+        const reference = await generateUniquePaymentReference();
         const pr = new PaymentRequest({
             userId: req.userId,
             plan,
             billingCycle: cycle,
             paymentMethod,
+            reference,
             comprobanteImage: paymentMethod === 'transferencia' ? comprobanteImage : undefined,
             status: 'pending'
         });
@@ -1279,8 +1405,10 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
         await user.save();
 
         res.status(201).json({
-            message: 'Tu solicitud fue registrada. Tu membresía será activada una vez validemos el pago.',
-            paymentRequest: { id: pr._id, plan, billingCycle: cycle, paymentMethod, status: 'pending' }
+            message: paymentMethod === 'paypal'
+                ? 'Tu solicitud fue registrada. Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).'
+                : 'Comprobante recibido. Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).',
+            paymentRequest: { id: pr._id, reference, plan, billingCycle: cycle, paymentMethod, status: 'pending' }
         });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -1295,6 +1423,7 @@ app.get('/api/admin/pending-payments', verifyToken, verifyAdmin, async (req, res
             .sort({ requestedAt: -1 });
         res.json(list.map(p => ({
             id: p._id,
+            reference: p.reference,
             userId: p.userId?._id,
             userName: p.userId?.name,
             userEmail: p.userId?.email,
@@ -1348,6 +1477,14 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
             { userId: pr.userId },
             { status: 'active', subscribedAt: now }
         );
+
+        // Notificación por email (si está configurado el mailer)
+        try {
+            const mailer = require('./mailer');
+            if (typeof mailer.sendPaymentApproved === 'function') {
+                await mailer.sendPaymentApproved(user.email, pr.plan, pr.billingCycle);
+            }
+        } catch (err) { log.warn({ err: err.message }, 'Email pago aprobado no enviado'); }
 
         res.json({ message: 'Pago aprobado. Membresía activada por 30 días.' });
     } catch (e) {
@@ -1620,13 +1757,20 @@ app.post('/api/admin/partners/:id/suspend', verifyToken, verifyAdmin, async (req
 app.get('/api/admin/stats', verifyToken, verifyAdmin, async (req, res) => {
     try {
         const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const periodLastMonth = req.query.period === 'last_month';
+        const ref = periodLastMonth
+            ? new Date(now.getFullYear(), now.getMonth() - 1, 1)
+            : new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfMonth = ref;
+        const endOfMonth = periodLastMonth
+            ? new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+            : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
         const [totalUsers, usersThisMonth, allInvoices, invoicesThisMonth, allExpenses, pendingPayments, planCounts] = await Promise.all([
             User.countDocuments({}),
-            User.countDocuments({ createdAt: { $gte: startOfMonth } }),
+            User.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
             Invoice.find({ status: { $ne: 'cancelled' } }),
-            Invoice.find({ status: { $ne: 'cancelled' }, date: { $gte: startOfMonth } }),
+            Invoice.find({ status: { $ne: 'cancelled' }, date: { $gte: startOfMonth, $lte: endOfMonth } }),
             Expense.find({}),
             PaymentRequest.countDocuments({ status: 'pending' }),
             User.aggregate([
@@ -1678,17 +1822,66 @@ app.get('/api/admin/stats', verifyToken, verifyAdmin, async (req, res) => {
     }
 });
 
+// --- ADMIN: Datos para gráficos (últimos 12 meses) ---
+app.get('/api/admin/chart-data', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const months = parseInt(req.query.months, 10) || 12;
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth() - months, 1);
+        const agg = await Invoice.aggregate([
+            { $match: { status: { $ne: 'cancelled' }, date: { $gte: start } } },
+            {
+                $group: {
+                    _id: { year: { $year: '$date' }, month: { $month: '$date' } },
+                    revenue: { $sum: '$total' },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { '_id.year': 1, '_id.month': 1 } }
+        ]);
+        const byMonth = {};
+        for (let i = 0; i < months; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - months + i, 1);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            byMonth[key] = { month: key, revenue: 0, invoices: 0 };
+        }
+        agg.forEach(row => {
+            const key = `${row._id.year}-${String(row._id.month).padStart(2, '0')}`;
+            if (!byMonth[key]) byMonth[key] = { month: key, revenue: 0, invoices: 0 };
+            byMonth[key].revenue = row.revenue;
+            byMonth[key].invoices = row.count;
+        });
+        const monthly = Object.keys(byMonth).sort().map(k => byMonth[k]);
+        const planCounts = await User.aggregate([
+            { $match: { role: { $ne: 'admin' } } },
+            { $project: { plan: { $ifNull: ['$subscription.plan', { $ifNull: ['$membershipLevel', 'free'] }] } } },
+            { $group: { _id: '$plan', count: { $sum: 1 } } }
+        ]);
+        const usersByPlan = { free: 0, pro: 0, premium: 0 };
+        planCounts.forEach(p => { usersByPlan[p._id] = p.count; });
+        res.json({ monthly, usersByPlan });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // --- ADMIN: Dashboard CEO - Métricas SaaS completas ---
 app.get('/api/admin/metrics', verifyToken, verifyAdmin, async (req, res) => {
     try {
         const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        const periodLastMonth = req.query.period === 'last_month';
+        const startOfMonth = periodLastMonth
+            ? new Date(now.getFullYear(), now.getMonth() - 1, 1)
+            : new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = periodLastMonth
+            ? new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+            : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 0, 23, 59, 59);
 
         const [totalUsers, newThisMonth, newLastMonth, proUsers, approvedPayments, pendingPayments, expiredLastMonth] = await Promise.all([
             User.countDocuments({}),
-            User.countDocuments({ createdAt: { $gte: startOfMonth } }),
+            User.countDocuments({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
             User.countDocuments({ createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
             User.countDocuments({ $or: [{ 'subscription.plan': 'pro' }, { membershipLevel: 'pro' }], role: { $ne: 'admin' } }),
             PaymentRequest.find({ status: 'approved' }).sort({ processedAt: -1 }),
@@ -1775,18 +1968,14 @@ app.get('/api/status', async (req, res) => {
 // Rest of endpoints (Invoices, Customers, etc.)
 app.get('/api/rnc/:number', async (req, res) => {
     const { number } = req.params;
-    const cleanNumber = number.replace(/\D/g, ""); // Limpiar espacios o caracteres invisibles
+    const cleanNumber = number.replace(/\D/g, "");
 
     if (!validateTaxId(cleanNumber)) return res.status(400).json({ valid: false, message: 'Documento Inválido' });
 
-    const mockDb = {
-        "101010101": "JUAN PEREZ",
-        "131888444": "LEXIS BILL SOLUTIONS S.R.L.",
-        "40222222222": "DRA. MARIA RODRIGUEZ (DEMO)",
-        "130851255": "ASOCIACION DE ESPECIALISTAS FISCALES",
-        "22301650929": "ASOCIACION PROFESIONAL DE SANTO DOMINGO"
-    };
-    const name = mockDb[cleanNumber] || "CONTRIBUYENTE REGISTRADO";
+    const external = await fetchRncFromExternalApi(cleanNumber);
+    if (external) return res.json(external);
+
+    const name = RNC_MOCK_DB[cleanNumber] || 'CONTRIBUYENTE REGISTRADO';
     res.json({ valid: true, rnc: cleanNumber, name, type: cleanNumber.length === 9 ? 'JURIDICA' : 'FISICA' });
 });
 
@@ -1796,25 +1985,15 @@ app.post('/api/validate-rnc', async (req, res) => {
         if (!rnc) return res.status(400).json({ valid: false, message: 'RNC requerido' });
 
         const cleanRnc = rnc.replace(/\D/g, "");
-        if (!validateTaxId(cleanRnc)) {
-            return res.json({ valid: false, message: 'Formato inválido' });
-        }
+        if (!validateTaxId(cleanRnc)) return res.json({ valid: false, message: 'Formato inválido' });
 
-        const mockDb = {
-            "101010101": "JUAN PEREZ",
-            "131888444": "LEXIS BILL SOLUTIONS S.R.L.",
-            "40222222222": "DRA. MARIA RODRIGUEZ (DEMO)",
-            "130851255": "ASOCIACION DE ESPECIALISTAS FISCALES",
-            "22301650929": "ASOCIACION PROFESIONAL DE SANTO DOMINGO"
-        };
+        const external = await fetchRncFromExternalApi(cleanRnc);
+        if (external) return res.json({ valid: true, name: external.name });
 
-        const name = mockDb[cleanRnc] || "CONTRIBUYENTE REGISTRADO";
-
-        // Simular un pequeño delay de red para efectos de UX (solo si no es producción)
+        const name = RNC_MOCK_DB[cleanRnc] || 'CONTRIBUYENTE REGISTRADO';
         if (process.env.NODE_ENV !== 'production') {
-            await new Promise(resolve => setTimeout(resolve, 600));
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
-
         res.json({ valid: true, name });
     } catch (error) {
         res.status(500).json({ valid: false, error: error.message });
@@ -2018,6 +2197,35 @@ app.delete('/api/invoice-draft', verifyToken, async (req, res) => {
     }
 });
 
+// Servicios predefinidos (factura) — migrado desde localStorage
+app.get('/api/services', verifyToken, async (req, res) => {
+    try {
+        const doc = await UserServices.findOne({ userId: req.userId });
+        res.json(doc?.services || []);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.put('/api/services', verifyToken, async (req, res) => {
+    try {
+        const services = Array.isArray(req.body.services) ? req.body.services.slice(0, 50).map(s => ({
+            description: sanitizeString(s?.description || '', 500),
+            quantity: Math.max(0, Math.min(Number(s?.quantity) || 0, 999999)),
+            price: Math.max(0, Math.min(Number(s?.price) || 0, 999999999)),
+            isExempt: Boolean(s?.isExempt)
+        })) : [];
+        await UserServices.findOneAndUpdate(
+            { userId: req.userId },
+            { services, updatedAt: new Date() },
+            { upsert: true, new: true }
+        );
+        res.json({ services });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/invoice-templates', verifyToken, async (req, res) => {
     try {
         const templates = await InvoiceTemplate.find({ userId: req.userId }).sort({ createdAt: -1 });
@@ -2198,6 +2406,15 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
         );
         await session.commitTransaction();
         session.endSession();
+
+        // Notificación por email (factura emitida)
+        try {
+            const mailer = require('./mailer');
+            if (typeof mailer.sendInvoiceCreated === 'function' && req.user && req.user.email) {
+                await mailer.sendInvoiceCreated(req.user.email, fullNcf, (total || 0).toFixed(2), clientName);
+            }
+        } catch (err) { log.warn({ err: err.message }, 'Email factura emitida no enviado'); }
+
         res.status(201).json({ message: 'Factura creada exitosamente', ncf: fullNcf, invoice: newInvoice });
     } catch (error) {
         await session.abortTransaction();
@@ -2308,6 +2525,7 @@ app.get('/api/reports/607/validate', verifyToken, async (req, res) => {
         const periodo = `${y}${m.toString().padStart(2, '0')}`;
         const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
         let report = `607|${rncEmisor}|${periodo}|${invoices.length}\n`;
+        // 607 DGII: RNC|TipoId|NCF|NCFModificado|TipoIngreso(01-06)|FechaComp|FechaRetencion|MontoFacturado|ITBISFacturado|RentaRetenida|ITBISRetenido|Selectivo|Propina|Otros|MontoTotal|...
         invoices.forEach(inv => {
             const fechaComp = new Date(inv.date).toISOString().slice(0, 10).replace(/-/g, '');
             const rncCliente = (inv.clientRnc || '').replace(/[^\d]/g, '');
@@ -2315,7 +2533,9 @@ app.get('/api/reports/607/validate', verifyToken, async (req, res) => {
             const montoFact = (inv.subtotal || 0).toFixed(2);
             const itbisFact = (inv.itbis || 0).toFixed(2);
             const montoTotal = (inv.total || 0).toFixed(2);
-            report += `${rncCliente}|${tipoId}|${inv.ncfSequence}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|0.00|0.00|0.00|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00|0.00\n`;
+            const isrRet = (inv.isrRetention || 0).toFixed(2);
+            const itbisRet = (inv.itbisRetention || 0).toFixed(2);
+            report += `${rncCliente}|${tipoId}|${inv.ncfSequence}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|${isrRet}|${itbisRet}|0.00|0.00|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00\n`;
         });
 
         const validation = validate607Format(report);
@@ -2355,6 +2575,7 @@ app.get('/api/reports/607', verifyToken, async (req, res) => {
         const periodo = `${y}${m.toString().padStart(2, '0')}`;
         const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
         let report = `607|${rncEmisor}|${periodo}|${invoices.length}\n`;
+        // 607 DGII: misma estructura con retenciones ISR/ITBIS
         invoices.forEach(inv => {
             const fechaComp = new Date(inv.date).toISOString().slice(0, 10).replace(/-/g, '');
             const rncCliente = (inv.clientRnc || '').replace(/[^\d]/g, '');
@@ -2362,7 +2583,9 @@ app.get('/api/reports/607', verifyToken, async (req, res) => {
             const montoFact = (inv.subtotal || 0).toFixed(2);
             const itbisFact = (inv.itbis || 0).toFixed(2);
             const montoTotal = (inv.total || 0).toFixed(2);
-            report += `${rncCliente}|${tipoId}|${inv.ncfSequence}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|0.00|0.00|0.00|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00|0.00\n`;
+            const isrRet = (inv.isrRetention || 0).toFixed(2);
+            const itbisRet = (inv.itbisRetention || 0).toFixed(2);
+            report += `${rncCliente}|${tipoId}|${inv.ncfSequence}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|${isrRet}|${itbisRet}|0.00|0.00|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00\n`;
         });
 
         const validation = validate607Format(report);
@@ -2504,7 +2727,8 @@ app.get('/api/reports/606/validate', verifyToken, async (req, res) => {
             const tipoId = rncLimpiado.length === 9 ? '1' : '2';
             const itbisPagado = (exp.itbis || 0).toFixed(2);
             const montoTotal = (exp.amount || 0).toFixed(2);
-            report += `${rncLimpiado}|${tipoId}|${exp.category}|${exp.ncf}||${fecha}||${montoTotal}|0.00|${montoTotal}|${itbisPagado}|${itbisPagado}|||||||||\n`;
+            const formaPago = exp.paymentMethod || '01';
+            report += `${rncLimpiado}|${tipoId}|${exp.category}|${exp.ncf}||${fecha}||${montoTotal}|0.00|${montoTotal}|${itbisPagado}|${itbisPagado}|${formaPago}||||||||\n`;
         });
 
         const validation = validate606Format(report);
@@ -2576,7 +2800,8 @@ app.get('/api/reports/606', verifyToken, async (req, res) => {
             const tipoId = rncLimpiado.length === 9 ? '1' : '2';
             const itbisPagado = (exp.itbis || 0).toFixed(2);
             const montoTotal = (exp.amount || 0).toFixed(2);
-            report += `${rncLimpiado}|${tipoId}|${exp.category}|${exp.ncf}||${fecha}||${montoTotal}|0.00|${montoTotal}|${itbisPagado}|${itbisPagado}|||||||||\n`;
+            const formaPago = exp.paymentMethod || '01';
+            report += `${rncLimpiado}|${tipoId}|${exp.category}|${exp.ncf}||${fecha}||${montoTotal}|0.00|${montoTotal}|${itbisPagado}|${itbisPagado}|${formaPago}||||||||\n`;
         });
 
         const validation = validate606Format(report);
@@ -2610,6 +2835,29 @@ app.get('/api/reports/606', verifyToken, async (req, res) => {
         res.send(report);
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// Recordatorio 606/607: enviar email al entrar a Reportes (máximo 1 por periodo por usuario)
+app.post('/api/reports/reminder', verifyToken, async (req, res) => {
+    try {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth() + 1;
+        const period = `${y}${m.toString().padStart(2, '0')}`;
+        const periodLabel = `${y}-${m.toString().padStart(2, '0')}`;
+        const user = await User.findById(req.userId).select('email lastReportReminderPeriod').lean();
+        if (!user || !user.email) return res.json({ sent: false, reason: 'no_email' });
+        if (user.lastReportReminderPeriod === period) return res.json({ sent: false, reason: 'already_sent', period: periodLabel });
+        const mailer = require('./mailer');
+        if (typeof mailer.send606607Reminder === 'function') {
+            await mailer.send606607Reminder(user.email, periodLabel);
+        }
+        await User.findByIdAndUpdate(req.userId, { lastReportReminderPeriod: period });
+        res.json({ sent: true, period: periodLabel });
+    } catch (e) {
+        log.warn({ err: e.message, userId: req.userId }, 'Report reminder failed');
+        res.status(500).json({ sent: false, error: e.message });
     }
 });
 

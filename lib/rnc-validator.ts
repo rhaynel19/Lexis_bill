@@ -1,6 +1,6 @@
 /**
- * Simulación de validación de RNC/Cédula
- * En producción, esto consultaría a la API de DGII o un servicio intermedio.
+ * Validación de RNC/Cédula: consulta al backend (/api/rnc), que puede usar DGII o proveedor real (DGII_RNC_API_URL).
+ * Si la API no está disponible o falla, se usa fallback local (mock/genérico).
  */
 
 interface Taxpayer {
@@ -10,7 +10,6 @@ interface Taxpayer {
     status: "Active" | "Inactive";
 }
 
-// Base de datos simulada de contribuyentes
 const MOCK_DB: Record<string, Taxpayer> = {
     "101010101": { rnc: "101010101", name: "JUAN PEREZ (EJEMPLO)", type: "Física", status: "Active" },
     "123456789": { rnc: "123456789", name: "EMPRESA EJEMPLO S.R.L.", type: "Jurídica", status: "Active" },
@@ -19,24 +18,39 @@ const MOCK_DB: Record<string, Taxpayer> = {
     "40211111111": { rnc: "40211111111", name: "ARQ. PEDRO MARTINEZ", type: "Física", status: "Active" }
 };
 
-export async function validateRNC(rnc: string): Promise<Taxpayer | null> {
-    // Simular retardo de red
-    await new Promise(resolve => setTimeout(resolve, 500));
+function mapApiToTaxpayer(data: { valid: boolean; rnc?: string; name?: string; type?: string }): Taxpayer | null {
+    if (!data.valid || !data.name) return null;
+    const rnc = (data.rnc || "").replace(/[^\d]/g, "");
+    const type = (data.type === "JURIDICA" ? "Jurídica" : "Física") as "Física" | "Jurídica";
+    return { rnc, name: data.name, type, status: "Active" };
+}
 
-    // Limpiar RNC (solo números)
+export async function validateRNC(rnc: string): Promise<Taxpayer | null> {
     const cleanCurrent = rnc.replace(/[^\d]/g, "");
 
-    // Buscar en mock DB
-    if (MOCK_DB[cleanCurrent]) {
-        return MOCK_DB[cleanCurrent];
+    if (typeof window !== "undefined") {
+        try {
+            const base = (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL)
+                ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "")
+                : "";
+            const url = base ? `${base}/api/rnc/${encodeURIComponent(cleanCurrent)}` : `/api/rnc/${encodeURIComponent(cleanCurrent)}`;
+            const res = await fetch(url, { credentials: "include" });
+            if (res.ok) {
+                const data = await res.json();
+                const taxpayer = mapApiToTaxpayer(data);
+                if (taxpayer) return taxpayer;
+            }
+        } catch {
+            // Fallback a mock/local
+        }
     }
 
-    // Fallback: Si no está en DB, generar nombre genérico si es válido
+    if (MOCK_DB[cleanCurrent]) return MOCK_DB[cleanCurrent];
     if (cleanCurrent.length === 9) {
         return { rnc: cleanCurrent, name: "SOCIEDAD COMERCIAL GENERICA S.R.L.", type: "Jurídica", status: "Active" };
-    } else if (cleanCurrent.length === 11) {
+    }
+    if (cleanCurrent.length === 11) {
         return { rnc: cleanCurrent, name: "CONTRIBUYENTE PERSONA FÍSICA", type: "Física", status: "Active" };
     }
-
     return null;
 }

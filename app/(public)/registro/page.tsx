@@ -18,9 +18,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { useAuth } from "@/components/providers/AuthContext";
 
 function RegisterForm() {
     const router = useRouter();
+    const { setUser } = useAuth();
     const searchParams = useSearchParams();
     const plan = searchParams.get("plan"); // 'pro' or null (trial)
     const ref = searchParams.get("ref") || ""; // Código de referido
@@ -125,17 +127,10 @@ function RegisterForm() {
         try {
             await api.register({ ...form, plan, suggestedName: rncStatus.name, referralCode: ref || undefined });
 
-            // Auto login after register (auth via cookie HttpOnly)
-            const loginData = await api.login(form.email, form.password);
-            localStorage.setItem("user", JSON.stringify({
-                name: loginData.name,
-                email: loginData.email,
-                role: loginData.role || "user",
-                subscription: loginData.subscription,
-                rnc: loginData.rnc,
-                fiscalStatus: loginData.fiscalStatus,
-                biometric: false
-            }));
+            // Auto login (cookie HttpOnly); usuario desde API, no localStorage
+            await api.login(form.email, form.password);
+            const me = await api.getMe();
+            if (me) setUser(me);
 
             toast.success("Cuenta creada. Redirigiendo…");
             if (invite) router.push(`/unirse-como-partner?invite=${invite}`);

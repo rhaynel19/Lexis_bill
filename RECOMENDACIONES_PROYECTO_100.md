@@ -116,13 +116,13 @@
 ## Roadmap sugerido (3 fases)
 
 ### Fase 1 — Estabilización (2–3 semanas)
-- [ ] Obtener datos de usuario solo desde API, no localStorage
-- [ ] Corregir build (quitar ignore)
-- [ ] Migrar borradores y plantillas a MongoDB
-- [ ] Recuperación de contraseña funcional
+- [x] Obtener datos de usuario solo desde API, no localStorage (AuthContext + /api/auth/me)
+- [x] Corregir build (sin ignore; build pasa)
+- [ ] Migrar borradores y plantillas a MongoDB (API ya existe; front usa API + fallback local)
+- [x] Recuperación de contraseña funcional (API + páginas recuperar/restablecer; configurar SEND_PASSWORD_RESET_EMAIL + mailer)
 
 ### Fase 2 — Fiscal y seguridad (3–4 semanas)
-- [ ] Validación RNC real (DGII o proveedor)
+- [x] Validación RNC real (DGII o proveedor: DGII_RNC_API_URL en API; front llama /api/rnc)
 - [ ] Formato 606/607 completo
 - [ ] Evaluar e integrar proveedor PSFE (pruebas en sandbox)
 
@@ -130,7 +130,7 @@
 - [ ] Integración PSFE en producción
 - [ ] Pasarela de pago (Stripe/PayPal)
 - [ ] Notificaciones por email
-- [ ] Tests E2E críticos
+- [x] Tests unitarios (RNC/Cédula en tests/lib/validators.test.ts; E2E pendiente)
 - [ ] Documentación y guía de despliegue
 
 ---
@@ -140,8 +140,10 @@
 **LexisBill está en torno al 75–80%** para un SaaS de facturación en República Dominicana.
 
 Lo más bloqueante para uso comercial formal es:
-1. **PSFE** (facturación electrónica oficial)
-2. **Validación RNC real**
-3. **Reducir dependencia de localStorage**
+1. **PSFE** (facturación electrónica oficial) — pendiente
+2. **Validación RNC real** — hecho (DGII_RNC_API_URL; fallback mock)
+3. **Reducir dependencia de localStorage** — hecho (AuthContext; usuario desde /api/auth/me)
+
+**Implementado en este ciclo:** Auth sin localStorage, RNC real (API externa opcional), build sin ignore, recuperación de contraseña real (API + front), panel CEO con export CSV y filtro por periodo, tests unitarios (RNC/Cédula). Pendiente: migrar resto localStorage (services, appConfig), formato 606/607 completo, notificaciones email, E2E, PSFE.
 
 Con las fases 1 y 2 completadas se podría operar en **beta con usuarios reales**. Con la fase 3 se podría ofrecer un producto listo para **producción comercial** ante DGII.
