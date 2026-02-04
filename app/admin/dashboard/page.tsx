@@ -193,7 +193,7 @@ export default function AdminCEODashboard() {
                                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                                         <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                                         <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                                        <Tooltip formatter={(value: number, name: string) => [name === "revenue" ? formatCurrency(value) : value, name === "revenue" ? "Ingresos" : "Facturas"]} labelFormatter={(l) => l} />
+                                        <Tooltip formatter={(value, name) => [name === "revenue" && value != null ? formatCurrency(Number(value)) : value ?? 0, name === "revenue" ? "Ingresos" : "Facturas"]} labelFormatter={(l) => l} />
                                         <Bar dataKey="revenue" fill={CHART_COLORS[0]} name="Ingresos" radius={[4, 4, 0, 0]} />
                                         <Bar dataKey="invoices" fill={CHART_COLORS[1]} name="Facturas" radius={[4, 4, 0, 0]} />
                                     </BarChart>
@@ -237,7 +237,7 @@ export default function AdminCEODashboard() {
                                                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                                                 ))}
                                         </Pie>
-                                        <Tooltip formatter={(value: number) => [value, "Usuarios"]} />
+                                        <Tooltip formatter={(value) => [value ?? 0, "Usuarios"]} />
                                         <Legend />
                                     </PieChart>
                                 </ResponsiveContainer>
