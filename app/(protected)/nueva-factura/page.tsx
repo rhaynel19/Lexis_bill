@@ -386,12 +386,18 @@ export default function NewInvoice() {
             const result: any = await api.validateRnc(rnc);
 
             if (result.valid) {
-                setClientName(result.name);
+                // No sobrescribir el nombre que ya escribió el usuario; solo rellenar si está vacío y la API trae un nombre real
+                const nameFromApi = (result.name || "").trim();
+                setClientName((prev) => {
+                    if (prev.trim()) return prev;
+                    if (nameFromApi && nameFromApi !== "CONTRIBUYENTE REGISTRADO") return nameFromApi;
+                    return nameFromApi || prev;
+                });
                 // Auto-set type based on RNC type
                 if (result.type === "JURIDICA") setApplyRetentions(true);
 
                 // Smart NCF Suggestion
-                suggestNCF(rnc, result.name);
+                suggestNCF(rnc, result.name || "");
             } else {
                 setRncError("Contribuyente no encontrado o RNC inválido");
             }

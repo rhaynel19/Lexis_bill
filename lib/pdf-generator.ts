@@ -90,8 +90,22 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = APP_CONFIG.pdf.margins;
+    const blueColor: [number, number, number] = [16, 24, 39];
 
     let yPosition = margin.top;
+
+    // ===== BARRA LEXIS BILL (marca de agua superior) =====
+    doc.setFillColor(...blueColor);
+    doc.rect(0, 0, pageWidth, 14, "F");
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(212, 175, 55);
+    doc.text("LEXIS BILL", margin.left, 9);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Comprobante fiscal", pageWidth - margin.right, 9, { align: "right" });
+    yPosition = 20;
 
     // Cargar configuración dinámica (contexto o localStorage)
     const storedConfig = typeof localStorage !== "undefined" ? localStorage.getItem("appConfig") : null;
@@ -112,7 +126,6 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
 
     // Colores de Lujo (Gold & Blue)
     const goldColor: [number, number, number] = [212, 175, 55];
-    const blueColor: [number, number, number] = [16, 24, 39];
 
     // ===== HEADER =====
     // Si hay logo, usarlo
@@ -197,10 +210,10 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(60, 60, 60);
-    doc.text(`${invoiceData.clientName}`, margin.left, yPosition);
+    const displayClientName = (invoiceData.clientName || "").trim();
+    doc.text(displayClientName || "— Indicar nombre del cliente —", margin.left, yPosition);
     yPosition += 5;
-    doc.text(`RNC/Cédula: ${invoiceData.rnc}`, margin.left, yPosition);
-    // Address placeholder if we had it
+    doc.text(`RNC/Cédula: ${invoiceData.rnc || "—"}`, margin.left, yPosition);
     yPosition += 15;
 
     // ===== TABLA DE ÍTEMS =====
@@ -217,7 +230,7 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
         body: tableData,
         theme: "striped",
         headStyles: {
-            fillColor: APP_CONFIG.pdf.colors.primary as [number, number, number],
+            fillColor: blueColor,
             textColor: [255, 255, 255],
             fontStyle: "bold",
             fontSize: APP_CONFIG.pdf.fontSize.normal,
@@ -375,6 +388,9 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
         doc.setTextColor(120, 120, 120);
         doc.text(disclaimerText, pageWidth / 2, footerY + 5, { align: "center" });
     }
+    doc.setFontSize(8);
+    doc.setTextColor(...goldColor);
+    doc.text("Generado por Lexis Bill", pageWidth / 2, footerY + 10, { align: "center" });
 
     return doc;
 }

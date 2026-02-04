@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
@@ -12,8 +13,10 @@ export default function Error({
     reset: () => void;
 }) {
     useEffect(() => {
-        // Log the error to an error reporting service
         console.error(error);
+        if (typeof Sentry?.captureException === "function") {
+            Sentry.captureException(error);
+        }
     }, [error]);
 
     return (
@@ -47,7 +50,7 @@ export default function Error({
 
                     <Button
                         variant="ghost"
-                        onClick={() => window.location.href = "/"}
+                        onClick={() => window.location.href = "/dashboard"}
                         className="text-slate-500 hover:text-slate-700 w-full"
                     >
                         Ir al Dashboard
