@@ -16,6 +16,7 @@ import {
     DollarSign,
     Calculator
 } from "lucide-react";
+import Link from "next/link";
 import { api } from "@/lib/api-service";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -266,6 +267,9 @@ export default function ReportsPage() {
                                         >
                                             606 - Compras <Download className="w-4 h-4" />
                                         </Button>
+                                        <Link href="/gastos" className="text-xs text-accent hover:underline px-2 py-1 block">
+                                            ¿Faltan gastos? Ir a Gastos 606
+                                        </Link>
                                         <Button variant="ghost" className="w-full justify-between font-bold h-10 text-muted-foreground hover:text-accent">
                                             Resumen ITBIS <ArrowUpRight className="w-4 h-4" />
                                         </Button>

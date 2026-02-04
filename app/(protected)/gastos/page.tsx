@@ -17,6 +17,7 @@ import {
     ShieldCheck,
     ArrowRight
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -110,7 +111,7 @@ export default function GastosPage() {
         }
     };
 
-    const handleSaveExpense = async () => {
+    const handleSaveExpense = async (andAddAnother = false) => {
         if (!formData.supplierName || !formData.supplierRnc || !formData.ncf || !formData.amount) {
             toast.error("Por favor completa los campos requeridos");
             return;
@@ -125,9 +126,13 @@ export default function GastosPage() {
             };
             await api.saveExpense(payload);
             toast.success("Gasto registrado correctamente");
-            setIsAddOpen(false);
-            resetForm();
             loadExpenses();
+            if (andAddAnother) {
+                resetForm();
+            } else {
+                setIsAddOpen(false);
+                resetForm();
+            }
         } catch (error) {
             toast.error("Error al guardar el gasto. Revisa tu conexión e intenta de nuevo.");
         } finally {
@@ -314,8 +319,11 @@ export default function GastosPage() {
                         GASTOS <span className="text-muted-foreground/30 font-light">606</span>
                     </h1>
                     <p className="text-muted-foreground mt-2 max-w-md">
-                        Gestiona tus compras y gastos. La IA te ayuda a registrar tus facturas en segundos para tu reporte 606.
+                        Gestiona tus compras y gastos. Registra cada compra con factura; al final del mes descargas el 606 en Reportes Fiscales.
                     </p>
+                    <Link href="/reportes" className="text-sm text-accent hover:underline mt-1 inline-flex items-center gap-1">
+                        Ver y descargar reporte 606 →
+                    </Link>
                 </div>
 
                 <div className="flex flex-wrap gap-3 w-full md:w-auto">
@@ -337,7 +345,7 @@ export default function GastosPage() {
                             {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <ScanLine className="w-5 h-5" />}
                             Escaneo QR / Tirilla
                         </Button>
-                        <p className="text-[10px] text-muted-foreground mt-1 px-1">Sube foto o PDF. Los datos extraídos son orientativos; revisa antes de guardar.</p>
+                        <p className="text-[10px] text-muted-foreground mt-1 px-1">Sube foto o PDF. Consejo: foto clara, comprobante plano y buena luz mejora la lectura automática.</p>
                     </div>
 
                     <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) resetForm(); }}>
@@ -453,7 +461,7 @@ export default function GastosPage() {
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">NCF</label>
                                             <Input
-                                                placeholder="B01..."
+                                                placeholder="Ej: B0100001234 (o vacío si la tirilla no trae NCF)"
                                                 value={formData.ncf}
                                                 onChange={e => setFormData({ ...formData, ncf: e.target.value })}
                                             />
@@ -511,9 +519,12 @@ export default function GastosPage() {
                                 </div>
                             </div>
 
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={isSaving}>Cancelar</Button>
-                                <Button onClick={handleSaveExpense} disabled={isSaving}>
+                            <DialogFooter className="flex-col sm:flex-row gap-2">
+                                <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={isSaving} className="w-full sm:w-auto">Cancelar</Button>
+                                <Button variant="secondary" onClick={() => handleSaveExpense(true)} disabled={isSaving} className="w-full sm:w-auto">
+                                    {isSaving ? "Guardando…" : "Guardar y registrar otro"}
+                                </Button>
+                                <Button onClick={() => handleSaveExpense(false)} disabled={isSaving} className="w-full sm:w-auto">
                                     {isSaving ? "Guardando…" : "Guardar Gasto"}
                                 </Button>
                             </DialogFooter>
@@ -585,6 +596,7 @@ export default function GastosPage() {
                             <p className="text-muted-foreground max-w-xs">
                                 Comienza subiendo una foto de tus facturas o regístralas manualmente para alimentar tu 606.
                             </p>
+                            <p className="text-[10px] text-muted-foreground mt-2">Consejo: foto clara, comprobante plano y buena luz mejora la lectura automática.</p>
                         </CardContent>
                     </Card>
                 ) : (
