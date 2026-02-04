@@ -35,9 +35,9 @@ export default function AdminUsuariosPage() {
             const { api } = await import("@/lib/api-service");
             const res = await api.getAdminUsers({
                 q: search || undefined,
-                role: roleFilter || undefined,
-                plan: planFilter || undefined,
-                status: statusFilter || undefined,
+                role: roleFilter === "all" ? undefined : roleFilter,
+                plan: planFilter === "all" ? undefined : planFilter,
+                status: statusFilter === "all" ? undefined : statusFilter,
                 page,
                 limit
             });
@@ -160,7 +160,7 @@ export default function AdminUsuariosPage() {
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                         <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <Select value={roleFilter} onValueChange={(v) => { setRoleFilter(v); setPage(1); }}>
+                        <Select value={roleFilter || "all"} onValueChange={(v) => { setRoleFilter(v); setPage(1); }}>
                             <SelectTrigger className="w-[130px]">
                                 <SelectValue placeholder="Rol" />
                             </SelectTrigger>
@@ -171,18 +171,18 @@ export default function AdminUsuariosPage() {
                                 <SelectItem value="partner">Partner</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Select value={planFilter} onValueChange={(v) => { setPlanFilter(v); setPage(1); }}>
+                        <Select value={planFilter || "all"} onValueChange={(v) => { setPlanFilter(v); setPage(1); }}>
                             <SelectTrigger className="w-[130px]">
                                 <SelectValue placeholder="Plan" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">Todos los planes</SelectItem>
+                                <SelectItem value="all">Todos los planes</SelectItem>
                                 <SelectItem value="free">Gratis</SelectItem>
                                 <SelectItem value="pro">Pro</SelectItem>
                                 <SelectItem value="premium">Premium</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+                        <Select value={statusFilter || "all"} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
                             <SelectTrigger className="w-[140px]">
                                 <SelectValue placeholder="Estado" />
                             </SelectTrigger>
@@ -198,7 +198,7 @@ export default function AdminUsuariosPage() {
                 <CardContent>
                     <p className="text-sm text-muted-foreground mb-4">
                         {total} usuario{total !== 1 ? "s" : ""} en total
-                        {(search || roleFilter || planFilter || statusFilter) ? " (filtros aplicados)" : ""}
+                        {(search || (roleFilter && roleFilter !== "all") || (planFilter && planFilter !== "all") || (statusFilter && statusFilter !== "all")) ? " (filtros aplicados)" : ""}
                     </p>
 
                     {list.length === 0 ? (
