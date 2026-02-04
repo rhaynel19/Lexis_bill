@@ -2382,8 +2382,8 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
     try {
         // === SANITIZACIÓN DE INPUTS ===
         const clientName = sanitizeString(req.body.clientName, 200);
-        const clientRnc = sanitizeString(req.body.clientRnc, 20).replace(/[^0-9]/g, '');
-        const ncfType = sanitizeString(req.body.ncfType, 10);
+        const clientRnc = (sanitizeString(req.body.clientRnc || req.body.rnc, 20)).replace(/[^0-9]/g, '');
+        const ncfType = sanitizeString(req.body.ncfType || req.body.type, 10);
         const items = sanitizeItems(req.body.items);
         const subtotal = Math.max(0, Math.min(Number(req.body.subtotal) || 0, 999999999));
         const itbis = Math.max(0, Math.min(Number(req.body.itbis) || 0, 999999999));
@@ -2397,7 +2397,12 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
         
         const fullNcf = await getNextNcf(req.userId, ncfType, session, clientRnc);
         if (!fullNcf) throw new Error("No hay secuencias NCF disponibles.");
-        const newInvoice = new Invoice({ userId: req.userId, clientName, clientRnc, ncfType, ncfSequence: fullNcf, items, subtotal, itbis, total });
+        let invoiceDate = new Date();
+        if (req.body.date) {
+            const parsed = new Date(req.body.date);
+            if (!isNaN(parsed.getTime())) invoiceDate = parsed;
+        }
+        const newInvoice = new Invoice({ userId: req.userId, clientName, clientRnc, ncfType, ncfSequence: fullNcf, items, subtotal, itbis, total, date: invoiceDate });
         await newInvoice.save({ session });
         await Customer.findOneAndUpdate(
             { userId: req.userId, rnc: clientRnc },

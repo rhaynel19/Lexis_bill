@@ -69,7 +69,7 @@ export function DocumentPreview({
                     <div className="text-left sm:text-right">
                         <h2 className="text-xl font-bold text-foreground">{data.clientName}</h2>
                         <p className="text-muted-foreground text-sm">{data.rnc}</p>
-                        <p className="text-muted-foreground text-sm">{new Date().toLocaleDateString("es-DO")}</p>
+                        <p className="text-muted-foreground text-sm">{data.date ? new Date(data.date).toLocaleDateString("es-DO") : new Date().toLocaleDateString("es-DO")}</p>
                     </div>
                 </div>
 

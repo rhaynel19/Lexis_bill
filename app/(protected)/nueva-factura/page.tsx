@@ -48,6 +48,7 @@ export default function NewInvoice() {
     const [clientName, setClientName] = useState("");
     const [rnc, setRnc] = useState("");
     const [clientPhone, setClientPhone] = useState("");
+    const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
     const [rncError, setRncError] = useState("");
     const [applyRetentions, setApplyRetentions] = useState(false);
     const [itbisRetentionRate, setItbisRetentionRate] = useState(0.30); // 30% por defecto
@@ -629,10 +630,10 @@ export default function NewInvoice() {
 
             const invoiceData = {
                 clientName: cleanClientName,
-                rnc: cleanRnc,
-                type: invoiceType,
+                clientRnc: cleanRnc,
+                ncfType: invoiceType,
                 items: validItems,
-                date: new Date().toISOString(),
+                date: invoiceDate ? new Date(invoiceDate).toISOString() : new Date().toISOString(),
                 subtotal,
                 itbis,
                 total,
@@ -735,7 +736,7 @@ export default function NewInvoice() {
             <div className="container mx-auto px-4 py-8">
                 <DocumentPreview
                     type="invoice"
-                    data={{ clientName, rnc, clientPhone, items, subtotal, itbis, total, invoiceType }}
+                    data={{ clientName, rnc, clientPhone, items, subtotal, itbis, total, invoiceType, date: invoiceDate }}
                     onEdit={() => setShowPreview(false)}
                     onConfirm={handleConfirmSave}
                     isProcessing={isGenerating}
@@ -923,6 +924,18 @@ export default function NewInvoice() {
                                             value={clientPhone}
                                             onChange={(e) => setClientPhone(e.target.value)}
                                         />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="invoice-date">Fecha de factura</Label>
+                                        <Input
+                                            id="invoice-date"
+                                            type="date"
+                                            value={invoiceDate}
+                                            onChange={(e) => setInvoiceDate(e.target.value)}
+                                            className="bg-white"
+                                        />
+                                        <p className="text-xs text-muted-foreground">Puedes elegir la fecha que aparecerá en la factura.</p>
                                     </div>
 
                                     <div className="flex items-center space-x-2 mt-2">
