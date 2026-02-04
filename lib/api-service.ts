@@ -3,6 +3,21 @@ import { secureFetch } from "./secure-fetch";
 // Siempre /api para same-origin (cookies HttpOnly). En dev, next.config rewrites proxy a backend.
 const API_URL = "/api";
 
+export interface AdminUser {
+    id: string;
+    name: string;
+    email: string;
+    rnc: string;
+    role: string;
+    profession?: string;
+    plan: string;
+    subscriptionStatus: string;
+    expiryDate?: string;
+    onboardingCompleted: boolean;
+    createdAt: string;
+    partner?: { referralCode: string; status: string; tier?: string } | null;
+}
+
 export const api = {
     // Auth - credenciales via cookie HttpOnly
     async login(email: string, password: string) {
@@ -347,6 +362,17 @@ export const api = {
     async getAdminChartData(months?: number) {
         return secureFetch<{ monthly: Array<{ month: string; revenue: number; invoices: number }>; usersByPlan: { free: number; pro: number; premium: number } }>(
             `${API_URL}/admin/chart-data${months ? `?months=${months}` : ""}`
+        );
+    },
+
+    async getAdminUsers(params?: { q?: string; page?: number; limit?: number }) {
+        const sp = new URLSearchParams();
+        if (params?.q) sp.set("q", params.q);
+        if (params?.page) sp.set("page", String(params.page));
+        if (params?.limit) sp.set("limit", String(params.limit));
+        const query = sp.toString();
+        return secureFetch<{ list: AdminUser[]; total: number; page: number; limit: number }>(
+            `${API_URL}/admin/users${query ? `?${query}` : ""}`
         );
     },
 

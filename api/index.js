@@ -1520,6 +1520,64 @@ app.post('/api/admin/reject-payment/:id', verifyToken, verifyAdmin, async (req, 
     }
 });
 
+// --- ADMIN: Listado de usuarios registrados ---
+app.get('/api/admin/users', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const q = (req.query.q || '').trim();
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(100, Math.max(10, parseInt(req.query.limit, 10) || 50));
+        const skip = (page - 1) * limit;
+
+        const filter = {};
+        if (q) {
+            filter.$or = [
+                { name: new RegExp(q, 'i') },
+                { email: new RegExp(q, 'i') },
+                { rnc: new RegExp(q, 'i') }
+            ];
+        }
+
+        const [users, total] = await Promise.all([
+            User.find(filter)
+                .select('name email rnc role profession membershipLevel subscription subscriptionStatus expiryDate onboardingCompleted createdAt')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            User.countDocuments(filter)
+        ]);
+
+        const userIds = users.map(u => u._id);
+        const partners = await Partner.find({ userId: { $in: userIds } }).select('userId referralCode status tier').lean();
+        const partnerByUser = Object.fromEntries(partners.map(p => [p.userId.toString(), p]));
+
+        const list = users.map(u => {
+            const sub = u.subscription || {};
+            const plan = u.membershipLevel || sub.plan || 'free';
+            const status = u.subscriptionStatus || sub.status || (sub.endDate && new Date(sub.endDate) < new Date() ? 'expired' : 'active');
+            const partner = partnerByUser[u._id.toString()];
+            return {
+                id: u._id,
+                name: u.name,
+                email: u.email,
+                rnc: u.rnc,
+                role: u.role,
+                profession: u.profession,
+                plan,
+                subscriptionStatus: status,
+                expiryDate: u.expiryDate || sub.endDate,
+                onboardingCompleted: !!u.onboardingCompleted,
+                createdAt: u.createdAt,
+                partner: partner ? { referralCode: partner.referralCode, status: partner.status, tier: partner.tier } : null
+            };
+        });
+
+        res.json({ list, total, page, limit });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // --- ADMIN: Programa Partners ---
 app.get('/api/admin/partners', verifyToken, verifyAdmin, async (req, res) => {
     try {

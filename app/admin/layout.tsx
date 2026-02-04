@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ShieldAlert, LayoutDashboard, CreditCard, ArrowLeft, Users } from "lucide-react";
+import { ShieldAlert, LayoutDashboard, CreditCard, ArrowLeft, Users, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function AdminLayout({
@@ -62,6 +62,11 @@ export default function AdminLayout({
                             <Link href="/admin" className="shrink-0">
                                 <Button variant="outline" size="sm" className="gap-2 whitespace-nowrap">
                                     <CreditCard className="w-4 h-4 shrink-0" /> Pagos Pendientes
+                                </Button>
+                            </Link>
+                            <Link href="/admin/usuarios" className="shrink-0">
+                                <Button variant="outline" size="sm" className="gap-2 whitespace-nowrap">
+                                    <UserCircle className="w-4 h-4 shrink-0" /> Usuarios
                                 </Button>
                             </Link>
                             <Link href="/admin/partners" className="shrink-0">
