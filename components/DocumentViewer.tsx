@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { generateQuoteWhatsAppMessage, generateInvoiceWhatsAppMessage } from "@/lib/whatsapp-utils";
 import { useAuth } from "@/components/providers/AuthContext";
+import { APP_CONFIG } from "@/lib/config";
 
 // Interfaz para cotizaciones
 export interface Quote {
@@ -110,22 +111,29 @@ export function DocumentViewer({
         });
     };
 
-    // Nombre y RNC desde contexto de auth (o fallback appConfig/localStorage)
+    const formatDateShort = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString("es-DO", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        });
+    };
+
+    // Datos de empresa: auth > appConfig (localStorage) > APP_CONFIG
     const { user: authUser } = useAuth();
-    const companyName = authUser?.fiscalStatus?.confirmed
-        || (typeof window !== "undefined" && (() => {
+    const appConfig = typeof window !== "undefined"
+        ? (() => {
             try {
                 const c = localStorage.getItem("appConfig");
-                return c ? JSON.parse(c).companyName : null;
-            } catch { return null; }
-        })())
-        || "Lexis Bill";
-    const companyRnc = authUser?.rnc || (typeof window !== "undefined" && (() => {
-        try {
-            const c = localStorage.getItem("appConfig");
-            return c ? JSON.parse(c).rnc : null;
-        } catch { return null; }
-    })()) || "N/A";
+                return c ? JSON.parse(c) : {};
+            } catch { return {}; }
+        })()
+        : {};
+    const companyName = authUser?.fiscalStatus?.confirmed || appConfig.companyName || appConfig.name || APP_CONFIG.company.name || "Lexis Bill";
+    const companyRnc = authUser?.rnc ?? appConfig.rnc ?? APP_CONFIG.company.rnc ?? "N/A";
+    const companyAddress = appConfig.address ?? APP_CONFIG.company.address ?? "";
+    const companyPhone = appConfig.phone ?? APP_CONFIG.company.phone ?? "";
+    const companyEmail = appConfig.email ?? APP_CONFIG.company.email ?? "";
     const documentNumber = type === "quote"
         ? `COT-${(document as Quote).id.slice(-8)}`
         : (document as Invoice).ncfSequence || (document as Invoice).id;
@@ -162,107 +170,219 @@ export function DocumentViewer({
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-4xl h-[95vh] md:h-[90vh] p-0 flex flex-col overflow-hidden bg-background border-border/20 shadow-2xl">
-                {/* Header Fijo */}
-                <div className="p-6 border-b border-border/10 bg-secondary flex-shrink-0 z-20">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <DialogTitle className="text-xl md:text-2xl font-serif font-black text-foreground flex items-center gap-3">
-                                {type === "quote" ? "Cotización" : "Factura"}
-                                <StatusBadge status={document.status || (type === "quote" ? "borrador" : "emitida")} />
-                            </DialogTitle>
-                            <DialogDescription className="text-muted-foreground mt-1 font-medium">
-                                No. {documentNumber} • {type === "quote" ? "Propuesta comercial" : "Comprobante fiscal"}
-                            </DialogDescription>
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={onClose}
-                            className="text-muted-foreground hover:text-foreground hover:bg-accent/10 rounded-full h-10 w-10 transition-colors"
-                        >
-                            <X className="w-5 h-5" />
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Body con Scroll */}
-                <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-12 bg-background">
-                    {/* Sección 1: Encabezado del Documento (Empresa y Cliente) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                        <div className="space-y-4">
-                            <div>
-                                <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Emisor</h4>
-                                <h3 className="text-xl font-bold text-foreground leading-tight">{companyName}</h3>
-                                <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
-                                    <span className="font-semibold text-muted-foreground/60">RNC:</span> {companyRnc}
-                                </p>
-                            </div>
-                            <div className="pt-2">
-                                <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Fecha de Emisión</h4>
-                                <p className="text-foreground font-medium">{formatDate(documentDate)}</p>
+                {type === "quote" ? (
+                    <>
+                        {/* Barra superior estilo PDF: LEXIS BILL + Comprobante fiscal */}
+                        <div className="flex-shrink-0 flex items-center justify-between px-6 py-3 bg-[#1A202C] z-20">
+                            <span className="text-[#D4AF37] font-bold text-lg tracking-tight">LEXIS BILL</span>
+                            <div className="flex items-center gap-3">
+                                <span className="text-white/90 text-sm">Comprobante fiscal</span>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={onClose}
+                                    className="text-white/80 hover:text-white hover:bg-white/10 rounded-full h-9 w-9"
+                                >
+                                    <X className="w-5 h-5" />
+                                </Button>
                             </div>
                         </div>
 
-                        <div className="space-y-4 bg-secondary p-6 rounded-2xl border border-border/50">
-                            <div>
-                                <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Cliente</h4>
-                                <h3 className="text-lg font-bold text-foreground">{clientName}</h3>
-                                <p className="text-sm text-foreground/80 mt-1 flex items-center gap-2">
-                                    <span className="font-semibold text-muted-foreground/60">RNC/Cédula:</span> {clientRnc}
-                                </p>
-                            </div>
-                            {type === "quote" && (document as Quote).validUntil && (
-                                <div className="pt-2 border-t border-border/10">
-                                    <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Válida hasta</h4>
-                                    <p className="text-foreground/80 font-medium">{formatDate((document as Quote).validUntil!)}</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Tabla de Items */}
-                    <div className="space-y-4">
-                        <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Detalle de Productos / Servicios</h4>
-                        <div className="border border-border/30 rounded-xl overflow-hidden shadow-sm">
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader className="bg-muted/50">
-                                        <TableRow className="hover:bg-transparent border-border/10">
-                                            <TableHead className="text-foreground font-bold py-4">Descripción</TableHead>
-                                            <TableHead className="text-center text-foreground font-bold py-4">Cant.</TableHead>
-                                            <TableHead className="text-right text-foreground font-bold py-4">Precio Unit.</TableHead>
-                                            <TableHead className="text-right text-foreground font-bold py-4">Subtotal</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {items.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={4} className="text-center text-muted-foreground py-10 italic">
-                                                    No hay conceptos registrados en este documento
-                                                </TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            items.map((item, index) => (
-                                                <TableRow key={index} className="border-b border-border/5 last:border-0">
-                                                    <TableCell className="py-4 text-foreground font-medium">{item.description || "Sin descripción"}</TableCell>
-                                                    <TableCell className="text-center py-4 text-muted-foreground">{item.quantity}</TableCell>
-                                                    <TableCell className="text-right py-4 text-muted-foreground">{formatCurrency(item.price)}</TableCell>
-                                                    <TableCell className="text-right py-4 text-foreground font-bold">
-                                                        {formatCurrency(item.quantity * item.price)}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
+                        {/* Body: fondo blanco, dos columnas + FACTURADO A */}
+                        <div className="flex-1 overflow-y-auto bg-white text-[#333]">
+                            <div className="p-6 md:p-10">
+                                {/* Dos columnas: Emisor (izq) | Cotización (der) */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                                    <div className="min-w-0 space-y-1">
+                                        {appConfig.logo ? (
+                                            <img src={appConfig.logo} alt="" className="h-14 w-auto object-contain mb-2" />
+                                        ) : null}
+                                        <p className="text-sm font-medium text-[#000]">{companyName}</p>
+                                        <p className="text-sm text-[#333]">RNC: {companyRnc}</p>
+                                        {companyAddress ? <p className="text-sm text-[#333]">{companyAddress}</p> : null}
+                                        {(companyPhone || companyEmail) ? (
+                                            <p className="text-sm text-[#333]">
+                                                {companyPhone ? `Tel: ${companyPhone}` : ""}
+                                                {companyPhone && companyEmail ? " | " : ""}
+                                                {companyEmail || ""}
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                    <div className="min-w-0 text-right md:text-right">
+                                        <h2 className="text-2xl font-bold text-[#000] uppercase tracking-tight">Cotización</h2>
+                                        <p className="text-sm mt-1">
+                                            <span className="text-[#333]">Número: </span>
+                                            <span className="font-bold text-[#D4AF37]">{documentNumber}</span>
+                                        </p>
+                                        <p className="text-sm text-[#333] mt-0.5">Fecha Emisión: {formatDateShort(documentDate)}</p>
+                                        {type === "quote" && (document as Quote).validUntil && (
+                                            <p className="text-sm text-[#333]">Válida hasta: {formatDateShort((document as Quote).validUntil!)}</p>
                                         )}
-                                    </TableBody>
-                                </Table>
+                                    </div>
+                                </div>
+
+                                {/* Línea dorada */}
+                                <hr className="my-6 border-t-2 border-[#D4AF37]" />
+
+                                {/* FACTURADO A */}
+                                <p className="text-sm font-bold text-[#000] uppercase tracking-wide">Facturado a:</p>
+                                <p className="text-sm text-[#333] mt-1">{clientName}</p>
+                                <p className="text-sm text-[#333]">RNC/Cédula: {clientRnc}</p>
+
+                                {/* Segunda línea dorada */}
+                                <hr className="my-6 border-t-2 border-[#D4AF37]" />
+
+                                {/* Tabla y totales (mismo scroll) */}
+                                <div className="space-y-4 mt-6">
+                                    <h4 className="text-[10px] uppercase tracking-widest text-[#666] font-bold">Detalle de Productos / Servicios</h4>
+                                    <div className="border border-[#e5e7eb] rounded-lg overflow-hidden">
+                                        <Table>
+                                            <TableHeader className="bg-[#f3f4f6]">
+                                                <TableRow className="hover:bg-transparent border-[#e5e7eb]">
+                                                    <TableHead className="text-[#333] font-bold py-3">Descripción</TableHead>
+                                                    <TableHead className="text-center text-[#333] font-bold py-3">Cant.</TableHead>
+                                                    <TableHead className="text-right text-[#333] font-bold py-3">Precio Unit.</TableHead>
+                                                    <TableHead className="text-right text-[#333] font-bold py-3">Subtotal</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {items.length === 0 ? (
+                                                    <TableRow>
+                                                        <TableCell colSpan={4} className="text-center text-[#666] py-8 italic">
+                                                            No hay conceptos registrados
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ) : (
+                                                    items.map((item, index) => (
+                                                        <TableRow key={index} className="border-b border-[#e5e7eb] last:border-0">
+                                                            <TableCell className="py-3 text-[#333]">{item.description || "Sin descripción"}</TableCell>
+                                                            <TableCell className="text-center py-3 text-[#333]">{item.quantity}</TableCell>
+                                                            <TableCell className="text-right py-3 text-[#333]">{formatCurrency(item.price)}</TableCell>
+                                                            <TableCell className="text-right py-3 text-[#333] font-medium">{formatCurrency(item.quantity * item.price)}</TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                    <div className="flex flex-col items-end mt-6 space-y-1 text-sm">
+                                        <div className="flex justify-between w-64">
+                                            <span className="text-[#333]">Subtotal:</span>
+                                            <span className="font-medium text-[#333]">{formatCurrency(subtotal)}</span>
+                                        </div>
+                                        <div className="flex justify-between w-64">
+                                            <span className="text-[#333]">ITBIS (18%):</span>
+                                            <span className="font-medium text-[#333]">{formatCurrency(itbis)}</span>
+                                        </div>
+                                        <hr className="border-t border-[#D4AF37] w-64 my-2" />
+                                        <div className="flex justify-between w-64 items-center">
+                                            <span className="font-bold text-[#000] uppercase">Total factura:</span>
+                                            <span className="text-xl font-bold text-[#D4AF37]">{formatCurrency(total)}</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
+                    </>
+                ) : (
+                    <>
+                        {/* Header Fijo (facturas) */}
+                        <div className="p-6 border-b border-border/10 bg-secondary flex-shrink-0 z-20">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <DialogTitle className="text-xl md:text-2xl font-serif font-black text-foreground flex items-center gap-3">
+                                        Factura
+                                        <StatusBadge status={document.status || "emitida"} />
+                                    </DialogTitle>
+                                    <DialogDescription className="text-muted-foreground mt-1 font-medium">
+                                        No. {documentNumber} • Comprobante fiscal
+                                    </DialogDescription>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={onClose}
+                                    className="text-muted-foreground hover:text-foreground hover:bg-accent/10 rounded-full h-10 w-10 transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Body con Scroll (facturas) */}
+                        <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-12 bg-background">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                <div className="space-y-4 min-w-0">
+                                    <div>
+                                        <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Emisor</h4>
+                                        <h3 className="text-xl font-bold text-foreground leading-tight">{companyName}</h3>
+                                        <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
+                                            <span className="font-semibold text-muted-foreground/60">RNC:</span> {companyRnc}
+                                        </p>
+                                    </div>
+                                    <div className="pt-2">
+                                        <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Fecha de Emisión</h4>
+                                        <p className="text-foreground font-medium">{formatDate(documentDate)}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-4 bg-secondary p-6 rounded-2xl border border-border/50 min-w-0 overflow-hidden">
+                                    <div className="min-w-0">
+                                        <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Cliente</h4>
+                                        <h3 className="text-lg font-bold text-foreground truncate" title={clientName}>{clientName}</h3>
+                                        <p className="text-sm text-foreground/80 mt-1 flex items-center gap-2 min-w-0">
+                                            <span className="font-semibold text-muted-foreground/60 shrink-0">RNC/Cédula:</span>
+                                            <span className="font-mono truncate min-w-0" title={clientRnc}>{clientRnc}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Tabla de Items (facturas) */}
+                            <div className="space-y-4">
+                                <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Detalle de Productos / Servicios</h4>
+                                <div className="border border-border/30 rounded-xl overflow-hidden shadow-sm">
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader className="bg-muted/50">
+                                                <TableRow className="hover:bg-transparent border-border/10">
+                                                    <TableHead className="text-foreground font-bold py-4">Descripción</TableHead>
+                                                    <TableHead className="text-center text-foreground font-bold py-4">Cant.</TableHead>
+                                                    <TableHead className="text-right text-foreground font-bold py-4">Precio Unit.</TableHead>
+                                                    <TableHead className="text-right text-foreground font-bold py-4">Subtotal</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {items.length === 0 ? (
+                                                    <TableRow>
+                                                        <TableCell colSpan={4} className="text-center text-muted-foreground py-10 italic">
+                                                            No hay conceptos registrados en este documento
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ) : (
+                                                    items.map((item, index) => (
+                                                        <TableRow key={index} className="border-b border-border/5 last:border-0">
+                                                            <TableCell className="py-4 text-foreground font-medium">{item.description || "Sin descripción"}</TableCell>
+                                                            <TableCell className="text-center py-4 text-muted-foreground">{item.quantity}</TableCell>
+                                                            <TableCell className="text-right py-4 text-muted-foreground">{formatCurrency(item.price)}</TableCell>
+                                                            <TableCell className="text-right py-4 text-foreground font-bold">
+                                                                {formatCurrency(item.quantity * item.price)}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
 
                 {/* Footer Fijo con Totales y Botones */}
-                <div className="flex-shrink-0 bg-secondary border-t border-border/30 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
-                    {/* Bloque de Totales */}
+                <div className={`flex-shrink-0 border-t shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] ${type === "quote" ? "bg-white border-[#e5e7eb]" : "bg-secondary border-border/30"}`}>
+                    {/* Bloque de Totales (solo facturas; cotización ya muestra totales en el body) */}
+                    {type !== "quote" && (
                     <div className="bg-muted/30 px-6 py-4 md:px-10 border-b border-border/10">
                         <div className="flex flex-col items-end space-y-2">
                             <div className="flex justify-between w-full md:w-80 text-sm text-muted-foreground">
@@ -281,9 +401,10 @@ export function DocumentViewer({
                             </div>
                         </div>
                     </div>
+                    )}
 
                     {/* Botones de Acción */}
-                    <div className="p-4 md:p-6 bg-secondary flex grid grid-cols-4 sm:flex gap-2 sm:gap-3 justify-end items-center">
+                    <div className={`p-4 md:p-6 flex grid grid-cols-4 sm:flex gap-2 sm:gap-3 justify-end items-center ${type === "quote" ? "bg-white" : "bg-secondary"}`}>
                         <Button
                             variant="outline"
                             onClick={onClose}
