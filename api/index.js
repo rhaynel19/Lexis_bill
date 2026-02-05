@@ -644,6 +644,7 @@ const NCF_TYPES_GOVERNMENT = ['15', '45'];
 
 function validateNcfForClient(ncfType, clientRnc) {
     if (!clientRnc) return { valid: true };
+    if (ncfType === '34' || ncfType === '04') return { valid: true }; // Nota de crédito (E34/B04): mismo cliente que la factura original
     const cleanRnc = (clientRnc || '').replace(/[^\d]/g, '');
     const isBusiness = cleanRnc.length === 9;
     const isGov = cleanRnc.startsWith('4') || cleanRnc.length === 11; // simplificado: cédula o gubernamental
@@ -2630,6 +2631,63 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
         await session.abortTransaction();
         session.endSession();
         res.status(500).json({ error: error.message });
+    }
+});
+
+// Nota de crédito (e-CF 34): anula la factura original y crea el comprobante de crédito
+app.post('/api/invoices/:id/credit-note', verifyToken, async (req, res) => {
+    const invoiceId = req.params.id;
+    if (!invoiceId || !isValidObjectId(invoiceId)) {
+        return res.status(400).json({ message: 'ID de factura inválido' });
+    }
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const original = await Invoice.findOne({ _id: invoiceId, userId: req.userId }).session(session).lean();
+        if (!original) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: 'Factura no encontrada' });
+        }
+        if (original.status === 'cancelled' || original.annulledBy) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: 'Esta factura ya fue anulada con una nota de crédito' });
+        }
+        const series = (original.ncfSequence || 'E')[0];
+        const creditNoteType = series === 'B' ? '04' : '34';
+        const fullNcf = await getNextNcf(req.userId, creditNoteType, session, original.clientRnc);
+        const creditNote = new Invoice({
+            userId: req.userId,
+            clientName: original.clientName,
+            clientRnc: original.clientRnc,
+            ncfType: creditNoteType,
+            ncfSequence: fullNcf,
+            items: original.items || [],
+            subtotal: original.subtotal,
+            itbis: original.itbis,
+            total: original.total,
+            date: new Date(),
+            status: 'paid',
+            modifiedNcf: original.ncfSequence
+        });
+        await creditNote.save({ session });
+        await Invoice.updateOne(
+            { _id: invoiceId, userId: req.userId },
+            { $set: { status: 'cancelled', annulledBy: fullNcf } },
+            { session }
+        );
+        await session.commitTransaction();
+        session.endSession();
+        res.status(201).json({ message: 'Nota de crédito emitida', ncf: fullNcf, invoice: creditNote });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        const msg = error.message || 'Error al emitir nota de crédito';
+        if (msg.includes('secuencias NCF') || msg.includes('vencido')) {
+            return res.status(400).json({ message: 'Configura un lote de comprobantes tipo Nota de crédito (E34 o B04) en Configuración.' });
+        }
+        res.status(500).json({ message: msg });
     }
 });
 

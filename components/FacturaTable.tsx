@@ -3,7 +3,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { CheckCircle, Clock, AlertCircle, Share2, MessageCircle, Mail, Copy, Ban, Download, Pencil, Filter, Repeat, Eye, CreditCard, User } from "lucide-react";
+import { CheckCircle, Clock, AlertCircle, Share2, MessageCircle, Mail, Copy, Ban, Download, Pencil, Filter, Repeat, Eye, CreditCard, User, Receipt } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -46,9 +46,10 @@ export interface Invoice {
 interface FacturaTableProps {
     invoices: Invoice[];
     onRefresh: () => void;
+    onRequestCreditNote?: (invoice: Invoice) => void;
 }
 
-export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
+export function FacturaTable({ invoices, onRefresh, onRequestCreditNote }: FacturaTableProps) {
     const router = useRouter();
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -252,8 +253,20 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onClick={() => handleWhatsApp(inv)}>WhatsApp</DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => handleDownloadPDF(inv)}>PDF</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleViewInvoice(inv)}>
+                                                                    <Eye className="w-4 h-4 mr-2" /> Ver
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleDownloadPDF(inv)}>
+                                                                    <Download className="w-4 h-4 mr-2" /> Descargar PDF
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleWhatsApp(inv)}>
+                                                                    <MessageCircle className="w-4 h-4 mr-2" /> Enviar por WhatsApp
+                                                                </DropdownMenuItem>
+                                                                {onRequestCreditNote && inv.status !== 'cancelled' && !inv.annulledBy && (
+                                                                    <DropdownMenuItem onClick={() => onRequestCreditNote(inv)}>
+                                                                        <Receipt className="w-4 h-4 mr-2" /> Nota de crédito
+                                                                    </DropdownMenuItem>
+                                                                )}
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </div>
@@ -289,16 +302,21 @@ export function FacturaTable({ invoices, onRefresh }: FacturaTableProps) {
                                                 <p className="text-[10px] text-muted-foreground font-bold uppercase mt-1">Total DOP</p>
                                             </div>
                                         </div>
-                                        <div className="flex gap-2 pt-2">
-                                            <Button variant="outline" size="sm" className="flex-1 h-9" onClick={(e) => { e.stopPropagation(); handleViewInvoice(inv); }}>
+                                        <div className="flex flex-wrap gap-2 pt-2">
+                                            <Button variant="outline" size="sm" className="h-9" onClick={(e) => { e.stopPropagation(); handleViewInvoice(inv); }}>
                                                 <Eye className="w-4 h-4 mr-2" /> Ver
                                             </Button>
-                                            <Button variant="outline" size="sm" className="flex-1 h-9 text-success border-success/20" onClick={(e) => { e.stopPropagation(); handleWhatsApp(inv); }}>
+                                            <Button variant="outline" size="sm" className="h-9" onClick={(e) => { e.stopPropagation(); handleDownloadPDF(inv); }}>
+                                                <Download className="w-4 h-4 mr-2" /> PDF
+                                            </Button>
+                                            <Button variant="outline" size="sm" className="h-9 text-success border-success/20" onClick={(e) => { e.stopPropagation(); handleWhatsApp(inv); }}>
                                                 <MessageCircle className="w-4 h-4 mr-2" /> WhatsApp
                                             </Button>
-                                            <Button variant="outline" size="sm" className="h-9 w-10 p-0" onClick={(e) => { e.stopPropagation(); handleDownloadPDF(inv); }}>
-                                                <Download className="w-4 h-4" />
-                                            </Button>
+                                            {onRequestCreditNote && inv.status !== 'cancelled' && !inv.annulledBy && (
+                                                <Button variant="outline" size="sm" className="h-9 text-amber-600 border-amber-200" onClick={(e) => { e.stopPropagation(); onRequestCreditNote(inv); }}>
+                                                    <Receipt className="w-4 h-4 mr-2" /> Nota de crédito
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}

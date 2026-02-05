@@ -60,7 +60,7 @@ interface Invoice {
   isrRetention?: number;
   itbisRetention?: number;
   date: string;
-  status: "pending" | "paid" | "modified" | "cancelled";
+  status: "pending" | "paid" | "modified" | "cancelled" | "recibida" | "rechazada" | "condicional";
   annulledBy?: string;
   modifiedNcf?: string;
   sequenceNumber?: string;
@@ -532,6 +532,10 @@ export default function Dashboard() {
         <FacturaTable
           invoices={recentInvoices}
           onRefresh={handleRefresh}
+          onRequestCreditNote={(inv) => {
+            setSelectedInvoice(inv);
+            setShowCreditNote(true);
+          }}
         />
 
       </div>
