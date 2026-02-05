@@ -2935,7 +2935,7 @@ app.get('/api/expenses', verifyToken, async (req, res) => {
 
 app.post('/api/expenses', verifyToken, async (req, res) => {
     try {
-        const { supplierName, supplierRnc, ncf, amount, itbis, category, date } = req.body;
+        const { supplierName, supplierRnc, ncf, amount, itbis, category, date, imageUrl } = req.body;
         const newExpense = new Expense({
             userId: req.userId,
             supplierName,
@@ -2944,7 +2944,8 @@ app.post('/api/expenses', verifyToken, async (req, res) => {
             amount,
             itbis: itbis || 0,
             category,
-            date: date || new Date()
+            date: date || new Date(),
+            imageUrl: imageUrl || undefined
         });
         await newExpense.save();
         res.status(201).json(newExpense);
