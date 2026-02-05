@@ -419,7 +419,7 @@ export default function Dashboard() {
                         </p>
                       </div>
                     </div>
-                    <Link href="/configuracion" className="w-full md:w-auto">
+                    <Link href={!fiscalState.confirmed ? "/configuracion?section=perfil" : "/configuracion?section=ncf"} className="w-full md:w-auto">
                       <Button className="w-full md:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-6 rounded-xl shadow-lg shadow-red-600/20 active:scale-95 transition-all">
                         Configurar Perfil Fiscal
                       </Button>
@@ -441,7 +441,7 @@ export default function Dashboard() {
                   </p>
                 </div>
               </div>
-              <Link href="/configuracion" className="w-full md:w-auto">
+              <Link href="/configuracion?section=ncf" className="w-full md:w-auto">
                 <Button variant="outline" className="w-full md:w-auto border-amber-600 text-amber-700 hover:bg-amber-100 font-bold px-8 py-6 rounded-xl">
                   Ir a Configuración
                 </Button>

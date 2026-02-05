@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Save, Upload, Settings, Pencil } from "lucide-react";
 import { SupportTicketForm } from "@/components/support-ticket-form";
 import { ComprobantesConfig } from "@/components/ComprobantesConfig";
@@ -15,8 +15,11 @@ import { toast } from "sonner";
 
 export default function Configuration() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { profession, setProfession } = usePreferences();
     const { refresh: refreshAuth } = useAuth();
+    const sectionPerfilRef = useRef<HTMLDivElement>(null);
+    const sectionNcfRef = useRef<HTMLDivElement>(null);
 
     const [confirmDataOk, setConfirmDataOk] = useState(false);
     const [configLocked, setConfigLocked] = useState(false);
@@ -49,6 +52,20 @@ export default function Configuration() {
         const locked = localStorage.getItem("configLocked");
         setConfigLocked(locked === "true");
     }, [profession]);
+
+    useEffect(() => {
+        const section = searchParams.get("section");
+        if (!section) return;
+        const timer = setTimeout(() => {
+            if (section === "perfil" && sectionPerfilRef.current) {
+                sectionPerfilRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+            if (section === "ncf" && sectionNcfRef.current) {
+                sectionNcfRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchParams]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setConfig({ ...config, [e.target.id]: e.target.value });
@@ -175,7 +192,9 @@ export default function Configuration() {
                 </Card>
 
                 {/* NCF Configuration Section */}
-                <ComprobantesConfig />
+                <div id="section-ncf" ref={sectionNcfRef} className="scroll-mt-6">
+                    <ComprobantesConfig />
+                </div>
 
                 {/* Preferencias de Facturación */}
                 <Card className="border-none shadow-lg bg-indigo-50/50 backdrop-blur-sm border-indigo-100 italic">
@@ -203,6 +222,7 @@ export default function Configuration() {
                 </Card>
 
                 {/* Fiscal & Contact Info Section */}
+                <div id="section-perfil" ref={sectionPerfilRef} className="scroll-mt-6">
                 <Card className="border-none shadow-lg bg-white/50 backdrop-blur-sm">
                     <CardHeader>
                         <CardTitle className="text-xl">Datos Fiscales y de Contacto</CardTitle>
@@ -268,6 +288,7 @@ export default function Configuration() {
                         </div>
                     </CardContent>
                 </Card>
+                </div>
 
                 {/* Confirmación y Guardar / Modificar */}
                 <Card className="border-amber-100 bg-amber-50/30">
