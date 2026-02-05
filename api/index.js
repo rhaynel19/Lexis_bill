@@ -2082,11 +2082,16 @@ app.get('/api/alerts', verifyToken, async (req, res) => {
         const ncfSettings = await NCFSettings.find({ userId: req.userId, isActive: true });
         ncfSettings.forEach(s => {
             const remaining = (s.finalNumber || 0) - (s.currentValue || 0);
+            const label = `${s.series || 'E'}${String(s.type).padStart(2, '0')}`;
+            const expiryStr = s.expiryDate ? new Date(s.expiryDate).toLocaleDateString('es-DO') : '';
             if (remaining < 10 && remaining >= 0) {
-                alerts.push({ type: 'ncf_low', message: `NCF ${s.series}${s.type} le quedan ${remaining} números.`, severity: 'warning' });
+                alerts.push({ type: 'ncf_low', message: `Le quedan ${remaining} comprobantes válidos tipo ${label}.${expiryStr ? ` La secuencia vence el ${expiryStr}.` : ''}`, severity: 'warning' });
             }
-            if (s.expiryDate && new Date(s.expiryDate) < in30Days) {
-                alerts.push({ type: 'ncf_expiring', message: `Secuencia NCF ${s.series}${s.type} vence el ${new Date(s.expiryDate).toLocaleDateString('es-DO')}.`, severity: 'warning' });
+            if (s.expiryDate && new Date(s.expiryDate) < in30Days && remaining >= 0) {
+                const hasLow = alerts.some(a => a.type === 'ncf_low' && a.message.includes(label));
+                if (!hasLow) {
+                    alerts.push({ type: 'ncf_expiring', message: `Le quedan ${remaining} comprobantes tipo ${label}. La secuencia vence el ${expiryStr}.`, severity: 'warning' });
+                }
             }
         });
 
@@ -2239,6 +2244,23 @@ app.post('/api/ncf-settings', verifyToken, async (req, res) => {
 
         await newSetting.save();
         res.status(201).json(newSetting);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/ncf-settings/:id', verifyToken, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID de lote inválido' });
+        const setting = await NCFSettings.findOne({ _id: req.params.id, userId: req.userId });
+        if (!setting) return res.status(404).json({ message: 'Lote no encontrado' });
+        const currentVal = setting.currentValue ?? setting.initialNumber;
+        const initialVal = setting.initialNumber ?? 0;
+        if (currentVal > initialVal) {
+            return res.status(400).json({ message: 'No se puede eliminar: ya se han usado números de este lote. Agregue un nuevo lote con otro rango.' });
+        }
+        await NCFSettings.deleteOne({ _id: req.params.id, userId: req.userId });
+        res.json({ success: true, message: 'Lote eliminado' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

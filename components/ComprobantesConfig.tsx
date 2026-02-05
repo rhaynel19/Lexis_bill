@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api-service";
-import { AlertTriangle, Plus, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertTriangle, Plus, CheckCircle2, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 export function ComprobantesConfig() {
     const [batches, setBatches] = useState<any[]>([]);
@@ -43,11 +44,24 @@ export function ComprobantesConfig() {
         try {
             await api.saveNcfSetting(newBatch);
             await loadSettings();
-            alert("Lote de NCF agregado exitosamente");
+            toast.success("Lote de NCF agregado exitosamente");
         } catch (error: any) {
-            alert("Error: " + (error.message || "No se pudo agregar el lote"));
+            toast.error(error.message || "No se pudo agregar el lote");
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleDeleteBatch = async (batch: any) => {
+        if (!batch._id) return;
+        if (!confirm(`¿Eliminar el lote ${batch.series === "E" ? "E" : "B"}${batch.type} (rango ${batch.initialNumber}-${batch.finalNumber})? Solo se puede eliminar si no se ha usado ningún número.`)) return;
+        try {
+            await api.deleteNcfSetting(batch._id);
+            await loadSettings();
+            toast.success("Lote eliminado. Puedes agregar uno nuevo con el rango correcto.");
+        } catch (error: any) {
+            const msg = error?.message || "No se pudo eliminar";
+            toast.error(msg);
         }
     };
 
@@ -129,25 +143,27 @@ export function ComprobantesConfig() {
                         <Table>
                             <TableHeader className="bg-slate-50">
                                 <TableRow>
-                                    <TableHead>Tipo</TableHead>
-                                    <TableHead>Rango</TableHead>
-                                    <TableHead>Actual</TableHead>
-                                    <TableHead>Disponibles</TableHead>
-                                    <TableHead>Estado</TableHead>
-                                </TableRow>
+                                        <TableHead>Tipo</TableHead>
+                                        <TableHead>Rango</TableHead>
+                                        <TableHead>Actual</TableHead>
+                                        <TableHead>Disponibles</TableHead>
+                                        <TableHead>Estado</TableHead>
+                                        <TableHead className="text-right">Acciones</TableHead>
+                                    </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-slate-400">Cargando...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-slate-400">Cargando...</TableCell></TableRow>
                                 ) : batches.length === 0 ? (
-                                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-slate-400">No hay lotes configurados</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-slate-400">No hay lotes configurados</TableCell></TableRow>
                                 ) : batches.map((batch, i) => {
                                     const available = batch.finalNumber - batch.currentValue;
                                     const isLow = available < 10;
                                     const isElectronic = batch.sequenceType === "electronic" || batch.series === "E";
                                     const label = isElectronic ? `e-CF ${batch.type}` : `B${batch.type}`;
+                                    const canDelete = batch.currentValue === batch.initialNumber;
                                     return (
-                                        <TableRow key={i} className={isLow ? "bg-red-50/30" : ""}>
+                                        <TableRow key={batch._id || i} className={isLow ? "bg-red-50/30" : ""}>
                                             <TableCell className="font-medium text-slate-700">{label}</TableCell>
                                             <TableCell className="text-slate-500">{batch.initialNumber} - {batch.finalNumber}</TableCell>
                                             <TableCell className="text-slate-700 font-bold">{batch.currentValue}</TableCell>
@@ -163,6 +179,19 @@ export function ComprobantesConfig() {
                                                 <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${batch.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
                                                     {batch.isActive ? "Activo" : "Agotado"}
                                                 </span>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    onClick={() => handleDeleteBatch(batch)}
+                                                    title={canDelete ? "Eliminar lote (solo si no se ha usado)" : "No se puede eliminar: ya se usaron números"}
+                                                    disabled={!canDelete}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
                                             </TableCell>
                                         </TableRow>
                                     );

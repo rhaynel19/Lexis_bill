@@ -214,7 +214,11 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     doc.text(displayClientName || "— Indicar nombre del cliente —", margin.left, yPosition);
     yPosition += 5;
     doc.text(`RNC/Cédula: ${invoiceData.rnc || "—"}`, margin.left, yPosition);
-    yPosition += 15;
+    yPosition += 8;
+    doc.setDrawColor(...goldColor);
+    doc.setLineWidth(1);
+    doc.line(margin.left, yPosition, pageWidth - margin.right, yPosition);
+    yPosition += 12;
 
     // ===== TABLA DE ÍTEMS =====
     const tableData = invoiceData.items.map((item) => [

@@ -1,32 +1,53 @@
 
+export interface InsightOptions {
+    userName?: string;
+    configComplete?: boolean;
+    predictions?: string[];
+}
+
 export const AIService = {
-    // Generate a human-readable monthly summary
-    generateMonthlyInsight: (revenue: number, previousRevenue: number, pendingCount: number, profession: string): string => {
-        // Mock logic - in production this would call an LLM API
+    // Generate a human-readable monthly summary (context-aware)
+    generateMonthlyInsight: (
+        revenue: number,
+        previousRevenue: number,
+        pendingCount: number,
+        profession: string,
+        options: InsightOptions = {}
+    ): string => {
+        const { userName = "", configComplete = true, predictions = [] } = options;
         const growth = revenue > previousRevenue;
-        const diff = Math.abs(revenue - previousRevenue);
 
         const professionTones: Record<string, string> = {
-            "medic": "Dr/Dra.",
-            "lawyer": "Lic.",
-            "engineer": "Ing.",
-            "general": ""
+            "medic": "Dr/Dra. ",
+            "lawyer": "Lic. ",
+            "technical": "Ing. ",
+            "general": "",
+            "other": ""
         };
         const title = professionTones[profession] || "";
+        const name = (userName || "").trim().split(" ")[0] || "";
+        const saludo = name ? `Hola ${title}${name}, ` : `Hola ${title}, `;
 
-        let insight = `Hola ${title}, `;
-
-        if (revenue === 0) {
-            insight += "este mes recién comienza. Cuando estés listo, crea tu primera factura para empezar a sumar.";
-        } else if (growth) {
-            insight += `vas muy bien este mes. Has facturado más que el mes anterior. `;
-            if (pendingCount > 0) insight += `Solo recuerda que tienes ${pendingCount} facturas pendientes de cobro.`;
-        } else {
-            insight += `tienes un ritmo estable. `;
-            if (pendingCount > 3) insight += `Sería bueno dar seguimiento a las ${pendingCount} facturas pendientes para mejorar el flujo.`;
+        // Si falta configuración, el asistente prioriza eso
+        if (!configComplete) {
+            return `${saludo}para poder emitir facturas con valor fiscal necesitas completar tu perfil y configurar al menos un lote de NCF en Configuración. Cuando termines, podrás crear tu primera factura.`;
         }
 
-        return insight;
+        // Config lista pero sin facturas aún
+        if (revenue === 0) {
+            return `${saludo}todo listo. Crea tu primera factura cuando quieras para empezar a sumar.`;
+        }
+
+        // Con actividad: mensajes según datos reales
+        if (growth) {
+            let msg = `${saludo}vas muy bien este mes: has facturado más que el mes anterior.`;
+            if (pendingCount > 0) msg += ` Recuerda que tienes ${pendingCount} factura${pendingCount === 1 ? "" : "s"} pendiente${pendingCount === 1 ? "" : "s"} de cobro.`;
+            return msg;
+        }
+        let msg = `${saludo}tienes un ritmo estable.`;
+        if (pendingCount > 3) msg += ` Sería bueno dar seguimiento a las ${pendingCount} facturas pendientes para mejorar el flujo.`;
+        if (predictions.length > 0) msg += ` ${predictions[0]}`;
+        return msg;
     },
 
     // Predict upcoming tax tasks
