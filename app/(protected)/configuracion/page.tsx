@@ -22,7 +22,8 @@ export default function Configuration() {
     const sectionNcfRef = useRef<HTMLDivElement>(null);
 
     const [confirmDataOk, setConfirmDataOk] = useState(false);
-    const [configLocked, setConfigLocked] = useState(false);
+    // Por defecto bloqueada: no se puede modificar nada hasta que el usuario pulse "Modificar"
+    const [configLocked, setConfigLocked] = useState(true);
     const [config, setConfig] = useState({
         companyName: "",
         rnc: "",
@@ -49,8 +50,9 @@ export default function Configuration() {
             if (data.seal) setSealPreview(data.seal);
         }
         if (profession) setConfig(prev => ({ ...prev, profession }));
+        // Bloqueado por defecto: solo editable si han pulsado "Modificar" (no guardamos "false", se quita la clave)
         const locked = localStorage.getItem("configLocked");
-        setConfigLocked(locked === "true");
+        setConfigLocked(locked !== "false");
     }, [profession]);
 
     useEffect(() => {
@@ -119,12 +121,15 @@ export default function Configuration() {
         } catch (error) {
             console.error("Error saving to cloud:", error);
             toast.warning("⚠️ Guardado localmente, pero hubo un error al sincronizar con la nube.");
+            localStorage.setItem("configLocked", "true");
+            setConfigLocked(true);
+            setConfirmDataOk(false);
         }
     };
 
     const handleModificar = () => {
         setConfigLocked(false);
-        localStorage.removeItem("configLocked");
+        localStorage.setItem("configLocked", "false");
         toast.info("Puedes editar los datos. Revisa y marca la confirmación para guardar.");
     };
 
@@ -134,6 +139,13 @@ export default function Configuration() {
                 <h1 className="text-3xl font-bold text-primary mb-2">Mi Oficina Fiscal</h1>
                 <p className="text-gray-500">Personalice la apariencia de sus documentos y datos fiscales.</p>
             </div>
+
+            {configLocked && (
+                <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+                    <p className="font-medium">La configuración está bloqueada.</p>
+                    <p className="mt-1 text-amber-700 dark:text-amber-300/90">Para editar datos fiscales, logo o preferencias, haz clic en <strong>Modificar</strong> más abajo y luego guarda los cambios.</p>
+                </div>
+            )}
 
             <div className="grid gap-8">
                 {/* Identidad Visual Section */}

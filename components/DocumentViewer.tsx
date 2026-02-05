@@ -172,23 +172,21 @@ export function DocumentViewer({
             <DialogContent className="max-w-4xl h-[95vh] md:h-[90vh] p-0 flex flex-col overflow-hidden bg-background border-border/20 shadow-2xl">
                 {type === "quote" ? (
                     <>
-                        {/* Barra superior estilo PDF: LEXIS BILL + Comprobante fiscal */}
-                        <div className="flex-shrink-0 flex items-center justify-between px-6 py-3 bg-[#1A202C] z-20">
-                            <span className="text-[#D4AF37] font-bold text-lg tracking-tight">LEXIS BILL</span>
-                            <div className="flex items-center gap-3">
-                                <span className="text-white/90 text-sm">Comprobante fiscal</span>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={onClose}
-                                    className="text-white/80 hover:text-white hover:bg-white/10 rounded-full h-9 w-9"
-                                >
-                                    <X className="w-5 h-5" />
-                                </Button>
-                            </div>
+                        {/* Barra superior ligera: solo texto de estado y cerrar (sin fondo oscuro ni LEXIS BILL) */}
+                        <div className="flex-shrink-0 flex items-center justify-between px-6 py-3 bg-white border-b border-[#e5e7eb] z-20">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={onClose}
+                                className="text-[#333] hover:bg-[#f3f4f6] rounded-full h-9 w-9"
+                            >
+                                <X className="w-5 h-5" />
+                            </Button>
+                            <span className="text-sm font-medium text-[#6b7280] uppercase tracking-wide">Cotización pendiente por facturar</span>
+                            <div className="w-9" aria-hidden />
                         </div>
 
-                        {/* Body: fondo blanco, dos columnas + FACTURADO A */}
+                        {/* Body: fondo blanco, dos columnas + FACTURADO A (igual o mejor que el PDF) */}
                         <div className="flex-1 overflow-y-auto bg-white text-[#333]">
                             <div className="p-6 md:p-10">
                                 {/* Dos columnas: Emisor (izq) | Cotización (der) */}
