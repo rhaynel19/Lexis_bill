@@ -1265,7 +1265,7 @@ app.post('/api/auth/profile', verifyToken, async (req, res) => {
         const updates = req.body;
         const allowedUpdates = [
             'name', 'profession', 'logo', 'digitalSeal', 'exequatur',
-            'address', 'phone', 'hasElectronicBilling'
+            'address', 'phone', 'hasElectronicBilling', 'confirmedFiscalName'
         ];
 
         const user = await User.findById(req.userId);
@@ -1273,7 +1273,8 @@ app.post('/api/auth/profile', verifyToken, async (req, res) => {
 
         allowedUpdates.forEach(field => {
             if (updates[field] !== undefined) {
-                user[field] = updates[field];
+                const val = updates[field];
+                user[field] = field === 'confirmedFiscalName' ? sanitizeString(val, 200) : val;
             }
         });
 

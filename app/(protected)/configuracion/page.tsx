@@ -10,11 +10,13 @@ import { Save, Upload, Settings, Pencil } from "lucide-react";
 import { SupportTicketForm } from "@/components/support-ticket-form";
 import { ComprobantesConfig } from "@/components/ComprobantesConfig";
 import { usePreferences } from "@/components/providers/PreferencesContext";
+import { useAuth } from "@/components/providers/AuthContext";
 import { toast } from "sonner";
 
 export default function Configuration() {
     const router = useRouter();
     const { profession, setProfession } = usePreferences();
+    const { refresh: refreshAuth } = useAuth();
 
     const [confirmDataOk, setConfirmDataOk] = useState(false);
     const [configLocked, setConfigLocked] = useState(false);
@@ -88,8 +90,10 @@ export default function Configuration() {
                 exequatur: config.exequatur,
                 hasElectronicBilling: config.hasElectronicBilling,
                 logo: logoPreview,
-                digitalSeal: sealPreview
+                digitalSeal: sealPreview,
+                confirmedFiscalName: (config.companyName || "").trim() || undefined
             });
+            await refreshAuth();
             toast.success("✅ Configuración guardada. Redirigiendo al dashboard.");
             localStorage.setItem("configLocked", "true");
             setConfigLocked(true);
