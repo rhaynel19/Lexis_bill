@@ -111,7 +111,7 @@ export default function AdminPagosPendientes() {
                         Solicitudes pendientes de validación
                     </CardTitle>
                     <CardDescription>
-                        Valida los comprobantes de transferencia antes de aprobar. Busca por referencia (ej. LEX-1024) para localizar el pago.
+                        Valida los comprobantes de transferencia antes de aprobar. Busca por referencia (ej. LEX-1024) para localizar el pago. Al aprobar, el usuario se activa automáticamente y su plan queda vigente.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

@@ -311,6 +311,30 @@ export default function NewInvoice() {
         }
     }, [items, clientName, rnc, invoiceType, isGenerating, showSuccessModal]);
 
+    // Auto-llenar nombre cuando el RNC tiene 9 u 11 dígitos (consulta DGII / API después de dejar de escribir)
+    useEffect(() => {
+        const clean = rnc.replace(/[^0-9]/g, "");
+        if (clean.length !== 9 && clean.length !== 11) return;
+        const timer = setTimeout(async () => {
+            try {
+                const { api } = await import("@/lib/api-service");
+                const result: any = await api.validateRnc(rnc);
+                if (result?.valid && result?.found && result?.name) {
+                    const nameFromApi = (result.name || "").trim();
+                    setClientName((prev) => (prev.trim() ? prev : nameFromApi));
+                    suggestNCF(clean, nameFromApi);
+                    setRncError("");
+                } else if (result?.valid && result?.found === false) {
+                    setRncError("");
+                    toast.info("RNC válido. Escribe el nombre del cliente; al guardar se recordará para la próxima vez.");
+                }
+            } catch {
+                // Silencioso: el usuario puede usar el botón "Buscar" o escribir el nombre a mano
+            }
+        }, 800);
+        return () => clearTimeout(timer);
+    }, [rnc]);
+
     useEffect(() => {
         // Lógica automática al cambiar tipo de comprobante
         if (invoiceType === "44" || invoiceType === "14") {
@@ -386,20 +410,18 @@ export default function NewInvoice() {
             const result: any = await api.validateRnc(rnc);
 
             if (result.valid) {
-                // No sobrescribir el nombre que ya escribió el usuario; solo rellenar si está vacío y la API trae un nombre real
-                const nameFromApi = (result.name || "").trim();
-                setClientName((prev) => {
-                    if (prev.trim()) return prev;
-                    if (nameFromApi && nameFromApi !== "CONTRIBUYENTE REGISTRADO") return nameFromApi;
-                    return nameFromApi || prev;
-                });
-                // Auto-set type based on RNC type
-                if (result.type === "JURIDICA") setApplyRetentions(true);
-
-                // Smart NCF Suggestion
-                suggestNCF(rnc, result.name || "");
+                if (result.found && result.name) {
+                    const nameFromApi = (result.name || "").trim();
+                    setClientName((prev) => (prev.trim() ? prev : nameFromApi));
+                    if (result.type === "JURIDICA") setApplyRetentions(true);
+                    suggestNCF(rnc, result.name || "");
+                    setRncError("");
+                } else {
+                    setRncError("");
+                    toast.info("RNC válido. Escribe el nombre del cliente; al guardar la factura o el cliente se recordará para la próxima vez.");
+                }
             } else {
-                setRncError("Contribuyente no encontrado o RNC inválido");
+                setRncError("RNC o cédula inválido");
             }
         } catch (e: any) {
             console.error(e);
@@ -633,6 +655,24 @@ export default function NewInvoice() {
             const validItems = items.filter(
                 (item) => item.description && Number(item.quantity) > 0 && Number(item.price) > 0
             );
+
+            // Validación defensiva antes de llamar al API (evita "Cliente, RNC e items son requeridos")
+            const isPlaceholderName = !cleanClientName || cleanClientName.toUpperCase().trim() === "CONTRIBUYENTE REGISTRADO";
+            if (isPlaceholderName) {
+                toast.error("Indica el nombre real del cliente antes de emitir la factura (no uses el placeholder).");
+                setIsGenerating(false);
+                return;
+            }
+            if (cleanRnc.length < 9) {
+                toast.error("Indica un RNC o cédula válido (9 u 11 dígitos) antes de emitir.");
+                setIsGenerating(false);
+                return;
+            }
+            if (validItems.length === 0) {
+                toast.error("Agrega al menos un ítem con descripción, cantidad y precio.");
+                setIsGenerating(false);
+                return;
+            }
 
             const invoiceData = {
                 clientName: cleanClientName,
@@ -910,11 +950,12 @@ export default function NewInvoice() {
                                                     size="icon"
                                                     onClick={handleRNCSearch}
                                                     disabled={isSearchingRNC}
-                                                    title="Buscar en DGII (Simulado)"
+                                                    title="Buscar nombre por RNC / Cédula"
                                                 >
-                                                    <Search className="h-4 w-4" />
+                                                    {isSearchingRNC ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                                                 </Button>
                                             </div>
+                                            <p className="text-xs text-muted-foreground">Al escribir 9 u 11 dígitos el nombre se completa automáticamente si está en DGII.</p>
                                             {rncError && (
                                                 <p className="text-xs text-destructive">{rncError}</p>
                                             )}

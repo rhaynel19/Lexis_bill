@@ -67,6 +67,13 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
                 const errorData = await response.json().catch(() => ({}));
                 const errorMessage = errorData.message || errorData.error || `Server Error: ${response.status}`;
 
+                // Sesión expirada o no autorizado: redirigir a login para que el usuario no quede "sacado" sin explicación
+                if (response.status === 401 && typeof window !== 'undefined') {
+                    toast.error("Tu sesión expiró o no es válida. Inicia sesión de nuevo.");
+                    window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+                    throw { status: 401, message: errorMessage };
+                }
+
                 // Si es un error 4xx (Cliente), no reintentar
                 if (response.status >= 400 && response.status < 500) {
                     throw { status: response.status, message: errorMessage };

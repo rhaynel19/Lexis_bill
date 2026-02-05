@@ -504,6 +504,29 @@ partnerInviteSchema.index({ status: 1 });
 
 const PartnerInvite = mongoose.models.PartnerInvite || mongoose.model('PartnerInvite', partnerInviteSchema);
 
+// Consulta RNC: base local (listado DGII importado o caché de API externa)
+const rncContribuyenteSchema = new mongoose.Schema({
+    rnc: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    type: { type: String, enum: ['JURIDICA', 'FISICA'], default: 'JURIDICA' },
+    source: { type: String, enum: ['dgii_list', 'external_api', 'user'], default: 'dgii_list' },
+    updatedAt: { type: Date, default: Date.now }
+});
+rncContribuyenteSchema.index({ rnc: 1 });
+const RncContribuyente = mongoose.models.RncContribuyente || mongoose.model('RncContribuyente', rncContribuyenteSchema);
+
+/** Guarda o actualiza RNC + nombre en la base local para que futuras consultas lo devuelvan (nombre ingresado por el usuario). */
+function upsertRncFromUser(rnc, name) {
+    const cleanRnc = typeof rnc === 'string' ? rnc.replace(/\D/g, '') : '';
+    const cleanName = typeof name === 'string' ? name.trim().slice(0, 500) : '';
+    if (!cleanRnc || !cleanName || !validateTaxId(cleanRnc)) return Promise.resolve();
+    return RncContribuyente.findOneAndUpdate(
+        { rnc: cleanRnc },
+        { name: cleanName, type: cleanRnc.length === 9 ? 'JURIDICA' : 'FISICA', source: 'user', updatedAt: new Date() },
+        { upsert: true, new: true }
+    ).catch(() => {});
+}
+
 function generateInviteToken() {
     return 'INV' + Math.random().toString(36).slice(2, 10).toUpperCase() + Date.now().toString(36).slice(-4).toUpperCase();
 }
@@ -714,14 +737,6 @@ async function fetchRncFromExternalApi(cleanNumber) {
         return null;
     }
 }
-
-const RNC_MOCK_DB = {
-    '101010101': 'JUAN PEREZ',
-    '131888444': 'LEXIS BILL SOLUTIONS S.R.L.',
-    '40222222222': 'DRA. MARIA RODRIGUEZ (DEMO)',
-    '130851255': 'ASOCIACION DE ESPECIALISTAS FISCALES',
-    '22301650929': 'ASOCIACION PROFESIONAL DE SANTO DOMINGO'
-};
 
 // --- 5. ENDPOINTS ---
 
@@ -1438,6 +1453,7 @@ app.get('/api/admin/pending-payments', verifyToken, verifyAdmin, async (req, res
     }
 });
 
+// Aprobación de pago: al aprobar, el usuario se ACTIVA AUTOMÁTICAMENTE (membresía activa desde ese momento).
 app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req, res) => {
     try {
         if (!isValidObjectId(req.params.id)) {
@@ -1456,6 +1472,7 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
         const daysToAdd = (pr.billingCycle === 'annual') ? 365 : 30;
         endDate.setDate(endDate.getDate() + daysToAdd);
 
+        // Activación automática: el cliente no tiene que hacer nada más; queda activo al aprobar.
         if (!user.subscription) user.subscription = {};
         user.subscription.plan = pr.plan;
         user.subscription.status = 'active';
@@ -2104,11 +2121,37 @@ app.get('/api/rnc/:number', async (req, res) => {
 
     if (!validateTaxId(cleanNumber)) return res.status(400).json({ valid: false, message: 'Documento Inválido' });
 
-    const external = await fetchRncFromExternalApi(cleanNumber);
-    if (external) return res.json(external);
+    const type = cleanNumber.length === 9 ? 'JURIDICA' : 'FISICA';
 
-    const name = RNC_MOCK_DB[cleanNumber] || 'CONTRIBUYENTE REGISTRADO';
-    res.json({ valid: true, rnc: cleanNumber, name, type: cleanNumber.length === 9 ? 'JURIDICA' : 'FISICA' });
+    // 1) Consulta base local (listado DGII importado o caché de API externa)
+    try {
+        if (mongoose.connection.readyState === 1) {
+            const doc = await RncContribuyente.findOne({ rnc: cleanNumber }).lean();
+            if (doc) return res.json({ valid: true, found: true, rnc: cleanNumber, name: doc.name, type: doc.type || type });
+        }
+    } catch (e) {
+        log.warn({ err: e.message, rnc: cleanNumber }, 'RNC local lookup failed');
+    }
+
+    // 2) API externa (y guardar en caché si responde)
+    const external = await fetchRncFromExternalApi(cleanNumber);
+    if (external) {
+        try {
+            if (mongoose.connection.readyState === 1) {
+                await RncContribuyente.findOneAndUpdate(
+                    { rnc: cleanNumber },
+                    { name: external.name, type: external.type, source: 'external_api', updatedAt: new Date() },
+                    { upsert: true, new: true }
+                );
+            }
+        } catch (e) {
+            log.warn({ err: e.message, rnc: cleanNumber }, 'RNC cache save failed');
+        }
+        return res.json({ ...external, found: true });
+    }
+
+    // No encontrado: el cliente debe escribir el nombre; al guardar factura/cliente se guarda en BD
+    res.json({ valid: true, found: false, rnc: cleanNumber, type });
 });
 
 app.post('/api/validate-rnc', async (req, res) => {
@@ -2119,14 +2162,40 @@ app.post('/api/validate-rnc', async (req, res) => {
         const cleanRnc = rnc.replace(/\D/g, "");
         if (!validateTaxId(cleanRnc)) return res.json({ valid: false, message: 'Formato inválido' });
 
-        const external = await fetchRncFromExternalApi(cleanRnc);
-        if (external) return res.json({ valid: true, name: external.name });
+        const type = cleanRnc.length === 9 ? 'JURIDICA' : 'FISICA';
 
-        const name = RNC_MOCK_DB[cleanRnc] || 'CONTRIBUYENTE REGISTRADO';
+        // 1) Base local
+        try {
+            if (mongoose.connection.readyState === 1) {
+                const doc = await RncContribuyente.findOne({ rnc: cleanRnc }).lean();
+                if (doc) return res.json({ valid: true, found: true, name: doc.name });
+            }
+        } catch (e) {
+            log.warn({ err: e.message, rnc: cleanRnc }, 'RNC local lookup failed');
+        }
+
+        // 2) API externa (y guardar en caché)
+        const external = await fetchRncFromExternalApi(cleanRnc);
+        if (external) {
+            try {
+                if (mongoose.connection.readyState === 1) {
+                    await RncContribuyente.findOneAndUpdate(
+                        { rnc: cleanRnc },
+                        { name: external.name, type: external.type, source: 'external_api', updatedAt: new Date() },
+                        { upsert: true, new: true }
+                    );
+                }
+            } catch (e) {
+                log.warn({ err: e.message, rnc: cleanRnc }, 'RNC cache save failed');
+            }
+            return res.json({ valid: true, found: true, name: external.name });
+        }
+
+        // No encontrado: el cliente escribe el nombre; al guardar se persiste en RncContribuyente
         if (process.env.NODE_ENV !== 'production') {
             await new Promise(resolve => setTimeout(resolve, 300));
         }
-        res.json({ valid: true, name });
+        res.json({ valid: true, found: false });
     } catch (error) {
         res.status(500).json({ valid: false, error: error.message });
     }
@@ -2272,6 +2341,7 @@ app.post('/api/customers', verifyToken, async (req, res) => {
             sanitizedData,
             { upsert: true, new: true }
         );
+        await upsertRncFromUser(sanitizedData.rnc, sanitizedData.name);
         res.json(customer);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -2521,10 +2591,11 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
         const itbis = Math.max(0, Math.min(Number(req.body.itbis) || 0, 999999999));
         const total = Math.max(0, Math.min(Number(req.body.total) || 0, 999999999));
         
-        if (!clientName || !clientRnc || items.length === 0) {
+        const isPlaceholderName = !clientName || (String(clientName).toUpperCase().trim() === 'CONTRIBUYENTE REGISTRADO');
+        if (isPlaceholderName || !clientRnc || items.length === 0) {
             await session.abortTransaction();
             session.endSession();
-            return res.status(400).json({ message: 'Cliente, RNC e items son requeridos' });
+            return res.status(400).json({ message: isPlaceholderName ? 'Indica el nombre real del cliente (no el placeholder).' : 'Cliente, RNC e items son requeridos' });
         }
         
         const fullNcf = await getNextNcf(req.userId, ncfType, session, clientRnc);
@@ -2543,6 +2614,8 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
         );
         await session.commitTransaction();
         session.endSession();
+
+        await upsertRncFromUser(clientRnc, clientName);
 
         // Notificación por email (factura emitida)
         try {
