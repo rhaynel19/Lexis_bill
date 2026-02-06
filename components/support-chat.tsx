@@ -28,15 +28,25 @@ export function SupportChat() {
     }, [isOpen]);
 
     const handleWhatsApp = (type: "tech" | "billing") => {
-        const userName = user?.name || "Usuario";
+        // Nombre para el mensaje: perfil (appConfig) > nombre fiscal > nombre de usuario
+        let displayName = user?.name || "Usuario";
+        try {
+            const raw = typeof window !== "undefined" ? localStorage.getItem("appConfig") : null;
+            const appConfig = raw ? JSON.parse(raw) : {};
+            const fromConfig = appConfig.companyName || appConfig.name;
+            if (fromConfig) displayName = fromConfig;
+            else if (user?.fiscalStatus?.confirmed) displayName = user.fiscalStatus.confirmed;
+        } catch {
+            if (user?.fiscalStatus?.confirmed) displayName = user.fiscalStatus.confirmed;
+        }
         const pantalla = pathname ? pathname.replace(/^\//, "") || "inicio" : "";
         const desde = pantalla ? `, desde ${pantalla}.` : ".";
 
         let message = "";
         if (type === "tech") {
-            message = `Hola, soy ${userName} de Lexis Bill${desde} Necesito soporte técnico con...`;
+            message = `Hola, soy ${displayName} de Lexis Bill${desde} Necesito soporte técnico con...`;
         } else {
-            message = `Hola, soy ${userName} de Lexis Bill${desde} Tengo una consulta de facturación o pagos sobre...`;
+            message = `Hola, soy ${displayName} de Lexis Bill${desde} Tengo una consulta de facturación o pagos sobre...`;
         }
 
         window.open(`https://wa.me/${SUPPORT_PHONE}?text=${encodeURIComponent(message)}`, "_blank");
