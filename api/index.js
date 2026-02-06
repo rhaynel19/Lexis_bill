@@ -504,29 +504,6 @@ partnerInviteSchema.index({ status: 1 });
 
 const PartnerInvite = mongoose.models.PartnerInvite || mongoose.model('PartnerInvite', partnerInviteSchema);
 
-// Consulta RNC: base local (listado DGII importado o caché de API externa)
-const rncContribuyenteSchema = new mongoose.Schema({
-    rnc: { type: String, required: true, unique: true },
-    name: { type: String, required: true },
-    type: { type: String, enum: ['JURIDICA', 'FISICA'], default: 'JURIDICA' },
-    source: { type: String, enum: ['dgii_list', 'external_api', 'user'], default: 'dgii_list' },
-    updatedAt: { type: Date, default: Date.now }
-});
-rncContribuyenteSchema.index({ rnc: 1 });
-const RncContribuyente = mongoose.models.RncContribuyente || mongoose.model('RncContribuyente', rncContribuyenteSchema);
-
-/** Guarda o actualiza RNC + nombre en la base local para que futuras consultas lo devuelvan (nombre ingresado por el usuario). */
-function upsertRncFromUser(rnc, name) {
-    const cleanRnc = typeof rnc === 'string' ? rnc.replace(/\D/g, '') : '';
-    const cleanName = typeof name === 'string' ? name.trim().slice(0, 500) : '';
-    if (!cleanRnc || !cleanName || !validateTaxId(cleanRnc)) return Promise.resolve();
-    return RncContribuyente.findOneAndUpdate(
-        { rnc: cleanRnc },
-        { name: cleanName, type: cleanRnc.length === 9 ? 'JURIDICA' : 'FISICA', source: 'user', updatedAt: new Date() },
-        { upsert: true, new: true }
-    ).catch(() => {});
-}
-
 function generateInviteToken() {
     return 'INV' + Math.random().toString(36).slice(2, 10).toUpperCase() + Date.now().toString(36).slice(-4).toUpperCase();
 }
@@ -644,7 +621,6 @@ const NCF_TYPES_GOVERNMENT = ['15', '45'];
 
 function validateNcfForClient(ncfType, clientRnc) {
     if (!clientRnc) return { valid: true };
-    if (ncfType === '34' || ncfType === '04') return { valid: true }; // Nota de crédito (E34/B04): mismo cliente que la factura original
     const cleanRnc = (clientRnc || '').replace(/[^\d]/g, '');
     const isBusiness = cleanRnc.length === 9;
     const isGov = cleanRnc.startsWith('4') || cleanRnc.length === 11; // simplificado: cédula o gubernamental
@@ -738,6 +714,14 @@ async function fetchRncFromExternalApi(cleanNumber) {
         return null;
     }
 }
+
+const RNC_MOCK_DB = {
+    '101010101': 'JUAN PEREZ',
+    '131888444': 'LEXIS BILL SOLUTIONS S.R.L.',
+    '40222222222': 'DRA. MARIA RODRIGUEZ (DEMO)',
+    '130851255': 'ASOCIACION DE ESPECIALISTAS FISCALES',
+    '22301650929': 'ASOCIACION PROFESIONAL DE SANTO DOMINGO'
+};
 
 // --- 5. ENDPOINTS ---
 
@@ -1265,7 +1249,7 @@ app.post('/api/auth/profile', verifyToken, async (req, res) => {
         const updates = req.body;
         const allowedUpdates = [
             'name', 'profession', 'logo', 'digitalSeal', 'exequatur',
-            'address', 'phone', 'hasElectronicBilling', 'confirmedFiscalName'
+            'address', 'phone', 'hasElectronicBilling'
         ];
 
         const user = await User.findById(req.userId);
@@ -1273,8 +1257,7 @@ app.post('/api/auth/profile', verifyToken, async (req, res) => {
 
         allowedUpdates.forEach(field => {
             if (updates[field] !== undefined) {
-                const val = updates[field];
-                user[field] = field === 'confirmedFiscalName' ? sanitizeString(val, 200) : val;
+                user[field] = updates[field];
             }
         });
 
@@ -2083,16 +2066,11 @@ app.get('/api/alerts', verifyToken, async (req, res) => {
         const ncfSettings = await NCFSettings.find({ userId: req.userId, isActive: true });
         ncfSettings.forEach(s => {
             const remaining = (s.finalNumber || 0) - (s.currentValue || 0);
-            const label = `${s.series || 'E'}${String(s.type).padStart(2, '0')}`;
-            const expiryStr = s.expiryDate ? new Date(s.expiryDate).toLocaleDateString('es-DO') : '';
             if (remaining < 10 && remaining >= 0) {
-                alerts.push({ type: 'ncf_low', message: `Le quedan ${remaining} comprobantes válidos tipo ${label}.${expiryStr ? ` La secuencia vence el ${expiryStr}.` : ''}`, severity: 'warning' });
+                alerts.push({ type: 'ncf_low', message: `NCF ${s.series}${s.type} le quedan ${remaining} números.`, severity: 'warning' });
             }
-            if (s.expiryDate && new Date(s.expiryDate) < in30Days && remaining >= 0) {
-                const hasLow = alerts.some(a => a.type === 'ncf_low' && a.message.includes(label));
-                if (!hasLow) {
-                    alerts.push({ type: 'ncf_expiring', message: `Le quedan ${remaining} comprobantes tipo ${label}. La secuencia vence el ${expiryStr}.`, severity: 'warning' });
-                }
+            if (s.expiryDate && new Date(s.expiryDate) < in30Days) {
+                alerts.push({ type: 'ncf_expiring', message: `Secuencia NCF ${s.series}${s.type} vence el ${new Date(s.expiryDate).toLocaleDateString('es-DO')}.`, severity: 'warning' });
             }
         });
 
@@ -2128,37 +2106,11 @@ app.get('/api/rnc/:number', async (req, res) => {
 
     if (!validateTaxId(cleanNumber)) return res.status(400).json({ valid: false, message: 'Documento Inválido' });
 
-    const type = cleanNumber.length === 9 ? 'JURIDICA' : 'FISICA';
-
-    // 1) Consulta base local (listado DGII importado o caché de API externa)
-    try {
-        if (mongoose.connection.readyState === 1) {
-            const doc = await RncContribuyente.findOne({ rnc: cleanNumber }).lean();
-            if (doc) return res.json({ valid: true, found: true, rnc: cleanNumber, name: doc.name, type: doc.type || type });
-        }
-    } catch (e) {
-        log.warn({ err: e.message, rnc: cleanNumber }, 'RNC local lookup failed');
-    }
-
-    // 2) API externa (y guardar en caché si responde)
     const external = await fetchRncFromExternalApi(cleanNumber);
-    if (external) {
-        try {
-            if (mongoose.connection.readyState === 1) {
-                await RncContribuyente.findOneAndUpdate(
-                    { rnc: cleanNumber },
-                    { name: external.name, type: external.type, source: 'external_api', updatedAt: new Date() },
-                    { upsert: true, new: true }
-                );
-            }
-        } catch (e) {
-            log.warn({ err: e.message, rnc: cleanNumber }, 'RNC cache save failed');
-        }
-        return res.json({ ...external, found: true });
-    }
+    if (external) return res.json(external);
 
-    // No encontrado: el cliente debe escribir el nombre; al guardar factura/cliente se guarda en BD
-    res.json({ valid: true, found: false, rnc: cleanNumber, type });
+    const name = RNC_MOCK_DB[cleanNumber] || 'CONTRIBUYENTE REGISTRADO';
+    res.json({ valid: true, rnc: cleanNumber, name, type: cleanNumber.length === 9 ? 'JURIDICA' : 'FISICA' });
 });
 
 app.post('/api/validate-rnc', async (req, res) => {
@@ -2169,40 +2121,14 @@ app.post('/api/validate-rnc', async (req, res) => {
         const cleanRnc = rnc.replace(/\D/g, "");
         if (!validateTaxId(cleanRnc)) return res.json({ valid: false, message: 'Formato inválido' });
 
-        const type = cleanRnc.length === 9 ? 'JURIDICA' : 'FISICA';
-
-        // 1) Base local
-        try {
-            if (mongoose.connection.readyState === 1) {
-                const doc = await RncContribuyente.findOne({ rnc: cleanRnc }).lean();
-                if (doc) return res.json({ valid: true, found: true, name: doc.name });
-            }
-        } catch (e) {
-            log.warn({ err: e.message, rnc: cleanRnc }, 'RNC local lookup failed');
-        }
-
-        // 2) API externa (y guardar en caché)
         const external = await fetchRncFromExternalApi(cleanRnc);
-        if (external) {
-            try {
-                if (mongoose.connection.readyState === 1) {
-                    await RncContribuyente.findOneAndUpdate(
-                        { rnc: cleanRnc },
-                        { name: external.name, type: external.type, source: 'external_api', updatedAt: new Date() },
-                        { upsert: true, new: true }
-                    );
-                }
-            } catch (e) {
-                log.warn({ err: e.message, rnc: cleanRnc }, 'RNC cache save failed');
-            }
-            return res.json({ valid: true, found: true, name: external.name });
-        }
+        if (external) return res.json({ valid: true, name: external.name });
 
-        // No encontrado: el cliente escribe el nombre; al guardar se persiste en RncContribuyente
+        const name = RNC_MOCK_DB[cleanRnc] || 'CONTRIBUYENTE REGISTRADO';
         if (process.env.NODE_ENV !== 'production') {
             await new Promise(resolve => setTimeout(resolve, 300));
         }
-        res.json({ valid: true, found: false });
+        res.json({ valid: true, name });
     } catch (error) {
         res.status(500).json({ valid: false, error: error.message });
     }
@@ -2245,23 +2171,6 @@ app.post('/api/ncf-settings', verifyToken, async (req, res) => {
 
         await newSetting.save();
         res.status(201).json(newSetting);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.delete('/api/ncf-settings/:id', verifyToken, async (req, res) => {
-    try {
-        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID de lote inválido' });
-        const setting = await NCFSettings.findOne({ _id: req.params.id, userId: req.userId });
-        if (!setting) return res.status(404).json({ message: 'Lote no encontrado' });
-        const currentVal = setting.currentValue ?? setting.initialNumber;
-        const initialVal = setting.initialNumber ?? 0;
-        if (currentVal > initialVal) {
-            return res.status(400).json({ message: 'No se puede eliminar: ya se han usado números de este lote. Agregue un nuevo lote con otro rango.' });
-        }
-        await NCFSettings.deleteOne({ _id: req.params.id, userId: req.userId });
-        res.json({ success: true, message: 'Lote eliminado' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -2365,7 +2274,6 @@ app.post('/api/customers', verifyToken, async (req, res) => {
             sanitizedData,
             { upsert: true, new: true }
         );
-        await upsertRncFromUser(sanitizedData.rnc, sanitizedData.name);
         res.json(customer);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -2639,8 +2547,6 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
         await session.commitTransaction();
         session.endSession();
 
-        await upsertRncFromUser(clientRnc, clientName);
-
         // Notificación por email (factura emitida)
         try {
             const mailer = require('./mailer');
@@ -2654,63 +2560,6 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
         await session.abortTransaction();
         session.endSession();
         res.status(500).json({ error: error.message });
-    }
-});
-
-// Nota de crédito (e-CF 34): anula la factura original y crea el comprobante de crédito
-app.post('/api/invoices/:id/credit-note', verifyToken, async (req, res) => {
-    const invoiceId = req.params.id;
-    if (!invoiceId || !isValidObjectId(invoiceId)) {
-        return res.status(400).json({ message: 'ID de factura inválido' });
-    }
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    try {
-        const original = await Invoice.findOne({ _id: invoiceId, userId: req.userId }).session(session).lean();
-        if (!original) {
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(404).json({ message: 'Factura no encontrada' });
-        }
-        if (original.status === 'cancelled' || original.annulledBy) {
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(400).json({ message: 'Esta factura ya fue anulada con una nota de crédito' });
-        }
-        const series = (original.ncfSequence || 'E')[0];
-        const creditNoteType = series === 'B' ? '04' : '34';
-        const fullNcf = await getNextNcf(req.userId, creditNoteType, session, original.clientRnc);
-        const creditNote = new Invoice({
-            userId: req.userId,
-            clientName: original.clientName,
-            clientRnc: original.clientRnc,
-            ncfType: creditNoteType,
-            ncfSequence: fullNcf,
-            items: original.items || [],
-            subtotal: original.subtotal,
-            itbis: original.itbis,
-            total: original.total,
-            date: new Date(),
-            status: 'paid',
-            modifiedNcf: original.ncfSequence
-        });
-        await creditNote.save({ session });
-        await Invoice.updateOne(
-            { _id: invoiceId, userId: req.userId },
-            { $set: { status: 'cancelled', annulledBy: fullNcf } },
-            { session }
-        );
-        await session.commitTransaction();
-        session.endSession();
-        res.status(201).json({ message: 'Nota de crédito emitida', ncf: fullNcf, invoice: creditNote });
-    } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
-        const msg = error.message || 'Error al emitir nota de crédito';
-        if (msg.includes('secuencias NCF') || msg.includes('vencido')) {
-            return res.status(400).json({ message: 'Configura un lote de comprobantes tipo Nota de crédito (E34 o B04) en Configuración.' });
-        }
-        res.status(500).json({ message: msg });
     }
 });
 
@@ -2935,7 +2784,7 @@ app.get('/api/expenses', verifyToken, async (req, res) => {
 
 app.post('/api/expenses', verifyToken, async (req, res) => {
     try {
-        const { supplierName, supplierRnc, ncf, amount, itbis, category, date, imageUrl } = req.body;
+        const { supplierName, supplierRnc, ncf, amount, itbis, category, date } = req.body;
         const newExpense = new Expense({
             userId: req.userId,
             supplierName,
@@ -2944,8 +2793,7 @@ app.post('/api/expenses', verifyToken, async (req, res) => {
             amount,
             itbis: itbis || 0,
             category,
-            date: date || new Date(),
-            imageUrl: imageUrl || undefined
+            date: date || new Date()
         });
         await newExpense.save();
         res.status(201).json(newExpense);

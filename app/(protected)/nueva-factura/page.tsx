@@ -51,17 +51,7 @@ export default function NewInvoice() {
     const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
     const [rncError, setRncError] = useState("");
     const [applyRetentions, setApplyRetentions] = useState(false);
-    // Tasas de retención ITBIS por ley en RD (valor como string para que el Select muestre la opción elegida)
-    const ITBIS_RETENTION_RATES = [
-        { value: "0", label: "0% (No retener)" },
-        { value: "0.02", label: "2% (Transacciones con tarjetas / Norma 06-2023)" },
-        { value: "0.10", label: "10%" },
-        { value: "0.16", label: "16%" },
-        { value: "0.30", label: "30% (Servicios profesionales)" },
-        { value: "0.50", label: "50%" },
-        { value: "1.00", label: "100% (P. jurídica a P. física)" },
-    ] as const;
-    const [itbisRetentionRate, setItbisRetentionRate] = useState("0.30");
+    const [itbisRetentionRate, setItbisRetentionRate] = useState(0.30); // 30% por defecto
     const [showPreview, setShowPreview] = useState(false);
 
     // Smart RNC States
@@ -230,20 +220,15 @@ export default function NewInvoice() {
         };
         fetchServices();
 
-        // Templates from API, fallback localStorage (siempre array)
+        // Templates from API
         const fetchTemplates = async () => {
             try {
                 const { api } = await import("@/lib/api-service");
                 const templates = await api.getInvoiceTemplates();
-                setSavedTemplates(Array.isArray(templates) ? templates : []);
+                setSavedTemplates(templates || []);
             } catch {
-                try {
-                    const local = localStorage.getItem("invoiceTemplates");
-                    const parsed = local ? JSON.parse(local) : [];
-                    setSavedTemplates(Array.isArray(parsed) ? parsed : []);
-                } catch {
-                    setSavedTemplates([]);
-                }
+                const local = localStorage.getItem("invoiceTemplates");
+                if (local) setSavedTemplates(JSON.parse(local));
             }
         };
         fetchTemplates();
@@ -334,14 +319,13 @@ export default function NewInvoice() {
             try {
                 const { api } = await import("@/lib/api-service");
                 const result: any = await api.validateRnc(rnc);
-                if (result?.valid && result?.found && result?.name) {
+                if (result?.valid && result?.name) {
                     const nameFromApi = (result.name || "").trim();
-                    setClientName((prev) => (prev.trim() ? prev : nameFromApi));
-                    suggestNCF(clean, nameFromApi);
-                    setRncError("");
-                } else if (result?.valid && result?.found === false) {
-                    setRncError("");
-                    toast.info("RNC válido. Escribe el nombre del cliente; al guardar se recordará para la próxima vez.");
+                    if (nameFromApi.toUpperCase() !== "CONTRIBUYENTE REGISTRADO") {
+                        setClientName((prev) => (prev.trim() ? prev : nameFromApi));
+                        suggestNCF(clean, nameFromApi);
+                        setRncError("");
+                    }
                 }
             } catch {
                 // Silencioso: el usuario puede usar el botón "Buscar" o escribir el nombre a mano
@@ -405,14 +389,14 @@ export default function NewInvoice() {
         setClientName(t.clientName || "");
         setRnc(t.rnc || "");
         const its = (t.items || []).map((i: any, idx: number) => ({
-            id: (i.id ?? i._id?.toString() ?? `${Date.now()}-${idx}`).toString(),
+            id: (i.id || Date.now() + idx).toString(),
             description: i.description || "",
             quantity: i.quantity ?? 1,
             price: i.price ?? 0,
             isExempt: i.isExempt
         }));
         setItems(its.length ? its : [{ id: "1", description: "", quantity: 1, price: 0, isExempt: false }]);
-        toast.success(`📂 Plantilla "${t.name || "Sin nombre"}" cargada.`);
+        toast.success(`📂 Plantilla "${t.name}" cargada.`);
     };
 
     // CRM Handlers
@@ -425,18 +409,20 @@ export default function NewInvoice() {
             const result: any = await api.validateRnc(rnc);
 
             if (result.valid) {
-                if (result.found && result.name) {
-                    const nameFromApi = (result.name || "").trim();
-                    setClientName((prev) => (prev.trim() ? prev : nameFromApi));
-                    if (result.type === "JURIDICA") setApplyRetentions(true);
-                    suggestNCF(rnc, result.name || "");
-                    setRncError("");
-                } else {
-                    setRncError("");
-                    toast.info("RNC válido. Escribe el nombre del cliente; al guardar la factura o el cliente se recordará para la próxima vez.");
-                }
+                // Rellenar nombre solo si la API trae un nombre real (nunca usar placeholder "CONTRIBUYENTE REGISTRADO")
+                const nameFromApi = (result.name || "").trim();
+                const isRealName = nameFromApi && nameFromApi.toUpperCase() !== "CONTRIBUYENTE REGISTRADO";
+                setClientName((prev) => {
+                    if (isRealName) return nameFromApi;
+                    return prev;
+                });
+                // Auto-set type based on RNC type
+                if (result.type === "JURIDICA") setApplyRetentions(true);
+
+                // Smart NCF Suggestion
+                suggestNCF(rnc, result.name || "");
             } else {
-                setRncError("RNC o cédula inválido");
+                setRncError("Contribuyente no encontrado o RNC inválido");
             }
         } catch (e: any) {
             console.error(e);
@@ -559,16 +545,16 @@ export default function NewInvoice() {
     // ISR: 10% de la base imponible (Servicios Profesionales)
     const isrRetention = applyRetentions ? taxableSubtotal * 0.10 : 0;
 
-    // Retención ITBIS: tasa legal sobre el ITBIS (valor en estado es string)
-    const itbisRateNum = Number(parseFloat(itbisRetentionRate)) || 0;
-    const itbisRetention = applyRetentions ? itbis * itbisRateNum : 0;
+    // Retención ITBIS: 30% del ITBIS (Norma 02-05 para servicios)
+    const itbisRetention = applyRetentions ? itbis * itbisRetentionRate : 0;
 
     // Total Factura (lo que paga el cliente antes de retenciones)
+    // Nota: En e-CF, el total de la factura incluye ITBIS. Las retenciones son informativas para el pago.
+    // Sin embargo, para "cuánto recibiré neto", calculamos:
     const invoiceTotal = subtotal + itbis;
 
-    // Total a Recibir (Neto): asegurar que nunca sea NaN
-    const rawNeto = invoiceTotal - isrRetention - itbisRetention;
-    const totalNeto = Number.isFinite(rawNeto) ? rawNeto : 0;
+    // Total a Recibir (Neto)
+    const totalNeto = invoiceTotal - isrRetention - itbisRetention;
 
     // Usaremos invoiceTotal para el documento, pero mostraremos el des desglose
     const total = invoiceTotal;
@@ -810,21 +796,15 @@ export default function NewInvoice() {
         <div className="container mx-auto px-4 py-8 max-w-5xl">
             <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Nueva factura" }]} className="mb-4 text-muted-foreground" />
             {/* Encabezado */}
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-8 flex items-center justify-between">
                 <div>
                     <h2 className="text-3xl font-bold text-accent">Nueva Factura</h2>
-                    <p className="text-muted-foreground">Crear comprobante fiscal (e-CF próximamente)</p>
+                    <p className="text-muted-foreground">Crear comprobante fiscal electrónico (e-CF)</p>
                     <p className="text-xs text-muted-foreground/80 mt-1">Tu borrador se guarda automáticamente y está disponible en todos tus dispositivos.</p>
                 </div>
                 <Link href="/dashboard">
                     <Button variant="outline">← Volver</Button>
                 </Link>
-            </div>
-
-            {/* Aviso: facturación electrónica aún no disponible */}
-            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
-                <p className="font-medium">La facturación electrónica (e-CF con DGII) aún no está disponible.</p>
-                <p className="mt-1 text-amber-700 dark:text-amber-300/90">Por ahora puedes crear comprobantes internos, descargar PDF y enviarlos por WhatsApp. La integración con DGII estará disponible en próximas actualizaciones.</p>
             </div>
 
             {/* Template Bar */}
@@ -834,22 +814,16 @@ export default function NewInvoice() {
                 </Button>
                 <div className="h-8 w-[1px] bg-border mx-2"></div>
                 {/* Loader Mock */}
-                <Select
-                    onValueChange={(val) => {
-                        const idx = parseInt(val, 10);
-                        if (!Number.isNaN(idx) && savedTemplates[idx] != null) {
-                            handleLoadTemplate(savedTemplates[idx]);
-                        }
-                    }}
-                >
-                    <SelectTrigger className="w-[220px] h-9" disabled={savedTemplates.length === 0}>
-                        <SelectValue placeholder={savedTemplates.length === 0 ? "No hay plantillas" : "Cargar Plantilla..."} />
+                <Select onValueChange={(val) => {
+                    const t = savedTemplates.find((tmp: any) => tmp.name === val);
+                    if (t) handleLoadTemplate(t);
+                }}>
+                    <SelectTrigger className="w-[200px] h-9">
+                        <SelectValue placeholder="Cargar Plantilla..." />
                     </SelectTrigger>
                     <SelectContent>
                         {savedTemplates.map((t: any, i: number) => (
-                            <SelectItem key={i} value={String(i)}>
-                                {t.name || `Plantilla ${i + 1}`}
-                            </SelectItem>
+                            <SelectItem key={i} value={t.name}>{t.name}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
@@ -865,14 +839,14 @@ export default function NewInvoice() {
                                 <CardHeader>
                                     <CardTitle>Información del Comprobante</CardTitle>
                                     <CardDescription>
-                                        Selecciona el tipo de comprobante (B o e-CF cuando esté disponible)
+                                        Selecciona el tipo de comprobante fiscal electrónico
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     {/* Selector de Tipo de e-CF */}
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2">
-                                            <Label htmlFor="invoice-type">Tipo de Comprobante (NCF) *</Label>
+                                            <Label htmlFor="invoice-type">Tipo de Comprobante (e-CF) *</Label>
                                             <ContextualHelp text="NCF: Número de Comprobante Fiscal. B01/E31 para empresas (RNC 9 dígitos), B02/E32 para consumidor final. El tipo debe coincidir con el cliente." mode="popover" />
                                         </div>
                                         <Select value={invoiceType} onValueChange={setInvoiceType}>
@@ -1330,18 +1304,15 @@ export default function NewInvoice() {
                                                 <div>
                                                     <Label htmlFor="itbis-ret-rate" className="text-xs">Tasa Retención ITBIS</Label>
                                                     <Select
-                                                        value={itbisRetentionRate}
-                                                        onValueChange={(val) => setItbisRetentionRate(val)}
+                                                        value={itbisRetentionRate.toString()}
+                                                        onValueChange={(val) => setItbisRetentionRate(parseFloat(val))}
                                                     >
-                                                        <SelectTrigger id="itbis-ret-rate" className="h-9 min-w-[220px]">
-                                                            <SelectValue placeholder="Seleccione tasa" />
+                                                        <SelectTrigger id="itbis-ret-rate" className="h-8">
+                                                            <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {ITBIS_RETENTION_RATES.map((opt) => (
-                                                                <SelectItem key={opt.value} value={opt.value}>
-                                                                    {opt.label}
-                                                                </SelectItem>
-                                                            ))}
+                                                            <SelectItem value="0.30">30% (Servicios Profesionales)</SelectItem>
+                                                            <SelectItem value="1.00">100% (Casos Especiales)</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
@@ -1397,7 +1368,7 @@ export default function NewInvoice() {
                                     {itbisRetention > 0 && (
                                         <div className="flex justify-between items-center py-2 border-b border-border/10 text-destructive">
                                             <span className="font-medium">
-                                                Retención ITBIS ({(itbisRateNum * 100)}%):
+                                                Retención ITBIS ({itbisRetentionRate * 100}%):
                                             </span>
                                             <span className="text-xl font-semibold">
                                                 - {formatCurrency(itbisRetention)}

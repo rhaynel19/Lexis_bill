@@ -85,7 +85,6 @@ export default function GastosPage() {
     const [zoom, setZoom] = useState(1);
     const [extraPhotos, setExtraPhotos] = useState<string[]>([]);
     const [dataFromScan, setDataFromScan] = useState(false); // true cuando los datos vienen del escaneo (aviso de verificación)
-    const [isManualEntry, setIsManualEntry] = useState(false); // true cuando abrieron por "Registrar gasto manual" (solo adjuntar foto, no escanear)
     const invoiceImgRef = useRef<HTMLImageElement>(null);
 
     useEffect(() => {
@@ -112,20 +111,6 @@ export default function GastosPage() {
         }
     };
 
-    const getImageDataUrl = (): Promise<string | null> => {
-        if (!scannedImage) return Promise.resolve(null);
-        if (scannedImage.startsWith("data:")) return Promise.resolve(scannedImage);
-        return fetch(scannedImage)
-            .then((r) => r.blob())
-            .then((blob) => new Promise<string>((res, rej) => {
-                const fr = new FileReader();
-                fr.onload = () => res(fr.result as string);
-                fr.onerror = rej;
-                fr.readAsDataURL(blob);
-            }))
-            .catch(() => null);
-    };
-
     const handleSaveExpense = async (andAddAnother = false) => {
         if (!formData.supplierName || !formData.supplierRnc || !formData.ncf || !formData.amount) {
             toast.error("Por favor completa los campos requeridos");
@@ -134,12 +119,10 @@ export default function GastosPage() {
 
         setIsSaving(true);
         try {
-            const imageUrlToSend = await getImageDataUrl();
             const payload = {
                 ...formData,
                 amount: parseFloat(formData.amount),
                 itbis: parseFloat(formData.itbis) || 0,
-                ...(imageUrlToSend ? { imageUrl: imageUrlToSend } : {}),
             };
             await api.saveExpense(payload);
             toast.success("Gasto registrado correctamente");
@@ -195,7 +178,6 @@ export default function GastosPage() {
                         date: parsed.date ? parsed.date.split("-").reverse().join("-") : new Date().toISOString().split("T")[0],
                     });
                     setDataFromScan(true);
-                    setIsManualEntry(false);
                     if (!dialogAlreadyOpen) setIsAddOpen(true);
                     toast.success("Factura detectada por QR. Revisa los datos antes de guardar.");
                     setIsScanning(false);
@@ -228,7 +210,6 @@ export default function GastosPage() {
                         date: parsed.date || new Date().toISOString().split("T")[0],
                     });
                     setDataFromScan(true);
-                    setIsManualEntry(false);
                     if (!dialogAlreadyOpen) setIsAddOpen(true);
                     toast.success("Datos extraídos. Revisa y corrige si hay errores antes de guardar.");
                     setIsScanning(false);
@@ -242,7 +223,6 @@ export default function GastosPage() {
         // 3. No usar datos aleatorios: abrir formulario vacío para entrada manual
         toast.warning("No se pudo extraer datos del comprobante. Completa el formulario manualmente.");
         setDataFromScan(false);
-        setIsManualEntry(false);
         setFormData({
             supplierName: "",
             supplierRnc: "",
@@ -305,9 +285,8 @@ export default function GastosPage() {
             date: new Date().toISOString().split("T")[0],
         });
         setDataFromScan(false);
-        setIsManualEntry(false);
         if (scannedImage) {
-            if (!scannedImage.startsWith("data:")) URL.revokeObjectURL(scannedImage);
+            URL.revokeObjectURL(scannedImage);
             setScannedImage(null);
         }
         setExtraPhotos((prev) => {
@@ -319,22 +298,7 @@ export default function GastosPage() {
 
     const openManualForm = () => {
         resetForm();
-        setIsManualEntry(true);
         setIsAddOpen(true);
-    };
-
-    const handleAttachPhotoOnly = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        e.target.value = "";
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const dataUrl = reader.result as string;
-            if (scannedImage && !scannedImage.startsWith("data:")) URL.revokeObjectURL(scannedImage);
-            setScannedImage(dataUrl);
-            toast.success("Foto de la factura anexada. Completa los datos y guarda.");
-        };
-        reader.readAsDataURL(file);
     };
 
     const filteredExpenses = expenses.filter(exp =>
@@ -362,18 +326,7 @@ export default function GastosPage() {
                     </Link>
                 </div>
 
-                <div className="flex flex-wrap gap-3 w-full md:w-auto items-end">
-                    <div className="flex flex-col gap-1 w-full sm:w-auto">
-                        <Button
-                            variant="default"
-                            className="w-full sm:w-auto h-12 px-6 font-bold flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground shadow-md"
-                            onClick={openManualForm}
-                        >
-                            <Receipt className="w-5 h-5" />
-                            Registrar gasto manual
-                        </Button>
-                        <p className="text-[10px] text-muted-foreground px-1">Completa los datos y anexa foto de la factura (opcional). Cumple con el 606 para la DGII.</p>
-                    </div>
+                <div className="flex flex-wrap gap-3 w-full md:w-auto">
                     <div className="relative overflow-hidden group w-full sm:w-auto">
                         <input
                             type="file"
@@ -396,11 +349,19 @@ export default function GastosPage() {
                     </div>
 
                     <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) resetForm(); }}>
+                        <Button
+                            variant="secondary"
+                            className="w-full sm:w-auto h-12 px-6 font-bold flex items-center gap-2 border-2 border-dashed"
+                            onClick={openManualForm}
+                        >
+                            <Keyboard className="w-5 h-5" />
+                            Entrada manual (sin escanear)
+                        </Button>
                         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background border-border/20 shadow-2xl">
                             <DialogHeader>
                                 <DialogTitle className="text-2xl font-serif">Registrar Gasto 606</DialogTitle>
                                 <DialogDescription>
-                                    Completa los datos del comprobante según la factura (suplidor, RNC, NCF, monto, tipo de gasto DGII). Puedes anexar una foto de la factura para tu respaldo (opcional).
+                                    Completa los datos del comprobante. Puedes subir una foto o PDF después (opcional) o escanear primero y corregir aquí.
                                 </DialogDescription>
                             </DialogHeader>
 
@@ -436,7 +397,7 @@ export default function GastosPage() {
                                             ) : (
                                                 <label className="flex flex-col items-center justify-center w-full text-slate-400 gap-3 py-6 cursor-pointer" htmlFor="gastos-upload-comprobante">
                                                     <Upload className="w-10 h-10 opacity-50" />
-                                                    <p className="text-xs font-medium">Anexar foto de la factura (opcional)</p>
+                                                    <p className="text-xs font-medium">Subir comprobante o factura (opcional)</p>
                                                     <span className="inline-flex items-center gap-2 rounded-md border border-dashed px-4 py-2 text-sm font-medium hover:bg-muted/50">
                                                         {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                                                         {isScanning ? "Leyendo…" : "Elegir archivo"}
@@ -447,8 +408,8 @@ export default function GastosPage() {
                                                         accept="image/*,application/pdf"
                                                         className="hidden"
                                                         disabled={isScanning}
-                                                        onChange={(e) => (isManualEntry ? handleAttachPhotoOnly(e) : handleScan(e, true))}
-                                                        aria-label="Anexar foto de la factura"
+                                                        onChange={(e) => handleScan(e, true)}
+                                                        aria-label="Subir comprobante"
                                                     />
                                                 </label>
                                             )}

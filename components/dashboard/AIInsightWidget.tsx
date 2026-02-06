@@ -10,40 +10,25 @@ import { cn } from "@/lib/utils";
 interface AIInsightWidgetProps {
     revenue: number;
     pendingCount: number;
-    /** Ingresos del mes anterior */
+    /** Ingresos del mes anterior (cuando viene del dashboard con datos reales) */
     previousRevenue?: number;
-    /** Alertas predictivas (NCF, pendientes, etc.) */
+    /** Alertas predictivas con datos reales (NCF, pendientes, clientes recurrentes) */
     predictions?: string[];
-    /** Si el perfil fiscal y al menos un lote NCF están listos */
-    configComplete?: boolean;
-    /** Nombre del usuario para personalizar el saludo */
-    userName?: string;
 }
 
-export function AIInsightWidget({
-    revenue,
-    pendingCount,
-    previousRevenue,
-    predictions = [],
-    configComplete = true,
-    userName = ""
-}: AIInsightWidgetProps) {
+export function AIInsightWidget({ revenue, pendingCount, previousRevenue, predictions = [] }: AIInsightWidgetProps) {
     const { profession, mode } = usePreferences();
     const [insight, setInsight] = useState("");
     const [task, setTask] = useState<{ task: string, urgency: string } | null>(null);
 
     useEffect(() => {
         const prevRev = previousRevenue !== undefined ? previousRevenue : revenue * 0.8;
-        const text = AIService.generateMonthlyInsight(revenue, prevRev, pendingCount, profession, {
-            userName,
-            configComplete,
-            predictions
-        });
+        const text = AIService.generateMonthlyInsight(revenue, prevRev, pendingCount, profession);
         setInsight(text);
 
         const currentDay = new Date().getDate();
         setTask(AIService.predictNextTaxTask(currentDay));
-    }, [revenue, previousRevenue, pendingCount, profession, configComplete, userName, predictions]);
+    }, [revenue, previousRevenue, pendingCount, profession]);
 
     return (
         <Card className="border-none bg-gradient-to-r from-violet-600/10 to-indigo-600/10 shadow-sm mb-6 overflow-hidden relative">

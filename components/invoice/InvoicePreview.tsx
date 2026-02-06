@@ -4,9 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { usePreferences } from "@/components/providers/PreferencesContext";
-import { useAuth } from "@/components/providers/AuthContext";
 import { cn } from "@/lib/utils";
-import { APP_CONFIG } from "@/lib/config";
 import { User, Phone, MapPin, Receipt, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -34,14 +32,7 @@ interface InvoicePreviewProps {
 
 export function InvoicePreview({ data }: InvoicePreviewProps) {
     const { profession } = usePreferences();
-    const { user: authUser } = useAuth();
     const [viewMode, setViewMode] = useState<"simple" | "fiscal">("simple");
-
-    // Nombre de la empresa: nombre fiscal confirmado o configuración
-    const appConfig = typeof window !== "undefined"
-        ? (() => { try { const c = localStorage.getItem("appConfig"); return c ? JSON.parse(c) : {}; } catch { return {}; } })()
-        : {};
-    const companyName = authUser?.fiscalStatus?.confirmed ?? appConfig.companyName ?? appConfig.name ?? APP_CONFIG.company.name ?? "Lexis Bill";
 
     // Adaptive Labels based on Profession
     const getClientLabel = () => {
@@ -83,14 +74,12 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
             <div className="flex justify-end gap-2 mb-2">
                 <div className="bg-muted p-1 rounded-lg flex text-xs font-medium border border-border/10">
                     <button
-                        type="button"
                         onClick={() => setViewMode("simple")}
                         className={cn("px-3 py-1.5 rounded-md transition-all", viewMode === "simple" ? "bg-background shadow-sm text-foreground font-bold" : "text-muted-foreground hover:text-foreground")}
                     >
                         Vista Cliente
                     </button>
                     <button
-                        type="button"
                         onClick={() => setViewMode("fiscal")}
                         className={cn("px-3 py-1.5 rounded-md transition-all", viewMode === "fiscal" ? "bg-background shadow-sm text-accent font-bold" : "text-muted-foreground hover:text-foreground")}
                     >
@@ -110,8 +99,8 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
 
                     <div className="flex justify-between items-start relative z-10">
                         <div>
-                            <h2 className="text-2xl font-serif font-bold tracking-tight mb-1 text-foreground">
-                                {companyName}
+                            <h2 className="text-2xl font-serif font-bold tracking-tight mb-1">
+                                <span className="text-accent">LEXIS</span> BILL
                             </h2>
                             <p className="text-xs text-muted-foreground uppercase tracking-widest">Servicios Profesionales</p>
                         </div>
@@ -138,9 +127,9 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
                                 {data.clientName || <span className="text-muted-foreground/30 italic">Nombre del cliente...</span>}
                             </h3>
                             {data.rnc && (
-                                <div className="flex items-center gap-2 mt-1 min-w-0">
-                                    <Badge variant="secondary" className="text-[10px] text-muted-foreground bg-secondary/50 shrink-0">RNC/Cédula</Badge>
-                                    <span className="font-mono text-sm text-foreground/80 truncate min-w-0" title={data.rnc}>{data.rnc}</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <Badge variant="secondary" className="text-[10px] text-muted-foreground bg-secondary/50">RNC/Cédula</Badge>
+                                    <span className="font-mono text-sm text-foreground/80">{data.rnc}</span>
                                 </div>
                             )}
                         </div>
@@ -210,21 +199,15 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
                 {/* Footer / Branding */}
                 <div className="bg-secondary/30 p-4 text-center border-t border-border/10">
                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-2">
-                        <ShieldCheck className="w-3 h-3 text-accent" /> Documento generado con Lexis Bill
+                        <ShieldCheck className="w-3 h-3 text-accent" /> Documento generado por Lexis Bill
                     </p>
                 </div>
             </Card>
 
-            {/* Vista Cliente: mensaje de ayuda */}
-            {viewMode === "simple" && (
+            {/* Simple Mode Helper */}
+            {viewMode === 'simple' && (
                 <p className="text-xs text-center text-muted-foreground animate-pulse">
                     Esta es la vista simplificada que recibirá tu cliente por WhatsApp.
-                </p>
-            )}
-            {/* Vista Fiscal: mensaje de ayuda */}
-            {viewMode === "fiscal" && (
-                <p className="text-xs text-center text-muted-foreground">
-                    Vista con desglose fiscal (subtotal e ITBIS) para contabilidad.
                 </p>
             )}
         </div>

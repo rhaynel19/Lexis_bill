@@ -66,9 +66,9 @@ export function DocumentPreview({
                         <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-2">{type === "invoice" ? "FACTURA" : "COTIZACIÓN"}</h1>
                         <p className="text-muted-foreground text-sm uppercase tracking-widest">{type === "invoice" ? "E-CF (Borrador)" : "Propuesta Comercial"}</p>
                     </div>
-                    <div className="text-left sm:text-right min-w-0 max-w-full">
-                        <h2 className="text-xl font-bold text-foreground truncate" title={data.clientName}>{data.clientName}</h2>
-                        <p className="text-muted-foreground text-sm truncate" title={data.rnc}>{data.rnc}</p>
+                    <div className="text-left sm:text-right">
+                        <h2 className="text-xl font-bold text-foreground">{data.clientName}</h2>
+                        <p className="text-muted-foreground text-sm">{data.rnc}</p>
                         <p className="text-muted-foreground text-sm">{data.date ? new Date(data.date).toLocaleDateString("es-DO") : new Date().toLocaleDateString("es-DO")}</p>
                     </div>
                 </div>

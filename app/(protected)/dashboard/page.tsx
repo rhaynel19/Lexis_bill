@@ -131,7 +131,6 @@ export default function Dashboard() {
   const [estimatedTaxes, setEstimatedTaxes] = useState(0);
   const [chartData, setChartData] = useState<number[]>([0, 0, 0, 0]);
   const [monthLabels, setMonthLabels] = useState<string[]>([]);
-  const [hasNcfBatch, setHasNcfBatch] = useState(false);
 
   // Estado para el Wizard de Configuración e Identidad Fiscal
   const [fiscalState, setFiscalState] = useState<{ suggested: string; confirmed: string | null }>({ suggested: "", confirmed: null });
@@ -155,11 +154,8 @@ export default function Dashboard() {
           confirmed: authUser.fiscalStatus?.confirmed || null
         });
 
-        const { api } = await import("@/lib/api-service");
-        const ncfSettings = await api.getNcfSettings().catch(() => []);
-        setHasNcfBatch(Array.isArray(ncfSettings) && ncfSettings.length > 0);
-
         // 2. Fetch subscription & fiscal status
+        const { api } = await import("@/lib/api-service");
 
         const status = await api.getSubscriptionStatus().catch(() => null);
 
@@ -372,14 +368,12 @@ export default function Dashboard() {
         {/* Alertas proactivas: NCF bajo, secuencias por vencer, suscripción */}
         <AlertsBanner />
 
-        {/* Asistente Inteligente: mensaje según configuración e ingresos reales */}
+        {/* AI Insight con datos reales (ingresos, alertas NCF y pendientes) */}
         <AIInsightWidget
           revenue={totalRevenue}
           previousRevenue={previousMonthRevenue}
           pendingCount={pendingInvoices}
           predictions={predictiveAlerts}
-          configComplete={!!(fiscalState.confirmed && hasNcfBatch)}
-          userName={authUser?.name ?? ""}
         />
 
         {/* Prompt de Identidad Fiscal o Bloqueo Informativo */}
@@ -400,54 +394,27 @@ export default function Dashboard() {
               />
             </div>
           ) : (
-            (() => {
-              const missing: string[] = [];
-              if (!fiscalState.confirmed) missing.push("confirmar nombre fiscal");
-              if (!hasNcfBatch) missing.push("configurar al menos un lote de NCF");
-              if (missing.length === 0) return null;
-              return (
-                <Card className="mb-8 border-red-100 bg-red-50/50 shadow-lg border-l-4 border-l-red-500">
-                  <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-start gap-4 text-center md:text-left">
-                      <div className="w-12 h-12 bg-red-100 text-red-600 rounded-xl flex items-center justify-center shrink-0">
-                        <AlertCircle className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-red-900 font-bold text-lg">Configuración Pendiente</h3>
-                        <p className="text-red-700 text-sm max-w-md">
-                          Para emitir facturas con valor fiscal falta: <strong>{missing.join(", ")}</strong>. Complétalo en la sección de configuración.
-                        </p>
-                      </div>
-                    </div>
-                    <Link href={!fiscalState.confirmed ? "/configuracion?section=perfil" : "/configuracion?section=ncf"} className="w-full md:w-auto">
-                      <Button className="w-full md:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-6 rounded-xl shadow-lg shadow-red-600/20 active:scale-95 transition-all">
-                        Configurar Perfil Fiscal
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              );
-            })()
-          )
-        ) : !hasNcfBatch ? (
-          <Card className="mb-8 border-amber-100 bg-amber-50/50 shadow-lg border-l-4 border-l-amber-500">
-            <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex items-start gap-4 text-center md:text-left">
-                <AlertTriangle className="w-12 h-12 text-amber-600 shrink-0" />
-                <div>
-                  <h3 className="text-amber-900 font-bold text-lg">Falta configurar NCF</h3>
-                  <p className="text-amber-800 text-sm max-w-md">
-                    Para emitir facturas debes agregar al menos un lote de comprobantes en Configuración.
-                  </p>
+            <Card className="mb-8 border-red-100 bg-red-50/50 shadow-lg border-l-4 border-l-red-500">
+              <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-start gap-4 text-center md:text-left">
+                  <div className="w-12 h-12 bg-red-100 text-red-600 rounded-xl flex items-center justify-center shrink-0">
+                    <AlertCircle className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-red-900 font-bold text-lg">Configuración Pendiente</h3>
+                    <p className="text-red-700 text-sm max-w-md">
+                      Para poder emitir facturas con valor fiscal, primero debes completar tu perfil y confirmar tu RNC en la sección de configuración.
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <Link href="/configuracion?section=ncf" className="w-full md:w-auto">
-                <Button variant="outline" className="w-full md:w-auto border-amber-600 text-amber-700 hover:bg-amber-100 font-bold px-8 py-6 rounded-xl">
-                  Ir a Configuración
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+                <Link href="/configuracion" className="w-full md:w-auto">
+                  <Button className="w-full md:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-6 rounded-xl shadow-lg shadow-red-600/20 active:scale-95 transition-all">
+                    Configurar Perfil Fiscal
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )
         ) : null}
 
         {/* Premium Feature: Bolsillo Fiscal (Advanced) / Emotional State (Simple) */}
@@ -539,6 +506,25 @@ export default function Dashboard() {
               <span className="mr-2 text-xl">✦</span> Nueva Factura
             </Button>
           </Link>
+        </div>
+
+        {/* Alerta de Vencimiento NCF */}
+        <div className="mt-6">
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r shadow-sm flex flex-col md:flex-row items-center md:items-start justify-between gap-4">
+            <div className="flex gap-3">
+              <AlertCircle className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-bold text-red-800 text-sm md:text-base">Secuencia de Facturas por Vencer</h3>
+                <p className="text-xs md:text-sm text-red-700 mt-1">
+                  Le quedan <strong>8 comprobantes</strong> válidos tipo B01.
+                  Su secuencia vence el <strong>30/06/2026</strong>.
+                </p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" className="w-full md:w-auto text-red-700 border-red-200 hover:bg-red-100">
+              Solicitar Nuevos
+            </Button>
+          </div>
         </div>
 
         {/* Tabla de facturas recientes */}

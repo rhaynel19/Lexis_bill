@@ -133,12 +133,7 @@ export const api = {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
         });
-        localStorage.removeItem("cache_ncf_settings");
-        return res;
-    },
-
-    async deleteNcfSetting(id: string) {
-        const res = await secureFetch<any>(`${API_URL}/ncf-settings/${id}`, { method: "DELETE" });
+        // Invalidate cache manually ideally, or just wait for next fetch override
         localStorage.removeItem("cache_ncf_settings");
         return res;
     },

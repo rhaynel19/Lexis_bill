@@ -94,20 +94,18 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
 
     let yPosition = margin.top;
 
-    // ===== BARRA SUPERIOR: solo para facturas; cotizaciones sin barra oscura ni LEXIS BILL =====
-    if (invoiceData.type !== "quote") {
-        doc.setFillColor(...blueColor);
-        doc.rect(0, 0, pageWidth, 14, "F");
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(212, 175, 55);
-        doc.text("LEXIS BILL", margin.left, 9);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-        doc.setTextColor(255, 255, 255);
-        doc.text("Comprobante fiscal", pageWidth - margin.right, 9, { align: "right" });
-        yPosition = 20;
-    }
+    // ===== BARRA LEXIS BILL (marca de agua superior) =====
+    doc.setFillColor(...blueColor);
+    doc.rect(0, 0, pageWidth, 14, "F");
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(212, 175, 55);
+    doc.text("LEXIS BILL", margin.left, 9);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Comprobante fiscal", pageWidth - margin.right, 9, { align: "right" });
+    yPosition = 20;
 
     // Cargar configuración dinámica (contexto o localStorage)
     const storedConfig = typeof localStorage !== "undefined" ? localStorage.getItem("appConfig") : null;
@@ -216,11 +214,7 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     doc.text(displayClientName || "— Indicar nombre del cliente —", margin.left, yPosition);
     yPosition += 5;
     doc.text(`RNC/Cédula: ${invoiceData.rnc || "—"}`, margin.left, yPosition);
-    yPosition += 8;
-    doc.setDrawColor(...goldColor);
-    doc.setLineWidth(1);
-    doc.line(margin.left, yPosition, pageWidth - margin.right, yPosition);
-    yPosition += 12;
+    yPosition += 15;
 
     // ===== TABLA DE ÍTEMS =====
     const tableData = invoiceData.items.map((item) => [

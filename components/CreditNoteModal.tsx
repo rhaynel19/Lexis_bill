@@ -46,7 +46,7 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
                                 <AlertCircle className="text-red-500 w-6 h-6" /> Anular Factura
                             </DialogTitle>
                             <DialogDescription className="text-slate-500">
-                                Se generará una <strong>Nota de Crédito</strong> (E34 o B04 según la serie de la factura) para anular este monto.
+                                Se generará una <strong>Nota de Crédito (e-CF 34)</strong> para anular este monto.
                             </DialogDescription>
                         </DialogHeader>
 
