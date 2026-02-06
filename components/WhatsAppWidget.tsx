@@ -5,7 +5,7 @@ import { MessageCircle } from "lucide-react";
 export default function WhatsAppWidget() {
     return (
         <a
-            href="https://wa.me/18290000000"
+            href="https://wa.me/18298495890656"
             target="_blank"
             rel="noopener noreferrer"
             className="fixed bottom-8 right-8 z-[100] group flex items-center gap-3"
