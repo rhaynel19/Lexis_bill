@@ -67,12 +67,20 @@ interface Invoice {
   subtotal?: number;
 }
 
-// Interfaz para configuración de NCF
+// Interfaz para configuración de NCF (API devuelve también expiryDate)
 interface NcfSetting {
   type: string;
   finalNumber: number;
   currentValue: number;
   isActive: boolean;
+  expiryDate?: string;
+}
+// Resumen de una secuencia para mostrar en el dashboard
+interface NcfSequenceSummary {
+  type: string;
+  typeLabel: string;
+  remaining: number;
+  expiryDate: string;
 }
 
 // Componente simple de Gráfico de Línea SVG
@@ -136,6 +144,8 @@ export default function Dashboard() {
   const [fiscalState, setFiscalState] = useState<{ suggested: string; confirmed: string | null }>({ suggested: "", confirmed: null });
   const [isFiscalHealthy, setIsFiscalHealthy] = useState(true);
   const [lowNcfType, setLowNcfType] = useState<string | null>(null);
+  const [ncfSequenceSummary, setNcfSequenceSummary] = useState<NcfSequenceSummary | null>(null);
+  const [ncfLowSequence, setNcfLowSequence] = useState<NcfSequenceSummary | null>(null);
   const userName = authUser?.name ?? "";
   // Nombre para el saludo: perfil del usuario (configuración) > nombre fiscal > nombre de usuario
   const [welcomeName, setWelcomeName] = useState(userName || authUser?.fiscalStatus?.confirmed || APP_CONFIG.company.name);
@@ -242,13 +252,30 @@ export default function Dashboard() {
         // Check NCF Health + predictive alerts con datos reales
         try {
           const ncfSettings = await api.getNcfSettings() as NcfSetting[];
-          const lowSequence = ncfSettings.find((s: NcfSetting) =>
-            (s.finalNumber - s.currentValue) < 10 && s.isActive
-          );
-          if (lowSequence) {
-            setIsFiscalHealthy(false);
-            setLowNcfType(lowSequence.type);
+          const typeToLabel: Record<string, string> = { "01": "B01", "02": "B02", "31": "E31", "32": "E32", "14": "B14", "15": "B15", "44": "E44", "45": "E45" };
+          const activeSettings = (ncfSettings || []).filter((s: NcfSetting) => s.isActive);
+          let firstSummary: NcfSequenceSummary | null = null;
+          let lowSummary: NcfSequenceSummary | null = null;
+          for (const s of activeSettings) {
+            const remaining = (s.finalNumber ?? 0) - (s.currentValue ?? 0);
+            const expiryStr = s.expiryDate
+              ? new Date(s.expiryDate).toLocaleDateString("es-DO", { day: "2-digit", month: "2-digit", year: "numeric" })
+              : "";
+            const summary: NcfSequenceSummary = {
+              type: s.type,
+              typeLabel: typeToLabel[s.type] || `tipo ${s.type}`,
+              remaining: Math.max(0, remaining),
+              expiryDate: expiryStr
+            };
+            if (!firstSummary) firstSummary = summary;
+            if (remaining < 20 && remaining >= 0 && !lowSummary) {
+              lowSummary = summary;
+              setIsFiscalHealthy(false);
+              setLowNcfType(s.type);
+            }
           }
+          setNcfSequenceSummary(firstSummary);
+          setNcfLowSequence(lowSummary);
           // Alertas predictivas con datos reales (NCF, pendientes, clientes recurrentes)
           const { PredictiveService: Pred } = await import("@/lib/predictive-service");
           const pending = (invRes?.data || []).filter((inv: Invoice) => inv.status === "pending").length;
@@ -521,24 +548,47 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {/* Alerta de Vencimiento NCF */}
-        <div className="mt-6">
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r shadow-sm flex flex-col md:flex-row items-center md:items-start justify-between gap-4">
-            <div className="flex gap-3">
-              <AlertCircle className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-bold text-red-800 text-sm md:text-base">Secuencia de Facturas por Vencer</h3>
-                <p className="text-xs md:text-sm text-red-700 mt-1">
-                  Le quedan <strong>8 comprobantes</strong> válidos tipo B01.
-                  Su secuencia vence el <strong>30/06/2026</strong>.
-                </p>
+        {/* Estado de secuencia NCF: alerta solo si quedan pocos; si no, mensaje informativo con datos reales */}
+        {(ncfLowSequence || ncfSequenceSummary) && (
+          <div className="mt-6">
+            {ncfLowSequence ? (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r shadow-sm flex flex-col md:flex-row items-center md:items-start justify-between gap-4">
+                <div className="flex gap-3">
+                  <AlertCircle className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-bold text-red-800 text-sm md:text-base">Secuencia de Facturas por Vencer</h3>
+                    <p className="text-xs md:text-sm text-red-700 mt-1">
+                      Le quedan <strong>{ncfLowSequence.remaining} comprobante{ncfLowSequence.remaining !== 1 ? "s" : ""}</strong> válido{ncfLowSequence.remaining !== 1 ? "s" : ""} tipo {ncfLowSequence.typeLabel}.
+                      {ncfLowSequence.expiryDate && (
+                        <> Su secuencia vence el <strong>{ncfLowSequence.expiryDate}</strong>.</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <Link href="/configuracion" className="w-full md:w-auto">
+                  <Button size="sm" variant="outline" className="w-full md:w-auto text-red-700 border-red-200 hover:bg-red-100">
+                    Solicitar Nuevos
+                  </Button>
+                </Link>
               </div>
-            </div>
-            <Button size="sm" variant="outline" className="w-full md:w-auto text-red-700 border-red-200 hover:bg-red-100">
-              Solicitar Nuevos
-            </Button>
+            ) : ncfSequenceSummary && ncfSequenceSummary.remaining >= 20 ? (
+              <div className="bg-slate-50 border-l-4 border-slate-300 p-4 rounded-r shadow-sm flex flex-col sm:flex-row items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-sm md:text-base">Comprobantes fiscales</h3>
+                  <p className="text-xs md:text-sm text-slate-600 mt-1">
+                    Tienes <strong>{ncfSequenceSummary.remaining} comprobante{ncfSequenceSummary.remaining !== 1 ? "s" : ""}</strong> válido{ncfSequenceSummary.remaining !== 1 ? "s" : ""} tipo {ncfSequenceSummary.typeLabel}.
+                    {ncfSequenceSummary.expiryDate && (
+                      <> La secuencia vence el <strong>{ncfSequenceSummary.expiryDate}</strong>.</>
+                    )}
+                  </p>
+                </div>
+                <Link href="/configuracion" className="text-sm font-medium text-primary hover:underline shrink-0">
+                  Ver en Configuración
+                </Link>
+              </div>
+            ) : null}
           </div>
-        </div>
+        )}
 
         {/* Tabla de facturas recientes */}
         {/* Usando el nuevo componente refactorizado con lógica Luxury */}
