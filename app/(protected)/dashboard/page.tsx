@@ -137,6 +137,19 @@ export default function Dashboard() {
   const [isFiscalHealthy, setIsFiscalHealthy] = useState(true);
   const [lowNcfType, setLowNcfType] = useState<string | null>(null);
   const userName = authUser?.name ?? "";
+  // Nombre para el saludo: perfil del usuario (configuración) > nombre fiscal > nombre de usuario
+  const [welcomeName, setWelcomeName] = useState(userName || authUser?.fiscalStatus?.confirmed || APP_CONFIG.company.name);
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("appConfig") : null;
+      const appConfig = raw ? JSON.parse(raw) : {};
+      const fromConfig = appConfig.companyName || appConfig.name;
+      const name = fromConfig || authUser?.fiscalStatus?.confirmed || userName || APP_CONFIG.company.name;
+      setWelcomeName(name || APP_CONFIG.company.name);
+    } catch {
+      setWelcomeName(userName || authUser?.fiscalStatus?.confirmed || APP_CONFIG.company.name);
+    }
+  }, [authUser?.fiscalStatus?.confirmed, userName]);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -351,7 +364,7 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-1">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-              Bienvenido, {userName || APP_CONFIG.company.name}
+              Bienvenido, {welcomeName}
             </h2>
             <p className="text-sm md:text-base text-slate-500 mt-1">Aquí está lo que está pasando con tu negocio hoy.</p>
           </div>
