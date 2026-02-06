@@ -1299,7 +1299,7 @@ app.get('/api/membership/payment-info', (req, res) => {
     });
 });
 
-// Preparar transferencia: devuelve referencia única para que el cliente la ponga en el concepto (antes de transferir)
+// Preparar transferencia: devuelve referencia única. Un solo pendiente por usuario (evita duplicados).
 app.post('/api/membership/prepare-transfer', verifyToken, async (req, res) => {
     try {
         const { plan, billingCycle } = req.body;
@@ -1308,32 +1308,50 @@ app.post('/api/membership/prepare-transfer', verifyToken, async (req, res) => {
         }
         const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
 
+        // Reutilizar cualquier solicitud pendiente del usuario (evita duplicados al cambiar plan/ciclo o doble clic)
         let pr = await PaymentRequest.findOne({
             userId: req.userId,
-            status: 'pending',
-            paymentMethod: 'transferencia',
-            plan,
-            billingCycle: cycle
+            status: 'pending'
         });
-        if (pr && pr.reference) {
-            return res.json({ reference: pr.reference, paymentRequestId: pr._id.toString() });
-        }
-        if (pr && !pr.reference) {
-            pr.reference = await generateUniquePaymentReference();
+        if (pr) {
+            pr.plan = plan;
+            pr.billingCycle = cycle;
+            pr.paymentMethod = 'transferencia';
+            if (!pr.reference) pr.reference = await generateUniquePaymentReference();
             await pr.save();
+            const user = req.user;
+            if (!user.subscription) user.subscription = {};
+            user.subscription.plan = plan;
+            user.subscription.status = 'pending';
+            user.subscription.paymentMethod = 'transferencia';
+            await user.save();
             return res.json({ reference: pr.reference, paymentRequestId: pr._id.toString() });
         }
 
         const reference = await generateUniquePaymentReference();
-        pr = new PaymentRequest({
-            userId: req.userId,
-            plan,
-            billingCycle: cycle,
-            paymentMethod: 'transferencia',
-            reference,
-            status: 'pending'
-        });
-        await pr.save();
+        try {
+            pr = new PaymentRequest({
+                userId: req.userId,
+                plan,
+                billingCycle: cycle,
+                paymentMethod: 'transferencia',
+                reference,
+                status: 'pending'
+            });
+            await pr.save();
+        } catch (createErr) {
+            if (createErr.code === 11000) {
+                pr = await PaymentRequest.findOne({ userId: req.userId, status: 'pending' });
+                if (pr) {
+                    if (!pr.reference) {
+                        pr.reference = await generateUniquePaymentReference();
+                        await pr.save();
+                    }
+                    return res.json({ reference: pr.reference, paymentRequestId: pr._id.toString() });
+                }
+            }
+            throw createErr;
+        }
 
         const user = req.user;
         if (!user.subscription) user.subscription = {};
@@ -1342,7 +1360,7 @@ app.post('/api/membership/prepare-transfer', verifyToken, async (req, res) => {
         user.subscription.paymentMethod = 'transferencia';
         await user.save();
 
-        res.json({ reference, paymentRequestId: pr._id.toString() });
+        res.json({ reference: pr.reference, paymentRequestId: pr._id.toString() });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

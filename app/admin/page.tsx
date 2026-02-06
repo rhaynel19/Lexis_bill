@@ -80,9 +80,15 @@ export default function AdminPagosPendientes() {
     };
 
     const filteredPayments = useMemo(() => {
-        if (!searchRef.trim()) return payments;
+        const list = payments;
+        const byId = new Map<string, typeof list[0]>();
+        list.forEach((p) => {
+            if (p?.id && !byId.has(p.id)) byId.set(p.id, p);
+        });
+        const deduped = Array.from(byId.values());
+        if (!searchRef.trim()) return deduped;
         const q = searchRef.trim().toUpperCase();
-        return payments.filter((p) => (p.reference || "").toUpperCase().includes(q));
+        return deduped.filter((p) => (p.reference || "").toUpperCase().includes(q));
     }, [payments, searchRef]);
 
     return (
