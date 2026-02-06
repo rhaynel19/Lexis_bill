@@ -29,13 +29,14 @@ export function SupportChat() {
 
     const handleWhatsApp = (type: "tech" | "billing") => {
         const userName = user?.name || "Usuario";
+        const pantalla = pathname ? pathname.replace(/^\//, "") || "inicio" : "";
+        const desde = pantalla ? `, desde ${pantalla}.` : ".";
 
-        const pathLabel = pathname ? ` (pantalla: ${pathname.replace(/^\//, "") || "inicio"})` : "";
         let message = "";
         if (type === "tech") {
-            message = `Hola, soy ${userName} de Lexis Bill${pathLabel} y necesito Soporte Técnico con...`;
+            message = `Hola, soy ${userName} de Lexis Bill${desde} Necesito soporte técnico con...`;
         } else {
-            message = `Hola, soy ${userName} de Lexis Bill${pathLabel} y tengo una consulta de Facturación/Pagos sobre...`;
+            message = `Hola, soy ${userName} de Lexis Bill${desde} Tengo una consulta de facturación o pagos sobre...`;
         }
 
         window.open(`https://wa.me/${SUPPORT_PHONE}?text=${encodeURIComponent(message)}`, "_blank");
