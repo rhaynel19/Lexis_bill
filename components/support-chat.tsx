@@ -6,7 +6,7 @@ import { MessageCircle, Headphones, CreditCard, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/providers/AuthContext";
 
-const SUPPORT_PHONE = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "18095550000";
+const SUPPORT_PHONE = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "18495890656";
 
 export function SupportChat() {
     const [isOpen, setIsOpen] = useState(false);

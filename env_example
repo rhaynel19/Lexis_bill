@@ -58,8 +58,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 # npm install nodemailer  (para enviar correos)
 
 # Soporte (WhatsApp)
-# Número con código de país, sin + ni espacios (ej: 18095550000)
-NEXT_PUBLIC_SUPPORT_WHATSAPP=18095550000
+# Número con código de país, sin + ni espacios (ej: 18495890656 para (849) 589-0656)
+NEXT_PUBLIC_SUPPORT_WHATSAPP=18495890656
 
 # APIs Fiscales (DGII)
 # Consulta RNC/Cédula real: si está definido, el API consulta este endpoint (ej. MegaPlus: https://rnc.megaplus.com.do/api/consulta)
