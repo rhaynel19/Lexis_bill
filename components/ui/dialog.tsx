@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { X } from "lucide-react"
 
 const Dialog = React.forwardRef<
     HTMLDivElement,
@@ -11,16 +10,17 @@ const Dialog = React.forwardRef<
     if (!open) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in-0">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in-0"
+            onClick={() => onOpenChange?.(false)}
+            role="presentation"
+        >
             <div
                 ref={ref}
                 className={cn("bg-white rounded-lg shadow-lg w-full max-w-lg mx-4 p-6 relative animate-in zoom-in-95 slide-in-from-bottom-5", className)}
+                onClick={(e) => e.stopPropagation()}
                 {...props}
             >
-                {/* Close Button Mock (optional) */}
-                {/* <button onClick={() => onOpenChange?.(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
-             <X className="w-4 h-4" />
-         </button> */}
                 {children}
             </div>
         </div>

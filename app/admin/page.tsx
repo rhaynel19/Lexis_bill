@@ -10,7 +10,7 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
-import { CreditCard, Check, X, Loader2, RefreshCw, AlertCircle, ImageIcon, Search } from "lucide-react";
+import { CreditCard, Check, X, Loader2, RefreshCw, AlertCircle, ImageIcon, Search, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useMemo } from "react";
@@ -239,18 +239,35 @@ export default function AdminPagosPendientes() {
                 </CardContent>
             </Card>
 
-            <Dialog open={!!comprobanteView} onOpenChange={() => setComprobanteView(null)}>
-                <DialogContent className="max-w-2xl max-h-[90vh]">
-                    <DialogHeader>
+            <Dialog open={!!comprobanteView} onOpenChange={(open) => !open && setComprobanteView(null)}>
+                <DialogContent className="max-w-2xl max-h-[90vh] relative">
+                    <DialogHeader className="flex flex-row items-center justify-between gap-4 pr-10">
                         <DialogTitle className="flex items-center gap-2">
                             <ImageIcon className="w-5 h-5" />
                             Comprobante de pago (adjunto)
                         </DialogTitle>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="absolute top-4 right-4 shrink-0"
+                            onClick={() => setComprobanteView(null)}
+                            aria-label="Cerrar"
+                        >
+                            <X className="w-5 h-5" />
+                        </Button>
                     </DialogHeader>
                     {comprobanteView && (
-                        <div className="overflow-auto max-h-[70vh]">
-                            <img src={comprobanteView} alt="Comprobante" className="w-full rounded-lg border" />
-                        </div>
+                        <>
+                            <div className="overflow-auto max-h-[70vh]">
+                                <img src={comprobanteView} alt="Comprobante" className="w-full rounded-lg border" />
+                            </div>
+                            <div className="mt-4 flex justify-end border-t pt-4">
+                                <Button variant="outline" onClick={() => setComprobanteView(null)} className="gap-2">
+                                    <ArrowLeft className="w-4 h-4" />
+                                    Volver / Cerrar
+                                </Button>
+                            </div>
+                        </>
                     )}
                 </DialogContent>
             </Dialog>
