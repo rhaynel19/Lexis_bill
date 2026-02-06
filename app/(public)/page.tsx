@@ -101,7 +101,7 @@ export default function LandingPage() {
 
         <div className="container mx-auto px-4 sm:px-6 text-center max-w-6xl">
           <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 md:mb-8 max-w-4xl mx-auto tracking-tight text-lexis-text-light">
-            <span className="text-lexis-gold">⭐</span> El sistema de gestión creado para el profesional independiente dominicano.
+            El sistema de gestión creado para el profesional independiente dominicano.
           </h1>
           <p className="text-xl md:text-2xl lg:text-3xl text-lexis-gold font-semibold mb-6 md:mb-8 max-w-2xl mx-auto">
             El único sistema que habla dominicano.
