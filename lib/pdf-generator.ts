@@ -104,7 +104,8 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(255, 255, 255);
-    doc.text("Comprobante fiscal", pageWidth - margin.right, 9, { align: "right" });
+    const headerLabel = invoiceData.type === "quote" ? "Cotización" : "Comprobante fiscal";
+    doc.text(headerLabel, pageWidth - margin.right, 9, { align: "right" });
     yPosition = 20;
 
     // Cargar configuración dinámica (contexto o localStorage)

@@ -172,11 +172,11 @@ export function DocumentViewer({
             <DialogContent className="max-w-4xl h-[95vh] md:h-[90vh] p-0 flex flex-col overflow-hidden bg-background border-border/20 shadow-2xl">
                 {type === "quote" ? (
                     <>
-                        {/* Barra superior estilo PDF: LEXIS BILL + Comprobante fiscal */}
+                        {/* Barra superior estilo PDF: LEXIS BILL + Cotización */}
                         <div className="flex-shrink-0 flex items-center justify-between px-6 py-3 bg-[#1A202C] z-20">
                             <span className="text-[#D4AF37] font-bold text-lg tracking-tight">LEXIS BILL</span>
                             <div className="flex items-center gap-3">
-                                <span className="text-white/90 text-sm">Comprobante fiscal</span>
+                                <span className="text-white/90 text-sm">Cotización</span>
                                 <Button
                                     variant="ghost"
                                     size="icon"

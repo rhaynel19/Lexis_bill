@@ -1469,8 +1469,8 @@ export default function NewInvoice() {
                     </form>
                 </div>
 
-                {/* Preview Side (Sticky) */}
-                <div className="hidden lg:block lg:col-span-1 sticky top-24 self-start">
+                {/* Preview Side (Sticky): ancho mínimo para que la vista previa no se vea en blanco */}
+                <div className="hidden lg:block lg:col-span-1 sticky top-24 self-start min-w-0 w-full lg:min-w-[380px]">
                     <InvoicePreview data={{
                         invoiceType,
                         clientName,

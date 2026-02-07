@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AlertCircle, CheckCircle, Clock, Lock, AlertTriangle } from "lucide-react";
 import { api } from "@/lib/api-service";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,7 @@ export function SubscriptionAlert() {
         Gracia: {
             icon: Clock,
             color: "bg-orange-50 border-orange-200 text-orange-800",
-            msg: `Suscripción vencida. Tienes ${graceDaysRemaining} días de gracia antes del bloqueo.`,
+            msg: `Suscripción vencida. Tienes ${graceDaysRemaining ?? 0} días de gracia antes del bloqueo.`,
             action: "Pagar Pendiente"
         },
         Bloqueado: {
@@ -50,9 +51,11 @@ export function SubscriptionAlert() {
                 <config.icon className="w-5 h-5" />
                 <span className="text-sm font-semibold">{config.msg}</span>
             </div>
-            <Button size="sm" variant="outline" className="bg-white/50 border-current hover:bg-white transition-colors h-8">
-                {config.action}
-            </Button>
+            <Link href="/pagos">
+                <Button size="sm" variant="outline" className="bg-white/50 border-current hover:bg-white transition-colors h-8">
+                    {config.action}
+                </Button>
+            </Link>
         </div>
     );
 }

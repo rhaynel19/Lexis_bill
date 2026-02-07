@@ -67,11 +67,18 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
                 const errorData = await response.json().catch(() => ({}));
                 const errorMessage = errorData.message || errorData.error || `Server Error: ${response.status}`;
 
-                // Sesión expirada o no autorizado: redirigir a login para que el usuario no quede "sacado" sin explicación
+                // Sesión expirada o no autorizado: redirigir a login
                 if (response.status === 401 && typeof window !== 'undefined') {
                     toast.error("Tu sesión expiró o no es válida. Inicia sesión de nuevo.");
                     window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
                     throw { status: 401, message: errorMessage };
+                }
+
+                // Suscripción bloqueada (días de gracia pasados): redirigir a pagos
+                if (response.status === 403 && errorData.code === 'SUBSCRIPTION_LOCKED' && typeof window !== 'undefined') {
+                    toast.error("Tu cuenta está bloqueada por falta de pago. Regulariza para seguir usando Lexis Bill.");
+                    window.location.href = "/pagos?locked=1";
+                    throw { status: 403, message: errorMessage, code: errorData.code };
                 }
 
                 // Si es un error 4xx (Cliente), no reintentar

@@ -108,7 +108,7 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
             </div>
 
             {/* The Document Visual */}
-            <Card className="border border-border/10 shadow-2xl bg-card text-card-foreground overflow-hidden relative min-h-[600px] flex flex-col transition-colors duration-300">
+            <Card className="border-2 border-border shadow-2xl bg-card text-card-foreground overflow-hidden relative min-h-[400px] flex flex-col transition-colors duration-300 w-full">
                 {/* Watermark / Background */}
                 <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-accent/5 to-transparent rounded-full -mr-32 -mt-32 pointer-events-none opacity-50"></div>
 

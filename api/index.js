@@ -3213,11 +3213,22 @@ app.get('/api/subscription/status', verifyToken, (req, res) => {
     const now = new Date();
     const endDate = sub.endDate ? new Date(sub.endDate) : req.user.expiryDate ? new Date(req.user.expiryDate) : null;
     const diffDays = endDate ? Math.ceil((endDate - now) / (1000 * 60 * 60 * 24)) : 999;
+    const daysRemaining = Math.max(-999, diffDays);
+    const GRACE_DAYS = 5;
+    const daysPastEnd = daysRemaining < 0 ? Math.abs(daysRemaining) : 0;
+    const graceDaysRemaining = daysPastEnd > 0 ? Math.max(0, GRACE_DAYS - daysPastEnd) : GRACE_DAYS;
+    let displayStatus = 'Activo';
+    if (sub.status === 'expired' || daysRemaining <= 0) {
+        displayStatus = graceDaysRemaining > 0 ? 'Gracia' : 'Bloqueado';
+    } else if (daysRemaining <= 7) {
+        displayStatus = 'VencePronto';
+    }
     res.json({
         plan: sub.plan,
-        status: sub.status,
+        status: displayStatus,
         expiryDate: endDate,
-        daysRemaining: Math.max(0, diffDays),
+        daysRemaining: Math.max(0, daysRemaining),
+        graceDaysRemaining: daysRemaining <= 0 ? graceDaysRemaining : null,
         paymentMethod: sub.paymentMethod
     });
 });
