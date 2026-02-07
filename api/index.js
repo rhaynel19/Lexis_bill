@@ -3152,6 +3152,23 @@ app.put('/api/quotes/:id', verifyToken, async (req, res) => {
     }
 });
 
+app.delete('/api/quotes/:id', verifyToken, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: 'ID de cotización inválido' });
+        }
+        const quote = await Quote.findOne({ _id: req.params.id, userId: req.userId });
+        if (!quote) return res.status(404).json({ message: 'Cotización no encontrada' });
+        if (quote.status === 'converted') {
+            return res.status(400).json({ message: 'No se puede eliminar una cotización ya facturada.' });
+        }
+        await Quote.deleteOne({ _id: req.params.id, userId: req.userId });
+        res.json({ message: 'Cotización eliminada' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Convertir cotización a factura - marca como converted, asocia invoiceId, bloquea doble facturación
 app.post('/api/quotes/:id/convert', verifyToken, async (req, res) => {
     // === VALIDACIÓN DE OBJECTID ===

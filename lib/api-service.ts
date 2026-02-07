@@ -284,6 +284,12 @@ export const api = {
         return secureFetch<any>(`${API_URL}/quotes/${quoteId}/convert`, { method: "POST" });
     },
 
+    async deleteQuote(id: string) {
+        const res = await secureFetch<{ message?: string }>(`${API_URL}/quotes/${id}`, { method: "DELETE" });
+        localStorage.removeItem("cache_quotes_list");
+        return res;
+    },
+
     // Expenses (606)
     async getExpenses() {
         return secureFetch<any[]>(`${API_URL}/expenses`);

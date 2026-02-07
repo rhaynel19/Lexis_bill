@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, FileText, ArrowRight, Eye, Pencil, Loader2 } from "lucide-react";
+import { Plus, FileText, ArrowRight, Eye, Pencil, Loader2, Trash2 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -25,6 +25,7 @@ export default function Quotes() {
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [convertingId, setConvertingId] = useState<string | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -110,6 +111,24 @@ export default function Quotes() {
         const message = generateQuoteWhatsAppMessage(selectedQuote);
         openWhatsApp(selectedQuote.clientPhone, message);
         toast.info("📲 Abriendo WhatsApp. Recuerda adjuntar el PDF antes de enviar.", { duration: 4000 });
+    };
+
+    const handleDeleteQuote = async (quote: Quote) => {
+        if (quote.status === "converted") {
+            toast.error("No se puede eliminar una cotización ya facturada.");
+            return;
+        }
+        if (!confirm("¿Estás seguro de eliminar esta cotización? Esta acción no se puede deshacer.")) return;
+        setDeletingId(quote.id);
+        try {
+            await api.deleteQuote(quote.id);
+            toast.success("Cotización eliminada");
+            loadQuotes();
+        } catch (e: unknown) {
+            toast.error((e as { message?: string })?.message || "Error al eliminar");
+        } finally {
+            setDeletingId(null);
+        }
     };
 
     return (
@@ -208,6 +227,16 @@ export default function Quotes() {
                                                             title="Editar cotización"
                                                         >
                                                             <Pencil className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="w-9 h-9 p-0 min-w-[36px] min-h-[36px] text-destructive border-destructive/30 hover:bg-destructive/10"
+                                                            onClick={() => handleDeleteQuote(q)}
+                                                            disabled={!!deletingId}
+                                                            title="Eliminar cotización"
+                                                        >
+                                                            {deletingId === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                                         </Button>
                                                         <Button
                                                             variant="outline"
