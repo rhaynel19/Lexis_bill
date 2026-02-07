@@ -149,11 +149,9 @@ export default function ProtectedLayout({
                     </div>
                 </aside>
 
-                {/* Contenido principal - wrapper flex para que el contenido llene el alto y evite espacio blanco */}
-                <main className="flex-grow min-h-0 flex flex-col overflow-y-auto bg-background">
-                    <div className="flex-1 min-h-0 flex flex-col bg-background">
-                        {children}
-                    </div>
+                {/* Contenido principal - self-start h-fit evita espacio blanco; max-h para scroll en paginas largas */}
+                <main className="flex-1 min-w-0 self-start overflow-y-auto bg-background h-fit max-h-[calc(100vh-5rem)]">
+                    {children}
                 </main>
             </div>
 

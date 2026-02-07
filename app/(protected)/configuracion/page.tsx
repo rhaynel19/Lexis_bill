@@ -104,7 +104,7 @@ export default function Configuration() {
     };
 
     return (
-        <div className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-12 max-w-5xl flex-1 min-h-[calc(100vh-6rem)]">
+        <div className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-12 max-w-5xl">
             <div className="mb-8">
                 <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2">Mi Oficina Fiscal</h1>
                 <p className="text-sm sm:text-base text-gray-500">Personalice la apariencia de sus documentos y datos fiscales.</p>

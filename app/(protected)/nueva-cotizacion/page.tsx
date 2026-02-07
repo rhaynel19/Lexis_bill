@@ -260,7 +260,7 @@ function NewQuoteForm() {
     }, [editId, clientName, rnc, clientPhone, items, subtotal, itbis, total, validityDays, status]);
 
     return (
-        <div className="container mx-auto px-4 py-8 pb-24 md:pb-8 max-w-5xl flex-1 min-h-[calc(100vh-6rem)]">
+        <div className="container mx-auto px-4 py-8 pb-24 md:pb-8 max-w-5xl">
             <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Cotizaciones", href: "/cotizaciones" }, { label: editId ? "Editar cotización" : "Nueva cotización" }]} className="mb-4 text-muted-foreground" />
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
