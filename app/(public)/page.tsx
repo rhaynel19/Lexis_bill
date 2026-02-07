@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { LexisWord } from "@/components/LexisWord";
 import { useAuth } from "@/components/providers/AuthContext";
+import WhatsAppWidget from "@/components/WhatsAppWidget";
 
 export default function LandingPage() {
   const { user, refresh } = useAuth();
@@ -444,7 +445,7 @@ export default function LandingPage() {
                 <li>info@lexisbill.do</li>
                 <li>Santo Domingo, RD</li>
                 <li>
-                  <a href="https://wa.me/18298495890656" target="_blank" rel="noopener noreferrer" className="hover:text-lexis-gold transition-colors">
+                  <a href="https://wa.me/18495890656" target="_blank" rel="noopener noreferrer" className="hover:text-lexis-gold transition-colors">
                     WhatsApp: (849) 589-0656
                   </a>
                 </li>
@@ -468,6 +469,8 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      <WhatsAppWidget />
     </div>
   );
 }
