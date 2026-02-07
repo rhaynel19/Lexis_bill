@@ -138,7 +138,7 @@ export default function ProtectedLayout({
                 </div>
             </div>
 
-            <div className="flex flex-1 overflow-hidden h-full">
+            <div className="flex flex-1 min-h-0 overflow-hidden h-full">
                 {/* Desktop Sidebar */}
                 <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border h-full overflow-y-auto">
                     <nav className="flex-1 px-4 py-8 flex flex-col">
@@ -149,9 +149,11 @@ export default function ProtectedLayout({
                     </div>
                 </aside>
 
-                {/* Contenido principal */}
-                <main className="flex-grow overflow-y-auto bg-background">
-                    {children}
+                {/* Contenido principal - wrapper flex para que el contenido llene el alto y evite espacio blanco */}
+                <main className="flex-grow min-h-0 flex flex-col overflow-y-auto bg-background">
+                    <div className="flex-1 min-h-0 flex flex-col bg-background">
+                        {children}
+                    </div>
                 </main>
             </div>
 
