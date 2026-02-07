@@ -104,19 +104,19 @@ export default function Configuration() {
     };
 
     return (
-        <div className="container mx-auto px-4 py-6 md:py-8 pb-28 md:pb-12 max-w-5xl">
+        <div className="container mx-auto px-4 py-6 md:py-8 pb-36 md:pb-12 max-w-5xl min-h-screen">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-primary mb-2">Mi Oficina Fiscal</h1>
-                <p className="text-gray-500">Personalice la apariencia de sus documentos y datos fiscales.</p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2">Mi Oficina Fiscal</h1>
+                <p className="text-sm sm:text-base text-gray-500">Personalice la apariencia de sus documentos y datos fiscales.</p>
             </div>
 
             {configLocked && (
-                <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <Lock className="w-5 h-5 text-amber-600 shrink-0" />
-                        <p className="text-amber-900 font-medium">La configuración está bloqueada. Pulse <strong>Modificar</strong> para editar.</p>
+                <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-4">
+                    <div className="flex items-start sm:items-center gap-3 min-w-0">
+                        <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
+                        <p className="text-amber-900 font-medium text-sm sm:text-base">La configuración está bloqueada. Pulse <strong>Modificar</strong> para editar.</p>
                     </div>
-                    <Button type="button" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100 gap-2" onClick={() => { setConfigLocked(false); localStorage.setItem("configLocked", "false"); }}>
+                    <Button type="button" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100 gap-2 shrink-0 self-start sm:self-center" onClick={() => { setConfigLocked(false); localStorage.setItem("configLocked", "false"); }}>
                         <Pencil className="w-4 h-4" /> Modificar
                     </Button>
                 </div>
@@ -147,7 +147,7 @@ export default function Configuration() {
                                                 <Upload className="w-6 h-6" />
                                             </div>
                                             <h3 className="font-medium text-slate-900">Subir Logo</h3>
-                                            <p className="text-xs text-slate-500 mt-1">PNG, JPG (Recomendado 400x150px)</p>
+                                            <p className="text-xs text-slate-500 mt-1 break-words px-2">PNG, JPG (Recomendado 400×150px)</p>
                                         </>
                                     )}
                                 </div>
@@ -190,8 +190,8 @@ export default function Configuration() {
                         <CardDescription>Configure cómo Lexis Bill automatiza sus comprobantes.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-indigo-100 shadow-sm">
-                            <div className="space-y-0.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-white rounded-xl border border-indigo-100 shadow-sm">
+                            <div className="space-y-0.5 min-w-0">
                                 <Label className="text-base font-bold text-slate-800">Facturación Electrónica Activa</Label>
                                 <p className="text-sm text-slate-500">Lexis Bill sugerirá Serie E (E31, E32...) en lugar de Serie B.</p>
                             </div>

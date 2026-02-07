@@ -158,8 +158,8 @@ export default function ProtectedLayout({
             <SupportChat />
             <CommandMenu />
 
-            {/* Mobile FAB (Floating Action Button) */}
-            <div className="fixed bottom-24 right-6 md:hidden z-50">
+            {/* Mobile FAB (Floating Action Button) - bottom-28 evita solapamiento con barra nav */}
+            <div className="fixed bottom-28 right-4 md:hidden z-50">
                 <Link href="/nueva-factura">
                     <button className="h-14 w-14 bg-accent text-accent-foreground rounded-full shadow-xl shadow-amber-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all" aria-label="Nueva factura" title="Nueva factura">
                         <Plus className="h-8 w-8" />
