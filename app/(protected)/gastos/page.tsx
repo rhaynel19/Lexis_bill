@@ -326,37 +326,42 @@ export default function GastosPage() {
                     </Link>
                 </div>
 
-                <div className="flex flex-wrap gap-3 w-full md:w-auto">
-                    <div className="relative overflow-hidden group w-full sm:w-auto">
-                        <input
-                            type="file"
-                            accept="image/*,application/pdf"
-                            onChange={(e) => handleScan(e, false)}
-                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                            disabled={isScanning}
-                            aria-label="Subir imagen de factura o tirilla (QR o lectura de texto)"
-                            title="Subir imagen de factura o tirilla"
-                        />
-                        <Button
-                            variant="outline"
-                            className="w-full border-accent/20 bg-accent/5 text-accent hover:bg-accent/10 h-12 px-6 font-bold flex items-center gap-2 group-hover:scale-[1.02] transition-all"
-                            disabled={isScanning}
-                        >
-                            {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <ScanLine className="w-5 h-5" />}
-                            Escaneo QR / Tirilla
-                        </Button>
-                        <p className="text-[10px] text-muted-foreground mt-1 px-1">Sube foto o PDF. Consejo: foto clara, comprobante plano y buena luz mejora la lectura automática.</p>
-                    </div>
+                <div className="w-full md:w-auto space-y-3">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Agregar gasto</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="relative overflow-hidden group">
+                            <input
+                                type="file"
+                                accept="image/*,application/pdf"
+                                onChange={(e) => handleScan(e, false)}
+                                className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                disabled={isScanning}
+                                aria-label="Subir imagen de factura o tirilla (QR o lectura de texto)"
+                                title="Subir imagen de factura o tirilla"
+                            />
+                            <Button
+                                variant="outline"
+                                className="w-full border-accent/20 bg-accent/5 text-accent hover:bg-accent/10 h-12 px-4 font-bold flex items-center justify-center gap-2 group-hover:scale-[1.02] transition-all"
+                                disabled={isScanning}
+                            >
+                                {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <ScanLine className="w-5 h-5" />}
+                                Escaneo QR / Tirilla
+                            </Button>
+                            <p className="text-[10px] text-muted-foreground mt-1 px-1">Sube foto o PDF. Foto clara mejora la lectura.</p>
+                        </div>
 
-                    <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) resetForm(); }}>
-                        <Button
-                            variant="secondary"
-                            className="w-full sm:w-auto h-12 px-6 font-bold flex items-center gap-2 border-2 border-dashed"
-                            onClick={openManualForm}
-                        >
-                            <Keyboard className="w-5 h-5" />
-                            Entrada manual (sin escanear)
-                        </Button>
+                        <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) resetForm(); }}>
+                            <div className="h-full flex flex-col">
+                                <Button
+                                    variant="secondary"
+                                    className="w-full h-12 px-4 font-bold flex items-center justify-center gap-2 border-2 border-dashed hover:bg-accent/5"
+                                    onClick={openManualForm}
+                                >
+                                    <Keyboard className="w-5 h-5" />
+                                    Entrada manual (sin escanear)
+                                </Button>
+                                <p className="text-[10px] text-muted-foreground mt-1 px-1">Completa suplidor, RNC, NCF y monto a mano.</p>
+                            </div>
                         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background border-border/20 shadow-2xl">
                             <DialogHeader>
                                 <DialogTitle className="text-2xl font-serif">Registrar Gasto 606</DialogTitle>
@@ -529,7 +534,8 @@ export default function GastosPage() {
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
-                    </Dialog>
+                        </Dialog>
+                    </div>
                 </div>
             </div>
 
@@ -587,16 +593,36 @@ export default function GastosPage() {
                         <p className="text-sm font-medium text-muted-foreground capitalize tracking-widest">Cargando registros...</p>
                     </div>
                 ) : filteredExpenses.length === 0 ? (
-                    <Card className="border-dashed border-border/40 bg-transparent py-40">
+                    <Card className="border-dashed border-border/40 bg-transparent py-16 sm:py-24">
                         <CardContent className="flex flex-col items-center justify-center text-center">
                             <div className="w-20 h-20 rounded-full bg-accent/5 flex items-center justify-center mb-6">
                                 <Receipt className="w-10 h-10 text-accent/30" />
                             </div>
                             <h3 className="text-xl font-serif font-bold mb-2">No hay gastos registrados</h3>
-                            <p className="text-muted-foreground max-w-xs">
+                            <p className="text-muted-foreground max-w-xs mb-6">
                                 Comienza subiendo una foto de tus facturas o regístralas manualmente para alimentar tu 606.
                             </p>
-                            <p className="text-[10px] text-muted-foreground mt-2">Consejo: foto clara, comprobante plano y buena luz mejora la lectura automática.</p>
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <div className="relative">
+                                    <input
+                                        type="file"
+                                        accept="image/*,application/pdf"
+                                        onChange={(e) => handleScan(e, false)}
+                                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                        disabled={isScanning}
+                                        aria-label="Subir factura o tirilla"
+                                    />
+                                    <Button variant="outline" className="gap-2" disabled={isScanning}>
+                                        {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4" />}
+                                        Escanear comprobante
+                                    </Button>
+                                </div>
+                                <Button variant="secondary" className="gap-2 border-2 border-dashed" onClick={openManualForm}>
+                                    <Keyboard className="w-4 h-4" />
+                                    Entrada manual
+                                </Button>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-4">Consejo: foto clara, comprobante plano y buena luz mejora la lectura automática.</p>
                         </CardContent>
                     </Card>
                 ) : (
