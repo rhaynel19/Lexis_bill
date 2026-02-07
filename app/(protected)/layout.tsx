@@ -87,8 +87,8 @@ export default function ProtectedLayout({
     }
 
     return (
-        <div className="flex flex-col h-screen bg-background text-foreground transition-colors duration-300">
-            <div className="flex-none border-b border-border/20 bg-secondary shadow-lg sticky top-0 z-50 transition-colors duration-300">
+        <div className="flex min-h-screen flex-col bg-background text-foreground transition-colors duration-300">
+            <header className="shrink-0 border-b border-border/20 bg-secondary shadow-lg sticky top-0 z-50 transition-colors duration-300">
                 <div className="container mx-auto px-4 py-4 flex justify-between items-center">
                     <Link href="/dashboard">
                         <div className="group">
@@ -136,9 +136,9 @@ export default function ProtectedLayout({
                         </div>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <div className="flex flex-1 min-h-0 overflow-hidden h-full">
+            <div className="flex flex-1 min-h-0 overflow-hidden">
                 {/* Desktop Sidebar */}
                 <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border h-full overflow-y-auto">
                     <nav className="flex-1 px-4 py-8 flex flex-col">
@@ -149,8 +149,8 @@ export default function ProtectedLayout({
                     </div>
                 </aside>
 
-                {/* Contenido principal - self-start h-fit evita espacio blanco; max-h para scroll en paginas largas */}
-                <main className="flex-1 min-w-0 self-start overflow-y-auto bg-background h-fit max-h-[calc(100vh-5rem)]">
+                {/* Contenido principal - flex-1 min-h-0 para scroll correcto sin forzar altura */}
+                <main className="flex-1 min-w-0 min-h-0 overflow-y-auto bg-background">
                     {children}
                 </main>
             </div>

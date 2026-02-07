@@ -104,7 +104,7 @@ export default function Configuration() {
     };
 
     return (
-        <div className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-12 max-w-5xl">
+        <div className="container mx-auto px-4 py-6 md:py-8 pb-20 md:pb-8 max-w-5xl">
             <div className="mb-8">
                 <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2">Mi Oficina Fiscal</h1>
                 <p className="text-sm sm:text-base text-gray-500">Personalice la apariencia de sus documentos y datos fiscales.</p>
@@ -275,7 +275,7 @@ export default function Configuration() {
                 </Card>
 
                 {/* Save Button Container */}
-                <div className="flex justify-end pt-4 pb-12">
+                <div className="flex justify-end pt-4 pb-6">
                     <Button size="lg" onClick={handleSave} disabled={configLocked} className="bg-[#D4AF37] hover:bg-amber-600 text-white gap-2 px-8 h-12 rounded-xl shadow-lg transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
                         <Save className="w-5 h-5" /> Guardar Cambios
                     </Button>
