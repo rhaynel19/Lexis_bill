@@ -172,20 +172,16 @@ export function DocumentViewer({
             <DialogContent className="max-w-4xl h-[95vh] md:h-[90vh] p-0 flex flex-col overflow-hidden bg-background border-border/20 shadow-2xl">
                 {type === "quote" ? (
                     <>
-                        {/* Barra superior estilo PDF: LEXIS BILL + Cotización */}
-                        <div className="flex-shrink-0 flex items-center justify-between px-6 py-3 bg-[#1A202C] z-20">
-                            <span className="text-[#D4AF37] font-bold text-lg tracking-tight">LEXIS BILL</span>
-                            <div className="flex items-center gap-3">
-                                <span className="text-white/90 text-sm">Cotización</span>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={onClose}
-                                    className="text-white/80 hover:text-white hover:bg-white/10 rounded-full h-9 w-9"
-                                >
-                                    <X className="w-5 h-5" />
-                                </Button>
-                            </div>
+                        {/* Header con botón cerrar (sin barra azul) */}
+                        <div className="flex-shrink-0 flex justify-end p-3 border-b border-border/10 bg-white z-20">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={onClose}
+                                className="text-muted-foreground hover:text-foreground hover:bg-accent/10 rounded-full h-9 w-9"
+                            >
+                                <X className="w-5 h-5" />
+                            </Button>
                         </div>
 
                         {/* Body: fondo blanco, dos columnas + FACTURADO A */}
