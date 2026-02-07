@@ -330,9 +330,9 @@ export const api = {
         return secureFetch<any>(`${API_URL}/membership/payment-info`);
     },
 
-    /** Obtiene referencia única LEX-XXXX para que el cliente la ponga en la transferencia (antes de pagar) */
+    /** Obtiene referencia única LEX-XXXX para que el cliente la ponga en la transferencia (antes de pagar). No crea solicitud en DB. */
     async prepareTransfer(plan: string, billingCycle: "monthly" | "annual") {
-        return secureFetch<{ reference: string; paymentRequestId: string }>(`${API_URL}/membership/prepare-transfer`, {
+        return secureFetch<{ reference: string }>(`${API_URL}/membership/prepare-transfer`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ plan, billingCycle }),
@@ -344,11 +344,11 @@ export const api = {
         billingCycle: "monthly" | "annual",
         paymentMethod: "transferencia" | "paypal",
         comprobanteImage?: string,
-        paymentRequestId?: string
+        reference?: string
     ) {
         const body: Record<string, unknown> = { plan, billingCycle, paymentMethod };
         if (comprobanteImage) body.comprobanteImage = comprobanteImage;
-        if (paymentRequestId) body.paymentRequestId = paymentRequestId;
+        if (reference) body.reference = reference;
         const res = await secureFetch<any>(`${API_URL}/membership/request-payment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },

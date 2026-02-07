@@ -25,7 +25,7 @@ export function MembershipConfig() {
     const [userEmail, setUserEmail] = useState<string>("");
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [transferReference, setTransferReference] = useState<{ reference: string; paymentRequestId: string } | null>(null);
+    const [transferReference, setTransferReference] = useState<{ reference: string } | null>(null);
 
     useEffect(() => {
         const load = async () => {
@@ -65,7 +65,7 @@ export function MembershipConfig() {
             try {
                 const { api } = await import("@/lib/api-service");
                 const data = await api.prepareTransfer(selectedPlan, selectedBilling);
-                setTransferReference({ reference: data.reference, paymentRequestId: data.paymentRequestId });
+                setTransferReference({ reference: data.reference });
             } catch {
                 setTransferReference(null);
             }
@@ -89,13 +89,12 @@ export function MembershipConfig() {
         setIsSubmitting(true);
         try {
             const { api } = await import("@/lib/api-service");
-            const paymentRequestId = selectedMethod === "transferencia" ? transferReference?.paymentRequestId : undefined;
             await api.requestMembershipPayment(
                 selectedPlan,
                 selectedBilling,
                 selectedMethod,
                 selectedMethod === "transferencia" ? comprobante || undefined : undefined,
-                paymentRequestId
+                selectedMethod === "transferencia" ? transferReference?.reference : undefined
             );
             toast.success("Solicitud registrada. Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).");
             setComprobante(null);

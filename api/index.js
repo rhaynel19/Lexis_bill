@@ -273,6 +273,11 @@ const paymentRequestSchema = new mongoose.Schema({
 });
 paymentRequestSchema.index({ status: 1, requestedAt: -1 });
 paymentRequestSchema.index({ reference: 1 });
+// Un solo pending por usuario: evita duplicados por doble clic / refresh / race
+paymentRequestSchema.index(
+    { userId: 1 },
+    { unique: true, partialFilterExpression: { status: 'pending' } }
+);
 
 const ncfSettingsSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -1299,90 +1304,25 @@ app.get('/api/membership/payment-info', (req, res) => {
     });
 });
 
-// Preparar transferencia: devuelve referencia única. Un solo pendiente por usuario (evita duplicados).
+// Preparar transferencia: devuelve SOLO referencia única LEX-XXXX. NO crea PaymentRequest.
+// La solicitud se crea ÚNICAMENTE cuando el usuario sube comprobante en request-payment.
 app.post('/api/membership/prepare-transfer', verifyToken, async (req, res) => {
     try {
         const { plan, billingCycle } = req.body;
         if (!plan || plan !== 'pro') {
             return res.status(400).json({ message: 'Por ahora solo el plan Profesional está disponible.' });
         }
-        const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
-
-        // Reutilizar cualquier solicitud pendiente del usuario (evita duplicados al cambiar plan/ciclo o doble clic)
-        let pr = await PaymentRequest.findOne({
-            userId: req.userId,
-            status: 'pending'
-        });
-        if (pr) {
-            pr.plan = plan;
-            pr.billingCycle = cycle;
-            pr.paymentMethod = 'transferencia';
-            if (!pr.reference) pr.reference = await generateUniquePaymentReference();
-            await pr.save();
-            const user = req.user;
-            if (!user.subscription) user.subscription = {};
-            user.subscription.plan = plan;
-            user.subscription.status = 'pending';
-            user.subscription.paymentMethod = 'transferencia';
-            await user.save();
-            return res.json({ reference: pr.reference, paymentRequestId: pr._id.toString() });
-        }
-
         const reference = await generateUniquePaymentReference();
-        try {
-            pr = new PaymentRequest({
-                userId: req.userId,
-                plan,
-                billingCycle: cycle,
-                paymentMethod: 'transferencia',
-                reference,
-                status: 'pending'
-            });
-            await pr.save();
-        } catch (createErr) {
-            if (createErr.code === 11000) {
-                pr = await PaymentRequest.findOne({ userId: req.userId, status: 'pending' });
-                if (pr) {
-                    if (!pr.reference) {
-                        pr.reference = await generateUniquePaymentReference();
-                        await pr.save();
-                    }
-                    return res.json({ reference: pr.reference, paymentRequestId: pr._id.toString() });
-                }
-            }
-            throw createErr;
-        }
-
-        const user = req.user;
-        if (!user.subscription) user.subscription = {};
-        user.subscription.plan = plan;
-        user.subscription.status = 'pending';
-        user.subscription.paymentMethod = 'transferencia';
-        await user.save();
-
-        res.json({ reference: pr.reference, paymentRequestId: pr._id.toString() });
+        res.json({ reference });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
 
+// Crear solicitud de validación SOLO cuando existe evidencia: comprobante (transfer) o confirmación (paypal).
 app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
     try {
-        const { plan, billingCycle, paymentMethod, comprobanteImage, paymentRequestId } = req.body;
-
-        // Flujo transferencia: ya tenemos solicitud con referencia; solo adjuntar comprobante
-        if (paymentRequestId && comprobanteImage && comprobanteImage.startsWith('data:image/')) {
-            const pr = await PaymentRequest.findOne({ _id: paymentRequestId, userId: req.userId, status: 'pending' });
-            if (!pr) {
-                return res.status(400).json({ message: 'Solicitud no encontrada o ya procesada.' });
-            }
-            pr.comprobanteImage = comprobanteImage;
-            await pr.save();
-            return res.status(200).json({
-                message: 'Comprobante recibido. Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).',
-                paymentRequest: { id: pr._id, reference: pr.reference, status: 'pending' }
-            });
-        }
+        const { plan, billingCycle, paymentMethod, comprobanteImage, reference: clientReference } = req.body;
 
         if (!plan || plan !== 'pro') {
             return res.status(400).json({ message: 'Por ahora solo el plan Profesional está disponible.' });
@@ -1403,7 +1343,10 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
             return res.status(400).json({ message: 'Ya tienes una solicitud de pago pendiente. Espera a que la validemos.' });
         }
 
-        const reference = await generateUniquePaymentReference();
+        const reference = clientReference && /^LEX-\d{4}$/.test(String(clientReference).trim())
+            ? String(clientReference).trim()
+            : await generateUniquePaymentReference();
+
         const pr = new PaymentRequest({
             userId: req.userId,
             plan,
@@ -1429,14 +1372,25 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
             paymentRequest: { id: pr._id, reference, plan, billingCycle: cycle, paymentMethod, status: 'pending' }
         });
     } catch (e) {
+        if (e.code === 11000) {
+            return res.status(400).json({ message: 'Ya tienes una solicitud de pago pendiente. Espera a que la validemos.' });
+        }
         res.status(500).json({ error: e.message });
     }
 });
 
 // --- ADMIN: Pagos pendientes y validación ---
+// Solo mostrar solicitudes con evidencia: comprobante (transfer) o paypal (confirmación).
+// Excluye registros legacy sin comprobante creados por prepare-transfer antiguo.
 app.get('/api/admin/pending-payments', verifyToken, verifyAdmin, async (req, res) => {
     try {
-        const list = await PaymentRequest.find({ status: 'pending' })
+        const list = await PaymentRequest.find({
+            status: 'pending',
+            $or: [
+                { comprobanteImage: { $exists: true, $ne: null, $ne: '' } },
+                { paymentMethod: 'paypal' }
+            ]
+        })
             .populate('userId', 'name email rnc')
             .sort({ requestedAt: -1 });
         res.json(list.map(p => ({
@@ -1924,7 +1878,13 @@ app.get('/api/admin/stats', verifyToken, verifyAdmin, async (req, res) => {
             Invoice.find({ status: { $ne: 'cancelled' } }),
             Invoice.find({ status: { $ne: 'cancelled' }, date: { $gte: startOfMonth, $lte: endOfMonth } }),
             Expense.find({}),
-            PaymentRequest.countDocuments({ status: 'pending' }),
+            PaymentRequest.countDocuments({
+                status: 'pending',
+                $or: [
+                    { comprobanteImage: { $exists: true, $ne: null, $ne: '' } },
+                    { paymentMethod: 'paypal' }
+                ]
+            }),
             User.aggregate([
                 { $project: { plan: { $ifNull: ['$subscription.plan', { $ifNull: ['$membershipLevel', 'free'] }] } } },
                 { $group: { _id: '$plan', count: { $sum: 1 } } }
@@ -2037,7 +1997,13 @@ app.get('/api/admin/metrics', verifyToken, verifyAdmin, async (req, res) => {
             User.countDocuments({ createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
             User.countDocuments({ $or: [{ 'subscription.plan': 'pro' }, { membershipLevel: 'pro' }], role: { $ne: 'admin' } }),
             PaymentRequest.find({ status: 'approved' }).sort({ processedAt: -1 }),
-            PaymentRequest.countDocuments({ status: 'pending' }),
+            PaymentRequest.countDocuments({
+                status: 'pending',
+                $or: [
+                    { comprobanteImage: { $exists: true, $ne: null, $ne: '' } },
+                    { paymentMethod: 'paypal' }
+                ]
+            }),
             User.countDocuments({
                 role: { $ne: 'admin' },
                 $or: [
