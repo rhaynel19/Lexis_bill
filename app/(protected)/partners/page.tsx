@@ -101,7 +101,7 @@ export default function PartnerDashboardPage() {
     if (loadError) {
         return (
             <div className="container mx-auto px-4 py-8 max-w-5xl">
-                <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Partner" }]} className="mb-4 text-slate-500" />
+                <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Partner" }]} className="mb-4" />
                 <div className="flex flex-col items-center justify-center min-h-[300px] gap-4 p-8 rounded-xl bg-destructive/5 border border-destructive/20">
                     <p className="text-destructive font-medium text-center">{loadError}</p>
                     <Button onClick={fetchData} variant="outline" className="gap-2">
@@ -120,7 +120,7 @@ export default function PartnerDashboardPage() {
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-5xl">
-            <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Partner" }]} className="mb-4 text-slate-500" />
+            <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Partner" }]} className="mb-4" />
             {data.showWelcomeMessage && (
                 <div className="mb-6 p-4 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 shrink-0 text-green-600 dark:text-green-400" />

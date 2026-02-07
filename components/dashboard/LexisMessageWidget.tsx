@@ -33,7 +33,7 @@ export function LexisMessageWidget({ userName, contextualMessage, monthlySummary
                     <MessageCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div className="space-y-2 flex-1 min-w-0">
-                    <p className="text-slate-800 dark:text-slate-200 font-medium">
+                    <p className="text-foreground font-medium">
                         <span className="text-amber-700 dark:text-amber-400 font-semibold">{greeting}, {displayName}.</span>
                         {contextualMessage ? (
                             <> {contextualMessage}</>
@@ -42,7 +42,7 @@ export function LexisMessageWidget({ userName, contextualMessage, monthlySummary
                         )}
                     </p>
                     {monthlySummary && monthlySummary.invoiceCount > 0 && (
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                        <p className="text-sm text-muted-foreground">
                             Este mes has facturado {formatCurrency(monthlySummary.revenue)} a {monthlySummary.clientCount} cliente{monthlySummary.clientCount !== 1 ? "s" : ""} ({monthlySummary.invoiceCount} comprobante{monthlySummary.invoiceCount !== 1 ? "s" : ""}).
                         </p>
                     )}

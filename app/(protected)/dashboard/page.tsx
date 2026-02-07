@@ -416,7 +416,7 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 py-8">
         <TrialBanner />
         <SubscriptionAlert />
-        <Breadcrumbs items={[{ label: "Inicio" }]} className="mb-4 text-slate-500" />
+        <Breadcrumbs items={[{ label: "Inicio" }]} className="mb-4" />
         {/* Mensaje de Lexis (saludo + contextual) */}
         {!isLoading && (
           <LexisMessageWidget
@@ -430,10 +430,10 @@ export default function Dashboard() {
         {/* Título del Dashboard */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-1">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground">
               Tu negocio hoy
             </h2>
-            <p className="text-sm md:text-base text-slate-500 mt-1">Resumen de ingresos, facturas y pendientes.</p>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">Resumen de ingresos, facturas y pendientes.</p>
           </div>
           <div className="flex gap-3 hidden md:flex">
             <Link href="/nueva-factura">

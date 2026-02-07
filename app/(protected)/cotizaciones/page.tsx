@@ -133,7 +133,7 @@ export default function Quotes() {
 
     return (
         <div className="container mx-auto px-4 py-8 pb-24 md:pb-8 max-w-6xl">
-            <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Cotizaciones" }]} className="mb-4 text-slate-500" />
+            <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Cotizaciones" }]} className="mb-4" />
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 dark:text-foreground font-serif lowercase tracking-tighter">Cotizaciones</h1>

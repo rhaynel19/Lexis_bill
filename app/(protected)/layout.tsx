@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { LexisWord } from "@/components/LexisWord";
 import { LexisHelpPanel } from "@/components/LexisHelpPanel";
 import { useAuth } from "@/components/providers/AuthContext";
+import { cn } from "@/lib/utils";
 
 export default function ProtectedLayout({
     children,
@@ -173,7 +174,7 @@ export default function ProtectedLayout({
 
             {/* Mobile Bottom Navigation Bar */}
             <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-secondary border-t border-border/20 px-2 py-2 flex justify-around items-center z-40 shadow-[0_-2px_15px_rgba(0,0,0,0.3)]">
-                <Link href="/dashboard" className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-accent min-w-0 flex-1">
+                <Link href="/dashboard" className={cn("flex flex-col items-center gap-0.5 min-w-0 flex-1 transition-colors", pathname === "/dashboard" ? "text-accent font-medium" : "text-muted-foreground hover:text-accent")}>
                     <LayoutDashboard className="w-5 h-5 shrink-0" />
                     <span className="text-[9px] font-medium uppercase truncate w-full text-center">Inicio</span>
                 </Link>
