@@ -133,9 +133,23 @@ export const api = {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
         });
-        // Invalidate cache manually ideally, or just wait for next fetch override
         localStorage.removeItem("cache_ncf_settings");
         return res;
+    },
+
+    async updateNcfSetting(id: string, data: { initialNumber?: number; finalNumber?: number; expiryDate?: string }) {
+        const res = await secureFetch<any>(`${API_URL}/ncf-settings/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        localStorage.removeItem("cache_ncf_settings");
+        return res;
+    },
+
+    async deleteNcfSetting(id: string) {
+        await secureFetch<void>(`${API_URL}/ncf-settings/${id}`, { method: "DELETE" });
+        localStorage.removeItem("cache_ncf_settings");
     },
 
     // Credit Note

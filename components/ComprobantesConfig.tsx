@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { api } from "@/lib/api-service";
-import { AlertTriangle, Plus, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertTriangle, Plus, CheckCircle2, Loader2, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 export function ComprobantesConfig() {
     const [batches, setBatches] = useState<any[]>([]);
@@ -22,6 +24,9 @@ export function ComprobantesConfig() {
         finalNumber: 100,
         expiryDate: "2026-12-31"
     });
+    const [editBatch, setEditBatch] = useState<{ _id: string; initialNumber: number; finalNumber: number; expiryDate: string } | null>(null);
+    const [editForm, setEditForm] = useState({ initialNumber: 1, finalNumber: 100, expiryDate: "" });
+    const [isUpdating, setIsUpdating] = useState(false);
 
     useEffect(() => {
         loadSettings();
@@ -43,11 +48,51 @@ export function ComprobantesConfig() {
         try {
             await api.saveNcfSetting(newBatch);
             await loadSettings();
-            alert("Lote de NCF agregado exitosamente");
+            toast.success("Lote de NCF agregado exitosamente");
         } catch (error: any) {
-            alert("Error: " + (error.message || "No se pudo agregar el lote"));
+            toast.error(error?.message || "No se pudo agregar el lote");
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const openEdit = (batch: any) => {
+        const expiry = batch.expiryDate ? new Date(batch.expiryDate).toISOString().slice(0, 10) : "";
+        setEditBatch({ _id: batch._id, initialNumber: batch.initialNumber, finalNumber: batch.finalNumber, expiryDate: batch.expiryDate });
+        setEditForm({ initialNumber: batch.initialNumber, finalNumber: batch.finalNumber, expiryDate: expiry });
+    };
+
+    const handleUpdateBatch = async () => {
+        if (!editBatch) return;
+        setIsUpdating(true);
+        try {
+            await api.updateNcfSetting(editBatch._id, {
+                initialNumber: editForm.initialNumber,
+                finalNumber: editForm.finalNumber,
+                expiryDate: editForm.expiryDate || undefined
+            });
+            toast.success("Lote actualizado.");
+            setEditBatch(null);
+            await loadSettings();
+        } catch (error: any) {
+            toast.error(error?.message || "No se pudo actualizar el lote");
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleDeleteBatch = async (batch: any) => {
+        if (batch.currentValue !== batch.initialNumber) {
+            toast.error("No se puede borrar un lote que ya tiene comprobantes en uso.");
+            return;
+        }
+        if (!confirm("¿Borrar este lote? Esta acción no se puede deshacer.")) return;
+        try {
+            await api.deleteNcfSetting(batch._id);
+            toast.success("Lote eliminado.");
+            await loadSettings();
+        } catch (error: any) {
+            toast.error(error?.message || "No se pudo eliminar el lote");
         }
     };
 
@@ -134,20 +179,22 @@ export function ComprobantesConfig() {
                                     <TableHead>Actual</TableHead>
                                     <TableHead>Disponibles</TableHead>
                                     <TableHead>Estado</TableHead>
+                                    <TableHead className="text-right">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-slate-400">Cargando...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-slate-400">Cargando...</TableCell></TableRow>
                                 ) : batches.length === 0 ? (
-                                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-slate-400">No hay lotes configurados</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-slate-400">No hay lotes configurados</TableCell></TableRow>
                                 ) : batches.map((batch, i) => {
                                     const available = batch.finalNumber - batch.currentValue;
                                     const isLow = available < 10;
                                     const isElectronic = batch.sequenceType === "electronic" || batch.series === "E";
                                     const label = isElectronic ? `e-CF ${batch.type}` : `B${batch.type}`;
+                                    const canEditOrDelete = batch.currentValue === batch.initialNumber;
                                     return (
-                                        <TableRow key={i} className={isLow ? "bg-red-50/30" : ""}>
+                                        <TableRow key={batch._id || i} className={isLow ? "bg-red-50/30" : ""}>
                                             <TableCell className="font-medium text-slate-700">{label}</TableCell>
                                             <TableCell className="text-slate-500">{batch.initialNumber} - {batch.finalNumber}</TableCell>
                                             <TableCell className="text-slate-700 font-bold">{batch.currentValue}</TableCell>
@@ -164,6 +211,20 @@ export function ComprobantesConfig() {
                                                     {batch.isActive ? "Activo" : "Agotado"}
                                                 </span>
                                             </TableCell>
+                                            <TableCell className="text-right">
+                                                {canEditOrDelete ? (
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => openEdit(batch)} title="Modificar lote">
+                                                            <Pencil className="w-3.5 h-3.5" /> Modificar
+                                                        </Button>
+                                                        <Button type="button" variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 gap-1" onClick={() => handleDeleteBatch(batch)} title="Borrar lote">
+                                                            <Trash2 className="w-3.5 h-3.5" /> Borrar
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-slate-400">En uso</span>
+                                                )}
+                                            </TableCell>
                                         </TableRow>
                                     );
                                 })}
@@ -172,6 +233,36 @@ export function ComprobantesConfig() {
                     </div>
                 </CardContent>
             </Card>
+
+            <Dialog open={!!editBatch} onOpenChange={(open) => !open && setEditBatch(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Modificar lote</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-slate-500 mb-4">Solo puedes modificar lotes que aún no han sido usados (contador en el primer número).</p>
+                    <div className="grid gap-4">
+                        <div className="space-y-2">
+                            <Label>Desde</Label>
+                            <Input type="number" min={1} value={editForm.initialNumber} onChange={(e) => setEditForm({ ...editForm, initialNumber: parseInt(e.target.value) || 1 })} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Hasta</Label>
+                            <Input type="number" min={1} value={editForm.finalNumber} onChange={(e) => setEditForm({ ...editForm, finalNumber: parseInt(e.target.value) || 1 })} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Fecha de vencimiento</Label>
+                            <Input type="date" value={editForm.expiryDate} onChange={(e) => setEditForm({ ...editForm, expiryDate: e.target.value })} />
+                        </div>
+                    </div>
+                    <DialogFooter className="mt-6">
+                        <Button variant="outline" onClick={() => setEditBatch(null)}>Cancelar</Button>
+                        <Button onClick={handleUpdateBatch} disabled={isUpdating}>
+                            {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                            Guardar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

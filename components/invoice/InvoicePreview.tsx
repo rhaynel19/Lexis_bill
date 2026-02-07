@@ -7,7 +7,8 @@ import { usePreferences } from "@/components/providers/PreferencesContext";
 import { cn } from "@/lib/utils";
 import { User, Phone, MapPin, Receipt, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/components/providers/AuthContext";
 
 interface InvoiceItem {
     description: string;
@@ -30,9 +31,24 @@ interface InvoicePreviewProps {
     clientType?: string; // B2B or B2C
 }
 
+const APP_NAME = "Lexis Bill";
+
 export function InvoicePreview({ data }: InvoicePreviewProps) {
     const { profession } = usePreferences();
+    const { user: authUser } = useAuth();
     const [viewMode, setViewMode] = useState<"simple" | "fiscal">("simple");
+    const [issuerName, setIssuerName] = useState(APP_NAME);
+
+    useEffect(() => {
+        try {
+            const raw = typeof window !== "undefined" ? localStorage.getItem("appConfig") : null;
+            const appConfig = raw ? JSON.parse(raw) : {};
+            const name = appConfig.companyName || appConfig.name || authUser?.fiscalStatus?.confirmed || authUser?.name;
+            setIssuerName(name || APP_NAME);
+        } catch {
+            setIssuerName(authUser?.fiscalStatus?.confirmed || authUser?.name || APP_NAME);
+        }
+    }, [authUser?.name, authUser?.fiscalStatus?.confirmed]);
 
     // Adaptive Labels based on Profession
     const getClientLabel = () => {
@@ -70,16 +86,19 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
 
     return (
         <div className="space-y-4">
-            {/* Toggle Controls */}
-            <div className="flex justify-end gap-2 mb-2">
+            {/* Toggle Vista Cliente / Vista Fiscal */}
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <p className="text-xs text-muted-foreground">Cambiar vista de la factura:</p>
                 <div className="bg-muted p-1 rounded-lg flex text-xs font-medium border border-border/10">
                     <button
+                        type="button"
                         onClick={() => setViewMode("simple")}
                         className={cn("px-3 py-1.5 rounded-md transition-all", viewMode === "simple" ? "bg-background shadow-sm text-foreground font-bold" : "text-muted-foreground hover:text-foreground")}
                     >
                         Vista Cliente
                     </button>
                     <button
+                        type="button"
                         onClick={() => setViewMode("fiscal")}
                         className={cn("px-3 py-1.5 rounded-md transition-all", viewMode === "fiscal" ? "bg-background shadow-sm text-accent font-bold" : "text-muted-foreground hover:text-foreground")}
                     >
@@ -93,16 +112,17 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
                 {/* Watermark / Background */}
                 <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-accent/5 to-transparent rounded-full -mr-32 -mt-32 pointer-events-none opacity-50"></div>
 
-                {/* Header */}
+                {/* Header: factura para [cliente]; emitido por [tu empresa]; Lexis Bill = gestor */}
                 <div className="bg-secondary text-secondary-foreground p-8 relative overflow-hidden transition-colors">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-accent rounded-full blur-[60px] opacity-20 -mr-10 -mt-10"></div>
 
                     <div className="flex justify-between items-start relative z-10">
                         <div>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Factura para</p>
                             <h2 className="text-2xl font-serif font-bold tracking-tight mb-1">
-                                <span className="text-accent">LEXIS</span> BILL
+                                {data.clientName || <span className="text-muted-foreground/50 italic">Nombre del cliente</span>}
                             </h2>
-                            <p className="text-xs text-muted-foreground uppercase tracking-widest">Servicios Profesionales</p>
+                            <p className="text-xs text-muted-foreground">Emitido por <span className="text-accent font-semibold">{issuerName}</span></p>
                         </div>
                         <div className="text-right">
                             <Badge variant="outline" className="text-accent border-accent/30 bg-accent/10 mb-2">
@@ -169,18 +189,21 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
                     {/* Totals Section */}
                     <div className="flex justify-end">
                         <div className="w-full md:w-1/2 space-y-3">
-                            {/* Fiscal Details (Hidden in Simple Mode) */}
-                            <div className={cn("space-y-2 text-sm text-muted-foreground", viewMode === "simple" && "hidden")}>
-                                <div className="flex justify-between">
-                                    <span>Subtotal</span>
-                                    <span className="text-foreground">{formatCurrency(data.subtotal)}</span>
+                            {/* Vista Fiscal: desglose Subtotal + ITBIS visible */}
+                            {viewMode === "fiscal" && (
+                                <div className="space-y-2 text-sm p-4 rounded-lg bg-muted/40 border border-border/20">
+                                    <p className="text-xs font-bold text-muted-foreground uppercase mb-2">Desglose fiscal</p>
+                                    <div className="flex justify-between">
+                                        <span>Subtotal</span>
+                                        <span className="text-foreground font-medium">{formatCurrency(data.subtotal)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-success">
+                                        <span>ITBIS (18%)</span>
+                                        <span className="font-medium">{formatCurrency(data.itbis)}</span>
+                                    </div>
+                                    <Separator className="my-2" />
                                 </div>
-                                <div className="flex justify-between text-success">
-                                    <span>ITBIS (18%)</span>
-                                    <span>{formatCurrency(data.itbis)}</span>
-                                </div>
-                                <Separator className="my-2 opacity-10" />
-                            </div>
+                            )}
 
                             {/* Grand Total */}
                             <div className="flex justify-between items-center pt-2">
@@ -196,18 +219,23 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
                     </div>
                 </CardContent>
 
-                {/* Footer / Branding */}
+                {/* Footer: Lexis Bill como gestor (puente cliente–DGII), no emisor */}
                 <div className="bg-secondary/30 p-4 text-center border-t border-border/10">
                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-2">
-                        <ShieldCheck className="w-3 h-3 text-accent" /> Documento generado por Lexis Bill
+                        <ShieldCheck className="w-3 h-3 text-accent" /> Documento gestionado con {APP_NAME}
                     </p>
                 </div>
             </Card>
 
-            {/* Simple Mode Helper */}
-            {viewMode === 'simple' && (
-                <p className="text-xs text-center text-muted-foreground animate-pulse">
-                    Esta es la vista simplificada que recibirá tu cliente por WhatsApp.
+            {/* Helper según modo */}
+            {viewMode === "simple" && (
+                <p className="text-xs text-center text-muted-foreground">
+                    Vista simplificada (como la que recibe tu cliente).
+                </p>
+            )}
+            {viewMode === "fiscal" && (
+                <p className="text-xs text-center text-muted-foreground">
+                    Vista con desglose fiscal (subtotal e ITBIS) para revisión.
                 </p>
             )}
         </div>

@@ -390,7 +390,7 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     }
     doc.setFontSize(8);
     doc.setTextColor(...goldColor);
-    doc.text("Generado por Lexis Bill", pageWidth / 2, footerY + 10, { align: "center" });
+    doc.text("Documento gestionado con Lexis Bill", pageWidth / 2, footerY + 10, { align: "center" });
 
     return doc;
 }

@@ -2194,6 +2194,40 @@ app.post('/api/ncf-settings', verifyToken, async (req, res) => {
     }
 });
 
+// Actualizar lote NCF solo si no se ha usado (currentValue === initialNumber)
+app.put('/api/ncf-settings/:id', verifyToken, async (req, res) => {
+    try {
+        const setting = await NCFSettings.findOne({ _id: req.params.id, userId: req.userId });
+        if (!setting) return res.status(404).json({ error: 'Lote no encontrado.' });
+        if (setting.currentValue !== setting.initialNumber) {
+            return res.status(400).json({ error: 'No se puede modificar un lote que ya tiene comprobantes en uso. El contador ya avanzó.' });
+        }
+        const { initialNumber, finalNumber, expiryDate } = req.body;
+        if (initialNumber != null) setting.initialNumber = Number(initialNumber);
+        if (finalNumber != null) setting.finalNumber = Number(finalNumber);
+        if (expiryDate != null) setting.expiryDate = new Date(expiryDate);
+        await setting.save();
+        res.json(setting);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Borrar lote NCF solo si no se ha usado (currentValue === initialNumber)
+app.delete('/api/ncf-settings/:id', verifyToken, async (req, res) => {
+    try {
+        const setting = await NCFSettings.findOne({ _id: req.params.id, userId: req.userId });
+        if (!setting) return res.status(404).json({ error: 'Lote no encontrado.' });
+        if (setting.currentValue !== setting.initialNumber) {
+            return res.status(400).json({ error: 'No se puede borrar un lote que ya tiene comprobantes en uso.' });
+        }
+        await NCFSettings.deleteOne({ _id: req.params.id, userId: req.userId });
+        res.status(204).send();
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.get('/api/customers', verifyToken, async (req, res) => {
     try {
         const customers = await Customer.find({ userId: req.userId }, "name rnc phone email lastInvoiceDate")

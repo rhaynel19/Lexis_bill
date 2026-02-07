@@ -454,7 +454,8 @@ export default function NewInvoice() {
         }
     };
 
-    // AI Magic Input
+    // AI Magic Input (colapsado por defecto para simplificar la pantalla)
+    const [showMagicGenerator, setShowMagicGenerator] = useState(false);
     const [magicCommand, setMagicCommand] = useState("");
     const [isParsingAI, setIsParsingAI] = useState(false);
 
@@ -1088,46 +1089,55 @@ export default function NewInvoice() {
                                 </CardContent>
                             </Card>
 
-                            {/* AI Magic Input */}
-                            <Card className="bg-gradient-to-r from-accent/5 to-primary/5 border-accent/10">
-                                <CardHeader className="pb-3">
-                                    <CardTitle className="text-accent flex items-center gap-2 text-lg">
-                                        <Sparkles className="w-5 h-5" />
-                                        Generador Mágico (AI)
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Describe lo que vendiste y deja que la IA llene los ítems por ti.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="flex gap-2">
-                                        <div className="relative flex-1">
-                                            <Input
-                                                placeholder="Ej: Instalación de 2 cámaras por 3500 pesos..."
-                                                className="pr-10 border-accent/20 focus-visible:ring-accent"
-                                                value={magicCommand}
-                                                onChange={(e) => setMagicCommand(e.target.value)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        handleMagicParse();
-                                                    }
-                                                }}
-                                            />
-                                            <Mic className="w-4 h-4 text-slate-400 absolute right-3 top-3 cursor-pointer hover:text-violet-600" />
+                            {/* Generador Mágico: colapsable para no saturar la pantalla */}
+                            {!showMagicGenerator ? (
+                                <Button type="button" variant="outline" className="w-full border-dashed border-accent/30 text-accent hover:bg-accent/10 gap-2" onClick={() => setShowMagicGenerator(true)}>
+                                    <Sparkles className="w-4 h-4" /> Usar Generador Mágico (AI)
+                                </Button>
+                            ) : (
+                                <Card className="bg-gradient-to-r from-accent/5 to-primary/5 border-accent/10">
+                                    <CardHeader className="pb-3 flex flex-row items-start justify-between gap-4">
+                                        <div>
+                                            <CardTitle className="text-accent flex items-center gap-2 text-lg">
+                                                <Sparkles className="w-5 h-5" />
+                                                Generador Mágico (AI)
+                                            </CardTitle>
+                                            <CardDescription>
+                                                Describe lo que vendiste y deja que la IA llene los ítems por ti.
+                                            </CardDescription>
                                         </div>
-                                        <Button
-                                            type="button"
-                                            onClick={handleMagicParse}
-                                            disabled={isParsingAI || !magicCommand.trim()}
-                                            className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2"
-                                        >
-                                            {isParsingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                                            {isParsingAI ? "Pensando..." : "Generar"}
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                        <Button type="button" variant="ghost" size="sm" onClick={() => setShowMagicGenerator(false)}>Ocultar</Button>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="flex gap-2">
+                                            <div className="relative flex-1">
+                                                <Input
+                                                    placeholder="Ej: Instalación de 2 cámaras por 3500 pesos..."
+                                                    className="pr-10 border-accent/20 focus-visible:ring-accent"
+                                                    value={magicCommand}
+                                                    onChange={(e) => setMagicCommand(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            handleMagicParse();
+                                                        }
+                                                    }}
+                                                />
+                                                <Mic className="w-4 h-4 text-slate-400 absolute right-3 top-3 cursor-pointer hover:text-violet-600" />
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                onClick={handleMagicParse}
+                                                disabled={isParsingAI || !magicCommand.trim()}
+                                                className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2"
+                                            >
+                                                {isParsingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                                                {isParsingAI ? "Pensando..." : "Generar"}
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
 
                             {/* Ítems de la Factura */}
                             <Card>

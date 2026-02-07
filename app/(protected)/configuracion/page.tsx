@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
-import { Save, Upload, Settings } from "lucide-react";
+import { Save, Upload, Settings, Pencil, Lock } from "lucide-react";
 import { SupportTicketForm } from "@/components/support-ticket-form";
 import { ComprobantesConfig } from "@/components/ComprobantesConfig";
 import { usePreferences } from "@/components/providers/PreferencesContext";
@@ -30,16 +30,20 @@ export default function Configuration() {
 
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [sealPreview, setSealPreview] = useState<string | null>(null);
+    const [configLocked, setConfigLocked] = useState(true);
 
     useEffect(() => {
         const stored = localStorage.getItem("appConfig");
+        const lockedStored = typeof window !== "undefined" ? localStorage.getItem("configLocked") : null;
+        if (lockedStored !== "false") setConfigLocked(true);
         if (stored) {
-            const data = JSON.parse(stored);
-            setConfig(prev => ({ ...prev, ...data }));
-            if (data.logo) setLogoPreview(data.logo);
-            if (data.seal) setSealPreview(data.seal);
+            try {
+                const data = JSON.parse(stored);
+                setConfig(prev => ({ ...prev, ...data }));
+                if (data.logo) setLogoPreview(data.logo);
+                if (data.seal) setSealPreview(data.seal);
+            } catch {}
         }
-
         if (profession) {
             setConfig(prev => ({ ...prev, profession }));
         }
@@ -54,6 +58,7 @@ export default function Configuration() {
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'seal') => {
+        if (configLocked) return;
         const file = e.target.files?.[0];
         if (file) {
             const reader = new FileReader();
@@ -88,9 +93,13 @@ export default function Configuration() {
                 digitalSeal: sealPreview
             });
             toast.success("✅ Configuración guardada exitosamente en la nube y localmente.");
+            setConfigLocked(true);
+            localStorage.setItem("configLocked", "true");
         } catch (error) {
             console.error("Error saving to cloud:", error);
             toast.warning("⚠️ Guardado localmente, pero hubo un error al sincronizar con la nube.");
+            setConfigLocked(true);
+            localStorage.setItem("configLocked", "true");
         }
     };
 
@@ -100,6 +109,18 @@ export default function Configuration() {
                 <h1 className="text-3xl font-bold text-primary mb-2">Mi Oficina Fiscal</h1>
                 <p className="text-gray-500">Personalice la apariencia de sus documentos y datos fiscales.</p>
             </div>
+
+            {configLocked && (
+                <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <Lock className="w-5 h-5 text-amber-600 shrink-0" />
+                        <p className="text-amber-900 font-medium">La configuración está bloqueada. Pulse <strong>Modificar</strong> para editar.</p>
+                    </div>
+                    <Button type="button" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100 gap-2" onClick={() => { setConfigLocked(false); localStorage.setItem("configLocked", "false"); }}>
+                        <Pencil className="w-4 h-4" /> Modificar
+                    </Button>
+                </div>
+            )}
 
             <div className="grid gap-8">
                 {/* Identidad Visual Section */}
@@ -113,8 +134,8 @@ export default function Configuration() {
                             {/* Logo Upload */}
                             <div className="space-y-3">
                                 <Label className="text-slate-600">Logo de Empresa</Label>
-                                <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer relative min-h-[160px]">
-                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'logo')} aria-label="Subir logo de empresa" title="Subir logo" />
+                                <div className={`border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center transition-colors relative min-h-[160px] ${configLocked ? "opacity-70 cursor-not-allowed bg-slate-50" : "hover:bg-slate-50 cursor-pointer"}`}>
+                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'logo')} aria-label="Subir logo de empresa" title="Subir logo" disabled={configLocked} />
                                     {logoPreview ? (
                                         <div className="relative w-full h-32">
                                             <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
@@ -135,8 +156,8 @@ export default function Configuration() {
                             {/* Seal Upload */}
                             <div className="space-y-3">
                                 <Label className="text-slate-600">Sello Digital / Firma</Label>
-                                <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer relative min-h-[160px]">
-                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'seal')} aria-label="Subir sello digital o firma" title="Subir sello" />
+                                <div className={`border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center transition-colors relative min-h-[160px] ${configLocked ? "opacity-70 cursor-not-allowed bg-slate-50" : "hover:bg-slate-50 cursor-pointer"}`}>
+                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'seal')} aria-label="Subir sello digital o firma" title="Subir sello" disabled={configLocked} />
                                     {sealPreview ? (
                                         <div className="relative w-full h-32">
                                             <img src={sealPreview} alt="Sello" className="w-full h-full object-contain" />
@@ -175,8 +196,8 @@ export default function Configuration() {
                                 <p className="text-sm text-slate-500">Lexis Bill sugerirá Serie E (E31, E32...) en lugar de Serie B.</p>
                             </div>
                             <div
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors duration-200 focus:outline-none ${config.hasElectronicBilling ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                                onClick={() => setConfig({ ...config, hasElectronicBilling: !config.hasElectronicBilling })}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none ${configLocked ? "cursor-not-allowed opacity-70" : "cursor-pointer"} ${config.hasElectronicBilling ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                                onClick={() => !configLocked && setConfig({ ...config, hasElectronicBilling: !config.hasElectronicBilling })}
                                 title="Activar o desactivar facturación electrónica"
                             >
                                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${config.hasElectronicBilling ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -194,19 +215,19 @@ export default function Configuration() {
                     <CardContent className="grid gap-6 md:grid-cols-2">
                         <div className="space-y-2">
                             <Label htmlFor="companyName">Nombre Comercial / Profesional</Label>
-                            <Input id="companyName" value={config.companyName} onChange={handleChange} placeholder="Ej: Dr. Juan Pérez" className="bg-white" />
+                            <Input id="companyName" value={config.companyName} onChange={handleChange} placeholder="Ej: Dr. Juan Pérez" className="bg-white" disabled={configLocked} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="rnc">RNC / Cédula</Label>
-                            <Input id="rnc" value={config.rnc} onChange={handleChange} placeholder="Ej: 131-XXXXX-X" className="bg-white" />
+                            <Input id="rnc" value={config.rnc} onChange={handleChange} placeholder="Ej: 131-XXXXX-X" className="bg-white" disabled={configLocked} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="exequatur">Exequátur / Colegiatura (Opcional)</Label>
-                            <Input id="exequatur" value={config.exequatur} onChange={handleChange} placeholder="Ej: 1234-56" className="bg-white" />
+                            <Input id="exequatur" value={config.exequatur} onChange={handleChange} placeholder="Ej: 1234-56" className="bg-white" disabled={configLocked} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="phone">Teléfono / WhatsApp</Label>
-                            <Input id="phone" value={config.phone} onChange={handleChange} placeholder="Ej: 809-555-0000" className="bg-white" />
+                            <Input id="phone" value={config.phone} onChange={handleChange} placeholder="Ej: 809-555-0000" className="bg-white" disabled={configLocked} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="profession">Especialidad / Sector</Label>
@@ -217,6 +238,7 @@ export default function Configuration() {
                                 title="Especialidad o sector profesional"
                                 aria-label="Especialidad o sector profesional"
                                 className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                disabled={configLocked}
                             >
                                 <option value="general">Profesional General</option>
                                 <option value="medic">Médico / Salud</option>
@@ -227,7 +249,7 @@ export default function Configuration() {
                         </div>
                         <div className="space-y-2 md:col-span-2">
                             <Label htmlFor="address">Dirección Física</Label>
-                            <Input id="address" value={config.address} onChange={handleChange} placeholder="Ej: Av. Winston Churchill esq. 27 de Febrero..." className="bg-white" />
+                            <Input id="address" value={config.address} onChange={handleChange} placeholder="Ej: Av. Winston Churchill esq. 27 de Febrero..." className="bg-white" disabled={configLocked} />
                         </div>
 
                         {/* Bank Info */}
@@ -237,7 +259,7 @@ export default function Configuration() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="bankName">Banco</Label>
-                                <Input id="bankName" value={config.bankName} onChange={handleChange} placeholder="Ej: Banco Popular..." className="bg-white border-blue-100" />
+                                <Input id="bankName" value={config.bankName} onChange={handleChange} placeholder="Ej: Banco Popular..." className="bg-white border-blue-100" disabled={configLocked} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="bankAccount">Número de Cuenta</Label>
@@ -247,14 +269,14 @@ export default function Configuration() {
 
                         <div className="space-y-2 md:col-span-2">
                             <Label htmlFor="email">Correo Electrónico (Visible en Factura)</Label>
-                            <Input id="email" value={config.email} onChange={handleChange} placeholder="contacto@sudominio.com" className="bg-white" />
+                            <Input id="email" value={config.email} onChange={handleChange} placeholder="contacto@sudominio.com" className="bg-white" disabled={configLocked} />
                         </div>
                     </CardContent>
                 </Card>
 
                 {/* Save Button Container */}
                 <div className="flex justify-end pt-4 pb-12">
-                    <Button size="lg" onClick={handleSave} className="bg-[#D4AF37] hover:bg-amber-600 text-white gap-2 px-8 h-12 rounded-xl shadow-lg transition-all transform hover:scale-105 active:scale-95">
+                    <Button size="lg" onClick={handleSave} disabled={configLocked} className="bg-[#D4AF37] hover:bg-amber-600 text-white gap-2 px-8 h-12 rounded-xl shadow-lg transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
                         <Save className="w-5 h-5" /> Guardar Cambios
                     </Button>
                 </div>
