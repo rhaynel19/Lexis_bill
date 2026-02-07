@@ -182,7 +182,7 @@ export default function Quotes() {
                                         <EmptyState
                                             icon={FileText}
                                             title="Aún no hay cotizaciones"
-                                            description="Crea tu primera cotización para enviar propuestas profesionales a tus clientes."
+                                            description="¿Creamos la primera? Las cotizaciones te ayudan a enviar presupuestos antes de facturar."
                                             actionLabel="Nueva cotización"
                                             actionHref="/nueva-cotizacion"
                                         />

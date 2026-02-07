@@ -179,7 +179,7 @@ export default function GastosPage() {
                     });
                     setDataFromScan(true);
                     if (!dialogAlreadyOpen) setIsAddOpen(true);
-                    toast.success("Factura detectada por QR. Revisa los datos antes de guardar.");
+                    toast.success("He detectado una factura por QR. Revisa los datos antes de guardar.");
                     setIsScanning(false);
                     return;
                 }
@@ -189,7 +189,7 @@ export default function GastosPage() {
         }
 
         // 2. OCR con Tesseract (tirilla sin QR)
-        toast.info("Leyendo texto del comprobante...");
+        toast.info("Estoy leyendo el comprobante...");
         try {
             const { createWorker } = await import("tesseract.js");
             const worker = await createWorker("spa");
@@ -211,7 +211,7 @@ export default function GastosPage() {
                     });
                     setDataFromScan(true);
                     if (!dialogAlreadyOpen) setIsAddOpen(true);
-                    toast.success("Datos extraídos. Revisa y corrige si hay errores antes de guardar.");
+                    toast.success("He extraído los datos. Revisa y corrige si hace falta antes de guardar.");
                     setIsScanning(false);
                     return;
                 }

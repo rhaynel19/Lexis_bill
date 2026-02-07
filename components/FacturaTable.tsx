@@ -179,7 +179,7 @@ export function FacturaTable({ invoices, onRefresh, onRequestCreditNote }: Factu
                             <EmptyState
                                 icon={CheckCircle}
                                 title="Aún no hay facturas"
-                                description="Crea tu primera factura fiscal para empezar a facturar a tus clientes."
+                                description="¿Creamos la primera? Te guío paso a paso para emitir tu comprobante fiscal."
                                 actionLabel="Nueva factura"
                                 actionHref="/nueva-factura"
                             />

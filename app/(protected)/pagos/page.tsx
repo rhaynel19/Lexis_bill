@@ -143,7 +143,7 @@ export default function PaymentsPage() {
                                         <EmptyState
                                             icon={CreditCard}
                                             title="Sin pagos registrados"
-                                            description="Cuando actives tu membresía Pro, los pagos aparecerán aquí. Elige tu plan arriba."
+                                            description="Cuando actives tu membresía Pro, los pagos aparecerán aquí. ¿Te ayudo a elegir tu plan?"
                                         />
                                     </TableCell>
                                 </TableRow>

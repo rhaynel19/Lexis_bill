@@ -13,6 +13,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { LexisWord } from "@/components/LexisWord";
+import { LexisHelpPanel } from "@/components/LexisHelpPanel";
 import { useAuth } from "@/components/providers/AuthContext";
 
 export default function ProtectedLayout({
@@ -63,7 +64,7 @@ export default function ProtectedLayout({
             <div className="h-screen w-full bg-background flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-accent font-serif tracking-widest uppercase text-xs">Verificando Credenciales...</p>
+                    <p className="text-accent font-serif tracking-widest uppercase text-xs">Lexis está verificando tu sesión...</p>
                 </div>
             </div>
         );
@@ -111,6 +112,9 @@ export default function ProtectedLayout({
                             </Link>
                         )}
                         <TrialHeaderBadge />
+                        <div className="hidden sm:block">
+                            <LexisHelpPanel />
+                        </div>
                         <ThemeToggle />
 
                         {/* Mobile Menu Trigger */}

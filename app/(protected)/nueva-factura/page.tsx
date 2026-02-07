@@ -83,7 +83,7 @@ export default function NewInvoice() {
                 setClientName(matchedClient.name);
                 if (matchedClient.phone) setClientPhone(matchedClient.phone);
                 setIsClientLocked(true);
-                toast.success("✨ Cliente frecuente detectado");
+                toast.success("Este RNC ya está en tu lista. He cargado los datos guardados.");
 
                 // Auto-configure type if Corporate
                 if (cleanValue.length === 9) setApplyRetentions(true);
@@ -140,8 +140,8 @@ export default function NewInvoice() {
 
         if (suggested !== invoiceType) {
             setInvoiceType(suggested);
-            toast.info(`💡 Sugerencia: ${getInvoiceTypeName(suggested)}`, {
-                description: `Detectado como ${clientType === "business" ? "Empresa" : clientType === "government" ? "Gobierno" : "Consumidor"}`,
+            toast.info(`Por el tipo de cliente, te recomiendo ${getInvoiceTypeName(suggested)}`, {
+                description: `Detectado como ${clientType === "business" ? "Empresa" : clientType === "government" ? "Gobierno" : "Consumidor"}. ¿Lo aplico?`,
             });
         }
     };
@@ -396,7 +396,7 @@ export default function NewInvoice() {
             isExempt: i.isExempt
         }));
         setItems(its.length ? its : [{ id: "1", description: "", quantity: 1, price: 0, isExempt: false }]);
-        toast.success(`📂 Plantilla "${t.name}" cargada.`);
+        toast.success(`Plantilla "${t.name}" cargada. Los datos están listos para editar.`);
     };
 
     // CRM Handlers
@@ -439,7 +439,7 @@ export default function NewInvoice() {
             setRnc(client.rnc);
             if (client.phone) setClientPhone(client.phone);
             setIsClientLocked(true);
-            toast.success("✨ Cliente cargado");
+            toast.success("Cliente cargado. Los datos están listos para facturar.");
 
             // Smart NCF Suggestion
             suggestNCF(client.rnc, client.name);
@@ -480,7 +480,7 @@ export default function NewInvoice() {
             }
 
             setMagicCommand("");
-            toast.success(`✨ Agregados ${newItems.length} ítems mágicamente`);
+            toast.success(`He agregado ${newItems.length} ítems. Revisa y ajusta si hace falta.`);
         } catch (e) {
             console.error(e);
             toast.error("No pude entender eso. Intenta ser más claro.");
@@ -910,7 +910,7 @@ export default function NewInvoice() {
                                             <div className="relative">
                                                 <Input
                                                     id="client-name"
-                                                    placeholder="Razón Social o Nombre"
+                                                    placeholder="Ej: Dr. Juan Pérez o Empresa ABC"
                                                     value={clientName}
                                                     onChange={(e) => setClientName(e.target.value)}
                                                     readOnly={isClientLocked}
@@ -939,7 +939,7 @@ export default function NewInvoice() {
                                             <div className="flex gap-2">
                                                 <Input
                                                     id="client-rnc"
-                                                    placeholder="Ej: 131234567"
+                                                    placeholder="Escribe o pega el RNC y lo valido"
                                                     value={rnc}
                                                     onChange={(e) => handleRncChange(e.target.value)}
                                                     onBlur={handleRncBlur}
@@ -1494,8 +1494,8 @@ export default function NewInvoice() {
                 isGenerating && (
                     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center z-50">
                         <Loader2 className="h-16 w-16 text-white animate-spin mb-4" />
-                        <h2 className="text-white text-xl font-semibold">Generando comprobante fiscal en la nube...</h2>
-                        <p className="text-white/80 text-sm">Validando secuencia NCF y firmando documento</p>
+                        <h2 className="text-white text-xl font-semibold">Generando tu comprobante...</h2>
+                        <p className="text-white/80 text-sm">Validando NCF y firmando documento</p>
                     </div>
                 )
             }

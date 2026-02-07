@@ -80,8 +80,8 @@ export function OnboardingWizard() {
                                     exit={{ opacity: 0, x: -10 }}
                                     className="space-y-6"
                                 >
-                                    <h3 className="text-2xl font-bold">¿A qué te dedicas?</h3>
-                                    <p className="text-slate-400">Personalizaremos el lenguaje y las facturas para tu área.</p>
+                                    <h3 className="text-2xl font-bold">Hola, soy Lexis 👋</h3>
+                                    <p className="text-slate-400">Te ayudo con la facturación y los reportes fiscales. ¿A qué te dedicas? Así personalizo todo para ti.</p>
                                     <div className="grid grid-cols-2 gap-3">
                                         {professions.map((p) => (
                                             <button
@@ -118,7 +118,7 @@ export function OnboardingWizard() {
                                     className="space-y-6"
                                 >
                                     <h3 className="text-2xl font-bold">¿A quién le facturas?</h3>
-                                    <p className="text-slate-400">Esto nos ayuda a priorizar los comprobantes que necesitas.</p>
+                                    <p className="text-slate-400">Esto me ayuda a sugerirte el tipo de comprobante correcto cada vez.</p>
                                     <div className="space-y-3">
                                         <button
                                             onClick={() => setClientType("b2b")}
@@ -181,8 +181,8 @@ export function OnboardingWizard() {
                                     exit={{ opacity: 0, x: -10 }}
                                     className="space-y-6"
                                 >
-                                    <h3 className="text-2xl font-bold">Tu Identidad Fiscal</h3>
-                                    <p className="text-slate-400">Si aún no tienes RNC, puedes usar tu Cédula por ahora.</p>
+                                    <h3 className="text-2xl font-bold">Tu identidad fiscal</h3>
+                                    <p className="text-slate-400">Necesito tu RNC o cédula para generar tus comprobantes. Si aún no tienes RNC, usa tu cédula por ahora.</p>
 
                                     <div className="space-y-4">
                                         <div className="space-y-2">
@@ -231,9 +231,9 @@ export function OnboardingWizard() {
                                     <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto text-green-500 mb-6">
                                         <CheckCircle2 className="w-10 h-10" />
                                     </div>
-                                    <h3 className="text-3xl font-serif font-bold text-[#D4AF37]">¡Todo Listo!</h3>
+                                    <h3 className="text-3xl font-serif font-bold text-[#D4AF37]">¡Todo listo!</h3>
                                     <p className="text-slate-300 text-lg">
-                                        Tu oficina virtual está configurada.
+                                        Tu oficina virtual está configurada. Estoy listo para ayudarte a facturar.
                                     </p>
                                     <ul className="text-left text-slate-400 text-sm space-y-2 max-w-sm mx-auto bg-white/5 rounded-lg p-4 border border-white/10">
                                         <li><strong className="text-[#D4AF37]">Nueva Factura</strong> — Aquí creas y emites tus comprobantes fiscales.</li>
@@ -241,7 +241,7 @@ export function OnboardingWizard() {
                                         <li><strong className="text-[#D4AF37]">Clientes</strong> — Gestiona y migra tu planilla de clientes.</li>
                                     </ul>
                                     <p className="text-xs text-slate-500">
-                                        Modo Simple activado para que empieces sin estrés.
+                                        Modo Simple activado. Si tienes dudas, pregúntame en cualquier momento.
                                     </p>
 
                                     <Button onClick={completeOnboarding} className="w-full h-14 text-lg bg-[#D4AF37] hover:bg-[#B8962E] text-[#0A192F] font-bold rounded-xl mt-8 shadow-xl shadow-[#D4AF37]/20 animate-pulse">

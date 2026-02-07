@@ -38,6 +38,7 @@ import { FiscalNamePrompt } from "@/components/FiscalNamePrompt";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { EmotionalStatusWidget } from "@/components/dashboard/EmotionalStatusWidget";
 import { AIInsightWidget } from "@/components/dashboard/AIInsightWidget";
+import { LexisMessageWidget } from "@/components/dashboard/LexisMessageWidget";
 import { AlertsBanner } from "@/components/AlertsBanner";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
@@ -146,6 +147,8 @@ export default function Dashboard() {
   const [lowNcfType, setLowNcfType] = useState<string | null>(null);
   const [ncfSequenceSummary, setNcfSequenceSummary] = useState<NcfSequenceSummary | null>(null);
   const [ncfLowSequence, setNcfLowSequence] = useState<NcfSequenceSummary | null>(null);
+  const [lexisContextualMessage, setLexisContextualMessage] = useState<string>("");
+  const [monthlyStats, setMonthlyStats] = useState<{ revenue: number; invoiceCount: number; clientCount: number } | undefined>(undefined);
   const userName = authUser?.name ?? "";
   // Nombre para el saludo: perfil del usuario (configuración) > nombre fiscal > nombre de usuario
   const [welcomeName, setWelcomeName] = useState(userName || authUser?.fiscalStatus?.confirmed || APP_CONFIG.company.name);
@@ -246,8 +249,14 @@ export default function Dashboard() {
           }
           setChartData(last4MonthsData);
           setMonthLabels(labels);
-        }
 
+          // Resumen mensual para Lexis
+          setMonthlyStats({
+            revenue: monthlyRevenue,
+            invoiceCount: monthlyInvoices.length,
+            clientCount: uniqueClients.size
+          });
+        }
 
         // Check NCF Health + predictive alerts con datos reales
         try {
@@ -285,8 +294,29 @@ export default function Dashboard() {
             pendingCount: pending
           });
           setPredictiveAlerts(alerts);
+
+          // Mensaje contextual de Lexis
+          const todayStr = new Date().toISOString().slice(0, 10);
+          const invoicesToday = (invRes?.data || []).filter((inv: { date?: string }) => inv.date && inv.date.startsWith(todayStr));
+          const dayOfMonth = new Date().getDate();
+          if (invoicesToday.length === 0 && (invRes?.data || []).length > 0) {
+            setLexisContextualMessage("Hoy no has emitido facturas. ¿Creamos una?");
+          } else if (lowSummary) {
+            setLexisContextualMessage(`Tu secuencia ${lowSummary.typeLabel} se está agotando (quedan ${lowSummary.remaining}). ¿Te guío para solicitar más?`);
+          } else if (pending > 0) {
+            setLexisContextualMessage(`Tienes ${pending} factura${pending !== 1 ? "s" : ""} pendiente${pending !== 1 ? "s" : ""} de cobro. ¿Te ayudo con un recordatorio?`);
+          } else if (dayOfMonth >= 25) {
+            setLexisContextualMessage("Se acerca el cierre de mes. ¿Ya tienes listos tus reportes 606 y 607?");
+          } else {
+            setLexisContextualMessage("Aquí está tu resumen. ¿En qué te ayudo hoy?");
+          }
         } catch (e) { console.error("NCF Settings Fetch Error:", e); }
 
+        // Si no hay facturas, establecer stats en cero
+        if (!invRes?.data || (invRes.data as unknown[]).length === 0) {
+          setMonthlyStats({ revenue: 0, invoiceCount: 0, clientCount: 0 });
+          setLexisContextualMessage("Aún no hay facturas. ¿Creamos la primera juntos?");
+        }
       } catch (err: unknown) {
         console.error("Dashboard Load Error:", err);
         setError("Hubo un inconveniente técnico al cargar sus datos, nuestro equipo ha sido notificado.");
@@ -387,13 +417,23 @@ export default function Dashboard() {
         <TrialBanner />
         <SubscriptionAlert />
         <Breadcrumbs items={[{ label: "Inicio" }]} className="mb-4 text-slate-500" />
+        {/* Mensaje de Lexis (saludo + contextual) */}
+        {!isLoading && (
+          <LexisMessageWidget
+            userName={welcomeName}
+            contextualMessage={lexisContextualMessage}
+            monthlySummary={monthlyStats}
+            className="mb-6"
+          />
+        )}
+
         {/* Título del Dashboard */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-1">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-              Bienvenido, {welcomeName}
+              Tu negocio hoy
             </h2>
-            <p className="text-sm md:text-base text-slate-500 mt-1">Aquí está lo que está pasando con tu negocio hoy.</p>
+            <p className="text-sm md:text-base text-slate-500 mt-1">Resumen de ingresos, facturas y pendientes.</p>
           </div>
           <div className="flex gap-3 hidden md:flex">
             <Link href="/nueva-factura">
@@ -471,6 +511,10 @@ export default function Dashboard() {
         {/* Grid de tarjetas con estadísticas */}
         {isLoading ? (
           <div className="grid gap-6 md:grid-cols-3 mb-8">
+            <div className="col-span-3 flex items-center gap-3 text-muted-foreground text-sm">
+              <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin shrink-0"></div>
+              Revisando tus datos...
+            </div>
             {[1, 2, 3].map((i) => (
               <Card key={i} className="h-40 bg-slate-200 animate-pulse border-none"></Card>
             ))}

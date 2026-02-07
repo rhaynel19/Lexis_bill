@@ -117,7 +117,7 @@ function NewQuoteForm() {
                 setClientName(matchedClient.name);
                 if (matchedClient.phone) setClientPhone(matchedClient.phone);
                 setIsClientLocked(true);
-                toast.success("✨ Cliente frecuente detectado");
+                toast.success("Este RNC ya está en tu lista. He cargado los datos guardados.");
             }
         } else {
             if (isClientLocked) {
@@ -309,7 +309,7 @@ function NewQuoteForm() {
                                             value={clientName}
                                             onChange={e => setClientName(e.target.value)}
                                             readOnly={isClientLocked}
-                                            placeholder="Nombre completo o razón social"
+                                            placeholder="Ej: Dr. Juan Pérez o Empresa ABC"
                                             className={isClientLocked ? "bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/50 text-foreground font-bold pr-10 h-11" : "h-11 text-foreground bg-background"}
                                             required
                                         />
@@ -330,7 +330,7 @@ function NewQuoteForm() {
                                     <Input
                                         value={rnc}
                                         onChange={e => handleRncChange(e.target.value)}
-                                        placeholder="Ej: 131234567"
+                                        placeholder="Escribe o pega el RNC y lo valido"
                                         className="h-11 font-mono text-foreground bg-background"
                                     />
                                 </div>
