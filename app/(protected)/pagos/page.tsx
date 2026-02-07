@@ -71,7 +71,7 @@ export default function PaymentsPage() {
     };
 
     return (
-        <div className="container mx-auto px-4 py-6 md:py-8 pb-28 md:pb-12 max-w-4xl">
+        <div className="container mx-auto px-4 py-6 md:py-8 pb-24 md:pb-12 max-w-4xl">
             <div className="mb-6 flex items-center justify-between">
                 <div>
                     <Link href="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-2 text-sm font-semibold">

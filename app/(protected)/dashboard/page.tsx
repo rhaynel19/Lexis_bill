@@ -382,7 +382,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-24 md:pb-12">
       <div className="container mx-auto px-4 py-8">
         <TrialBanner />
         <SubscriptionAlert />

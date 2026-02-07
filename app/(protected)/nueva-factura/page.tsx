@@ -781,7 +781,7 @@ export default function NewInvoice() {
 
     if (showPreview) {
         return (
-            <div className="container mx-auto px-4 py-8">
+            <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
                 <DocumentPreview
                     type="invoice"
                     data={{ clientName, rnc, clientPhone, items, subtotal, itbis, total, invoiceType, date: invoiceDate }}
@@ -794,7 +794,7 @@ export default function NewInvoice() {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="container mx-auto px-4 py-8 pb-24 md:pb-8 max-w-5xl">
             <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Nueva factura" }]} className="mb-4 text-muted-foreground" />
             {/* Encabezado */}
             <div className="mb-8 flex items-center justify-between">
