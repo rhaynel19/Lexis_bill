@@ -146,6 +146,7 @@ export default function Dashboard() {
   const [ncfLowSequence, setNcfLowSequence] = useState<NcfSequenceSummary | null>(null);
   const [lexisContextualMessage, setLexisContextualMessage] = useState<string>("");
   const [monthlyStats, setMonthlyStats] = useState<{ revenue: number; invoiceCount: number; clientCount: number } | undefined>(undefined);
+  const [targetInvoices, setTargetInvoices] = useState<number | undefined>(undefined);
   const userName = authUser?.name ?? "";
   // Nombre para el saludo: perfil del usuario (configuración) > nombre fiscal > nombre de usuario
   const [welcomeName, setWelcomeName] = useState(userName || authUser?.fiscalStatus?.confirmed || APP_CONFIG.company.name);
@@ -214,6 +215,7 @@ export default function Dashboard() {
           });
           const prevRevenue = previousMonthlyInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
           setPreviousMonthRevenue(prevRevenue);
+          setTargetInvoices(Math.max(previousMonthlyInvoices.length, 1));
 
           // ITBIS (18% simplified or from data)
           const monthlyTaxes = monthlyInvoices.reduce((sum, inv) => sum + (inv.itbis || 0), 0);
@@ -312,6 +314,7 @@ export default function Dashboard() {
         // Si no hay facturas, establecer stats en cero
         if (!invRes?.data || (invRes.data as unknown[]).length === 0) {
           setMonthlyStats({ revenue: 0, invoiceCount: 0, clientCount: 0 });
+          setTargetInvoices(undefined);
           setLexisContextualMessage("Aún no hay facturas. ¿Creamos la primera juntos?");
         }
       } catch (err: unknown) {
@@ -424,6 +427,7 @@ export default function Dashboard() {
             pendingCount={pendingInvoices}
             predictions={predictiveAlerts}
             lastInvoiceDate={recentInvoices[0]?.date}
+            targetInvoices={targetInvoices}
             className="mb-6"
           />
         )}
