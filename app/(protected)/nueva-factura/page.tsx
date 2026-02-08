@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Link from "next/link";
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { validateRNCOrCedula, autoFormatRNCOrCedula } from "@/lib/validators";
 import { validateRNC } from "@/lib/rnc-validator";
@@ -17,7 +17,7 @@ import { getNextSequenceNumber } from "@/lib/config";
 import { getDominicanDate } from "@/lib/date-utils";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Search, Mic, Save, BookOpen, Loader2, CheckCircle, MessageCircle, UserPlus, FileText, Eye, Sparkles } from "lucide-react";
+import { Search, Mic, Save, BookOpen, Loader2, CheckCircle, MessageCircle, UserPlus, FileText, Eye, Sparkles, AlertTriangle, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { handleNumericKeyDown } from "@/lib/input-validators";
 import { InvoicePreview } from "@/components/invoice/InvoicePreview";
@@ -29,6 +29,9 @@ import { SuggestionWidget } from "@/components/ui/suggestion-widget";
 import { DocumentPreview } from "@/components/DocumentPreview";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ContextualHelp } from "@/components/ui/contextual-help";
+import { PaymentTypeSelector, type PagoMixtoItem } from "@/components/invoice/PaymentTypeSelector";
+import { ClientAutofillInput, type AutofillLastInvoice } from "@/components/invoice/ClientAutofillInput";
+import { ServiceAutofillInput, type AutofillService } from "@/components/invoice/ServiceAutofillInput";
 
 // Interfaz para definir la estructura de un ítem de factura
 interface InvoiceItem {
@@ -169,6 +172,18 @@ export default function NewInvoice() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [lastInvoiceNCF, setLastInvoiceNCF] = useState("");
+
+    // Tipo de Pago (obligatorio)
+    const [tipoPago, setTipoPago] = useState("efectivo");
+    const [tipoPagoOtro, setTipoPagoOtro] = useState("");
+    const [pagoMixto, setPagoMixto] = useState<PagoMixtoItem[]>([{ tipo: "efectivo", monto: 0 }]);
+
+    // Autofill inteligente
+    const [lastInvoiceFromAutofill, setLastInvoiceFromAutofill] = useState<AutofillLastInvoice | null>(null);
+    const [habitualTipoPago, setHabitualTipoPago] = useState<string | undefined>(undefined);
+
+    // Métricas de tiempo (para "Factura creada en tiempo récord")
+    const invoiceCreateStartRef = useRef<number>(Date.now());
 
     // Load CRM Data and Check for Cloned Invoice
     useEffect(() => {
@@ -432,26 +447,77 @@ export default function NewInvoice() {
         }
     };
 
-    const handleSelectClient = (clientRnc: string) => {
+    const handleSelectClient = async (clientRnc: string) => {
         const client = savedClients.find(c => c.rnc === clientRnc);
         if (client) {
             setClientName(client.name);
             setRnc(client.rnc);
             if (client.phone) setClientPhone(client.phone);
             setIsClientLocked(true);
-            toast.success("Cliente cargado. Los datos están listos para facturar.");
-
-            // Smart NCF Suggestion
             suggestNCF(client.rnc, client.name);
+            try {
+                const { api } = await import("@/lib/api-service");
+                const res = await api.getAutofillSuggestions({ rnc: client.rnc.replace(/[^\d]/g, "") });
+                if (res.lastInvoice) {
+                    setLastInvoiceFromAutofill(res.lastInvoice);
+                    setHabitualTipoPago(res.lastInvoice.tipoPago);
+                    setTipoPago(res.lastInvoice.tipoPago);
+                    toast.success("Cliente frecuente detectado.", { description: "Puedes usar «Repetir última factura»." });
+                } else {
+                    setLastInvoiceFromAutofill(null);
+                    setHabitualTipoPago(undefined);
+                    toast.success("Cliente cargado. Los datos están listos para facturar.");
+                }
+            } catch {
+                setLastInvoiceFromAutofill(null);
+                toast.success("Cliente cargado. Los datos están listos para facturar.");
+            }
         }
     };
 
+    const handleAutofillSelectClient = (client: { name: string; rnc: string; phone?: string; usualTipoPago?: string; count?: number }, lastInvoice?: AutofillLastInvoice | null) => {
+        setClientName(client.name);
+        setRnc(client.rnc);
+        if (client.phone) setClientPhone(client.phone);
+        setIsClientLocked(true);
+        setLastInvoiceFromAutofill(lastInvoice || null);
+        setHabitualTipoPago(client.usualTipoPago);
+        if (client.usualTipoPago) setTipoPago(client.usualTipoPago);
+        suggestNCF(client.rnc, client.name);
+        if (client.count && client.count > 1) toast.success("Cliente frecuente detectado.", { description: "He aplicado la configuración habitual." });
+        else toast.success("Cliente cargado. Los datos están listos para facturar.");
+    };
+
+    const handleUseSameConfig = () => {
+        const inv = lastInvoiceFromAutofill;
+        if (!inv?.items?.length) return;
+        const its = inv.items.map((i, idx) => ({
+            id: Date.now().toString() + idx,
+            description: i.description,
+            quantity: i.quantity ?? 1,
+            price: i.price ?? 0,
+            isExempt: i.isExempt ?? false,
+        }));
+        setItems(its);
+        if (inv.tipoPago) setTipoPago(inv.tipoPago);
+        if (inv.ncfType) setInvoiceType(inv.ncfType);
+        setLastInvoiceFromAutofill(null);
+        toast.success("Configuración aplicada.", { description: "Precio sugerido basado en tus últimas facturas." });
+    };
+
     const handleSelectService = (itemId: string, serviceName: string) => {
-        const service = savedServices.find(s => s.name === serviceName);
+        const service = savedServices.find(s => (s as any).name === serviceName || (s as any).description === serviceName);
         if (service) {
-            updateItem(itemId, "description", service.name);
-            updateItem(itemId, "price", service.price);
+            updateItem(itemId, "description", (service as any).name || (service as any).description || serviceName);
+            updateItem(itemId, "price", (service as any).price ?? 0);
         }
+    };
+
+    const handleAutofillSelectService = (itemId: string) => (s: AutofillService) => {
+        updateItem(itemId, "description", s.description);
+        updateItem(itemId, "price", s.price);
+        updateItem(itemId, "isExempt", s.isExempt);
+        toast.success("Precio sugerido basado en tus últimas facturas.", { duration: 2500 });
     };
 
     // AI Magic Input (colapsado por defecto para simplificar la pantalla)
@@ -630,24 +696,46 @@ export default function NewInvoice() {
 
     const handlePreSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Validar que todos los campos estén completos
         if (!invoiceType || !clientName || !rnc) {
             toast.error("Por favor completa todos los campos obligatorios");
             return;
         }
-
         const validItems = items.filter(
             (item) => item.description && Number(item.quantity) > 0 && Number(item.price) > 0
         );
-
         if (validItems.length === 0) {
             toast.error("Por favor agrega al menos un ítem válido a la factura");
             return;
         }
+        if (tipoPago === "mixto") {
+            const sumMixto = pagoMixto.reduce((s, p) => s + (p.monto || 0), 0);
+            if (Math.abs(sumMixto - total) > 1) {
+                toast.error("Los montos del pago mixto deben cuadrar con el total de la factura");
+                return;
+            }
+        }
         setShowPreview(true);
     }
 
-    const handleConfirmSave = async () => {
+    const [showCreditRiskConfirm, setShowCreditRiskConfirm] = useState(false);
+    const [creditRiskData, setCreditRiskData] = useState<{ message?: string; riskScore?: number } | null>(null);
+    const [pendingConfirmSave, setPendingConfirmSave] = useState(false);
+
+    const handleConfirmSave = async (skipRiskCheck = false) => {
+        if (isGenerating) return;
+        if (tipoPago === "credito" && !skipRiskCheck && rnc.replace(/[^0-9]/g, "").length >= 9) {
+            try {
+                const { api } = await import("@/lib/api-service");
+                const risk = await api.getClientPaymentRisk(rnc);
+                if (risk && risk.level === "alto_riesgo" && risk.message) {
+                    setCreditRiskData({ message: risk.message, riskScore: risk.riskScore });
+                    setShowCreditRiskConfirm(true);
+                    setPendingConfirmSave(true);
+                    return;
+                }
+            } catch { /* continue */ }
+        }
+        setPendingConfirmSave(false);
         if (isGenerating) return;
         setIsGenerating(true);
 
@@ -676,7 +764,7 @@ export default function NewInvoice() {
                 return;
             }
 
-            const invoiceData = {
+            const invoiceData: Record<string, unknown> = {
                 clientName: cleanClientName,
                 clientRnc: cleanRnc,
                 ncfType: invoiceType,
@@ -685,8 +773,13 @@ export default function NewInvoice() {
                 subtotal,
                 itbis,
                 total,
-                isrRetention
+                isrRetention,
+                tipoPago,
             };
+            if (tipoPago === "otro" && tipoPagoOtro?.trim()) invoiceData.tipoPagoOtro = tipoPagoOtro.trim();
+            if (tipoPago === "mixto" && pagoMixto.length > 0) {
+                invoiceData.pagoMixto = pagoMixto.filter((p) => (p.monto || 0) > 0).map((p) => ({ tipo: p.tipo, monto: p.monto }));
+            }
 
             const { api } = await import("@/lib/api-service");
             const response = await api.createInvoice(invoiceData);
@@ -723,6 +816,10 @@ export default function NewInvoice() {
 
             setLastInvoiceNCF(ncf);
             setShowSuccessModal(true);
+            const elapsedSec = (Date.now() - invoiceCreateStartRef.current) / 1000;
+            if (elapsedSec < 15) {
+                toast.success("Factura creada en tiempo récord.", { description: `Menos de ${Math.round(elapsedSec)} segundos. ¡Increíble!` });
+            }
             localStorage.removeItem("invoiceDraft");
             api.deleteInvoiceDraft().catch(() => {});
 
@@ -733,6 +830,12 @@ export default function NewInvoice() {
         } finally {
             if (!showSuccessModal) setIsGenerating(false);
         }
+    };
+
+    const handleCreditRiskContinue = () => {
+        setShowCreditRiskConfirm(false);
+        setCreditRiskData(null);
+        handleConfirmSave(true);
     };
 
 
@@ -887,13 +990,21 @@ export default function NewInvoice() {
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    {/* Selector de Cliente Guardado */}
-                                    {savedClients.length > 0 && (
-                                        <div className="space-y-2 mb-4 p-4 bg-muted/30 rounded border border-border/10">
-                                            <Label className="text-muted-foreground">📂 Clientes Frecuentes</Label>
+                                    {/* Autofill inteligente + Selector rápido */}
+                                    <div className="space-y-3">
+                                        <Label className="text-muted-foreground">🔍 Buscar cliente (autofill inteligente)</Label>
+                                        <ClientAutofillInput
+                                            value={clientName}
+                                            onChange={(v) => { setClientName(v); if (!v) { setLastInvoiceFromAutofill(null); setHabitualTipoPago(undefined); } }}
+                                            onSelectClient={handleAutofillSelectClient}
+                                            placeholder="Escribe nombre o RNC para buscar..."
+                                            disabled={isClientLocked}
+                                            className="w-full"
+                                        />
+                                        {savedClients.length > 0 && (
                                             <Select onValueChange={handleSelectClient}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Seleccionar cliente guardado..." />
+                                                <SelectTrigger className="h-8 text-sm">
+                                                    <SelectValue placeholder="O seleccionar de mi lista..." />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {savedClients.map((c, i) => (
@@ -901,39 +1012,30 @@ export default function NewInvoice() {
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+                                        )}
+                                    </div>
+
+                                    {/* USAR LA MISMA + Repetir última factura */}
+                                    {lastInvoiceFromAutofill?.items?.length && rnc && (
+                                        <div className="p-4 rounded-lg border-2 border-accent/40 bg-accent/10 space-y-2">
+                                            <p className="text-sm font-medium text-foreground">¿Deseas usar la misma configuración que la última factura?</p>
+                                            <div className="flex flex-wrap gap-2 items-center">
+                                                <Button type="button" size="sm" onClick={handleUseSameConfig} className="gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90 font-semibold shadow-sm">
+                                                    <Zap className="w-4 h-4" /> Repetir última factura
+                                                </Button>
+                                                <span className="text-xs text-muted-foreground">Clonar ítems, tipo de pago y NCF — &lt;10 seg</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {isClientLocked && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] bg-success/20 text-success px-2 py-0.5 rounded-full font-bold">✨ Cliente seleccionado</span>
+                                            <button type="button" onClick={() => { setIsClientLocked(false); setLastInvoiceFromAutofill(null); setHabitualTipoPago(undefined); }} className="text-xs text-muted-foreground hover:text-foreground underline">Cambiar</button>
                                         </div>
                                     )}
 
                                     <div className="grid gap-4 md:grid-cols-2">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="client-name">Nombre del Cliente *</Label>
-                                            <div className="relative">
-                                                <Input
-                                                    id="client-name"
-                                                    placeholder="Ej: Dr. Juan Pérez o Empresa ABC"
-                                                    value={clientName}
-                                                    onChange={(e) => setClientName(e.target.value)}
-                                                    readOnly={isClientLocked}
-                                                    className={isClientLocked ? "bg-muted/50 border-success/30 text-foreground font-semibold pr-10" : ""}
-                                                    required
-                                                />
-                                                {isClientLocked && (
-                                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                                        <span className="text-[10px] bg-success/20 text-success px-2 py-0.5 rounded-full font-bold hidden sm:inline-block">
-                                                            ✨ Frecuente
-                                                        </span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setIsClientLocked(false)}
-                                                            className="text-muted-foreground hover:text-foreground"
-                                                            title="Editar nombre"
-                                                        >
-                                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="client-rnc">RNC / Cédula *</Label>
                                             <div className="flex gap-2">
@@ -962,17 +1064,15 @@ export default function NewInvoice() {
                                                 <p className="text-xs text-destructive">{rncError}</p>
                                             )}
                                         </div>
-                                    </div>
-
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="client-phone">Teléfono / WhatsApp (Opcional)</Label>
-                                        <Input
-                                            id="client-phone"
-                                            placeholder="Ej: 8095551234"
-                                            value={clientPhone}
-                                            onChange={(e) => setClientPhone(e.target.value)}
-                                        />
+                                        <div className="space-y-2">
+                                            <Label htmlFor="client-phone">Teléfono / WhatsApp (Opcional)</Label>
+                                            <Input
+                                                id="client-phone"
+                                                placeholder="Ej: 8095551234"
+                                                value={clientPhone}
+                                                onChange={(e) => setClientPhone(e.target.value)}
+                                            />
+                                        </div>
                                     </div>
 
                                     <div className="space-y-2">
@@ -1163,22 +1263,20 @@ export default function NewInvoice() {
                                                 {items.map((item) => (
                                                     <Fragment key={item.id}>
                                                         <TableRow>
-                                                            {/* Descripción */}
+                                                            {/* Descripción con autofill inteligente */}
                                                             <TableCell>
-                                                                <div className="relative">
-                                                                    <Input
-                                                                        type="text"
-                                                                        placeholder="Descripción..."
+                                                                <div className="relative flex gap-1">
+                                                                    <ServiceAutofillInput
+                                                                        itemId={item.id}
                                                                         value={item.description}
-                                                                        onChange={(e) =>
-                                                                            updateItem(item.id, "description", e.target.value)
-                                                                        }
-                                                                        className="pr-8"
+                                                                        onChange={(v) => updateItem(item.id, "description", v)}
+                                                                        onSelectService={handleAutofillSelectService(item.id)}
+                                                                        placeholder="Escribe para autocompletar..."
                                                                     />
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => handleVoiceDictation(item.id)}
-                                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-accent transition-colors"
+                                                                        className="shrink-0 p-2 text-muted-foreground hover:text-accent transition-colors rounded"
                                                                         title="Dictado por voz"
                                                                     >
                                                                         <Mic className="w-4 h-4" />
@@ -1188,11 +1286,11 @@ export default function NewInvoice() {
                                                                     <div className="mt-1">
                                                                         <Select onValueChange={(val) => handleSelectService(item.id, val)}>
                                                                             <SelectTrigger className="h-6 text-xs border-0 bg-transparent text-accent p-0 hover:underline shadow-none">
-                                                                                <SelectValue placeholder="✨ Cargar servicio..." />
+                                                                                <SelectValue placeholder="✨ O cargar de mi lista..." />
                                                                             </SelectTrigger>
                                                                             <SelectContent>
                                                                                 {savedServices.map((s, i) => (
-                                                                                    <SelectItem key={i} value={s.name}>{s.name} - ${s.price}</SelectItem>
+                                                                                    <SelectItem key={i} value={(s as any).name || (s as any).description || ""}>{(s as any).name || (s as any).description} - ${(s as any).price}</SelectItem>
                                                                                 ))}
                                                                             </SelectContent>
                                                                         </Select>
@@ -1414,6 +1512,31 @@ export default function NewInvoice() {
                                 </CardContent>
                             </Card>
 
+                            {/* Tipo de Pago */}
+                            <Card className="border-l-4 border-l-blue-500/50">
+                                <CardHeader>
+                                    <CardTitle className="text-base">Tipo de Pago</CardTitle>
+                                    <CardDescription>
+                                        Registra cómo pagó el cliente para insights financieros en Lexis
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <PaymentTypeSelector
+                                        tipoPago={tipoPago}
+                                        onTipoPagoChange={(v) => {
+                                            setTipoPago(v);
+                                            if (v === "mixto" && pagoMixto.length === 0) setPagoMixto([{ tipo: "efectivo", monto: 0 }]);
+                                        }}
+                                        tipoPagoOtro={tipoPagoOtro}
+                                        onTipoPagoOtroChange={setTipoPagoOtro}
+                                        pagoMixto={pagoMixto}
+                                        onPagoMixtoChange={setPagoMixto}
+                                        total={total}
+                                        habitualTipoPago={habitualTipoPago}
+                                    />
+                                </CardContent>
+                            </Card>
+
                             {/* Botones de Acción */}
                             <div className="flex flex-col md:flex-row gap-4 justify-end">
                                 <Link href="/">
@@ -1499,6 +1622,34 @@ export default function NewInvoice() {
                     </div>
                 )
             }
+
+            {/* Modo preventivo: alerta venta a crédito a cliente de riesgo */}
+            <Dialog open={showCreditRiskConfirm} onOpenChange={(open) => {
+                if (!open) {
+                    setShowCreditRiskConfirm(false);
+                    setCreditRiskData(null);
+                    setPendingConfirmSave(false);
+                }
+            }}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                            <AlertTriangle className="w-5 h-5" /> Cliente con historial de pago irregular
+                        </DialogTitle>
+                        <DialogDescription>
+                            {creditRiskData?.message || "Este cliente suele pagar con retraso. ¿Deseas continuar con la venta a crédito?"}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => { setShowCreditRiskConfirm(false); setCreditRiskData(null); setPendingConfirmSave(false); }}>
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleCreditRiskContinue}>
+                            Sí, continuar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Success Modal */}
             <Dialog open={showSuccessModal} onOpenChange={() => router.push('/')}>

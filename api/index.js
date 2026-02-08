@@ -312,10 +312,24 @@ const invoiceSchema = new mongoose.Schema({
     annulledBy: { type: String },
     // Retenciones practicadas por terceros (formato 607 DGII)
     isrRetention: { type: Number, default: 0 },
-    itbisRetention: { type: Number, default: 0 }
+    itbisRetention: { type: Number, default: 0 },
+    // --- Tipo de Pago (Lexis Copilot / Radar Morosidad) ---
+    tipoPago: { type: String, enum: ['efectivo', 'transferencia', 'tarjeta', 'credito', 'mixto', 'otro'], default: 'efectivo' },
+    tipoPagoOtro: { type: String },
+    pagoMixto: [{
+        tipo: { type: String },
+        monto: { type: Number }
+    }],
+    montoPagado: { type: Number, default: 0 },
+    balancePendiente: { type: Number, default: 0 },
+    estadoPago: { type: String, enum: ['pagado', 'parcial', 'pendiente'], default: 'pagado' },
+    fechaPago: { type: Date }
 });
 invoiceSchema.index({ userId: 1, date: -1 });
 invoiceSchema.index({ userId: 1, ncfSequence: 1 });
+invoiceSchema.index({ userId: 1, tipoPago: 1 });
+invoiceSchema.index({ userId: 1, estadoPago: 1 });
+invoiceSchema.index({ userId: 1, clientRnc: 1, date: -1 });
 
 const customerSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -2078,6 +2092,428 @@ app.get('/api/admin/metrics', verifyToken, verifyAdmin, async (req, res) => {
     }
 });
 
+// --- LEXIS BUSINESS COPILOT: Analytics inteligente (sin IA externa) ---
+app.get('/api/business-copilot', verifyToken, async (req, res) => {
+    try {
+        const userId = req.userId;
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+
+        // 1. Agregación: clientes con última factura, total facturado, días sin facturar
+        const clientStats = await Invoice.aggregate([
+            { $match: {
+                userId: new mongoose.Types.ObjectId(userId),
+                status: { $nin: ['cancelled'] },
+                clientRnc: { $exists: true, $nin: [null, ''] }
+            }},
+            { $group: {
+                _id: '$clientRnc',
+                clientName: { $first: '$clientName' },
+                lastInvoiceDate: { $max: '$date' },
+                totalRevenue: { $sum: '$total' },
+                invoiceCount: { $sum: 1 }
+            }},
+            { $project: {
+                rnc: '$_id',
+                clientName: 1,
+                lastInvoiceDate: 1,
+                totalRevenue: 1,
+                invoiceCount: 1,
+                daysSinceLastInvoice: {
+                    $floor: { $divide: [{ $subtract: [now, '$lastInvoiceDate'] }, 86400000] }
+                }
+            }},
+            { $sort: { totalRevenue: -1 } }
+        ]);
+
+        // 2. Ingresos por mes (actual vs anterior)
+        const monthlyRevenue = await Invoice.aggregate([
+            { $match: { userId: new mongoose.Types.ObjectId(userId), status: { $nin: ['cancelled'] } } },
+            { $group: {
+                _id: { year: { $year: '$date' }, month: { $month: '$date' } },
+                total: { $sum: '$total' },
+                count: { $sum: 1 }
+            }}
+        ]);
+        const currMonth = monthlyRevenue.find(r => r._id.year === now.getFullYear() && r._id.month === now.getMonth() + 1);
+        const prevMonth = monthlyRevenue.find(r => r._id.year === endOfLastMonth.getFullYear() && r._id.month === endOfLastMonth.getMonth() + 1);
+        const currentRevenue = currMonth?.total || 0;
+        const previousRevenue = prevMonth?.total || 0;
+        const currentInvoiceCount = currMonth?.count || 0;
+
+        // 3. Servicios más vendidos (desde items)
+        const topServices = await Invoice.aggregate([
+            { $match: { userId: new mongoose.Types.ObjectId(userId), status: { $nin: ['cancelled'] } } },
+            { $unwind: '$items' },
+            { $match: { 'items.description': { $exists: true, $nin: [null, ''] } } },
+            { $group: {
+                _id: '$items.description',
+                totalQuantity: { $sum: { $ifNull: ['$items.quantity', 1] } },
+                totalRevenue: { $sum: { $multiply: [{ $ifNull: ['$items.quantity', 1] }, { $ifNull: ['$items.price', 0] }] } }
+            }},
+            { $sort: { totalRevenue: -1 } },
+            { $limit: 5 },
+            { $project: { description: '$_id', totalQuantity: 1, totalRevenue: 1, _id: 0 } }
+        ]);
+
+        // 4. NCF Settings y alertas fiscales
+        const ncfSettings = await NCFSettings.find({ userId, isActive: true }).lean();
+        const customers = await Customer.find({ userId }).select('rnc name').lean();
+
+        // Calcular total facturado para % concentración
+        const totalRevenueAll = clientStats.reduce((s, c) => s + c.totalRevenue, 0);
+        const topClient = clientStats[0];
+        const topClientPct = totalRevenueAll > 0 && topClient ? (topClient.totalRevenue / totalRevenueAll * 100) : 0;
+
+        // Clientes por categoría de inactividad
+        const clients30 = clientStats.filter(c => c.daysSinceLastInvoice >= 30 && c.daysSinceLastInvoice < 60);
+        const clients60 = clientStats.filter(c => c.daysSinceLastInvoice >= 60 && c.daysSinceLastInvoice < 90);
+        const clients90 = clientStats.filter(c => c.daysSinceLastInvoice >= 90);
+
+        // Alertas inteligentes
+        const alerts = [];
+        if (clients30.length > 0 || clients60.length > 0 || clients90.length > 0) {
+            const total = clients30.length + clients60.length + clients90.length;
+            const maxDays = Math.max(...[clients30, clients60, clients90].flat().map(c => c.daysSinceLastInvoice));
+            const threshold = maxDays >= 90 ? 90 : maxDays >= 60 ? 60 : 30;
+            alerts.push({
+                type: 'inactive_clients',
+                severity: maxDays >= 90 ? 'high' : maxDays >= 60 ? 'medium' : 'info',
+                message: `Tienes ${total} cliente${total > 1 ? 's' : ''} con más de ${threshold} días sin facturar. Podrías reactivarlos.`,
+                count: total,
+                threshold
+            });
+        }
+        if (previousRevenue > 0 && currentRevenue < previousRevenue) {
+            const pct = Math.round(((previousRevenue - currentRevenue) / previousRevenue) * 100);
+            alerts.push({
+                type: 'revenue_drop',
+                severity: pct > 20 ? 'high' : 'medium',
+                message: `Tu facturación bajó ${pct}% respecto al mes pasado.`,
+                pct
+            });
+        }
+        if (previousRevenue > 0 && currentRevenue > previousRevenue) {
+            const pct = Math.round(((currentRevenue - previousRevenue) / previousRevenue) * 100);
+            alerts.push({
+                type: 'revenue_growth',
+                severity: 'positive',
+                message: `Tu facturación creció ${pct}% respecto al mes pasado.`,
+                pct
+            });
+        }
+        if (topClientPct > 50 && topClient) {
+            alerts.push({
+                type: 'concentration',
+                severity: 'medium',
+                message: `Un cliente concentra el ${Math.round(topClientPct)}% de tus ingresos. Considera diversificar.`,
+                pct: Math.round(topClientPct),
+                clientName: topClient.clientName
+            });
+        } else if (topClient && totalRevenueAll > 0) {
+            alerts.push({
+                type: 'top_client',
+                severity: 'info',
+                message: `${topClient.clientName || 'Este cliente'} es tu mayor fuente de ingresos.`,
+                clientName: topClient.clientName,
+                pct: Math.round(topClientPct)
+            });
+        }
+        if (topServices.length > 0) {
+            alerts.push({
+                type: 'top_service',
+                severity: 'info',
+                message: `"${topServices[0].description}" es tu servicio más vendido este período.`,
+                service: topServices[0].description
+            });
+        }
+
+        // Radar de clientes (scoring)
+        const clientRadar = clientStats.map(c => {
+            let status = 'active';
+            if (c.daysSinceLastInvoice >= 90) status = 'lost';
+            else if (c.daysSinceLastInvoice >= 30) status = 'at_risk';
+            const pct = totalRevenueAll > 0 ? (c.totalRevenue / totalRevenueAll * 100) : 0;
+            return {
+                rnc: c.rnc,
+                clientName: c.clientName,
+                lastInvoiceDate: c.lastInvoiceDate,
+                daysSinceLastInvoice: c.daysSinceLastInvoice,
+                totalRevenue: c.totalRevenue,
+                revenuePct: Math.round(pct * 10) / 10,
+                status,
+                recommendation: status !== 'active' && pct >= 5
+                    ? `Este cliente representaba el ${Math.round(pct)}% de tus ingresos. Considera reactivarlo.`
+                    : null
+            };
+        });
+
+        // Ranking mensual
+        const lastMonthClients = await Invoice.aggregate([
+            { $match: {
+                userId: new mongoose.Types.ObjectId(userId),
+                status: { $nin: ['cancelled'] },
+                date: { $gte: startOfLastMonth, $lte: endOfLastMonth }
+            }},
+            { $group: { _id: '$clientRnc', clientName: { $first: '$clientName' }, total: { $sum: '$total' } } },
+            { $sort: { total: -1 } }
+        ]);
+        const thisMonthClients = await Invoice.aggregate([
+            { $match: {
+                userId: new mongoose.Types.ObjectId(userId),
+                status: { $nin: ['cancelled'] },
+                date: { $gte: startOfMonth }
+            }},
+            { $group: { _id: '$clientRnc', clientName: { $first: '$clientName' }, total: { $sum: '$total' } } }
+        ]);
+        const lastMonthRncSet = new Set(lastMonthClients.map(c => c._id));
+        const thisMonthRncSet = new Set(thisMonthClients.map(c => c._id));
+        const droppedClient = lastMonthClients.find(c => !thisMonthRncSet.has(c._id));
+
+        const rankings = {
+            topClient: topClient ? { name: topClient.clientName, total: topClient.totalRevenue, pct: Math.round(topClientPct) } : null,
+            droppedClient: droppedClient ? { name: droppedClient.clientName, lastMonthTotal: droppedClient.total } : null,
+            topService: topServices[0] ? { description: topServices[0].description, totalRevenue: topServices[0].totalRevenue, totalQuantity: topServices[0].totalQuantity } : null
+        };
+
+        // Detector de errores fiscales
+        const fiscalAlerts = [];
+        const typeToLabel = { '01': 'B01', '02': 'B02', '31': 'E31', '32': 'E32', '14': 'B14', '15': 'B15', '44': 'E44', '45': 'E45' };
+        for (const s of ncfSettings) {
+            const remaining = (s.finalNumber || 0) - (s.currentValue || 0);
+            const label = typeToLabel[s.type] || `${s.series}${s.type}`;
+            if (remaining >= 0 && remaining < 15) {
+                fiscalAlerts.push({
+                    type: 'ncf_low',
+                    severity: 'warning',
+                    message: `Lexis detectó que tu secuencia NCF (${label}) podría agotarse pronto (quedan ${remaining}). Te recomendamos solicitar una nueva.`,
+                    remaining
+                });
+            }
+            if (s.expiryDate && new Date(s.expiryDate) < new Date(now.getTime() + 30 * 86400000)) {
+                fiscalAlerts.push({
+                    type: 'ncf_expiring',
+                    severity: 'info',
+                    message: `Tu secuencia ${label} vence el ${new Date(s.expiryDate).toLocaleDateString('es-DO')}.`,
+                    expiryDate: s.expiryDate
+                });
+            }
+        }
+        // Clientes con RNC inválido (9 o 11 dígitos)
+        const invalidRnc = customers.filter(c => {
+            const clean = (c.rnc || '').replace(/\D/g, '');
+            return clean.length !== 9 && clean.length !== 11;
+        });
+        if (invalidRnc.length > 0) {
+            fiscalAlerts.push({
+                type: 'invalid_rnc',
+                severity: 'warning',
+                message: `Lexis detectó ${invalidRnc.length} cliente${invalidRnc.length > 1 ? 's' : ''} con RNC que no cumple el formato (9 u 11 dígitos).`,
+                count: invalidRnc.length
+            });
+        }
+
+        // --- TIPO DE PAGO: analytics (tipoPago, balancePendiente) ---
+        const paymentStats = await Invoice.aggregate([
+            { $match: { userId: new mongoose.Types.ObjectId(userId), status: { $nin: ['cancelled'] } } },
+            { $addFields: {
+                tipoPago: { $ifNull: ['$tipoPago', 'efectivo'] },
+                balance: { $cond: [{ $gt: [{ $ifNull: ['$balancePendiente', 0] }, 0] }, '$balancePendiente', { $cond: [{ $eq: ['$status', 'pending'] }, '$total', 0] }] },
+                montoPagado: { $ifNull: ['$montoPagado', { $cond: [{ $eq: ['$status', 'pending'] }, 0, '$total'] }] }
+            }},
+            { $group: {
+                _id: '$tipoPago',
+                count: { $sum: 1 },
+                totalRevenue: { $sum: '$total' },
+                totalBalance: { $sum: '$balance' }
+            }}
+        ]);
+        const totalInvoicesForPayment = paymentStats.reduce((s, p) => s + p.count, 0);
+        const creditStats = paymentStats.find(p => p._id === 'credito');
+        const creditPct = totalInvoicesForPayment > 0 && creditStats ? (creditStats.count / totalInvoicesForPayment * 100) : 0;
+        const transferStats = paymentStats.find(p => p._id === 'transferencia');
+        const transferPct = totalRevenueAll > 0 && transferStats ? (transferStats.totalRevenue / totalRevenueAll * 100) : 0;
+        let totalBalancePendiente = paymentStats.reduce((s, p) => s + (p.totalBalance || 0), 0);
+        if (totalBalancePendiente === 0 && invoicesWithBalance.length > 0) {
+            totalBalancePendiente = invoicesWithBalance.reduce((s, inv) => {
+                const bal = (inv.balancePendiente != null && inv.balancePendiente > 0) ? inv.balancePendiente : (inv.total || 0);
+                return s + bal;
+            }, 0);
+        }
+
+        // Morosidad: facturas con balance pendiente
+        const allInvoices = await Invoice.find({ userId, status: { $nin: ['cancelled'] } })
+            .select('clientRnc clientName date total balancePendiente estadoPago status').lean();
+        const invoicesWithBalance = allInvoices.filter(inv => {
+            const bal = (inv.balancePendiente != null && inv.balancePendiente > 0)
+                ? inv.balancePendiente
+                : (inv.estadoPago === 'pendiente' || inv.estadoPago === 'parcial' || inv.status === 'pending')
+                    ? (inv.total || 0) : 0;
+            return bal > 0;
+        });
+        const morosityByClient = {};
+        invoicesWithBalance.forEach(inv => {
+            const rnc = inv.clientRnc || 'unknown';
+            if (!morosityByClient[rnc]) morosityByClient[rnc] = { clientName: inv.clientName, total: 0, count: 0, maxDays: 0 };
+            const bal = inv.balancePendiente ?? inv.total;
+            morosityByClient[rnc].total += bal;
+            morosityByClient[rnc].count += 1;
+            const days = Math.floor((now - new Date(inv.date)) / 86400000);
+            if (days > morosityByClient[rnc].maxDays) morosityByClient[rnc].maxDays = days;
+        });
+        const morosityList = Object.entries(morosityByClient).map(([rnc, d]) => ({
+            rnc,
+            clientName: d.clientName,
+            totalPendiente: d.total,
+            facturasVencidas: d.count,
+            diasMayorAntiguedad: d.maxDays,
+            nivel: d.maxDays <= 15 ? 'normal' : d.maxDays <= 30 ? 'atencion' : d.maxDays <= 60 ? 'riesgo' : 'critico'
+        })).sort((a, b) => b.totalPendiente - a.totalPendiente);
+
+        // Payment insights para alerts
+        if (creditPct >= 30 && totalInvoicesForPayment >= 3) {
+            alerts.push({
+                type: 'credit_dependency',
+                severity: 'medium',
+                message: `El ${Math.round(creditPct)}% de tus facturas se están vendiendo a crédito. Esto puede afectar tu flujo de caja.`,
+                pct: Math.round(creditPct)
+            });
+        }
+        if (transferPct >= 50 && totalRevenueAll > 0) {
+            alerts.push({
+                type: 'cash_flow',
+                severity: 'positive',
+                message: `El ${Math.round(transferPct)}% de tus ingresos entra vía transferencia. Tu liquidez es saludable.`,
+                pct: Math.round(transferPct)
+            });
+        }
+        if (totalBalancePendiente > 0) {
+            alerts.push({
+                type: 'morosity',
+                severity: totalBalancePendiente > 50000 ? 'high' : 'medium',
+                message: `Lexis detectó RD$${Math.round(totalBalancePendiente).toLocaleString('es-DO')} pendientes de cobro. Te recomendamos gestionar estos pagos.`,
+                amount: totalBalancePendiente
+            });
+        }
+
+        // Predicción simple: ritmo actual * días restantes
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const daysElapsed = now.getDate();
+        const daysRemaining = daysInMonth - daysElapsed;
+        const dailyRate = daysElapsed > 0 ? currentRevenue / daysElapsed : 0;
+        const projectedMonth = Math.round(currentRevenue + (dailyRate * daysRemaining));
+
+        // Predicción de caja: cuentas por cobrar + proyección
+        const projectedCash15Days = Math.round(totalBalancePendiente + (dailyRate * Math.min(15, daysRemaining)));
+
+        // Score de salud (0-100)
+        const invoiceFreqScore = Math.min(100, currentInvoiceCount * 8);
+        const growthScore = previousRevenue > 0
+            ? Math.min(50, Math.max(-50, ((currentRevenue - previousRevenue) / previousRevenue) * 100) + 50)
+            : 50;
+        const diversificationScore = topClientPct > 70 ? 30 : topClientPct > 50 ? 60 : 90;
+        const inactivePenalty = (clients90.length * 10) + (clients60.length * 5) + (clients30.length * 2);
+        const healthScore = Math.round(Math.max(0, Math.min(100,
+            (invoiceFreqScore * 0.2) + (growthScore * 0.3) + (diversificationScore * 0.3) + (Math.max(0, 100 - inactivePenalty) * 0.2)
+        )));
+        let healthLabel = 'Excelente';
+        if (healthScore < 50) healthLabel = 'Requiere atención';
+        else if (healthScore < 70) healthLabel = 'Estable';
+        else if (healthScore < 90) healthLabel = 'Bueno';
+
+        res.json({
+            alerts,
+            clientRadar,
+            rankings,
+            fiscalAlerts,
+            prediction: {
+                currentRevenue,
+                projectedMonth,
+                dailyRate: Math.round(dailyRate),
+                daysRemaining,
+                projectedCash15Days
+            },
+            businessHealth: {
+                score: healthScore,
+                label: healthLabel,
+                concentrationRisk: topClientPct > 50 ? `Detectamos dependencia de un solo cliente (${Math.round(topClientPct)}%).` : null
+            },
+            paymentInsights: {
+                creditPct: Math.round(creditPct),
+                transferPct: Math.round(transferPct),
+                totalBalancePendiente,
+                byTipo: paymentStats.reduce((o, p) => { o[p._id] = { count: p.count, total: p.totalRevenue }; return o; }, {})
+            },
+            morosityRadar: {
+                totalPendiente: totalBalancePendiente,
+                clientes: morosityList.slice(0, 10),
+                riesgoGeneral: totalBalancePendiente > 100000 ? 'alto' : totalBalancePendiente > 30000 ? 'medio' : totalBalancePendiente > 0 ? 'bajo' : 'ninguno'
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- Modo preventivo: riesgo del cliente antes de facturar a crédito ---
+app.get('/api/client-payment-risk', verifyToken, async (req, res) => {
+    try {
+        const cleanRnc = (req.query.rnc || '').replace(/[^\d]/g, '');
+        if (!cleanRnc || cleanRnc.length < 9) return res.json({ riskScore: 50, level: 'unknown' });
+
+        const invoices = await Invoice.find({
+            userId: req.userId,
+            status: { $nin: ['cancelled'] },
+            clientRnc: cleanRnc
+        }).select('date total balancePendiente estadoPago tipoPago montoPagado').sort({ date: -1 }).limit(50).lean();
+
+        if (invoices.length === 0) return res.json({ riskScore: 50, level: 'unknown' });
+
+        const pendingInvs = invoices.filter(inv => {
+            const bal = inv.balancePendiente ?? (inv.estadoPago === 'pendiente' || inv.estadoPago === 'parcial' ? inv.total : 0);
+            return bal > 0;
+        });
+        const totalPending = pendingInvs.reduce((s, inv) => s + (inv.balancePendiente ?? inv.total), 0);
+        const now = new Date();
+        const paidInvoices = invoices.filter(inv => (inv.balancePendiente ?? 0) <= 0 && (inv.montoPagado ?? inv.total) > 0);
+        let avgDaysToPay = 0;
+        if (paidInvoices.length >= 2) {
+            const daysArray = [];
+            for (let i = 0; i < paidInvoices.length - 1; i++) {
+                const invDate = new Date(paidInvoices[i].date);
+                daysArray.push(Math.floor((now - invDate) / 86400000));
+            }
+            avgDaysToPay = Math.round(daysArray.reduce((a, b) => a + b, 0) / daysArray.length);
+        }
+        const maxDaysOverdue = pendingInvs.length > 0
+            ? Math.max(...pendingInvs.map(inv => Math.floor((now - new Date(inv.date)) / 86400000)))
+            : 0;
+
+        let riskScore = 80;
+        if (pendingInvs.length > 2) riskScore -= 25;
+        else if (pendingInvs.length > 0) riskScore -= 15;
+        if (maxDaysOverdue > 60) riskScore -= 30;
+        else if (maxDaysOverdue > 30) riskScore -= 20;
+        else if (maxDaysOverdue > 15) riskScore -= 10;
+        if (avgDaysToPay > 45) riskScore -= 15;
+        riskScore = Math.max(0, Math.min(100, riskScore));
+
+        let level = 'confiable';
+        if (riskScore < 50) level = 'alto_riesgo';
+        else if (riskScore < 80) level = 'inestable';
+
+        const message = riskScore < 50
+            ? 'Este cliente suele pagar con retraso. ¿Deseas continuar con venta a crédito?'
+            : riskScore < 80 ? 'Este cliente tiene historial irregular de pagos.' : null;
+
+        res.json({ riskScore, level, message, avgDaysToPay: avgDaysToPay || undefined, pendingAmount: totalPending || undefined });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // --- Alertas proactivas: NCF bajo, secuencias por vencer, suscripciones por vencer ---
 app.get('/api/alerts', verifyToken, async (req, res) => {
     try {
@@ -2214,6 +2650,107 @@ app.put('/api/ncf-settings/:id', verifyToken, async (req, res) => {
         res.json(setting);
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// --- AUTOFILL INTELIGENTE ---
+app.get('/api/autofill/suggestions', verifyToken, async (req, res) => {
+    try {
+        const q = (req.query.q || '').trim().toLowerCase();
+        const rnc = (req.query.rnc || '').replace(/[^\d]/g, '');
+        const userId = req.userId;
+
+        const result = { clients: [], services: [], lastInvoice: null };
+
+        // 1. Clientes: Invoice (frecuencia, último monto, tipoPago habitual) + Customer
+        const clientAgg = await Invoice.aggregate([
+            { $match: { userId: new mongoose.Types.ObjectId(userId), status: { $nin: ['cancelled'] }, clientRnc: { $nin: [null, ''] } } },
+            { $addFields: { tipoPago: { $ifNull: ['$tipoPago', 'efectivo'] } } },
+            { $sort: { date: -1 } },
+            { $group: {
+                _id: '$clientRnc',
+                clientName: { $first: '$clientName' },
+                count: { $sum: 1 },
+                lastTotal: { $first: '$total' },
+                lastDate: { $first: '$date' },
+                lastTipoPago: { $first: '$tipoPago' }
+            }},
+            { $sort: { count: -1, lastDate: -1 } },
+            { $limit: 50 }
+        ]);
+
+        const customers = await Customer.find({ userId }).select('name rnc phone').lean();
+        const custByRnc = Object.fromEntries(customers.map(c => [String(c.rnc).replace(/[^\d]/g, ''), c]));
+
+        const clientList = clientAgg.map(c => {
+            const cust = custByRnc[String(c._id).replace(/[^\d]/g, '')];
+            const name = (c.clientName || cust?.name || '').trim();
+            return {
+                name,
+                rnc: String(c._id),
+                phone: cust?.phone || '',
+                lastTotal: c.lastTotal,
+                count: c.count,
+                usualTipoPago: c.lastTipoPago || 'efectivo'
+            };
+        });
+
+        result.clients = q
+            ? clientList.filter(c => (c.name || '').toLowerCase().includes(q) || c.rnc.includes(q)).slice(0, 8)
+            : clientList.slice(0, 8);
+
+        // 2. Servicios: items de facturas, frecuencia y precio habitual
+        const serviceAgg = await Invoice.aggregate([
+            { $match: { userId: new mongoose.Types.ObjectId(userId), status: { $nin: ['cancelled'] } } },
+            { $unwind: '$items' },
+            { $match: { 'items.description': { $exists: true, $nin: [null, ''] } } },
+            { $group: {
+                _id: '$items.description',
+                description: { $first: '$items.description' },
+                avgPrice: { $avg: '$items.price' },
+                lastPrice: { $last: '$items.price' },
+                isExemptCount: { $sum: { $cond: ['$items.isExempt', 1, 0] } },
+                count: { $sum: 1 }
+            }},
+            { $project: {
+                description: '$_id',
+                price: { $round: [{ $ifNull: ['$lastPrice', '$avgPrice'] }, 0] },
+                isExempt: { $gte: ['$isExemptCount', { $multiply: ['$count', 0.5] }] },
+                count: 1
+            }},
+            { $sort: { count: -1 } },
+            { $limit: 30 }
+        ]);
+
+        result.services = serviceAgg
+            .filter(s => !q || (String(s.description || '')).toLowerCase().includes(q))
+            .slice(0, 10)
+            .map(s => ({ description: s.description, price: s.price || 0, isExempt: !!s.isExempt, count: s.count }));
+
+        // 3. Última factura por RNC (para Repetir / USAR LA MISMA)
+        if (rnc && rnc.length >= 9) {
+            const lastInv = await Invoice.findOne(
+                { userId, clientRnc: rnc, status: { $nin: ['cancelled'] } }
+            ).sort({ date: -1 }).lean();
+            if (lastInv) {
+                result.lastInvoice = {
+                    items: (lastInv.items || []).map(i => ({
+                        description: i.description,
+                        quantity: i.quantity ?? 1,
+                        price: i.price ?? 0,
+                        isExempt: i.isExempt
+                    })),
+                    tipoPago: lastInv.tipoPago || 'efectivo',
+                    ncfType: lastInv.ncfType,
+                    total: lastInv.total,
+                    date: lastInv.date
+                };
+            }
+        }
+
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -2593,7 +3130,35 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
             const parsed = new Date(req.body.date);
             if (!isNaN(parsed.getTime())) invoiceDate = parsed;
         }
-        const newInvoice = new Invoice({ userId: req.userId, clientName, clientRnc, ncfType, ncfSequence: fullNcf, items, subtotal, itbis, total, date: invoiceDate });
+        // Tipo de Pago
+        const tipoPagoValidos = ['efectivo', 'transferencia', 'tarjeta', 'credito', 'mixto', 'otro'];
+        const tipoPago = tipoPagoValidos.includes(req.body.tipoPago) ? req.body.tipoPago : 'efectivo';
+        const pagoMixto = Array.isArray(req.body.pagoMixto) ? req.body.pagoMixto.filter(p => p && p.tipo && Number(p.monto) > 0).map(p => ({
+            tipo: String(p.tipo).slice(0, 30),
+            monto: Math.max(0, Math.min(Number(p.monto) || 0, 999999999))
+        })) : [];
+        let montoPagado = 0, balancePendiente = total, estadoPago = 'pendiente', fechaPago = null;
+        if (tipoPago === 'credito') {
+            montoPagado = 0;
+            balancePendiente = total;
+            estadoPago = 'pendiente';
+        } else if (tipoPago === 'mixto' && pagoMixto.length > 0) {
+            montoPagado = pagoMixto.reduce((s, p) => s + (p.monto || 0), 0);
+            balancePendiente = Math.max(0, total - montoPagado);
+            estadoPago = balancePendiente <= 0 ? 'pagado' : 'parcial';
+            if (estadoPago === 'pagado') fechaPago = new Date();
+        } else {
+            montoPagado = total;
+            balancePendiente = 0;
+            estadoPago = 'pagado';
+            fechaPago = new Date();
+        }
+        const newInvoice = new Invoice({
+            userId: req.userId, clientName, clientRnc, ncfType, ncfSequence: fullNcf, items, subtotal, itbis, total, date: invoiceDate,
+            tipoPago, tipoPagoOtro: tipoPago === 'otro' ? sanitizeString(req.body.tipoPagoOtro || '', 50) : null,
+            pagoMixto: pagoMixto.length > 0 ? pagoMixto : undefined,
+            montoPagado, balancePendiente, estadoPago, fechaPago
+        });
         await newInvoice.save({ session });
         await Customer.findOneAndUpdate(
             { userId: req.userId, rnc: clientRnc },

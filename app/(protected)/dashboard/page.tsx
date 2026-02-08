@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import {
   FileText,
   MoreHorizontal,
+  Plus,
   Search,
   Settings,
   Users,
@@ -30,13 +31,12 @@ import { TrialBanner } from "@/components/TrialBanner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CreditNoteModal } from "@/components/CreditNoteModal";
-import { FacturaTable } from "@/components/FacturaTable";
+import { InvoiceControlCenter } from "@/components/dashboard/InvoiceControlCenter";
 import { TaxHealthWidget } from "@/components/TaxHealthWidget";
 import { FiscalNamePrompt } from "@/components/FiscalNamePrompt";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { EmotionalStatusWidget } from "@/components/dashboard/EmotionalStatusWidget";
-import { LexisMessageWidget } from "@/components/dashboard/LexisMessageWidget";
+import { LexisBusinessCopilot } from "@/components/dashboard/LexisBusinessCopilot";
 import { AlertsBanner } from "@/components/AlertsBanner";
 
 import { usePreferences } from "@/components/providers/PreferencesContext";
@@ -131,8 +131,6 @@ export default function Dashboard() {
 
   const { mode, profession } = usePreferences();
   const { user: authUser, refresh } = useAuth();
-  const [showCreditNote, setShowCreditNote] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
   const [estimatedTaxes, setEstimatedTaxes] = useState(0);
   const [chartData, setChartData] = useState<number[]>([0, 0, 0, 0]);
@@ -229,9 +227,8 @@ export default function Dashboard() {
           const uniqueClients = new Set(invoices.map((inv) => inv.rnc || inv.clientRnc || ""));
           setTotalClients(uniqueClients.size);
 
-          // Obtener las 5 facturas más recientes
-          const recent = invoices.slice(0, 5);
-          setRecentInvoices(recent);
+          // Facturas para Centro de Control (50 para tabla con paginación)
+          setRecentInvoices(invoices.slice(0, 50));
 
           // Datos para el gráfico (Últimos 4 meses)
           const last4MonthsData = [];
@@ -416,21 +413,8 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 py-8">
         <TrialBanner />
         <SubscriptionAlert />
-        {/* Lexis: saludo, contextual, resumen, alertas y CTA */}
-        {!isLoading && (
-          <LexisMessageWidget
-            userName={welcomeName}
-            contextualMessage={lexisContextualMessage}
-            monthlySummary={monthlyStats}
-            revenue={totalRevenue}
-            previousRevenue={previousMonthRevenue}
-            pendingCount={pendingInvoices}
-            predictions={predictiveAlerts}
-            lastInvoiceDate={recentInvoices[0]?.date}
-            targetInvoices={targetInvoices}
-            className="mb-6"
-          />
-        )}
+        {/* Lexis Business Copilot: observa tu negocio, alertas, scoring, predicción */}
+        {!isLoading && <LexisBusinessCopilot />}
 
         {/* Alertas proactivas: NCF bajo, secuencias por vencer, suscripción */}
         <AlertsBanner />
@@ -619,26 +603,24 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Tabla de facturas recientes */}
-        {/* Usando el nuevo componente refactorizado con lógica Luxury */}
-        <FacturaTable
+        {/* Centro de Control Inteligente — Facturas */}
+        <InvoiceControlCenter
           invoices={recentInvoices}
           onRefresh={handleRefresh}
-          onRequestCreditNote={(inv) => {
-            setSelectedInvoice(inv);
-            setShowCreditNote(true);
-          }}
+          isLoading={isLoading}
         />
 
       </div>
       <OnboardingWizard />
 
-      <CreditNoteModal
-        isOpen={showCreditNote}
-        onClose={() => setShowCreditNote(false)}
-        invoice={selectedInvoice}
-        onSuccess={handleRefresh}
-      />
+      {/* Botón flotante — Nueva Factura (siempre visible) */}
+      <Link
+        href="/nueva-factura"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 h-14 px-6 rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/30 hover:bg-primary/90 hover:scale-105 active:scale-100 transition-all font-semibold text-base"
+      >
+        <Plus className="w-5 h-5" />
+        Nueva Factura
+      </Link>
     </div>
   );
 }

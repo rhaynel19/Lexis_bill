@@ -51,15 +51,27 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
                         </DialogHeader>
 
                         <div className="py-6 space-y-4">
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex justify-between items-center">
-                                <div>
-                                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Factura Original</p>
-                                    <p className="font-mono text-slate-700">{invoice.ncfSequence || invoice.type.split(" - ")[0]}</p>
+                            <div className="bg-muted/30 p-4 rounded-xl border border-border/20">
+                                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-2">Factura original</p>
+                                <p className="font-mono text-sm font-semibold">{(invoice.ncfSequence || invoice.ncfType || invoice.id || "").toString().slice(-11)}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{invoice.clientName}</p>
+                            </div>
+                            {(invoice.items || []).length > 0 && (
+                                <div className="border border-border/20 rounded-xl overflow-hidden">
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider px-4 py-2 bg-muted/30">Ítems</p>
+                                    <ul className="divide-y divide-border/10 max-h-28 overflow-y-auto">
+                                        {(invoice.items || []).map((item: any, i: number) => (
+                                            <li key={i} className="px-4 py-2 flex justify-between text-sm">
+                                                <span className="truncate pr-2">{item.description}</span>
+                                                <span className="font-mono shrink-0">RD$ {((item.quantity || 1) * (item.price || 0)).toLocaleString()}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Monto Total</p>
-                                    <p className="font-bold text-primary">RD$ {invoice.total.toLocaleString()}</p>
-                                </div>
+                            )}
+                            <div className="flex justify-between items-center p-4 bg-primary/5 rounded-xl border border-primary/20">
+                                <span className="font-medium">Total a creditar</span>
+                                <span className="text-xl font-bold text-primary">RD$ {invoice.total.toLocaleString()}</span>
                             </div>
 
                             <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex items-start gap-3">

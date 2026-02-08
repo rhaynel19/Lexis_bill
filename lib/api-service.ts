@@ -415,6 +415,27 @@ export const api = {
         return secureFetch<{ alerts: Array<{ type: string; message: string; severity: string }> }>(`${API_URL}/alerts`);
     },
 
+    /** Lexis Business Copilot: analytics, alertas, scoring, predicción, morosidad */
+    async getBusinessCopilot() {
+        return secureFetch<{
+            alerts: Array<{ type: string; severity: string; message: string; count?: number; pct?: number; clientName?: string; service?: string; amount?: number }>;
+            clientRadar: Array<{ rnc: string; clientName: string; daysSinceLastInvoice: number; totalRevenue: number; revenuePct: number; status: string; recommendation?: string }>;
+            rankings: { topClient?: { name: string; total: number; pct: number }; droppedClient?: { name: string; lastMonthTotal: number }; topService?: { description: string; totalRevenue: number; totalQuantity: number } };
+            fiscalAlerts: Array<{ type: string; severity: string; message: string }>;
+            prediction: { currentRevenue: number; projectedMonth: number; dailyRate: number; daysRemaining: number; projectedCash15Days?: number };
+            businessHealth: { score: number; label: string; concentrationRisk?: string };
+            paymentInsights?: { creditPct: number; transferPct: number; totalBalancePendiente: number };
+            morosityRadar?: { totalPendiente: number; clientes: Array<{ rnc: string; clientName: string; totalPendiente: number; facturasVencidas: number; diasMayorAntiguedad: number; nivel: string }>; riesgoGeneral: string };
+        }>(`${API_URL}/business-copilot`);
+    },
+
+    /** Verificar riesgo del cliente antes de facturar a crédito (modo preventivo) */
+    async getClientPaymentRisk(rnc: string) {
+        return secureFetch<{ riskScore: number; level: string; message?: string; avgDaysToPay?: number; pendingAmount?: number }>(
+            `${API_URL}/client-payment-risk?rnc=${encodeURIComponent(rnc)}`
+        );
+    },
+
     // Borrador y plantillas de factura
     async getInvoiceDraft() {
         return secureFetch<any>(`${API_URL}/invoice-draft`);
@@ -434,6 +455,25 @@ export const api = {
 
     async getServices() {
         return secureFetch<any[]>(`${API_URL}/services`);
+    },
+
+    /** Autofill inteligente: sugerencias de clientes, servicios y última factura */
+    async getAutofillSuggestions(params: { q?: string; rnc?: string }) {
+        const sp = new URLSearchParams();
+        if (params.q?.trim()) sp.set("q", params.q.trim());
+        if (params.rnc?.trim()) sp.set("rnc", String(params.rnc).replace(/[^\d]/g, ""));
+        const qs = sp.toString();
+        return secureFetch<{
+            clients: Array<{ name: string; rnc: string; phone: string; lastTotal?: number; count?: number; usualTipoPago?: string }>;
+            services: Array<{ description: string; price: number; isExempt: boolean; count?: number }>;
+            lastInvoice: null | {
+                items: Array<{ description: string; quantity: number; price: number; isExempt?: boolean }>;
+                tipoPago: string;
+                ncfType?: string;
+                total?: number;
+                date?: string;
+            };
+        }>(`${API_URL}/autofill/suggestions${qs ? `?${qs}` : ""}`, { cacheKey: undefined });
     },
 
     async saveServices(services: Array<{ description?: string; quantity?: number; price?: number; isExempt?: boolean }>) {
