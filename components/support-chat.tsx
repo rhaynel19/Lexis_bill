@@ -54,7 +54,7 @@ export function SupportChat() {
 
     return (
         <div
-            className="fixed z-50 bottom-28 left-4 md:bottom-6 md:left-auto md:right-[11rem]"
+            className="fixed z-50 bottom-28 left-4 md:bottom-6 md:left-auto md:right-[15rem]"
             role="complementary"
             aria-label="Widget de soporte"
         >
