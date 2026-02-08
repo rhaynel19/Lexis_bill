@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { ShieldAlert } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { CommandMenu } from "@/components/command-menu";
-import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt, CreditCard, FolderLock, Users, Handshake } from "lucide-react";
+import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt, CreditCard, FolderLock, Users, Handshake, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TrialHeaderBadge } from "@/components/TrialHeaderBadge";
@@ -156,6 +156,14 @@ export default function ProtectedLayout({
 
                 {/* Contenido principal - flex-1 min-h-0 para scroll correcto sin forzar altura */}
                 <main className="flex-1 min-w-0 min-h-0 overflow-y-auto bg-background">
+                    {userFromApi?.partner?.status === "suspended" && (
+                        <div className="sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-destructive/10 border-b border-destructive/20 text-destructive">
+                            <Ban className="w-5 h-5 shrink-0" aria-hidden />
+                            <p className="text-sm font-medium">
+                                Tu cuenta partner fue suspendida. Contacta a soporte para más información.
+                            </p>
+                        </div>
+                    )}
                     {children}
                 </main>
             </div>

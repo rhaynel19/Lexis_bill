@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserCircle, Search, Download, Filter, Check, Ban, Loader2, Trash2 } from "lucide-react";
+import { UserCircle, Search, Download, Filter, Check, Ban, Loader2, Trash2, ArrowUp, ArrowDown, Eye, Lock, Unlock } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -16,7 +16,10 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
 import type { AdminUser } from "@/lib/api-service";
+import { cn } from "@/lib/utils";
 
 export default function AdminUsuariosPage() {
     const [list, setList] = useState<AdminUser[]>([]);
@@ -28,9 +31,15 @@ export default function AdminUsuariosPage() {
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [planFilter, setPlanFilter] = useState<string>("all");
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [activityFilter, setActivityFilter] = useState<string>("all");
+    const [sortBy, setSortBy] = useState<string>("lastLoginAt");
+    const [sortOrder, setSortOrder] = useState<string>("desc");
     const [isLoading, setIsLoading] = useState(true);
     const [actioningId, setActioningId] = useState<string | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+    const [detailUser, setDetailUser] = useState<AdminUser | null>(null);
+    const [detailData, setDetailData] = useState<any>(null);
+    const [notesEdit, setNotesEdit] = useState("");
 
     const fetchUsers = useCallback(async () => {
         setIsLoading(true);
@@ -41,6 +50,9 @@ export default function AdminUsuariosPage() {
                 role: roleFilter === "all" ? undefined : roleFilter,
                 plan: planFilter === "all" ? undefined : planFilter,
                 status: statusFilter === "all" ? undefined : statusFilter,
+                activity: activityFilter === "all" ? undefined : activityFilter,
+                sortBy,
+                sortOrder,
                 page,
                 limit
             });
@@ -53,7 +65,7 @@ export default function AdminUsuariosPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [search, roleFilter, planFilter, statusFilter, page, limit]);
+    }, [search, roleFilter, planFilter, statusFilter, activityFilter, sortBy, sortOrder, page, limit]);
 
     useEffect(() => {
         fetchUsers();
@@ -91,6 +103,65 @@ export default function AdminUsuariosPage() {
             fetchUsers();
         } catch (e: any) {
             toast.error(e?.message || "Error al bloquear.");
+        } finally {
+            setActioningId(null);
+        }
+    };
+
+    const handleBlock = async (id: string) => {
+        setActioningId(id);
+        try {
+            const { api } = await import("@/lib/api-service");
+            await api.blockUser(id);
+            toast.success("Cuenta bloqueada.");
+            fetchUsers();
+            setDetailUser(null);
+        } catch (e: any) {
+            toast.error(e?.message || "Error al bloquear.");
+        } finally {
+            setActioningId(null);
+        }
+    };
+
+    const handleUnblock = async (id: string) => {
+        setActioningId(id);
+        try {
+            const { api } = await import("@/lib/api-service");
+            await api.unblockUser(id);
+            toast.success("Cuenta desbloqueada.");
+            fetchUsers();
+            if (detailUser?.id === id) setDetailData((d: any) => d ? { ...d, blocked: false } : null);
+        } catch (e: any) {
+            toast.error(e?.message || "Error al desbloquear.");
+        } finally {
+            setActioningId(null);
+        }
+    };
+
+    const handleOpenDetail = async (u: AdminUser) => {
+        setDetailUser(u);
+        setNotesEdit(u.adminNotes || "");
+        try {
+            const { api } = await import("@/lib/api-service");
+            const data = await api.getAdminUserDetail(u.id);
+            setDetailData(data);
+        } catch {
+            toast.error("Error al cargar detalle");
+            setDetailData(null);
+        }
+    };
+
+    const handleSaveNotes = async () => {
+        if (!detailUser) return;
+        setActioningId(detailUser.id);
+        try {
+            const { api } = await import("@/lib/api-service");
+            await api.updateUserNotes(detailUser.id, notesEdit);
+            toast.success("Notas guardadas.");
+            setDetailData((d: any) => d ? { ...d, adminNotes: notesEdit } : null);
+            fetchUsers();
+        } catch (e: any) {
+            toast.error(e?.message || "Error al guardar.");
         } finally {
             setActioningId(null);
         }
@@ -148,6 +219,17 @@ export default function AdminUsuariosPage() {
         }
     };
 
+    /** Nivel de actividad: active (< 7 días), medium (7-30), inactive (> 30 o nunca) */
+    const getActivityLevel = (lastLoginAt: string | undefined): "active" | "medium" | "inactive" => {
+        if (!lastLoginAt) return "inactive";
+        const d = new Date(lastLoginAt);
+        const now = new Date();
+        const daysAgo = Math.floor((now.getTime() - d.getTime()) / (24 * 60 * 60 * 1000));
+        if (daysAgo <= 7) return "active";
+        if (daysAgo <= 30) return "medium";
+        return "inactive";
+    };
+
     const planLabel: Record<string, string> = {
         free: "Gratis",
         pro: "Pro",
@@ -160,7 +242,7 @@ export default function AdminUsuariosPage() {
     };
 
     const handleExportCsv = () => {
-        const headers = ["Nombre", "Email", "RNC", "Rol", "Plan", "Estado suscripción", "Días hasta bloqueo", "Onboarding", "Partner", "Fecha registro"];
+        const headers = ["Nombre", "Email", "RNC", "Rol", "Plan", "Estado suscripción", "Días hasta bloqueo", "Onboarding", "Partner", "Fecha registro", "Último acceso"];
         const rows = list.map((u) => {
             const days = getDaysUntilBlock(u);
             return [
@@ -173,7 +255,8 @@ export default function AdminUsuariosPage() {
                 days !== null ? `${days} días` : "—",
                 u.onboardingCompleted ? "Sí" : "No",
                 u.partner ? `${u.partner.referralCode} (${u.partner.status})` : "",
-                formatDate(u.createdAt)
+                formatDate(u.createdAt),
+                formatDate(u.lastLoginAt)
             ];
         });
         const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
@@ -266,17 +349,60 @@ export default function AdminUsuariosPage() {
                                 <SelectItem value="expired">Expirado</SelectItem>
                             </SelectContent>
                         </Select>
+                        <Select value={activityFilter || "all"} onValueChange={(v) => { setActivityFilter(v); setPage(1); }}>
+                            <SelectTrigger className="w-[160px]">
+                                <SelectValue placeholder="Último acceso" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos</SelectItem>
+                                <SelectItem value="active_7">Activos (7 días)</SelectItem>
+                                <SelectItem value="active_30">Activos (30 días)</SelectItem>
+                                <SelectItem value="inactive_30">Inactivos (30+ días)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select value={`${sortBy}_${sortOrder}`} onValueChange={(v) => {
+                            const [s, o] = v.split("_");
+                            setSortBy(s);
+                            setSortOrder(o || "desc");
+                            setPage(1);
+                        }}>
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Ordenar por" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="lastLoginAt_desc">
+                                    <span className="flex items-center gap-2">
+                                        <ArrowDown className="w-3.5 h-3.5" /> Último acceso (reciente)
+                                    </span>
+                                </SelectItem>
+                                <SelectItem value="lastLoginAt_asc">
+                                    <span className="flex items-center gap-2">
+                                        <ArrowUp className="w-3.5 h-3.5" /> Último acceso (antiguo)
+                                    </span>
+                                </SelectItem>
+                                <SelectItem value="createdAt_desc">
+                                    <span className="flex items-center gap-2">
+                                        <ArrowDown className="w-3.5 h-3.5" /> Registro (reciente)
+                                    </span>
+                                </SelectItem>
+                                <SelectItem value="createdAt_asc">
+                                    <span className="flex items-center gap-2">
+                                        <ArrowUp className="w-3.5 h-3.5" /> Registro (antiguo)
+                                    </span>
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </CardHeader>
                 <CardContent>
                     <p className="text-sm text-muted-foreground mb-4">
                         {total} usuario{total !== 1 ? "s" : ""} en total
-                        {(search || (roleFilter && roleFilter !== "all") || (planFilter && planFilter !== "all") || (statusFilter && statusFilter !== "all")) ? " (filtros aplicados)" : ""}
+                        {(search || (roleFilter && roleFilter !== "all") || (planFilter && planFilter !== "all") || (statusFilter && statusFilter !== "all") || (activityFilter && activityFilter !== "all")) ? " (filtros aplicados)" : ""}
                     </p>
 
                     {list.length === 0 ? (
                         <div className="py-12 text-center text-muted-foreground">
-                            {(search || (roleFilter && roleFilter !== "all") || (planFilter && planFilter !== "all") || (statusFilter && statusFilter !== "all")) ? "No hay usuarios con los filtros aplicados." : "No hay usuarios registrados."}
+                            {(search || (roleFilter && roleFilter !== "all") || (planFilter && planFilter !== "all") || (statusFilter && statusFilter !== "all") || (activityFilter && activityFilter !== "all")) ? "No hay usuarios con los filtros aplicados." : "No hay usuarios registrados."}
                         </div>
                     ) : (
                         <>
@@ -294,12 +420,17 @@ export default function AdminUsuariosPage() {
                                             <TableHead>Onboarding</TableHead>
                                             <TableHead>Partner</TableHead>
                                             <TableHead>Registro</TableHead>
+                                            <TableHead>Último acceso</TableHead>
                                             <TableHead className="text-right">Acciones</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {list.map((u) => (
-                                            <TableRow key={u.id}>
+                                            <TableRow
+                                                key={u.id}
+                                                className="cursor-pointer hover:bg-muted/50"
+                                                onClick={() => handleOpenDetail(u)}
+                                            >
                                                 <TableCell className="font-medium">{u.name || "—"}</TableCell>
                                                 <TableCell className="text-muted-foreground">{u.email || "—"}</TableCell>
                                                 <TableCell className="font-mono text-xs">{u.rnc || "—"}</TableCell>
@@ -314,8 +445,8 @@ export default function AdminUsuariosPage() {
                                                 </TableCell>
                                                 <TableCell>{planLabel[u.plan] ?? u.plan}</TableCell>
                                                 <TableCell className="text-xs">
-                                                    <span className={u.subscriptionStatus === "active" || u.subscriptionStatus === "Activo" ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>
-                                                        {u.subscriptionStatus === "active" || u.subscriptionStatus === "Activo" ? "Activo" : u.subscriptionStatus || "—"}
+                                                    <span className={u.blocked ? "text-red-600 dark:text-red-400 font-medium" : u.subscriptionStatus === "active" || u.subscriptionStatus === "Activo" ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>
+                                                        {u.blocked ? "Bloqueado" : u.subscriptionStatus === "active" || u.subscriptionStatus === "Activo" ? "Activo" : u.subscriptionStatus || "—"}
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="text-xs">
@@ -338,7 +469,31 @@ export default function AdminUsuariosPage() {
                                                     ) : "—"}
                                                 </TableCell>
                                                 <TableCell className="text-muted-foreground text-xs whitespace-nowrap">{formatDate(u.createdAt)}</TableCell>
-                                                <TableCell className="text-right">
+                                                <TableCell className="text-xs whitespace-nowrap">
+                                                    {u.lastLoginAt ? (
+                                                        (() => {
+                                                            const level = getActivityLevel(u.lastLoginAt);
+                                                            return (
+                                                                <span
+                                                                    className={cn(
+                                                                        "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium",
+                                                                        level === "active" && "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-400",
+                                                                        level === "medium" && "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400",
+                                                                        level === "inactive" && "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                                                                    )}
+                                                                    title={level === "active" ? "Activo en los últimos 7 días" : level === "medium" ? "Activo hace 7–30 días" : "Inactivo más de 30 días"}
+                                                                >
+                                                                    {formatDate(u.lastLoginAt)}
+                                                                </span>
+                                                            );
+                                                        })()
+                                                    ) : (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400" title="Sin registro de acceso">
+                                                            Nunca
+                                                        </span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                                     <div className="flex items-center justify-end gap-1.5 flex-wrap">
                                                         {u.role === "admin" ? (
                                                             <span className="text-muted-foreground text-xs">—</span>
@@ -346,14 +501,25 @@ export default function AdminUsuariosPage() {
                                                             <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                                                         ) : (
                                                             <>
-                                                                {isUserActive(u) ? (
-                                                                    <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeactivate(u.id)}>
-                                                                        <Ban className="w-3.5 h-3.5 mr-1" /> Bloquear
+                                                                {u.blocked ? (
+                                                                    <Button variant="outline" size="sm" className="text-green-600 hover:bg-green-500/10 border-green-500/50" onClick={() => handleUnblock(u.id)}>
+                                                                        <Unlock className="w-3.5 h-3.5 mr-1" /> Desbloquear
                                                                     </Button>
                                                                 ) : (
-                                                                    <Button variant="outline" size="sm" className="text-green-600 hover:bg-green-500/10 border-green-500/50" onClick={() => handleActivate(u.id)}>
-                                                                        <Check className="w-3.5 h-3.5 mr-1" /> Activar
+                                                                    <Button variant="outline" size="sm" className="text-amber-600 hover:bg-amber-500/10 border-amber-500/50" onClick={() => handleBlock(u.id)} title="Bloquear acceso (no podrá iniciar sesión)">
+                                                                        <Lock className="w-3.5 h-3.5 mr-1" /> Bloquear acceso
                                                                     </Button>
+                                                                )}
+                                                                {!u.blocked && (
+                                                                    isUserActive(u) ? (
+                                                                        <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeactivate(u.id)} title="Bloquear membresía">
+                                                                            <Ban className="w-3.5 h-3.5 mr-1" /> Bloquear
+                                                                        </Button>
+                                                                    ) : (
+                                                                        <Button variant="outline" size="sm" className="text-green-600 hover:bg-green-500/10 border-green-500/50" onClick={() => handleActivate(u.id)}>
+                                                                            <Check className="w-3.5 h-3.5 mr-1" /> Activar
+                                                                        </Button>
+                                                                    )
                                                                 )}
                                                                 <Button
                                                                     variant="outline"
@@ -411,6 +577,110 @@ export default function AdminUsuariosPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <Sheet open={!!detailUser} onOpenChange={(open) => !open && (setDetailUser(null), setDetailData(null))}>
+                <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+                    <SheetHeader>
+                        <SheetTitle className="flex items-center gap-2">
+                            <Eye className="w-5 h-5" /> Detalle de usuario
+                        </SheetTitle>
+                    </SheetHeader>
+                    {detailData && (
+                        <div className="mt-6 space-y-6">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Nombre</p>
+                                <p className="font-medium">{detailData.name || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Email</p>
+                                <p>{detailData.email || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">RNC</p>
+                                <p className="font-mono text-sm">{detailData.rnc || "—"}</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Plan</p>
+                                    <p>{planLabel[detailData.plan] ?? detailData.plan}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Estado</p>
+                                    <p className={detailData.blocked ? "text-red-600 font-medium" : ""}>
+                                        {detailData.blocked ? "Bloqueado" : detailData.subscriptionStatus || "—"}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Registro</p>
+                                    <p className="text-sm">{formatDate(detailData.createdAt)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Último acceso</p>
+                                    <p className="text-sm">{detailData.lastLoginAt ? formatDate(detailData.lastLoginAt) : "Nunca"}</p>
+                                </div>
+                            </div>
+                            {detailData.partner && (
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Partner</p>
+                                    <p className="text-amber-600 dark:text-amber-400">{detailData.partner.referralCode} ({detailData.partner.status})</p>
+                                </div>
+                            )}
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground mb-1">Resumen</p>
+                                <p className="text-sm">
+                                    {detailData.totalFacturas ?? 0} facturas · {new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 0 }).format(detailData.totalFacturado ?? 0)} facturado
+                                </p>
+                            </div>
+                            {detailData.invoices && detailData.invoices.length > 0 && (
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground mb-2">Últimas facturas</p>
+                                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                                        {detailData.invoices.map((inv: any) => (
+                                            <div key={inv.id} className="flex justify-between text-sm py-1 border-b border-border/50">
+                                                <span className="truncate">{inv.clientName}</span>
+                                                <span className="font-mono">{new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 0 }).format(inv.total)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground mb-2">Notas internas</p>
+                                <Textarea
+                                    value={notesEdit}
+                                    onChange={(e) => setNotesEdit(e.target.value)}
+                                    placeholder="Notas visibles solo para admins..."
+                                    className="min-h-[80px]"
+                                    maxLength={2000}
+                                />
+                                <Button size="sm" className="mt-2" onClick={handleSaveNotes} disabled={actioningId === detailUser?.id}>
+                                    {actioningId === detailUser?.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Guardar notas"}
+                                </Button>
+                            </div>
+                            {detailUser && detailUser.role !== "admin" && (
+                                <div className="pt-4 border-t flex gap-2">
+                                    {detailData.blocked ? (
+                                        <Button variant="outline" className="text-green-600" onClick={() => handleUnblock(detailUser.id)} disabled={!!actioningId}>
+                                            <Unlock className="w-4 h-4 mr-2" /> Desbloquear cuenta
+                                        </Button>
+                                    ) : (
+                                        <Button variant="outline" className="text-amber-600" onClick={() => handleBlock(detailUser.id)} disabled={!!actioningId}>
+                                            <Lock className="w-4 h-4 mr-2" /> Bloquear cuenta
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {detailUser && !detailData && (
+                        <div className="mt-6 flex justify-center">
+                            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                        </div>
+                    )}
+                </SheetContent>
+            </Sheet>
         </div>
     );
 }

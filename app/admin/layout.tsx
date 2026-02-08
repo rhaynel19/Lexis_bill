@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ShieldAlert, LayoutDashboard, CreditCard, ArrowLeft, Users, UserCircle } from "lucide-react";
+import { ShieldAlert, LayoutDashboard, CreditCard, ArrowLeft, Users, UserCircle, ScrollText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdminAlertsBanner } from "@/components/admin/AdminAlertsBanner";
 
 export default function AdminLayout({
     children,
@@ -79,6 +80,11 @@ export default function AdminLayout({
                                     <LayoutDashboard className="w-4 h-4 shrink-0" /> Estadísticas CEO
                                 </Button>
                             </Link>
+                            <Link href="/admin/audit" className="shrink-0">
+                                <Button variant="outline" size="sm" className="gap-2 whitespace-nowrap">
+                                    <ScrollText className="w-4 h-4 shrink-0" /> Auditoría
+                                </Button>
+                            </Link>
                         </nav>
                     </div>
                     <Link href="/dashboard" className="shrink-0 self-start sm:self-center">
@@ -88,6 +94,7 @@ export default function AdminLayout({
                     </Link>
                 </div>
             </header>
+            <AdminAlertsBanner />
             <main className="container mx-auto px-4 py-8">{children}</main>
         </div>
     );

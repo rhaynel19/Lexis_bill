@@ -256,7 +256,12 @@ const userSchema = new mongoose.Schema({
         amount: Number,
         reference: String
     }],
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
+    lastLoginAt: { type: Date },
+    blocked: { type: Boolean, default: false },
+    blockedAt: { type: Date },
+    blockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    adminNotes: { type: String }
 });
 
 const paymentRequestSchema = new mongoose.Schema({
@@ -523,6 +528,35 @@ partnerInviteSchema.index({ status: 1 });
 
 const PartnerInvite = mongoose.models.PartnerInvite || mongoose.model('PartnerInvite', partnerInviteSchema);
 
+const adminAuditLogSchema = new mongoose.Schema({
+    adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    adminEmail: { type: String },
+    action: { type: String, required: true },
+    targetType: { type: String },
+    targetId: { type: String },
+    metadata: { type: mongoose.Schema.Types.Mixed },
+    createdAt: { type: Date, default: Date.now }
+});
+adminAuditLogSchema.index({ createdAt: -1 });
+adminAuditLogSchema.index({ adminId: 1, createdAt: -1 });
+const AdminAuditLog = mongoose.models.AdminAuditLog || mongoose.model('AdminAuditLog', adminAuditLogSchema);
+
+async function logAdminAction(adminId, action, targetType, targetId, metadata = {}) {
+    try {
+        const admin = await User.findById(adminId).select('email').lean();
+        await AdminAuditLog.create({
+            adminId,
+            adminEmail: admin?.email,
+            action,
+            targetType,
+            targetId,
+            metadata
+        });
+    } catch (e) {
+        log.warn({ err: e.message }, 'AdminAuditLog: error guardando');
+    }
+}
+
 function generateInviteToken() {
     return 'INV' + Math.random().toString(36).slice(2, 10).toUpperCase() + Date.now().toString(36).slice(-4).toUpperCase();
 }
@@ -597,6 +631,7 @@ const verifyToken = (req, res, next) => {
         try {
             const user = await User.findById(decoded.id);
             if (!user) return res.status(404).json({ message: 'User not found' });
+            if (user.blocked) return res.status(403).json({ message: 'Cuenta bloqueada. Contacte a soporte.', code: 'ACCOUNT_BLOCKED' });
 
             const sub = getUserSubscription(user);
             const now = new Date();
@@ -892,8 +927,14 @@ app.post('/api/auth/login', async (req, res) => {
             log.warn('Login fallido: contraseña inválida');
             return res.status(401).json({ message: 'Contraseña inválida' });
         }
+        if (user.blocked) {
+            log.warn('Login fallido: cuenta bloqueada');
+            return res.status(403).json({ message: 'Cuenta bloqueada. Contacte a soporte.', code: 'ACCOUNT_BLOCKED' });
+        }
 
         const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: 86400 });
+
+        await User.findByIdAndUpdate(user._id, { lastLoginAt: new Date() });
 
         // Cookie HttpOnly para que el middleware permita acceso a rutas protegidas
         res.cookie('lexis_auth', token, {
@@ -1016,6 +1057,13 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/auth/me', verifyToken, async (req, res) => {
     try {
         const user = req.user;
+        // Actualizar última actividad (throttle: solo si pasó >5 min desde el último update para evitar writes excesivos)
+        const now = new Date();
+        const lastLogin = user.lastLoginAt ? new Date(user.lastLoginAt) : null;
+        const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000);
+        if (!lastLogin || lastLogin < fiveMinAgo) {
+            await User.findByIdAndUpdate(user._id, { lastLoginAt: now }, { new: false });
+        }
         const sub = getUserSubscription(user);
         let partner = null;
         const p = await Partner.findOne({ userId: user._id });
@@ -1459,6 +1507,7 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
         pr.processedAt = now;
         pr.processedBy = req.userId;
         await pr.save();
+        await logAdminAction(req.userId, 'payment_approve', 'payment', pr._id.toString(), { userId: pr.userId?.toString() });
 
         // Marcar referido como activo si es partner referral
         await PartnerReferral.findOneAndUpdate(
@@ -1501,7 +1550,7 @@ app.post('/api/admin/reject-payment/:id', verifyToken, verifyAdmin, async (req, 
         pr.processedAt = new Date();
         pr.processedBy = req.userId;
         await pr.save();
-
+        await logAdminAction(req.userId, 'payment_reject', 'payment', pr._id.toString(), { userId: pr.userId?.toString() });
         res.json({ message: 'Solicitud rechazada.' });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -1515,6 +1564,9 @@ app.get('/api/admin/users', verifyToken, verifyAdmin, async (req, res) => {
         const role = (req.query.role || '').trim().toLowerCase();
         const plan = (req.query.plan || '').trim().toLowerCase();
         const statusFilter = (req.query.status || '').trim().toLowerCase(); // active | trial | expired
+        const activityFilter = (req.query.activity || '').trim().toLowerCase(); // active_7 | active_30 | inactive_30
+        const sortBy = (req.query.sortBy || 'createdAt').trim().toLowerCase(); // createdAt | lastLoginAt
+        const sortOrder = (req.query.sortOrder || 'desc').toLowerCase() === 'asc' ? 1 : -1;
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
         const limit = Math.min(100, Math.max(10, parseInt(req.query.limit, 10) || 50));
         const skip = (page - 1) * limit;
@@ -1549,12 +1601,27 @@ app.get('/api/admin/users', verifyToken, verifyAdmin, async (req, res) => {
                 ]
             });
         }
+        if (activityFilter === 'active_7') {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            conditions.push({ lastLoginAt: { $gte: sevenDaysAgo } });
+        } else if (activityFilter === 'active_30') {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            conditions.push({ lastLoginAt: { $gte: thirtyDaysAgo } });
+        } else if (activityFilter === 'inactive_30') {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            conditions.push({ $or: [{ lastLoginAt: null }, { lastLoginAt: { $lt: thirtyDaysAgo } }] });
+        }
         const filter = conditions.length ? { $and: conditions } : {};
+
+        const sortField = sortBy === 'lastLoginAt' ? 'lastLoginAt' : 'createdAt';
 
         const [users, total] = await Promise.all([
             User.find(filter)
-                .select('name email rnc role profession membershipLevel subscription subscriptionStatus expiryDate onboardingCompleted createdAt')
-                .sort({ createdAt: -1 })
+                .select('name email rnc role profession membershipLevel subscription subscriptionStatus expiryDate onboardingCompleted createdAt lastLoginAt blocked adminNotes')
+                .sort({ [sortField]: sortOrder, createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
                 .lean(),
@@ -1582,6 +1649,9 @@ app.get('/api/admin/users', verifyToken, verifyAdmin, async (req, res) => {
                 expiryDate: u.expiryDate || sub.endDate,
                 onboardingCompleted: !!u.onboardingCompleted,
                 createdAt: u.createdAt,
+                lastLoginAt: u.lastLoginAt,
+                blocked: !!u.blocked,
+                adminNotes: u.adminNotes,
                 partner: partner ? { referralCode: partner.referralCode, status: partner.status, tier: partner.tier } : null
             };
         });
@@ -1613,7 +1683,7 @@ app.post('/api/admin/users/:id/activate', verifyToken, verifyAdmin, async (req, 
         user.subscriptionStatus = 'Activo';
         user.membershipLevel = user.subscription.plan;
         await user.save();
-
+        await logAdminAction(req.userId, 'user_activate', 'user', user._id.toString(), { email: user.email });
         res.json({ message: 'Membresía activada. 30 días desde hoy.' });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -1634,7 +1704,56 @@ app.post('/api/admin/users/:id/deactivate', verifyToken, verifyAdmin, async (req
         user.subscriptionStatus = 'Bloqueado';
         await user.save();
 
+        await logAdminAction(req.userId, 'user_deactivate', 'user', user._id.toString(), { email: user.email });
         res.json({ message: 'Membresía bloqueada. El usuario ya no tendrá acceso Pro.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- ADMIN: Bloquear / desbloquear acceso (cuenta) ---
+app.post('/api/admin/users/:id/block', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID de usuario inválido.' });
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
+        if (user.role === 'admin') return res.status(400).json({ message: 'No se puede bloquear un administrador.' });
+
+        user.blocked = true;
+        user.blockedAt = new Date();
+        user.blockedBy = req.userId;
+        await user.save();
+        await logAdminAction(req.userId, 'user_block', 'user', user._id.toString(), { email: user.email });
+        res.json({ message: 'Cuenta bloqueada. El usuario no podrá iniciar sesión.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/admin/users/:id/unblock', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID de usuario inválido.' });
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
+
+        user.blocked = false;
+        user.blockedAt = undefined;
+        user.blockedBy = undefined;
+        await user.save();
+        await logAdminAction(req.userId, 'user_unblock', 'user', user._id.toString(), { email: user.email });
+        res.json({ message: 'Cuenta desbloqueada.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- ADMIN: Actualizar notas internas ---
+app.put('/api/admin/users/:id/notes', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID de usuario inválido.' });
+        const { notes } = req.body;
+        await User.findByIdAndUpdate(req.params.id, { adminNotes: typeof notes === 'string' ? notes.slice(0, 2000) : '' });
+        res.json({ message: 'Notas actualizadas.' });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -1671,8 +1790,102 @@ app.delete('/api/admin/users/:id', verifyToken, verifyAdmin, async (req, res) =>
         ]);
 
         await User.deleteOne({ _id: uid });
-
+        await logAdminAction(req.userId, 'user_delete', 'user', uid.toString(), { email: user.email });
         res.json({ message: 'Usuario eliminado correctamente.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- ADMIN: Detalle de usuario ---
+app.get('/api/admin/users/:id', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID inválido.' });
+        const user = await User.findById(req.params.id).lean();
+        if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
+
+        const [invoices, partner] = await Promise.all([
+            Invoice.find({ userId: user._id, status: { $nin: ['cancelled'] } }).select('clientName total date status').sort({ date: -1 }).limit(10).lean(),
+            Partner.findOne({ userId: user._id }).select('referralCode status').lean()
+        ]);
+        const totalRevenue = await Invoice.aggregate([
+            { $match: { userId: user._id, status: { $nin: ['cancelled'] } } },
+            { $group: { _id: null, total: { $sum: '$total' }, count: { $sum: 1 } } }
+        ]);
+        const rev = totalRevenue[0] || { total: 0, count: 0 };
+
+        res.json({
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            rnc: user.rnc,
+            role: user.role,
+            membershipLevel: user.membershipLevel,
+            subscriptionStatus: user.subscriptionStatus,
+            expiryDate: user.expiryDate,
+            onboardingCompleted: user.onboardingCompleted,
+            createdAt: user.createdAt,
+            lastLoginAt: user.lastLoginAt,
+            blocked: !!user.blocked,
+            adminNotes: user.adminNotes,
+            partner: partner ? { referralCode: partner.referralCode, status: partner.status } : null,
+            invoices: invoices.map(inv => ({ id: inv._id, clientName: inv.clientName, total: inv.total, date: inv.date, status: inv.status })),
+            totalFacturado: rev.total,
+            totalFacturas: rev.count
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- ADMIN: Alertas (trials por vencer, inactivos, pagos pendientes) ---
+app.get('/api/admin/alerts', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const now = new Date();
+        const sevenDaysFromNow = new Date(now);
+        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const [trialsExpiring, inactiveUsers, pendingPayments, blockedCount] = await Promise.all([
+            User.countDocuments({
+                role: { $ne: 'admin' },
+                subscriptionStatus: 'Trial',
+                expiryDate: { $gte: now, $lte: sevenDaysFromNow }
+            }),
+            User.countDocuments({
+                role: { $ne: 'admin' },
+                $or: [{ lastLoginAt: null }, { lastLoginAt: { $lt: thirtyDaysAgo } }]
+            }),
+            PaymentRequest.countDocuments({ status: 'pending' }),
+            User.countDocuments({ blocked: true })
+        ]);
+
+        const alerts = [];
+        if (trialsExpiring > 0) alerts.push({ type: 'trials_expiring', count: trialsExpiring, severity: 'warning', message: `${trialsExpiring} trial(s) por vencer en 7 días` });
+        if (inactiveUsers > 0) alerts.push({ type: 'inactive', count: inactiveUsers, severity: 'info', message: `${inactiveUsers} usuario(s) inactivos (>30 días)` });
+        if (pendingPayments > 0) alerts.push({ type: 'pending_payments', count: pendingPayments, severity: 'warning', message: `${pendingPayments} pago(s) pendiente(s) de aprobar` });
+        if (blockedCount > 0) alerts.push({ type: 'blocked', count: blockedCount, severity: 'info', message: `${blockedCount} cuenta(s) bloqueada(s)` });
+
+        res.json({ alerts });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- ADMIN: Audit Log ---
+app.get('/api/admin/audit', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(100, Math.max(10, parseInt(req.query.limit, 10) || 50));
+        const skip = (page - 1) * limit;
+
+        const [logs, total] = await Promise.all([
+            AdminAuditLog.find().sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+            AdminAuditLog.countDocuments()
+        ]);
+
+        res.json({ list: logs, total, page, limit });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -1834,6 +2047,7 @@ app.post('/api/admin/partners/:id/approve', verifyToken, verifyAdmin, async (req
                 if (typeof mailer.sendPartnerApproved === 'function') await mailer.sendPartnerApproved(p.email, p.name, p.referralCode, referralUrl);
             }
         } catch (mailErr) { log.warn({ err: (mailErr && mailErr.message) || 'mailer no disponible' }, 'Email partner aprobado no enviado'); }
+        await logAdminAction(req.userId, 'partner_approve', 'partner', p._id.toString(), { referralCode: p.referralCode });
         res.json({ message: 'Partner aprobado', referralCode: p.referralCode });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -1905,6 +2119,7 @@ app.post('/api/admin/partners/:id/suspend', verifyToken, verifyAdmin, async (req
         p.status = 'suspended';
         p.updatedAt = new Date();
         await p.save();
+        await logAdminAction(req.userId, 'partner_suspend', 'partner', p._id.toString(), { referralCode: p.referralCode });
         res.json({ message: 'Partner suspendido' });
     } catch (e) {
         res.status(500).json({ error: e.message });

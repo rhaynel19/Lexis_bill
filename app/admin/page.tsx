@@ -10,7 +10,7 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
-import { CreditCard, Check, X, Loader2, RefreshCw, AlertCircle, ImageIcon, Search, ArrowLeft } from "lucide-react";
+import { CreditCard, Check, X, Loader2, RefreshCw, AlertCircle, ImageIcon, Search, ArrowLeft, AlertTriangle, Clock, Lock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useMemo } from "react";
@@ -23,6 +23,7 @@ export default function AdminPagosPendientes() {
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [comprobanteView, setComprobanteView] = useState<string | null>(null);
     const [searchRef, setSearchRef] = useState("");
+    const [alerts, setAlerts] = useState<Array<{ type: string; count: number; severity: string; message: string }>>([]);
 
     const fetchPayments = async () => {
         try {
@@ -37,8 +38,19 @@ export default function AdminPagosPendientes() {
         }
     };
 
+    const fetchAlerts = async () => {
+        try {
+            const { api } = await import("@/lib/api-service");
+            const res = await api.getAdminAlerts();
+            setAlerts(res?.alerts ?? []);
+        } catch {
+            setAlerts([]);
+        }
+    };
+
     useEffect(() => {
         fetchPayments();
+        fetchAlerts();
     }, []);
 
     const handleApprove = async (id: string) => {
@@ -91,8 +103,39 @@ export default function AdminPagosPendientes() {
         return deduped.filter((p) => (p.reference || "").toUpperCase().includes(q));
     }, [payments, searchRef]);
 
+    const alertHref: Record<string, string> = {
+        trials_expiring: "/admin/usuarios?status=trial",
+        inactive: "/admin/usuarios?activity=inactive",
+        pending_payments: "/admin",
+        blocked: "/admin/usuarios?status=blocked"
+    };
+
     return (
         <div className="space-y-6">
+            {/* Alertas: trials por vencer, inactivos, pagos pendientes, bloqueados */}
+            {alerts.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {alerts.map((a) => {
+                        const href = alertHref[a.type] || "#";
+                        const Icon = a.type === "pending_payments" ? CreditCard : a.type === "trials_expiring" ? AlertTriangle : a.type === "inactive" ? Clock : Lock;
+                        const isWarning = a.severity === "warning";
+                        return (
+                            <Link key={a.type} href={href}>
+                                <div className={`p-4 rounded-lg border ${isWarning ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800" : "bg-muted/50 border-border"} hover:opacity-90 transition-opacity flex items-center gap-3`}>
+                                    <div className={`p-2 rounded-full ${isWarning ? "bg-amber-100 dark:bg-amber-900/40" : "bg-muted"}`}>
+                                        <Icon className={`w-5 h-5 ${isWarning ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-sm text-foreground">{a.message}</p>
+                                        <p className="text-xs text-muted-foreground">Ver detalles →</p>
+                                    </div>
+                                </div>
+                            </Link>
+                        );
+                    })}
+                </div>
+            )}
+
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">Pagos Pendientes</h1>

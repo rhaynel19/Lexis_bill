@@ -115,7 +115,7 @@ export function SupportChat() {
                 onClick={() => setIsOpen(!isOpen)}
                 className="h-14 w-14 bg-[#25D366] text-white rounded-full shadow-xl shadow-green-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
                 aria-label={isOpen ? "Cerrar soporte" : "Abrir soporte Lexis Bill"}
-                aria-expanded={isOpen ? "true" : "false"}
+                {...(isOpen ? { "aria-expanded": "true" as const } : { "aria-expanded": "false" as const })}
             >
                 <MessageCircle className="h-8 w-8" aria-hidden />
             </button>

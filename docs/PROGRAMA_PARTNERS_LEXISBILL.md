@@ -384,7 +384,7 @@ Priorizadas por **impacto** y **esfuerzo**. Lo que ya está hecho (registro, app
 |------------|-------------|----------|
 | **Página pública de términos del programa** | Ruta tipo `/programa-partners` o `/terminos-partners` con el texto legal completo, enlazable desde "Ver términos completos" en `/unirse-como-partner`. | Bajo |
 | **Exportar lista de partners (admin)** | Botón en admin partners para descargar CSV/Excel (nombre, email, código, estado, clientes, comisiones) para reportes o contabilidad. | Bajo |
-| **Notificación in-app al partner** | Cuando el admin aprueba o suspende, mostrar un aviso/badge en el layout o en `/partners` ("Tu solicitud fue aprobada" / "Tu cuenta partner fue suspendida"). Puede complementar el email. | Bajo |
+| **Notificación in-app al partner** | ✅ Implementado | Aprobado: mensaje "Tu solicitud fue aprobada" en `/partners` (primeros 7 días). Suspendido: banner en layout protegido "Tu cuenta partner fue suspendida. Contacta a soporte." | Bajo |
 
 ### 14.4 Pendiente opcional
 

@@ -15,6 +15,9 @@ export interface AdminUser {
     expiryDate?: string;
     onboardingCompleted: boolean;
     createdAt: string;
+    lastLoginAt?: string;
+    blocked?: boolean;
+    adminNotes?: string;
     partner?: { referralCode: string; status: string; tier?: string } | null;
 }
 
@@ -385,12 +388,15 @@ export const api = {
         );
     },
 
-    async getAdminUsers(params?: { q?: string; role?: string; plan?: string; status?: string; page?: number; limit?: number }) {
+    async getAdminUsers(params?: { q?: string; role?: string; plan?: string; status?: string; activity?: string; sortBy?: string; sortOrder?: string; page?: number; limit?: number }) {
         const sp = new URLSearchParams();
         if (params?.q) sp.set("q", params.q);
         if (params?.role) sp.set("role", params.role);
         if (params?.plan) sp.set("plan", params.plan);
         if (params?.status) sp.set("status", params.status);
+        if (params?.activity) sp.set("activity", params.activity);
+        if (params?.sortBy) sp.set("sortBy", params.sortBy);
+        if (params?.sortOrder) sp.set("sortOrder", params.sortOrder);
         if (params?.page) sp.set("page", String(params.page));
         if (params?.limit) sp.set("limit", String(params.limit));
         const query = sp.toString();
@@ -409,6 +415,42 @@ export const api = {
 
     async deleteUser(userId: string) {
         return secureFetch<{ message: string }>(`${API_URL}/admin/users/${userId}`, { method: "DELETE" });
+    },
+
+    async getAdminUserDetail(userId: string) {
+        return secureFetch<AdminUser & { invoices?: Array<{ id: string; clientName: string; total: number; date: string; status: string }>; totalFacturado?: number; totalFacturas?: number }>(
+            `${API_URL}/admin/users/${userId}`
+        );
+    },
+
+    async blockUser(userId: string) {
+        return secureFetch<{ message: string }>(`${API_URL}/admin/users/${userId}/block`, { method: "POST" });
+    },
+
+    async unblockUser(userId: string) {
+        return secureFetch<{ message: string }>(`${API_URL}/admin/users/${userId}/unblock`, { method: "POST" });
+    },
+
+    async updateUserNotes(userId: string, notes: string) {
+        return secureFetch<{ message: string }>(`${API_URL}/admin/users/${userId}/notes`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ notes }),
+        });
+    },
+
+    async getAdminAlerts() {
+        return secureFetch<{ alerts: Array<{ type: string; count: number; severity: string; message: string }> }>(`${API_URL}/admin/alerts`);
+    },
+
+    async getAdminAudit(params?: { page?: number; limit?: number }) {
+        const sp = new URLSearchParams();
+        if (params?.page) sp.set("page", String(params.page));
+        if (params?.limit) sp.set("limit", String(params.limit));
+        const query = sp.toString();
+        return secureFetch<{ list: Array<{ _id: string; adminId: string; adminEmail?: string; action: string; targetType?: string; targetId?: string; metadata?: unknown; createdAt: string }>; total: number; page: number; limit: number }>(
+            `${API_URL}/admin/audit${query ? `?${query}` : ""}`
+        );
     },
 
     async getAlerts() {
