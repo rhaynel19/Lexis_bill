@@ -11,7 +11,6 @@ import { useRouter } from "next/navigation";
 import {
   FileText,
   MoreHorizontal,
-  Plus,
   Search,
   Settings,
   Users,
@@ -37,10 +36,8 @@ import { TaxHealthWidget } from "@/components/TaxHealthWidget";
 import { FiscalNamePrompt } from "@/components/FiscalNamePrompt";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { EmotionalStatusWidget } from "@/components/dashboard/EmotionalStatusWidget";
-import { AIInsightWidget } from "@/components/dashboard/AIInsightWidget";
 import { LexisMessageWidget } from "@/components/dashboard/LexisMessageWidget";
 import { AlertsBanner } from "@/components/AlertsBanner";
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
 import { usePreferences } from "@/components/providers/PreferencesContext";
 import { useAuth } from "@/components/providers/AuthContext";
@@ -416,45 +413,28 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 py-8">
         <TrialBanner />
         <SubscriptionAlert />
-        <Breadcrumbs items={[{ label: "Inicio" }]} className="mb-4" />
-        {/* Mensaje de Lexis (saludo + contextual) */}
+        {/* Lexis: saludo, contextual, resumen, alertas y CTA */}
         {!isLoading && (
           <LexisMessageWidget
             userName={welcomeName}
             contextualMessage={lexisContextualMessage}
             monthlySummary={monthlyStats}
+            revenue={totalRevenue}
+            previousRevenue={previousMonthRevenue}
+            pendingCount={pendingInvoices}
+            predictions={predictiveAlerts}
             className="mb-6"
           />
         )}
 
-        {/* Título del Dashboard */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-1">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground">
-              Tu negocio hoy
-            </h2>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">Resumen de ingresos, facturas y pendientes.</p>
-          </div>
-          <div className="flex gap-3 hidden md:flex">
-            <Link href="/nueva-factura">
-              <Button className="bg-[#D4AF37] hover:bg-[#B8962E] text-[#0A192F] font-bold shadow-lg shadow-amber-500/20 transition-all hover:scale-105">
-                <Plus className="w-4 h-4 mr-2" />
-                Nueva Factura
-              </Button>
-            </Link>
-          </div>
-        </div>
-
         {/* Alertas proactivas: NCF bajo, secuencias por vencer, suscripción */}
         <AlertsBanner />
 
-        {/* AI Insight con datos reales (ingresos, alertas NCF y pendientes) */}
-        <AIInsightWidget
-          revenue={totalRevenue}
-          previousRevenue={previousMonthRevenue}
-          pendingCount={pendingInvoices}
-          predictions={predictiveAlerts}
-        />
+        {/* Título del Dashboard */}
+        <div className="mb-8 px-1">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground">Tu negocio hoy</h2>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">Resumen de ingresos, facturas y pendientes.</p>
+        </div>
 
         {/* Prompt de Identidad Fiscal o Bloqueo Informativo */}
         {!fiscalState.confirmed ? (
