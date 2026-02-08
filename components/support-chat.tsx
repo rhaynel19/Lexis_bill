@@ -5,16 +5,31 @@ import { usePathname } from "next/navigation";
 import { MessageCircle, Headphones, CreditCard, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/providers/AuthContext";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 const SUPPORT_PHONE = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "18495890656";
+
+function useIsMobile() {
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const m = window.matchMedia("(max-width: 639px)");
+        setIsMobile(m.matches);
+        const listener = () => setIsMobile(m.matches);
+        m.addEventListener("change", listener);
+        return () => m.removeEventListener("change", listener);
+    }, []);
+    return isMobile;
+}
 
 export function SupportChat() {
     const [isOpen, setIsOpen] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
     const pathname = usePathname();
     const { user } = useAuth();
+    const isMobile = useIsMobile();
 
     useEffect(() => {
+        if (isMobile) return;
         const handleClickOutside = (e: MouseEvent) => {
             if (isOpen && panelRef.current && !panelRef.current.contains(e.target as Node)) {
                 const target = e.target as HTMLElement;
@@ -25,7 +40,7 @@ export function SupportChat() {
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [isOpen]);
+    }, [isOpen, isMobile]);
 
     const handleWhatsApp = (type: "tech" | "billing") => {
         // Nombre para el mensaje: perfil (appConfig) > nombre fiscal > nombre de usuario
@@ -50,11 +65,73 @@ export function SupportChat() {
         }
 
         window.open(`https://wa.me/${SUPPORT_PHONE}?text=${encodeURIComponent(message)}`, "_blank");
+        setIsOpen(false);
     };
+
+    const supportPanelContent = (
+        <>
+            <div className="p-4 space-y-2 bg-background">
+                <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                    onClick={() => handleWhatsApp("tech")}
+                    aria-label="Abrir WhatsApp para Soporte Técnico"
+                >
+                    <Headphones className="h-4 w-4 shrink-0" aria-hidden />
+                    Soporte Técnico
+                </Button>
+                <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                    onClick={() => handleWhatsApp("billing")}
+                    aria-label="Abrir WhatsApp para Facturación y Pagos"
+                >
+                    <CreditCard className="h-4 w-4 shrink-0" aria-hidden />
+                    Facturación y Pagos
+                </Button>
+            </div>
+            <div className="bg-muted/50 p-2 text-center text-[10px] text-muted-foreground border-t border-border">
+                Respuesta estimada: &lt; 5 min
+            </div>
+        </>
+    );
+
+    if (isMobile) {
+        return (
+            <div className="fixed z-50 bottom-28 right-4 md:bottom-6 md:right-6" role="complementary" aria-label="Widget de soporte">
+                <Sheet open={isOpen} onOpenChange={setIsOpen}>
+                    <SheetContent
+                        side="bottom"
+                        className="rounded-t-2xl p-0 max-h-[70vh] flex flex-col"
+                    >
+                        <SheetHeader className="p-4 pb-0 text-left shrink-0 bg-[#25D366] text-white rounded-t-2xl">
+                            <SheetTitle id="support-title" className="text-white font-bold">
+                                Soporte Lexis Bill
+                            </SheetTitle>
+                            <p className="text-xs opacity-90 flex items-center gap-1.5 mt-0.5">
+                                <Clock className="w-3 h-3" aria-hidden />
+                                Lun–Vie 9:00–18:00
+                            </p>
+                        </SheetHeader>
+                        <div className="overflow-y-auto flex-1">{supportPanelContent}</div>
+                    </SheetContent>
+                </Sheet>
+                <button
+                    data-support-trigger
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="h-14 w-14 bg-[#25D366] text-white rounded-full shadow-xl shadow-green-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+                    aria-label={isOpen ? "Cerrar soporte" : "Abrir soporte Lexis Bill"}
+                    {...(isOpen ? { "aria-expanded": "true" as const } : { "aria-expanded": "false" as const })}
+                >
+                    <MessageCircle className="h-8 w-8" aria-hidden />
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div
-            className="fixed z-50 bottom-28 left-4 md:bottom-6 md:left-auto md:right-[15rem]"
+            className="fixed z-50 bottom-6 left-4 md:left-auto md:right-[15rem]"
             role="complementary"
             aria-label="Widget de soporte"
         >
@@ -84,29 +161,7 @@ export function SupportChat() {
                             <X className="h-4 w-4" />
                         </button>
                     </div>
-                    <div className="p-4 space-y-2 bg-background">
-                        <Button
-                            variant="outline"
-                            className="w-full justify-start gap-2 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                            onClick={() => handleWhatsApp("tech")}
-                            aria-label="Abrir WhatsApp para Soporte Técnico"
-                        >
-                            <Headphones className="h-4 w-4 shrink-0" aria-hidden />
-                            Soporte Técnico
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="w-full justify-start gap-2 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                            onClick={() => handleWhatsApp("billing")}
-                            aria-label="Abrir WhatsApp para Facturación y Pagos"
-                        >
-                            <CreditCard className="h-4 w-4 shrink-0" aria-hidden />
-                            Facturación y Pagos
-                        </Button>
-                    </div>
-                    <div className="bg-muted/50 p-2 text-center text-[10px] text-muted-foreground border-t border-border">
-                        Respuesta estimada: &lt; 5 min
-                    </div>
+                    {supportPanelContent}
                 </div>
             ) : null}
 
