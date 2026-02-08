@@ -16,12 +16,19 @@ import {
     FileText,
     Radar,
     DollarSign,
+    RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useCallback } from "react";
 
 const LEXIS_COPILOT_COLLAPSED_KEY = "lexis-copilot-collapsed";
+const LEXIS_COPILOT_CACHE_KEY = "lexis-copilot-cache";
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+const MIN_LOADING_MS = 6000; // No mostrar error antes de 6 segundos
+const REQUEST_TIMEOUT_MS = 12000;
+const RETRY_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 2000;
 
 export interface BusinessCopilotData {
     alerts: Array<{ type: string; severity: string; message: string; count?: number; pct?: number; clientName?: string; service?: string; amount?: number }>;
@@ -63,38 +70,123 @@ function StatusDot({ status }: { status: string }) {
     return <span className={cn("inline-block w-2 h-2 rounded-full mr-1.5", colors[status as keyof typeof colors] || "bg-slate-400")} />;
 }
 
+function getCachedData(): BusinessCopilotData | null {
+    if (typeof window === "undefined") return null;
+    try {
+        const raw = localStorage.getItem(LEXIS_COPILOT_CACHE_KEY);
+        if (!raw) return null;
+        const { data, ts } = JSON.parse(raw);
+        if (Date.now() - ts > CACHE_TTL_MS) return null;
+        return data;
+    } catch {
+        return null;
+    }
+}
+
+function setCachedData(data: BusinessCopilotData) {
+    try {
+        localStorage.setItem(LEXIS_COPILOT_CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+    } catch { /* ignore */ }
+}
+
+function getSmartSubtitle(data: BusinessCopilotData): string {
+    const score = data.businessHealth?.score ?? 0;
+    const hasAlerts = (data.alerts?.length ?? 0) + (data.fiscalAlerts?.length ?? 0) > 0;
+    const hasGrowth = data.alerts?.some(a => a.type === "revenue_growth");
+    const hasDrop = data.alerts?.some(a => a.type === "revenue_drop");
+    if (hasGrowth) return "Detectamos oportunidades para aumentar tu facturación.";
+    if (hasDrop) return "Lexis ha detectado variaciones en tu ritmo. Te sugerimos revisar el análisis.";
+    if (hasAlerts) return "Hay aspectos de tu negocio que requieren tu atención.";
+    if (score >= 70) return "Hoy tu negocio muestra un comportamiento estable.";
+    if (score >= 50) return "Tu negocio se mantiene. Hay margen para optimizar.";
+    return "Análisis automático de tu facturación y clientes.";
+}
+
 export function LexisBusinessCopilot() {
     const [data, setData] = useState<BusinessCopilotData | null>(null);
     const [loading, setLoading] = useState(true);
     const [collapsed, setCollapsed] = useState(false);
+    const [showError, setShowError] = useState(false);
+    const [isRetrying, setIsRetrying] = useState(false);
+    const [fromCache, setFromCache] = useState(false);
 
     useEffect(() => {
         const stored = typeof window !== "undefined" ? localStorage.getItem(LEXIS_COPILOT_COLLAPSED_KEY) : null;
         setCollapsed(stored === "true");
     }, []);
 
-    const loadData = useCallback(async () => {
-        setLoading(true);
-        const timeoutMs = 10000;
-        try {
-            const { api } = await import("@/lib/api-service");
-            const res = await Promise.race([
-                api.getBusinessCopilot(),
-                new Promise<never>((_, reject) =>
-                    setTimeout(() => reject(new Error("timeout")), timeoutMs)
-                ),
-            ]);
-            setData(res);
-        } catch {
-            setData(null);
-        } finally {
-            setLoading(false);
+    const fetchWithRetry = useCallback(async (): Promise<BusinessCopilotData | null> => {
+        const { api } = await import("@/lib/api-service");
+        for (let attempt = 0; attempt <= RETRY_ATTEMPTS; attempt++) {
+            try {
+                const res = await Promise.race([
+                    api.getBusinessCopilot(),
+                    new Promise<never>((_, reject) =>
+                        setTimeout(() => reject(new Error("timeout")), REQUEST_TIMEOUT_MS)
+                    ),
+                ]);
+                return res;
+            } catch {
+                if (attempt < RETRY_ATTEMPTS) {
+                    await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
+                }
+            }
         }
+        return null;
+    }, []);
+
+    const loadData = useCallback(async (userInitiated = false) => {
+        if (userInitiated) setIsRetrying(true);
+        setLoading(true);
+        setShowError(false);
+        setFromCache(false);
+        const startTime = Date.now();
+
+        const res = await fetchWithRetry();
+
+        const elapsed = Date.now() - startTime;
+        const minWaitRemaining = Math.max(0, MIN_LOADING_MS - elapsed);
+        if (minWaitRemaining > 0) {
+            await new Promise(r => setTimeout(r, minWaitRemaining));
+        }
+
+        if (res) {
+            setData(res);
+            setCachedData(res);
+            setShowError(false);
+        } else {
+            const cached = getCachedData();
+            if (cached) {
+                setData(cached);
+                setFromCache(true);
+                setShowError(true);
+            } else {
+                setData(null);
+                setShowError(true);
+            }
+        }
+        setLoading(false);
+        setIsRetrying(false);
+    }, [fetchWithRetry]);
+
+    useEffect(() => {
+        loadData(false);
     }, []);
 
     useEffect(() => {
-        loadData();
-    }, [loadData]);
+        if (!showError || loading) return;
+        const t = setInterval(() => {
+            fetchWithRetry().then(res => {
+                if (res) {
+                    setData(res);
+                    setCachedData(res);
+                    setFromCache(false);
+                    setShowError(false);
+                }
+            });
+        }, 15000);
+        return () => clearInterval(t);
+    }, [showError, loading, fetchWithRetry]);
 
     const setCollapsedAndSave = (v: boolean) => {
         setCollapsed(v);
@@ -103,16 +195,47 @@ export function LexisBusinessCopilot() {
         } catch { /* ignore */ }
     };
 
-    if (loading) {
+    const handleManualRetry = () => loadData(true);
+
+    if (loading && !data) {
         return (
             <Card className="mb-6 overflow-hidden rounded-2xl border border-white/40 dark:border-slate-600/40 bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl">
                 <CardContent className="p-6">
                     <div className="animate-pulse flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-slate-200 dark:bg-slate-700" />
+                        <div className="h-12 w-12 rounded-xl bg-slate-200/80 dark:bg-slate-700/80" />
                         <div className="flex-1 space-y-2">
-                            <div className="h-4 w-48 bg-slate-200 dark:bg-slate-700 rounded" />
-                            <div className="h-3 w-64 bg-slate-200 dark:bg-slate-700 rounded" />
+                            <div className="h-4 w-48 bg-slate-200/80 dark:bg-slate-700/80 rounded animate-pulse" />
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                                Lexis Copilot está analizando tu negocio…
+                            </p>
                         </div>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    if (showError && !data) {
+        return (
+            <Card className="mb-6 overflow-hidden rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl">
+                <CardContent className="p-6">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                <Activity className="w-6 h-6 text-slate-500 dark:text-slate-400" />
+                            </div>
+                            <div>
+                                <p className="font-semibold text-foreground">Lexis Business Copilot</p>
+                                <p className="text-sm text-muted-foreground mt-0.5">
+                                    El asistente está teniendo dificultades para cargar el análisis.<br />
+                                    Estamos reintentando en segundo plano.
+                                </p>
+                            </div>
+                        </div>
+                        <Button variant="outline" onClick={handleManualRetry} disabled={isRetrying} className="gap-2 shrink-0">
+                            <RefreshCw className={cn("w-4 h-4", isRetrying && "animate-spin")} />
+                            {isRetrying ? "Reintentando…" : "Reintentar ahora"}
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
@@ -121,20 +244,24 @@ export function LexisBusinessCopilot() {
 
     if (!data) {
         return (
-            <Card className="mb-6 overflow-hidden rounded-2xl border border-amber-200/50 dark:border-amber-800/50 bg-amber-50/30 dark:bg-amber-950/20">
+            <Card className="mb-6 overflow-hidden rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl">
                 <CardContent className="p-6">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-                                <Activity className="w-6 h-6 text-amber-600" />
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                <Activity className="w-6 h-6 text-slate-500 dark:text-slate-400" />
                             </div>
                             <div>
                                 <p className="font-semibold text-foreground">Lexis Business Copilot</p>
-                                <p className="text-sm text-muted-foreground">No se pudo cargar el análisis. Revisa tu conexión o intenta de nuevo.</p>
+                                <p className="text-sm text-muted-foreground mt-0.5">
+                                    El asistente está teniendo dificultades para cargar el análisis.<br />
+                                    Estamos reintentando en segundo plano.
+                                </p>
                             </div>
                         </div>
-                        <Button variant="outline" onClick={loadData} disabled={loading} className="gap-2">
-                            {loading ? "Cargando..." : "Reintentar"}
+                        <Button variant="outline" onClick={handleManualRetry} disabled={isRetrying} className="gap-2 shrink-0">
+                            <RefreshCw className={cn("w-4 h-4", isRetrying && "animate-spin")} />
+                            {isRetrying ? "Reintentando…" : "Reintentar ahora"}
                         </Button>
                     </div>
                 </CardContent>
@@ -170,8 +297,25 @@ export function LexisBusinessCopilot() {
                                 Lexis observa tu negocio
                             </CardTitle>
                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                                Análisis automático de tu facturación y clientes
+                                {getSmartSubtitle(data)}
                             </p>
+                            {fromCache && (
+                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                    <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/60 px-2 py-0.5 rounded-md">
+                                        Mostrando último análisis disponible
+                                    </span>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleManualRetry}
+                                        disabled={isRetrying}
+                                        className="h-6 px-2 text-xs gap-1 text-slate-600 dark:text-slate-400"
+                                    >
+                                        <RefreshCw className={cn("w-3 h-3", isRetrying && "animate-spin")} />
+                                        Reintentar ahora
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </div>
                     <Button
