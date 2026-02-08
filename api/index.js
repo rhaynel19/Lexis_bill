@@ -2100,67 +2100,72 @@ app.get('/api/business-copilot', verifyToken, async (req, res) => {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        const userObjId = new mongoose.Types.ObjectId(userId);
+        const matchBase = { userId: userObjId, status: { $nin: ['cancelled'] } };
 
-        // 1. Agregación: clientes con última factura, total facturado, días sin facturar
-        const clientStats = await Invoice.aggregate([
-            { $match: {
-                userId: new mongoose.Types.ObjectId(userId),
-                status: { $nin: ['cancelled'] },
-                clientRnc: { $exists: true, $nin: [null, ''] }
-            }},
-            { $group: {
-                _id: '$clientRnc',
-                clientName: { $first: '$clientName' },
-                lastInvoiceDate: { $max: '$date' },
-                totalRevenue: { $sum: '$total' },
-                invoiceCount: { $sum: 1 }
-            }},
-            { $project: {
-                rnc: '$_id',
-                clientName: 1,
-                lastInvoiceDate: 1,
-                totalRevenue: 1,
-                invoiceCount: 1,
-                daysSinceLastInvoice: {
-                    $floor: { $divide: [{ $subtract: [now, '$lastInvoiceDate'] }, 86400000] }
-                }
-            }},
-            { $sort: { totalRevenue: -1 } }
+        // Ejecutar queries independientes en paralelo (más rápido)
+        const [clientStatsRaw, monthlyRevenue, topServices, ncfSettings, customers, allInvoices] = await Promise.all([
+            Invoice.aggregate([
+                { $match: { ...matchBase, clientRnc: { $exists: true, $nin: [null, ''] } } },
+                { $group: {
+                    _id: '$clientRnc',
+                    clientName: { $first: '$clientName' },
+                    lastInvoiceDate: { $max: '$date' },
+                    totalRevenue: { $sum: '$total' },
+                    invoiceCount: { $sum: 1 }
+                }},
+                { $project: {
+                    rnc: '$_id',
+                    clientName: 1,
+                    lastInvoiceDate: 1,
+                    totalRevenue: 1,
+                    invoiceCount: 1,
+                    daysSinceLastInvoice: { $floor: { $divide: [{ $subtract: [now, '$lastInvoiceDate'] }, 86400000] } }
+                }},
+                { $sort: { totalRevenue: -1 } },
+                { $limit: 100 }
+            ]),
+            Invoice.aggregate([
+                { $match: matchBase },
+                { $group: {
+                    _id: { year: { $year: '$date' }, month: { $month: '$date' } },
+                    total: { $sum: '$total' },
+                    count: { $sum: 1 }
+                }}
+            ]),
+            Invoice.aggregate([
+                { $match: matchBase },
+                { $unwind: '$items' },
+                { $match: { 'items.description': { $exists: true, $nin: [null, ''] } } },
+                { $group: {
+                    _id: '$items.description',
+                    totalQuantity: { $sum: { $ifNull: ['$items.quantity', 1] } },
+                    totalRevenue: { $sum: { $multiply: [{ $ifNull: ['$items.quantity', 1] }, { $ifNull: ['$items.price', 0] }] } }
+                }},
+                { $sort: { totalRevenue: -1 } },
+                { $limit: 5 },
+                { $project: { description: '$_id', totalQuantity: 1, totalRevenue: 1, _id: 0 } }
+            ]),
+            NCFSettings.find({ userId, isActive: true }).lean(),
+            Customer.find({ userId }).select('rnc name').lean(),
+            Invoice.find({ userId, status: { $nin: ['cancelled'] } })
+                .select('clientRnc clientName date total balancePendiente estadoPago status').lean()
         ]);
 
-        // 2. Ingresos por mes (actual vs anterior)
-        const monthlyRevenue = await Invoice.aggregate([
-            { $match: { userId: new mongoose.Types.ObjectId(userId), status: { $nin: ['cancelled'] } } },
-            { $group: {
-                _id: { year: { $year: '$date' }, month: { $month: '$date' } },
-                total: { $sum: '$total' },
-                count: { $sum: 1 }
-            }}
-        ]);
+        const clientStats = clientStatsRaw;
         const currMonth = monthlyRevenue.find(r => r._id.year === now.getFullYear() && r._id.month === now.getMonth() + 1);
         const prevMonth = monthlyRevenue.find(r => r._id.year === endOfLastMonth.getFullYear() && r._id.month === endOfLastMonth.getMonth() + 1);
         const currentRevenue = currMonth?.total || 0;
         const previousRevenue = prevMonth?.total || 0;
         const currentInvoiceCount = currMonth?.count || 0;
 
-        // 3. Servicios más vendidos (desde items)
-        const topServices = await Invoice.aggregate([
-            { $match: { userId: new mongoose.Types.ObjectId(userId), status: { $nin: ['cancelled'] } } },
-            { $unwind: '$items' },
-            { $match: { 'items.description': { $exists: true, $nin: [null, ''] } } },
-            { $group: {
-                _id: '$items.description',
-                totalQuantity: { $sum: { $ifNull: ['$items.quantity', 1] } },
-                totalRevenue: { $sum: { $multiply: [{ $ifNull: ['$items.quantity', 1] }, { $ifNull: ['$items.price', 0] }] } }
-            }},
-            { $sort: { totalRevenue: -1 } },
-            { $limit: 5 },
-            { $project: { description: '$_id', totalQuantity: 1, totalRevenue: 1, _id: 0 } }
-        ]);
-
-        // 4. NCF Settings y alertas fiscales
-        const ncfSettings = await NCFSettings.find({ userId, isActive: true }).lean();
-        const customers = await Customer.find({ userId }).select('rnc name').lean();
+        const invoicesWithBalance = allInvoices.filter(inv => {
+            const bal = (inv.balancePendiente != null && inv.balancePendiente > 0)
+                ? inv.balancePendiente
+                : (inv.estadoPago === 'pendiente' || inv.estadoPago === 'parcial' || inv.status === 'pending')
+                    ? (inv.total || 0) : 0;
+            return bal > 0;
+        });
 
         // Calcular total facturado para % concentración
         const totalRevenueAll = clientStats.reduce((s, c) => s + c.totalRevenue, 0);
@@ -2250,24 +2255,7 @@ app.get('/api/business-copilot', verifyToken, async (req, res) => {
             };
         });
 
-        // Ranking mensual
-        const lastMonthClients = await Invoice.aggregate([
-            { $match: {
-                userId: new mongoose.Types.ObjectId(userId),
-                status: { $nin: ['cancelled'] },
-                date: { $gte: startOfLastMonth, $lte: endOfLastMonth }
-            }},
-            { $group: { _id: '$clientRnc', clientName: { $first: '$clientName' }, total: { $sum: '$total' } } },
-            { $sort: { total: -1 } }
-        ]);
-        const thisMonthClients = await Invoice.aggregate([
-            { $match: {
-                userId: new mongoose.Types.ObjectId(userId),
-                status: { $nin: ['cancelled'] },
-                date: { $gte: startOfMonth }
-            }},
-            { $group: { _id: '$clientRnc', clientName: { $first: '$clientName' }, total: { $sum: '$total' } } }
-        ]);
+        // Ranking mensual (lastMonthClients y thisMonthClients ya vienen del Promise.all)
         const lastMonthRncSet = new Set(lastMonthClients.map(c => c._id));
         const thisMonthRncSet = new Set(thisMonthClients.map(c => c._id));
         const droppedClient = lastMonthClients.find(c => !thisMonthRncSet.has(c._id));
@@ -2315,20 +2303,30 @@ app.get('/api/business-copilot', verifyToken, async (req, res) => {
             });
         }
 
-        // --- TIPO DE PAGO: analytics (tipoPago, balancePendiente) ---
-        const paymentStats = await Invoice.aggregate([
-            { $match: { userId: new mongoose.Types.ObjectId(userId), status: { $nin: ['cancelled'] } } },
-            { $addFields: {
-                tipoPago: { $ifNull: ['$tipoPago', 'efectivo'] },
-                balance: { $cond: [{ $gt: [{ $ifNull: ['$balancePendiente', 0] }, 0] }, '$balancePendiente', { $cond: [{ $eq: ['$status', 'pending'] }, '$total', 0] }] },
-                montoPagado: { $ifNull: ['$montoPagado', { $cond: [{ $eq: ['$status', 'pending'] }, 0, '$total'] }] }
-            }},
-            { $group: {
-                _id: '$tipoPago',
-                count: { $sum: 1 },
-                totalRevenue: { $sum: '$total' },
-                totalBalance: { $sum: '$balance' }
-            }}
+        // Segunda ronda: paymentStats, rankings (en paralelo)
+        const [paymentStats, lastMonthClients, thisMonthClients] = await Promise.all([
+            Invoice.aggregate([
+                { $match: matchBase },
+                { $addFields: {
+                    tipoPago: { $ifNull: ['$tipoPago', 'efectivo'] },
+                    balance: { $cond: [{ $gt: [{ $ifNull: ['$balancePendiente', 0] }, 0] }, '$balancePendiente', { $cond: [{ $eq: ['$status', 'pending'] }, '$total', 0] }] }
+                }},
+                { $group: {
+                    _id: '$tipoPago',
+                    count: { $sum: 1 },
+                    totalRevenue: { $sum: '$total' },
+                    totalBalance: { $sum: '$balance' }
+                }}
+            ]),
+            Invoice.aggregate([
+                { $match: { ...matchBase, date: { $gte: startOfLastMonth, $lte: endOfLastMonth } } },
+                { $group: { _id: '$clientRnc', clientName: { $first: '$clientName' }, total: { $sum: '$total' } } },
+                { $sort: { total: -1 } }
+            ]),
+            Invoice.aggregate([
+                { $match: { ...matchBase, date: { $gte: startOfMonth } } },
+                { $group: { _id: '$clientRnc', clientName: { $first: '$clientName' }, total: { $sum: '$total' } } }
+            ])
         ]);
         const totalInvoicesForPayment = paymentStats.reduce((s, p) => s + p.count, 0);
         const creditStats = paymentStats.find(p => p._id === 'credito');
@@ -2343,16 +2341,7 @@ app.get('/api/business-copilot', verifyToken, async (req, res) => {
             }, 0);
         }
 
-        // Morosidad: facturas con balance pendiente
-        const allInvoices = await Invoice.find({ userId, status: { $nin: ['cancelled'] } })
-            .select('clientRnc clientName date total balancePendiente estadoPago status').lean();
-        const invoicesWithBalance = allInvoices.filter(inv => {
-            const bal = (inv.balancePendiente != null && inv.balancePendiente > 0)
-                ? inv.balancePendiente
-                : (inv.estadoPago === 'pendiente' || inv.estadoPago === 'parcial' || inv.status === 'pending')
-                    ? (inv.total || 0) : 0;
-            return bal > 0;
-        });
+        // Morosidad: ya tenemos invoicesWithBalance y allInvoices del Promise.all inicial
         const morosityByClient = {};
         invoicesWithBalance.forEach(inv => {
             const rnc = inv.clientRnc || 'unknown';

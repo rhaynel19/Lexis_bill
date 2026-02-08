@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 const LEXIS_COPILOT_COLLAPSED_KEY = "lexis-copilot-collapsed";
 
@@ -73,26 +73,28 @@ export function LexisBusinessCopilot() {
         setCollapsed(stored === "true");
     }, []);
 
-    useEffect(() => {
-        const load = async () => {
-            const timeoutMs = 8000;
-            try {
-                const { api } = await import("@/lib/api-service");
-                const res = await Promise.race([
-                    api.getBusinessCopilot(),
-                    new Promise<never>((_, reject) =>
-                        setTimeout(() => reject(new Error("timeout")), timeoutMs)
-                    ),
-                ]);
-                setData(res);
-            } catch {
-                setData(null);
-            } finally {
-                setLoading(false);
-            }
-        };
-        load();
+    const loadData = useCallback(async () => {
+        setLoading(true);
+        const timeoutMs = 10000;
+        try {
+            const { api } = await import("@/lib/api-service");
+            const res = await Promise.race([
+                api.getBusinessCopilot(),
+                new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error("timeout")), timeoutMs)
+                ),
+            ]);
+            setData(res);
+        } catch {
+            setData(null);
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     const setCollapsedAndSave = (v: boolean) => {
         setCollapsed(v);
@@ -117,7 +119,28 @@ export function LexisBusinessCopilot() {
         );
     }
 
-    if (!data) return null;
+    if (!data) {
+        return (
+            <Card className="mb-6 overflow-hidden rounded-2xl border border-amber-200/50 dark:border-amber-800/50 bg-amber-50/30 dark:bg-amber-950/20">
+                <CardContent className="p-6">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
+                                <Activity className="w-6 h-6 text-amber-600" />
+                            </div>
+                            <div>
+                                <p className="font-semibold text-foreground">Lexis Business Copilot</p>
+                                <p className="text-sm text-muted-foreground">No se pudo cargar el análisis. Revisa tu conexión o intenta de nuevo.</p>
+                            </div>
+                        </div>
+                        <Button variant="outline" onClick={loadData} disabled={loading} className="gap-2">
+                            {loading ? "Cargando..." : "Reintentar"}
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
 
     const hasAlerts = data.alerts.length > 0 || data.fiscalAlerts.length > 0;
     const hasContent = hasAlerts || data.clientRadar.length > 0 || data.rankings.topClient || data.rankings.topService || data.businessHealth.score > 0;
