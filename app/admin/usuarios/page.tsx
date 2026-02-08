@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserCircle, Search, Download, Filter, Check, Ban, Loader2 } from "lucide-react";
+import { UserCircle, Search, Download, Filter, Check, Ban, Loader2, Trash2 } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -15,6 +15,7 @@ import {
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import type { AdminUser } from "@/lib/api-service";
 
 export default function AdminUsuariosPage() {
@@ -29,6 +30,7 @@ export default function AdminUsuariosPage() {
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [isLoading, setIsLoading] = useState(true);
     const [actioningId, setActioningId] = useState<string | null>(null);
+    const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
     const fetchUsers = useCallback(async () => {
         setIsLoading(true);
@@ -94,6 +96,41 @@ export default function AdminUsuariosPage() {
         }
     };
 
+    const handleDelete = async () => {
+        if (!deleteConfirm) return;
+        const id = deleteConfirm.id;
+        setActioningId(id);
+        setDeleteConfirm(null);
+        try {
+            const { api } = await import("@/lib/api-service");
+            const res = await api.deleteUser(id);
+            toast.success(res?.message || "Usuario eliminado.");
+            fetchUsers();
+        } catch (e: any) {
+            toast.error(e?.message || "Error al eliminar.");
+            setActioningId(null);
+        } finally {
+            setActioningId(null);
+        }
+    };
+
+    /** Días restantes hasta bloqueo. Activo/Trial: días hasta expiryDate. Gracia: días de gracia restantes. */
+    const getDaysUntilBlock = (u: AdminUser): number | null => {
+        if (u.role === "admin") return null;
+        const status = (u.subscriptionStatus || "").toLowerCase();
+        if (status === "bloqueado" || status === "expired") return null;
+        const end = u.expiryDate ? new Date(u.expiryDate) : null;
+        if (!end) return null;
+        const now = new Date();
+        const diffMs = end.getTime() - now.getTime();
+        const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        if (days > 0) return days; // Activo/Trial: días hasta vencimiento
+        // Gracia: 5 días después del vencimiento
+        const daysPast = Math.abs(days);
+        const graceRemaining = Math.max(0, 5 - daysPast);
+        return graceRemaining > 0 ? graceRemaining : null;
+    };
+
     const displayName = (u: AdminUser) => {
         const name = (u.name || "").trim();
         if (!name || name.toUpperCase() === "CONTRIBUYENTE REGISTRADO") {
@@ -123,18 +160,22 @@ export default function AdminUsuariosPage() {
     };
 
     const handleExportCsv = () => {
-        const headers = ["Nombre", "Email", "RNC", "Rol", "Plan", "Estado suscripción", "Onboarding", "Partner", "Fecha registro"];
-        const rows = list.map((u) => [
-            u.name ?? "",
-            u.email ?? "",
-            u.rnc ?? "",
-            roleLabel[u.role] ?? u.role,
-            planLabel[u.plan] ?? u.plan,
-            u.subscriptionStatus ?? "",
-            u.onboardingCompleted ? "Sí" : "No",
-            u.partner ? `${u.partner.referralCode} (${u.partner.status})` : "",
-            formatDate(u.createdAt)
-        ]);
+        const headers = ["Nombre", "Email", "RNC", "Rol", "Plan", "Estado suscripción", "Días hasta bloqueo", "Onboarding", "Partner", "Fecha registro"];
+        const rows = list.map((u) => {
+            const days = getDaysUntilBlock(u);
+            return [
+                u.name ?? "",
+                u.email ?? "",
+                u.rnc ?? "",
+                roleLabel[u.role] ?? u.role,
+                planLabel[u.plan] ?? u.plan,
+                u.subscriptionStatus ?? "",
+                days !== null ? `${days} días` : "—",
+                u.onboardingCompleted ? "Sí" : "No",
+                u.partner ? `${u.partner.referralCode} (${u.partner.status})` : "",
+                formatDate(u.createdAt)
+            ];
+        });
         const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
         const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
         const url = URL.createObjectURL(blob);
@@ -249,6 +290,7 @@ export default function AdminUsuariosPage() {
                                             <TableHead>Rol</TableHead>
                                             <TableHead>Plan</TableHead>
                                             <TableHead>Estado</TableHead>
+                                            <TableHead>Días hasta bloqueo</TableHead>
                                             <TableHead>Onboarding</TableHead>
                                             <TableHead>Partner</TableHead>
                                             <TableHead>Registro</TableHead>
@@ -276,6 +318,17 @@ export default function AdminUsuariosPage() {
                                                         {u.subscriptionStatus === "active" || u.subscriptionStatus === "Activo" ? "Activo" : u.subscriptionStatus || "—"}
                                                     </span>
                                                 </TableCell>
+                                                <TableCell className="text-xs">
+                                                    {(() => {
+                                                        const days = getDaysUntilBlock(u);
+                                                        if (days === null) return "—";
+                                                        return (
+                                                            <span className={days <= 7 ? "text-amber-600 dark:text-amber-400 font-medium" : "text-muted-foreground"}>
+                                                                {days} {days === 1 ? "día" : "días"}
+                                                            </span>
+                                                        );
+                                                    })()}
+                                                </TableCell>
                                                 <TableCell>{u.onboardingCompleted ? "Sí" : "No"}</TableCell>
                                                 <TableCell>
                                                     {u.partner ? (
@@ -286,19 +339,33 @@ export default function AdminUsuariosPage() {
                                                 </TableCell>
                                                 <TableCell className="text-muted-foreground text-xs whitespace-nowrap">{formatDate(u.createdAt)}</TableCell>
                                                 <TableCell className="text-right">
-                                                    {u.role === "admin" ? (
-                                                        <span className="text-muted-foreground text-xs">—</span>
-                                                    ) : actioningId === u.id ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin inline-block text-muted-foreground" />
-                                                    ) : isUserActive(u) ? (
-                                                        <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeactivate(u.id)}>
-                                                            <Ban className="w-3.5 h-3.5 mr-1" /> Bloquear
-                                                        </Button>
-                                                    ) : (
-                                                        <Button variant="outline" size="sm" className="text-green-600 hover:bg-green-500/10 border-green-500/50" onClick={() => handleActivate(u.id)}>
-                                                            <Check className="w-3.5 h-3.5 mr-1" /> Activar
-                                                        </Button>
-                                                    )}
+                                                    <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                                        {u.role === "admin" ? (
+                                                            <span className="text-muted-foreground text-xs">—</span>
+                                                        ) : actioningId === u.id ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                                        ) : (
+                                                            <>
+                                                                {isUserActive(u) ? (
+                                                                    <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeactivate(u.id)}>
+                                                                        <Ban className="w-3.5 h-3.5 mr-1" /> Bloquear
+                                                                    </Button>
+                                                                ) : (
+                                                                    <Button variant="outline" size="sm" className="text-green-600 hover:bg-green-500/10 border-green-500/50" onClick={() => handleActivate(u.id)}>
+                                                                        <Check className="w-3.5 h-3.5 mr-1" /> Activar
+                                                                    </Button>
+                                                                )}
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="text-destructive hover:bg-destructive/10 border-destructive/30"
+                                                                    onClick={() => setDeleteConfirm({ id: u.id, name: displayName(u) })}
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -325,6 +392,25 @@ export default function AdminUsuariosPage() {
                     )}
                 </CardContent>
             </Card>
+
+            <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-destructive">
+                            <Trash2 className="w-5 h-5" /> Eliminar usuario
+                        </DialogTitle>
+                        <DialogDescription>
+                            ¿Estás seguro de que deseas eliminar a <strong>{deleteConfirm?.name || "este usuario"}</strong>? Esta acción no se puede deshacer y se eliminarán todos sus datos (facturas, cotizaciones, clientes, etc.).
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="ghost" onClick={() => setDeleteConfirm(null)}>Cancelar</Button>
+                        <Button variant="destructive" onClick={handleDelete} className="gap-2">
+                            <Trash2 className="w-4 h-4" /> Sí, eliminar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

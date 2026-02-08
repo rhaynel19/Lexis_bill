@@ -1626,6 +1626,44 @@ app.post('/api/admin/users/:id/deactivate', verifyToken, verifyAdmin, async (req
     }
 });
 
+// --- ADMIN: Eliminar usuario (cascada completa) ---
+app.delete('/api/admin/users/:id', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const userId = req.params.id;
+        if (!isValidObjectId(userId)) return res.status(400).json({ message: 'ID de usuario inválido.' });
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
+        if (user.role === 'admin') return res.status(400).json({ message: 'No se puede eliminar un administrador.' });
+
+        const uid = user._id;
+
+        await Promise.all([
+            Invoice.deleteMany({ userId: uid }),
+            Quote.deleteMany({ userId: uid }),
+            Customer.deleteMany({ userId: uid }),
+            Expense.deleteMany({ userId: uid }),
+            NCFSettings.deleteMany({ userId: uid }),
+            InvoiceDraft.deleteOne({ userId: uid }),
+            InvoiceTemplate.deleteMany({ userId: uid }),
+            UserServices.deleteOne({ userId: uid }),
+            UserDocument.deleteMany({ userId: uid }),
+            FiscalAuditLog.deleteMany({ userId: uid }),
+            PaymentRequest.deleteMany({ userId: uid }),
+            PasswordReset.deleteMany({ userId: uid }),
+            SupportTicket.deleteMany({ userId: uid }),
+            PartnerReferral.deleteMany({ userId: uid }),
+            Partner.deleteOne({ userId: uid })
+        ]);
+
+        await User.deleteOne({ _id: uid });
+
+        res.json({ message: 'Usuario eliminado correctamente.' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // --- ADMIN: Programa Partners ---
 app.get('/api/admin/partners', verifyToken, verifyAdmin, async (req, res) => {
     try {
