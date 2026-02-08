@@ -339,7 +339,7 @@ export default function Dashboard() {
       const { api } = await import("@/lib/api-service");
       const invRes = await api.getInvoices(1, 200);
       const invoices = invRes?.data || [];
-      if (invoices.length > 0) setRecentInvoices(invoices.slice(0, 10));
+      setRecentInvoices(invoices.slice(0, 50));
     };
     refresh();
   };

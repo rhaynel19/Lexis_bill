@@ -16,6 +16,8 @@ import {
     DollarSign,
     ArrowDownLeft,
     AlertCircle,
+    ChevronDown,
+    ChevronUp,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -116,6 +118,12 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
     const [hoveredRow, setHoveredRow] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const pageSize = 15;
+    const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
+    const [amountMin, setAmountMin] = useState("");
+    const [amountMax, setAmountMax] = useState("");
+    const [filterTipoPago, setFilterTipoPago] = useState<string>("");
 
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -171,8 +179,21 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                     (i.rnc || i.clientRnc || "").replace(/\D/g, "").includes(q.replace(/\D/g, ""))
             );
         }
+        if (dateFrom) {
+            const from = new Date(dateFrom).getTime();
+            list = list.filter((i) => new Date(i.date).getTime() >= from);
+        }
+        if (dateTo) {
+            const to = new Date(dateTo + "T23:59:59").getTime();
+            list = list.filter((i) => new Date(i.date).getTime() <= to);
+        }
+        const min = parseFloat(amountMin);
+        if (!isNaN(min) && min > 0) list = list.filter((i) => (i.total || 0) >= min);
+        const max = parseFloat(amountMax);
+        if (!isNaN(max) && max > 0) list = list.filter((i) => (i.total || 0) <= max);
+        if (filterTipoPago) list = list.filter((i) => (i.tipoPago || "").toLowerCase() === filterTipoPago.toLowerCase());
         return list;
-    }, [invoices, quickFilter, searchQuery, now, currentMonth, currentYear]);
+    }, [invoices, quickFilter, searchQuery, dateFrom, dateTo, amountMin, amountMax, filterTipoPago, now, currentMonth, currentYear]);
 
     const paginatedInvoices = useMemo(() => {
         const start = (page - 1) * pageSize;
@@ -269,7 +290,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Facturado este mes</p>
+                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">💰 Facturado este mes</p>
                                         <p className="text-xl font-bold text-foreground mt-1">{formatCurrency(stats.facturadoMes)}</p>
                                     </div>
                                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -282,7 +303,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Cobrado</p>
+                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">📥 Cobrado</p>
                                         <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{formatCurrency(stats.cobrado)}</p>
                                     </div>
                                     <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
@@ -295,7 +316,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pendiente</p>
+                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">⏳ Pendiente</p>
                                         <p className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">{formatCurrency(stats.pendiente)}</p>
                                     </div>
                                     <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
@@ -308,7 +329,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Vencido</p>
+                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">⚠️ Vencido</p>
                                         <p className="text-xl font-bold text-rose-600 dark:text-rose-400 mt-1">{formatCurrency(stats.vencido)}</p>
                                     </div>
                                     <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center">
@@ -387,7 +408,57 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                                         className="pl-9 h-9"
                                     />
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}
+                                    className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    <Filter className="w-4 h-4" />
+                                    Filtro avanzado
+                                    {showAdvancedFilter ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                </button>
                             </div>
+                            {showAdvancedFilter && (
+                                <div className="mt-4 p-4 rounded-xl border border-border/20 bg-muted/20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div>
+                                        <label className="text-xs font-medium text-muted-foreground block mb-1">Desde</label>
+                                        <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className="h-9" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-medium text-muted-foreground block mb-1">Hasta</label>
+                                        <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="h-9" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-medium text-muted-foreground block mb-1">Monto mín. (RD$)</label>
+                                        <Input type="number" placeholder="0" value={amountMin} onChange={(e) => { setAmountMin(e.target.value); setPage(1); }} className="h-9" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-medium text-muted-foreground block mb-1">Monto máx. (RD$)</label>
+                                        <Input type="number" placeholder="Sin límite" value={amountMax} onChange={(e) => { setAmountMax(e.target.value); setPage(1); }} className="h-9" />
+                                    </div>
+                                    <div className="sm:col-span-2 lg:col-span-1">
+                                        <label className="text-xs font-medium text-muted-foreground block mb-1">Método de pago</label>
+                                        <select
+                                            value={filterTipoPago}
+                                            onChange={(e) => { setFilterTipoPago(e.target.value); setPage(1); }}
+                                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                            aria-label="Filtrar por método de pago"
+                                        >
+                                            <option value="">Todos</option>
+                                            {Object.entries(TIPO_PAGO_LABELS).map(([k, v]) => (
+                                                <option key={k} value={k}>{v}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {(dateFrom || dateTo || amountMin || amountMax || filterTipoPago) && (
+                                        <div className="sm:col-span-2 lg:col-span-1 flex items-end">
+                                            <Button variant="ghost" size="sm" onClick={() => { setDateFrom(""); setDateTo(""); setAmountMin(""); setAmountMax(""); setFilterTipoPago(""); setPage(1); }}>
+                                                Limpiar filtros avanzados
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </CardHeader>
 
