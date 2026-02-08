@@ -423,6 +423,7 @@ export default function Dashboard() {
             previousRevenue={previousMonthRevenue}
             pendingCount={pendingInvoices}
             predictions={predictiveAlerts}
+            lastInvoiceDate={recentInvoices[0]?.date}
             className="mb-6"
           />
         )}
