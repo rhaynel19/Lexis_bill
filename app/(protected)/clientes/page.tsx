@@ -39,6 +39,9 @@ export default function CustomersPage() {
     const [customerToDelete, setCustomerToDelete] = useState<any>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
+    const [isNewClientOpen, setIsNewClientOpen] = useState(false);
+    const [newClientForm, setNewClientForm] = useState({ name: "", rnc: "", phone: "", email: "" });
+    const [isSavingNew, setIsSavingNew] = useState(false);
 
     useEffect(() => {
         loadCustomers();
@@ -102,6 +105,36 @@ export default function CustomersPage() {
         return params.toString();
     };
 
+    const openNewClient = () => {
+        setNewClientForm({ name: "", rnc: "", phone: "", email: "" });
+        setIsNewClientOpen(true);
+    };
+
+    const handleSaveNewClient = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const { name, rnc, phone, email } = newClientForm;
+        const rncClean = (rnc || "").replace(/\D/g, "");
+        if (!name.trim()) {
+            toast.error("El nombre es obligatorio.");
+            return;
+        }
+        if (rncClean.length < 9 || rncClean.length > 11) {
+            toast.error("RNC debe tener 9 u 11 dígitos.");
+            return;
+        }
+        setIsSavingNew(true);
+        try {
+            await api.saveCustomer({ name: name.trim(), rnc: rncClean, phone: phone.trim() || undefined, email: email.trim() || undefined });
+            toast.success("Cliente creado.");
+            setIsNewClientOpen(false);
+            loadCustomers();
+        } catch (err: any) {
+            toast.error(err?.message || "No se pudo crear el cliente.");
+        } finally {
+            setIsSavingNew(false);
+        }
+    };
+
     return (
         <TooltipProvider>
         <div className="container mx-auto px-4 py-8">
@@ -120,7 +153,7 @@ export default function CustomersPage() {
                     <Button variant="outline" className="gap-2" onClick={() => setShowMigration(!showMigration)}>
                         {showMigration ? "Ver listado" : "Subir planilla / Migrar"}
                     </Button>
-                    <Button className="gap-2 shadow-lg shadow-primary/20">
+                    <Button className="gap-2 shadow-lg shadow-primary/20" onClick={openNewClient}>
                         <UserPlus className="w-4 h-4" /> Nuevo Cliente
                     </Button>
                 </div>
@@ -332,6 +365,69 @@ export default function CustomersPage() {
                             {isDeleting ? "Eliminando…" : "Eliminar"}
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isNewClientOpen} onOpenChange={setIsNewClientOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <UserPlus className="w-5 h-5" /> Nuevo Cliente
+                        </DialogTitle>
+                        <DialogDescription>
+                            Completa los datos del cliente. Nombre y RNC son obligatorios.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSaveNewClient} className="space-y-4">
+                        <div>
+                            <label className="text-sm font-medium text-foreground">Nombre o razón social</label>
+                            <Input
+                                className="mt-1"
+                                placeholder="Ej. Empresa SRL"
+                                value={newClientForm.name}
+                                onChange={(e) => setNewClientForm((f) => ({ ...f, name: e.target.value }))}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground">RNC (9 u 11 dígitos)</label>
+                            <Input
+                                className="mt-1 font-mono"
+                                placeholder="101010101"
+                                value={newClientForm.rnc}
+                                onChange={(e) => setNewClientForm((f) => ({ ...f, rnc: e.target.value.replace(/\D/g, "").slice(0, 11) }))}
+                                maxLength={11}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-muted-foreground">Teléfono (opcional)</label>
+                            <Input
+                                className="mt-1"
+                                placeholder="8095550000"
+                                value={newClientForm.phone}
+                                onChange={(e) => setNewClientForm((f) => ({ ...f, phone: e.target.value }))}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-muted-foreground">Email (opcional)</label>
+                            <Input
+                                type="email"
+                                className="mt-1"
+                                placeholder="contacto@ejemplo.com"
+                                value={newClientForm.email}
+                                onChange={(e) => setNewClientForm((f) => ({ ...f, email: e.target.value }))}
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setIsNewClientOpen(false)} disabled={isSavingNew}>
+                                Cancelar
+                            </Button>
+                            <Button type="submit" disabled={isSavingNew}>
+                                {isSavingNew ? "Guardando…" : "Crear cliente"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
                 </DialogContent>
             </Dialog>
         </div>

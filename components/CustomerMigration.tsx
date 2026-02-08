@@ -196,16 +196,24 @@ export function CustomerMigration({ onImportSuccess }: { onImportSuccess: () => 
                     </div>
 
                     <div
-                        className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center transition-all ${isDragging ? "border-primary bg-primary/5" : "border-border bg-muted/30"}`}
+                        className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center transition-all min-h-[220px] ${isDragging ? "border-primary bg-primary/5" : "border-border bg-muted/30"} ${!selectedFile && !results && !isUploading ? "cursor-pointer hover:border-primary/50 hover:bg-muted/50" : ""}`}
                         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                         onDragLeave={() => setIsDragging(false)}
                         onDrop={onDrop}
+                        onClick={() => {
+                            if (!selectedFile && !results && !isUploading) fileInputRef.current?.click();
+                        }}
+                        aria-label={!selectedFile && !results && !isUploading ? "Toca para elegir archivo CSV o JSON" : undefined}
                     >
                         <input
                             type="file"
                             ref={fileInputRef}
                             className="hidden"
-                            onChange={(e) => e.target.files?.[0] && onFileSelect(e.target.files[0])}
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) onFileSelect(file);
+                                e.target.value = "";
+                            }}
                             accept=".csv,.json"
                             aria-label="Subir archivo CSV o JSON para migración"
                             title="Subir archivo"
@@ -262,12 +270,13 @@ export function CustomerMigration({ onImportSuccess }: { onImportSuccess: () => 
                             </div>
                         ) : (
                             <>
-                                <div className="w-16 h-16 bg-background rounded-full flex items-center justify-center shadow-sm border border-border mb-4">
+                                <div className="w-16 h-16 bg-background rounded-full flex items-center justify-center shadow-sm border border-border mb-4 pointer-events-none">
                                     <Upload className="w-8 h-8 text-primary" />
                                 </div>
-                                <h3 className="text-lg font-bold text-foreground capitalize">Arrastra tu planilla aquí</h3>
-                                <p className="text-xs text-muted-foreground mt-1 mb-6 px-4">CSV o JSON, hasta 5 MB. Excel: expórtalo como CSV.</p>
-                                <Button onClick={() => fileInputRef.current?.click()} className="shadow-lg shadow-primary/20" aria-label="Seleccionar archivo CSV o JSON">
+                                <h3 className="text-lg font-bold text-foreground capitalize pointer-events-none">Arrastra tu planilla aquí</h3>
+                                <p className="text-xs text-muted-foreground mt-1 mb-2 px-4 pointer-events-none">CSV o JSON, hasta 5 MB. Excel: expórtalo como CSV.</p>
+                                <p className="text-xs text-primary font-medium mb-4 sm:mb-6 px-4 md:hidden pointer-events-none">En el celular: toca aquí para elegir archivo</p>
+                                <Button type="button" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} className="shadow-lg shadow-primary/20 pointer-events-auto" aria-label="Seleccionar archivo CSV o JSON">
                                     Seleccionar archivo
                                 </Button>
                             </>
