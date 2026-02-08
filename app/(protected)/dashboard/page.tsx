@@ -552,15 +552,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Botón de acción rápida (Solo en Mobile) */}
-        <div className="mb-10 text-right md:hidden">
-          <Link href="/nueva-factura">
-            <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg shadow-secondary/20 px-8 py-6 text-lg rounded-xl transition-all hover:scale-105 active:scale-95 font-bold">
-              <span className="mr-2 text-xl">✦</span> Nueva Factura
-            </Button>
-          </Link>
-        </div>
-
         {/* Estado de secuencia NCF: alerta solo si quedan pocos; si no, mensaje informativo con datos reales */}
         {(ncfLowSequence || ncfSequenceSummary) && (
           <div className="mt-6">
@@ -613,10 +604,10 @@ export default function Dashboard() {
       </div>
       <OnboardingWizard />
 
-      {/* Botón flotante — Nueva Factura (siempre visible) */}
+      {/* Botón flotante — Nueva Factura (solo desktop; en móvil usa el FAB circular del layout) */}
       <Link
         href="/nueva-factura"
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 h-14 px-6 rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/30 hover:bg-primary/90 hover:scale-105 active:scale-100 transition-all font-semibold text-base"
+        className="hidden md:flex fixed bottom-6 right-6 z-50 items-center gap-2 h-14 px-6 rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/30 hover:bg-primary/90 hover:scale-105 active:scale-100 transition-all font-semibold text-base"
       >
         <Plus className="w-5 h-5" />
         Nueva Factura
