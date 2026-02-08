@@ -75,9 +75,15 @@ export function LexisBusinessCopilot() {
 
     useEffect(() => {
         const load = async () => {
+            const timeoutMs = 8000;
             try {
                 const { api } = await import("@/lib/api-service");
-                const res = await api.getBusinessCopilot();
+                const res = await Promise.race([
+                    api.getBusinessCopilot(),
+                    new Promise<never>((_, reject) =>
+                        setTimeout(() => reject(new Error("timeout")), timeoutMs)
+                    ),
+                ]);
                 setData(res);
             } catch {
                 setData(null);
