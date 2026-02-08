@@ -31,12 +31,14 @@ const RETRY_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 2000;
 
 export interface BusinessCopilotData {
+    insufficientData?: boolean;
+    message?: string;
     alerts: Array<{ type: string; severity: string; message: string; count?: number; pct?: number; clientName?: string; service?: string; amount?: number }>;
     clientRadar: Array<{ rnc: string; clientName: string; daysSinceLastInvoice: number; totalRevenue: number; revenuePct: number; status: string; recommendation?: string }>;
     rankings: {
-        topClient?: { name: string; total: number; pct: number };
-        droppedClient?: { name: string; lastMonthTotal: number };
-        topService?: { description: string; totalRevenue: number; totalQuantity: number };
+        topClient?: { name: string; total: number; pct: number } | null;
+        droppedClient?: { name: string; lastMonthTotal: number } | null;
+        topService?: { description: string; totalRevenue: number; totalQuantity: number } | null;
     };
     fiscalAlerts: Array<{ type: string; severity: string; message: string }>;
     prediction: { currentRevenue: number; projectedMonth: number; dailyRate: number; daysRemaining: number; projectedCash15Days?: number };
@@ -263,6 +265,33 @@ export function LexisBusinessCopilot() {
                             <RefreshCw className={cn("w-4 h-4", isRetrying && "animate-spin")} />
                             {isRetrying ? "Reintentando…" : "Reintentar ahora"}
                         </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    // Usuario nuevo sin facturas: mensaje amigable (no es error)
+    if (data.insufficientData) {
+        return (
+            <Card className="mb-6 overflow-hidden rounded-2xl border border-blue-200/50 dark:border-blue-800/40 bg-blue-50/30 dark:bg-blue-950/20 backdrop-blur-xl">
+                <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center shrink-0">
+                            <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                            <p className="font-semibold text-foreground">Lexis Business Copilot</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                {data.message ?? "Aún no tenemos suficientes datos para generar un análisis inteligente. Crea tus primeras facturas y el Copilot comenzará a darte recomendaciones automáticamente."}
+                            </p>
+                            <Button asChild variant="default" size="sm" className="mt-4 gap-2">
+                                <Link href="/nueva-factura">
+                                    <FileText className="w-4 h-4" />
+                                    Crear primera factura
+                                </Link>
+                            </Button>
+                        </div>
                     </div>
                 </CardContent>
             </Card>

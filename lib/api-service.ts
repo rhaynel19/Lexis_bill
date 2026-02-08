@@ -418,15 +418,17 @@ export const api = {
     /** Lexis Business Copilot: analytics, alertas, scoring, predicción, morosidad */
     async getBusinessCopilot() {
         return secureFetch<{
+            insufficientData?: boolean;
+            message?: string;
             alerts: Array<{ type: string; severity: string; message: string; count?: number; pct?: number; clientName?: string; service?: string; amount?: number }>;
             clientRadar: Array<{ rnc: string; clientName: string; daysSinceLastInvoice: number; totalRevenue: number; revenuePct: number; status: string; recommendation?: string }>;
-            rankings: { topClient?: { name: string; total: number; pct: number }; droppedClient?: { name: string; lastMonthTotal: number }; topService?: { description: string; totalRevenue: number; totalQuantity: number } };
+            rankings: { topClient?: { name: string; total: number; pct: number } | null; droppedClient?: { name: string; lastMonthTotal: number } | null; topService?: { description: string; totalRevenue: number; totalQuantity: number } | null };
             fiscalAlerts: Array<{ type: string; severity: string; message: string }>;
             prediction: { currentRevenue: number; projectedMonth: number; dailyRate: number; daysRemaining: number; projectedCash15Days?: number };
             businessHealth: { score: number; label: string; concentrationRisk?: string };
             paymentInsights?: { creditPct: number; transferPct: number; totalBalancePendiente: number };
             morosityRadar?: { totalPendiente: number; clientes: Array<{ rnc: string; clientName: string; totalPendiente: number; facturasVencidas: number; diasMayorAntiguedad: number; nivel: string }>; riesgoGeneral: string };
-        }>(`${API_URL}/business-copilot`);
+        }>(`${API_URL}/business-copilot`, { timeout: 20000 });
     },
 
     /** Verificar riesgo del cliente antes de facturar a crédito (modo preventivo) */

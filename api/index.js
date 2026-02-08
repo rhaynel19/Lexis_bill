@@ -2094,8 +2094,10 @@ app.get('/api/admin/metrics', verifyToken, verifyAdmin, async (req, res) => {
 
 // --- LEXIS BUSINESS COPILOT: Analytics inteligente (sin IA externa) ---
 app.get('/api/business-copilot', verifyToken, async (req, res) => {
+    const requestId = `copilot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const startTime = Date.now();
+    const userId = req.userId;
     try {
-        const userId = req.userId;
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -2150,6 +2152,47 @@ app.get('/api/business-copilot', verifyToken, async (req, res) => {
             Customer.find({ userId }).select('rnc name').lean(),
             Invoice.find({ userId, status: { $nin: ['cancelled'] } })
                 .select('clientRnc clientName date total balancePendiente estadoPago status').lean()
+        ]);
+
+        // Validación temprana: usuario sin facturas → respuesta explícita (evita queries innecesarias)
+        if (allInvoices.length === 0) {
+            log.info({ requestId, userId, elapsed: Date.now() - startTime }, 'Copilot: sin datos suficientes');
+            return res.status(200).json({
+                insufficientData: true,
+                message: 'Aún no tenemos suficientes datos para generar un análisis inteligente. Crea tus primeras facturas y el Copilot comenzará a darte recomendaciones automáticamente.',
+                alerts: [],
+                clientRadar: [],
+                rankings: { topClient: null, droppedClient: null, topService: null },
+                fiscalAlerts: [],
+                prediction: { currentRevenue: 0, projectedMonth: 0, dailyRate: 0, daysRemaining: new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate(), projectedCash15Days: 0 },
+                businessHealth: { score: 0, label: 'Sin datos' }
+            });
+        }
+
+        // Segunda ronda de datos necesaria para rankings y payment insights (debe ejecutarse ANTES de usarlos)
+        const [paymentStats, lastMonthClients, thisMonthClients] = await Promise.all([
+            Invoice.aggregate([
+                { $match: matchBase },
+                { $addFields: {
+                    tipoPago: { $ifNull: ['$tipoPago', 'efectivo'] },
+                    balance: { $cond: [{ $gt: [{ $ifNull: ['$balancePendiente', 0] }, 0] }, '$balancePendiente', { $cond: [{ $eq: ['$status', 'pending'] }, '$total', 0] }] }
+                }},
+                { $group: {
+                    _id: '$tipoPago',
+                    count: { $sum: 1 },
+                    totalRevenue: { $sum: '$total' },
+                    totalBalance: { $sum: '$balance' }
+                }}
+            ]),
+            Invoice.aggregate([
+                { $match: { ...matchBase, date: { $gte: startOfLastMonth, $lte: endOfLastMonth } } },
+                { $group: { _id: '$clientRnc', clientName: { $first: '$clientName' }, total: { $sum: '$total' } } },
+                { $sort: { total: -1 } }
+            ]),
+            Invoice.aggregate([
+                { $match: { ...matchBase, date: { $gte: startOfMonth } } },
+                { $group: { _id: '$clientRnc', clientName: { $first: '$clientName' }, total: { $sum: '$total' } } }
+            ])
         ]);
 
         const clientStats = clientStatsRaw;
@@ -2303,31 +2346,6 @@ app.get('/api/business-copilot', verifyToken, async (req, res) => {
             });
         }
 
-        // Segunda ronda: paymentStats, rankings (en paralelo)
-        const [paymentStats, lastMonthClients, thisMonthClients] = await Promise.all([
-            Invoice.aggregate([
-                { $match: matchBase },
-                { $addFields: {
-                    tipoPago: { $ifNull: ['$tipoPago', 'efectivo'] },
-                    balance: { $cond: [{ $gt: [{ $ifNull: ['$balancePendiente', 0] }, 0] }, '$balancePendiente', { $cond: [{ $eq: ['$status', 'pending'] }, '$total', 0] }] }
-                }},
-                { $group: {
-                    _id: '$tipoPago',
-                    count: { $sum: 1 },
-                    totalRevenue: { $sum: '$total' },
-                    totalBalance: { $sum: '$balance' }
-                }}
-            ]),
-            Invoice.aggregate([
-                { $match: { ...matchBase, date: { $gte: startOfLastMonth, $lte: endOfLastMonth } } },
-                { $group: { _id: '$clientRnc', clientName: { $first: '$clientName' }, total: { $sum: '$total' } } },
-                { $sort: { total: -1 } }
-            ]),
-            Invoice.aggregate([
-                { $match: { ...matchBase, date: { $gte: startOfMonth } } },
-                { $group: { _id: '$clientRnc', clientName: { $first: '$clientName' }, total: { $sum: '$total' } } }
-            ])
-        ]);
         const totalInvoicesForPayment = paymentStats.reduce((s, p) => s + p.count, 0);
         const creditStats = paymentStats.find(p => p._id === 'credito');
         const creditPct = totalInvoicesForPayment > 0 && creditStats ? (creditStats.count / totalInvoicesForPayment * 100) : 0;
@@ -2441,8 +2459,21 @@ app.get('/api/business-copilot', verifyToken, async (req, res) => {
                 riesgoGeneral: totalBalancePendiente > 100000 ? 'alto' : totalBalancePendiente > 30000 ? 'medio' : totalBalancePendiente > 0 ? 'bajo' : 'ninguno'
             }
         });
+        log.info({
+            requestId,
+            userId,
+            elapsed: Date.now() - startTime,
+            invoicesCount: allInvoices.length
+        }, 'Copilot: éxito');
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        log.error({
+            requestId,
+            userId,
+            elapsed: Date.now() - startTime,
+            error: e.message,
+            stack: e.stack
+        }, 'Copilot: error');
+        res.status(500).json({ error: e.message || 'Error interno del servidor' });
     }
 });
 
