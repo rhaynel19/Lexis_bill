@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserCircle, Search, Download, Filter, Check, Ban, Loader2, Trash2, ArrowUp, ArrowDown, Eye, Lock, Unlock } from "lucide-react";
+import { UserCircle, Search, Download, Filter, Check, Loader2, Trash2, ArrowUp, ArrowDown, Eye, Lock, Unlock } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -89,20 +89,6 @@ export default function AdminUsuariosPage() {
             fetchUsers();
         } catch (e: any) {
             toast.error(e?.message || "Error al activar.");
-        } finally {
-            setActioningId(null);
-        }
-    };
-
-    const handleDeactivate = async (id: string) => {
-        setActioningId(id);
-        try {
-            const { api } = await import("@/lib/api-service");
-            const res = await api.deactivateUser(id);
-            toast.success(res?.message || "Membresía bloqueada.");
-            fetchUsers();
-        } catch (e: any) {
-            toast.error(e?.message || "Error al bloquear.");
         } finally {
             setActioningId(null);
         }
@@ -510,16 +496,10 @@ export default function AdminUsuariosPage() {
                                                                         <Lock className="w-3.5 h-3.5 mr-1" /> Bloquear acceso
                                                                     </Button>
                                                                 )}
-                                                                {!u.blocked && (
-                                                                    isUserActive(u) ? (
-                                                                        <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeactivate(u.id)} title="Bloquear membresía">
-                                                                            <Ban className="w-3.5 h-3.5 mr-1" /> Bloquear
-                                                                        </Button>
-                                                                    ) : (
-                                                                        <Button variant="outline" size="sm" className="text-green-600 hover:bg-green-500/10 border-green-500/50" onClick={() => handleActivate(u.id)}>
-                                                                            <Check className="w-3.5 h-3.5 mr-1" /> Activar
-                                                                        </Button>
-                                                                    )
+                                                                {!u.blocked && !isUserActive(u) && (
+                                                                    <Button variant="outline" size="sm" className="text-green-600 hover:bg-green-500/10 border-green-500/50" onClick={() => handleActivate(u.id)}>
+                                                                        <Check className="w-3.5 h-3.5 mr-1" /> Activar
+                                                                    </Button>
                                                                 )}
                                                                 <Button
                                                                     variant="outline"
