@@ -176,7 +176,7 @@ export default function AdminPagosPendientes() {
                     <Link href="/admin/dashboard">
                         <Button variant="outline">Ver Estadísticas</Button>
                     </Link>
-                    <Button variant="outline" size="icon" onClick={fetchPayments} disabled={isLoading}>
+                    <Button variant="outline" size="icon" onClick={fetchPayments} disabled={isLoading} aria-label="Actualizar lista de pagos">
                         <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
                     </Button>
                 </div>

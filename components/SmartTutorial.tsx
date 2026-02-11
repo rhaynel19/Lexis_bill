@@ -215,7 +215,11 @@ export function SmartTutorial() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="fixed bottom-6 right-6 z-50 w-full max-w-md"
+                className={cn(
+                    "fixed z-50 max-w-md",
+                    "top-4 left-4 right-4 w-[calc(100vw-2rem)]",
+                    "md:top-auto md:bottom-6 md:left-6 md:right-auto md:w-full"
+                )}
             >
                 <Card className="border-2 border-primary/20 shadow-2xl bg-gradient-to-br from-background to-primary/5">
                     <CardHeader className="pb-3">
