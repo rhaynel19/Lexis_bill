@@ -17,10 +17,11 @@ export function SubscriptionAlert() {
 
     if (!status) return null;
 
-    const { daysRemaining, graceDaysRemaining, status: state, internalStatus, hasPendingPayment } = status;
+    const { daysRemaining, graceDaysRemaining, status: state, internalStatus, hasPendingPayment, shouldRedirect, allowPartialAccess } = status;
 
-    // Solo mostrar si necesita atención (no ocultar durante GRACE_PERIOD o PENDING_VALIDATION)
-    if (state === 'Activo' && daysRemaining > 7 && !hasPendingPayment) return null;
+    // ✅ Solo mostrar si necesita atención (no ocultar durante GRACE_PERIOD o PENDING_VALIDATION)
+    // Mostrar siempre si allowPartialAccess es true o shouldRedirect es true
+    if (state === 'Activo' && daysRemaining > 7 && !hasPendingPayment && !shouldRedirect && !allowPartialAccess) return null;
 
     const variants: any = {
         PendienteValidacion: {
@@ -40,8 +41,15 @@ export function SubscriptionAlert() {
         Gracia: {
             icon: Clock,
             color: "bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-950/30 dark:border-orange-800 dark:text-orange-200",
-            msg: `Suscripción vencida. Tienes ${graceDaysRemaining ?? 0} días de gracia antes del bloqueo. Tienes acceso limitado.`,
+            msg: `Suscripción vencida. Tienes ${graceDaysRemaining ?? 0} días de gracia antes del bloqueo. Tienes acceso limitado hasta completar el pago.`,
             action: "Pagar Ahora",
+            allowAccess: true
+        },
+        'En Revisión': {
+            icon: Clock,
+            color: "bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-200",
+            msg: "Tu pago está en revisión. Tienes acceso limitado hasta completar la validación.",
+            action: "Ver Estado",
             allowAccess: true
         },
         Bloqueado: {
@@ -60,7 +68,17 @@ export function SubscriptionAlert() {
         }
     };
 
-    const config = variants[state] || variants[internalStatus === 'PENDING_VALIDATION' ? 'PendienteValidacion' : state];
+    // ✅ Mapear estados internos a variantes
+    let variantKey = state;
+    if (internalStatus === 'PENDING_PAYMENT' || internalStatus === 'UNDER_REVIEW') {
+        variantKey = internalStatus === 'UNDER_REVIEW' ? 'En Revisión' : 'PendienteValidacion';
+    } else if (internalStatus === 'GRACE_PERIOD') {
+        variantKey = 'Gracia';
+    } else if (internalStatus === 'PAST_DUE' || internalStatus === 'SUSPENDED') {
+        variantKey = internalStatus === 'SUSPENDED' ? 'Suspendido' : 'Bloqueado';
+    }
+    
+    const config = variants[variantKey] || variants[state];
     if (!config) return null;
 
     return (

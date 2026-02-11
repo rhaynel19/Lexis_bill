@@ -271,17 +271,17 @@ const paymentRequestSchema = new mongoose.Schema({
     paymentMethod: { type: String, enum: ['transferencia', 'paypal'], required: true },
     reference: { type: String, unique: true, sparse: true }, // LEX-XXXX para que el cliente ponga en la transferencia
     comprobanteImage: { type: String }, // base64 data URL del comprobante (obligatorio para transferencia)
-    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    status: { type: String, enum: ['pending', 'under_review', 'approved', 'rejected', 'expired'], default: 'pending' },
     requestedAt: { type: Date, default: Date.now },
     processedAt: { type: Date },
     processedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 });
 paymentRequestSchema.index({ status: 1, requestedAt: -1 });
 paymentRequestSchema.index({ reference: 1 });
-// Un solo pending por usuario: evita duplicados por doble clic / refresh / race
+// ✅ Un solo pending o under_review por usuario: evita duplicados por doble clic / refresh / race
 paymentRequestSchema.index(
     { userId: 1 },
-    { unique: true, partialFilterExpression: { status: 'pending' } }
+    { unique: true, partialFilterExpression: { status: { $in: ['pending', 'under_review'] } } }
 );
 
 const ncfSettingsSchema = new mongoose.Schema({
@@ -781,8 +781,10 @@ async function activateSubscriptionFromPayment(userId, paymentId, plan, billingC
     periodEnd.setDate(periodEnd.getDate() + daysToAdd);
     
     const sub = await getOrCreateSubscription(userId);
+    const statusBefore = sub.status;
     
-    await Subscription.findOneAndUpdate(
+    // ✅ Actualizar Subscription (fuente de verdad)
+    const updatedSub = await Subscription.findOneAndUpdate(
         { userId },
         {
             plan,
@@ -794,6 +796,13 @@ async function activateSubscriptionFromPayment(userId, paymentId, plan, billingC
         },
         { upsert: true, new: true }
     );
+    
+    // ✅ Log de auditoría: cambio de estado de suscripción
+    await logSubscriptionStatusChange(userId, statusBefore, 'ACTIVE', paymentId, null, {
+        plan,
+        billingCycle,
+        reason: 'Payment approved - automatic activation'
+    });
     
     // Sincronizar con User (legacy, para compatibilidad)
     const user = await User.findById(userId);
@@ -807,18 +816,24 @@ async function activateSubscriptionFromPayment(userId, paymentId, plan, billingC
         user.subscriptionStatus = 'Activo';
         user.membershipLevel = plan;
         await user.save();
+        
+        // ✅ Log de auditoría: actualización de User legacy
+        log.info({ userId, paymentId, plan }, 'User legacy subscription updated after payment approval');
     }
     
+    // ✅ Emitir evento de activación
     await billingEventEmitter.emit('subscription_activated', {
         userId,
-        subscriptionId: sub._id,
+        subscriptionId: updatedSub._id,
         paymentId,
         plan,
         periodStart: now,
         periodEnd
     });
     
-    return sub;
+    log.info({ userId, paymentId, plan, statusBefore, statusAfter: 'ACTIVE' }, 'Subscription activated from payment');
+    
+    return updatedSub;
 }
 
 // === LISTENERS DE EVENTOS (Desacoplados) ===
@@ -1737,9 +1752,19 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
             }
         }
 
-        const existing = await PaymentRequest.findOne({ userId: req.userId, status: 'pending' });
+        // ✅ Verificar pagos pendientes o en revisión (no solo pending)
+        const existing = await PaymentRequest.findOne({ 
+            userId: req.userId, 
+            status: { $in: ['pending', 'under_review'] },
+            // ✅ Solo considerar pagos recientes (últimos 90 días)
+            requestedAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) }
+        });
         if (existing) {
-            return res.status(400).json({ message: 'Ya tienes una solicitud de pago pendiente. Espera a que la validemos.' });
+            return res.status(400).json({ 
+                message: 'Ya tienes una solicitud de pago pendiente o en revisión. Espera a que la validemos.',
+                existingPaymentId: existing._id,
+                existingStatus: existing.status
+            });
         }
 
         const reference = clientReference && /^LEX-\d{4}$/.test(String(clientReference).trim())
@@ -1814,8 +1839,9 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
 // Excluye registros legacy sin comprobante creados por prepare-transfer antiguo.
 app.get('/api/admin/pending-payments', verifyToken, verifyAdmin, async (req, res) => {
     try {
+        // ✅ CORREGIDO: Solo contar pagos con estado PENDING o UNDER_REVIEW y con comprobante válido
         const list = await PaymentRequest.find({
-            status: 'pending',
+            status: { $in: ['pending', 'under_review'] }, // ✅ Incluir UNDER_REVIEW
             $or: [
                 { 
                     comprobanteImage: { 
@@ -1827,7 +1853,9 @@ app.get('/api/admin/pending-payments', verifyToken, verifyAdmin, async (req, res
                     }
                 },
                 { paymentMethod: 'paypal' }
-            ]
+            ],
+            // ✅ Excluir pagos muy antiguos (más de 90 días) que pueden estar obsoletos
+            requestedAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) }
         })
             .populate('userId', 'name email rnc')
             .sort({ requestedAt: -1 });
@@ -1841,7 +1869,8 @@ app.get('/api/admin/pending-payments', verifyToken, verifyAdmin, async (req, res
             billingCycle: p.billingCycle || 'monthly',
             paymentMethod: p.paymentMethod,
             comprobanteImage: p.comprobanteImage,
-            requestedAt: p.requestedAt
+            requestedAt: p.requestedAt,
+            status: p.status // ✅ Incluir status en respuesta
         })));
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -1855,7 +1884,8 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
             return res.status(400).json({ message: 'ID de solicitud inválido' });
         }
         const pr = await PaymentRequest.findById(req.params.id);
-        if (!pr || pr.status !== 'pending') {
+        // ✅ Aceptar pagos en estado 'pending' o 'under_review'
+        if (!pr || !['pending', 'under_review'].includes(pr.status)) {
             return res.status(404).json({ message: 'Solicitud no encontrada o ya procesada.' });
         }
 
@@ -1863,21 +1893,6 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
         if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
 
         const now = new Date();
-        const endDate = new Date(now);
-        const daysToAdd = (pr.billingCycle === 'annual') ? 365 : 30;
-        endDate.setDate(endDate.getDate() + daysToAdd);
-
-        // Activación automática: el cliente no tiene que hacer nada más; queda activo al aprobar.
-        if (!user.subscription) user.subscription = {};
-        user.subscription.plan = pr.plan;
-        user.subscription.status = 'active';
-        user.subscription.paymentMethod = pr.paymentMethod;
-        user.subscription.startDate = now;
-        user.subscription.endDate = endDate;
-        user.expiryDate = endDate;
-        user.subscriptionStatus = 'Activo';
-        user.membershipLevel = pr.plan;
-        await user.save();
 
         const statusBefore = pr.status;
         pr.status = 'approved';
@@ -1885,11 +1900,20 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
         pr.processedBy = req.userId;
         await pr.save();
         
-        // Logs de auditoría
-        await logAdminAction(req.userId, 'payment_approve', 'payment', pr._id.toString(), { userId: pr.userId?.toString() });
-        await logPaymentStatusChange(pr._id, pr.userId, statusBefore, 'approved', req.userId, { plan: pr.plan, billingCycle: pr.billingCycle });
+        // ✅ Logs de auditoría mejorados
+        await logAdminAction(req.userId, 'payment_approve', 'payment', pr._id.toString(), { 
+            userId: pr.userId?.toString(),
+            plan: pr.plan,
+            billingCycle: pr.billingCycle,
+            statusBefore
+        });
+        await logPaymentStatusChange(pr._id, pr.userId, statusBefore, 'approved', req.userId, { 
+            plan: pr.plan, 
+            billingCycle: pr.billingCycle,
+            processedAt: now
+        });
         
-        // 🔥 USAR SISTEMA DE EVENTOS (Desacoplado)
+        // 🔥 USAR SISTEMA DE EVENTOS (Desacoplado) - El listener activará la suscripción
         await billingEventEmitter.emit('payment_approved', {
             userId: pr.userId,
             paymentId: pr._id,
@@ -1899,7 +1923,30 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
             changedBy: req.userId
         });
         
-        // El listener 'payment_approved' activará automáticamente la suscripción
+        // ✅ Verificar que la suscripción se activó correctamente
+        const updatedSub = await Subscription.findOne({ userId: pr.userId });
+        if (!updatedSub || updatedSub.status !== 'ACTIVE') {
+            log.warn({ userId: pr.userId, paymentId: pr._id }, 'Subscription not activated after payment approval - attempting manual activation');
+            // Intentar activación manual como fallback
+            await activateSubscriptionFromPayment(pr.userId, pr._id, pr.plan, pr.billingCycle || 'monthly');
+        }
+        
+        // ✅ Retornar estado actualizado
+        const finalSub = await Subscription.findOne({ userId: pr.userId });
+        res.json({
+            success: true,
+            message: 'Pago aprobado y suscripción activada correctamente.',
+            payment: {
+                id: pr._id,
+                status: pr.status,
+                plan: pr.plan
+            },
+            subscription: {
+                status: finalSub?.status || 'ACTIVE',
+                plan: finalSub?.plan || pr.plan,
+                currentPeriodEnd: finalSub?.currentPeriodEnd
+            }
+        });
 
         // Marcar referido como activo si es partner referral
         await PartnerReferral.findOneAndUpdate(
@@ -2261,9 +2308,9 @@ app.get('/api/admin/alerts', verifyToken, verifyAdmin, async (req, res) => {
                 role: { $ne: 'admin' },
                 $or: [{ lastLoginAt: null }, { lastLoginAt: { $lt: thirtyDaysAgo } }]
             }),
-            // CORREGIDO: Contar solo pagos con comprobante válido o PayPal (igual que en /api/admin/pending-payments)
+            // ✅ CORREGIDO: Contar solo pagos con estado PENDING o UNDER_REVIEW, comprobante válido o PayPal, y recientes
             PaymentRequest.countDocuments({
-                status: 'pending',
+                status: { $in: ['pending', 'under_review'] }, // ✅ Incluir UNDER_REVIEW
                 $or: [
                     { 
                         comprobanteImage: { 
@@ -2277,7 +2324,9 @@ app.get('/api/admin/alerts', verifyToken, verifyAdmin, async (req, res) => {
                     { 
                         paymentMethod: 'paypal'
                     }
-                ]
+                ],
+                // ✅ Excluir pagos muy antiguos (más de 90 días)
+                requestedAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) }
             }),
             User.countDocuments({ blocked: true })
         ]);
@@ -4912,14 +4961,35 @@ app.get('/api/subscription/status', verifyToken, async (req, res) => {
         const diffDays = endDate ? Math.ceil((endDate - now) / (1000 * 60 * 60 * 24)) : 999;
         const daysRemaining = Math.max(-999, diffDays);
         
-        // Verificar si hay pago pendiente
+        // ✅ Verificar si hay pago pendiente (PENDING o UNDER_REVIEW)
         const pendingPayment = await PaymentRequest.findOne({ 
             userId: user._id, 
-            status: 'pending' 
+            status: { $in: ['pending', 'under_review'] },
+            // ✅ Solo considerar pagos recientes (últimos 90 días)
+            requestedAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) }
         });
         
         // Usar el estado de Subscription como fuente de verdad
         let internalStatus = sub.status;
+        
+        // ✅ Override si usuario está bloqueado (prioridad máxima)
+        if (user.blocked) {
+            internalStatus = 'SUSPENDED';
+        }
+        // ✅ Override si hay pago pendiente y no está activo
+        else if (pendingPayment && internalStatus !== 'ACTIVE') {
+            internalStatus = 'PENDING_PAYMENT';
+        }
+        // ✅ Verificar si está en GRACE_PERIOD basado en fechas
+        else if (internalStatus === 'ACTIVE' && endDate && now > endDate) {
+            const graceUntil = sub.graceUntil || new Date(endDate.getTime() + 5 * 24 * 60 * 60 * 1000);
+            if (now <= graceUntil) {
+                internalStatus = 'GRACE_PERIOD';
+            } else {
+                internalStatus = 'PAST_DUE';
+            }
+        }
+        
         let displayStatus = {
             'TRIAL': 'Trial',
             'ACTIVE': 'Activo',
@@ -4931,26 +5001,23 @@ app.get('/api/subscription/status', verifyToken, async (req, res) => {
             'CANCELLED': 'Cancelado'
         }[internalStatus] || 'Trial';
         
-        // Override si hay pago pendiente
-        if (pendingPayment && internalStatus !== 'ACTIVE') {
-            internalStatus = 'PENDING_PAYMENT';
-            displayStatus = 'PendienteValidacion';
-        }
-        
-        // Override si usuario está bloqueado
-        if (user.blocked) {
-            internalStatus = 'SUSPENDED';
-            displayStatus = 'Suspendido';
-        }
-        
         // Calcular días de gracia restantes
         let graceDaysRemaining = null;
         if (sub.graceUntil) {
             const graceDiff = Math.ceil((sub.graceUntil - now) / (1000 * 60 * 60 * 24));
             graceDaysRemaining = Math.max(0, graceDiff);
         } else if (internalStatus === 'GRACE_PERIOD') {
-            graceDaysRemaining = Math.max(0, daysRemaining + 5); // 5 días de gracia
+            // Si no hay graceUntil pero está en GRACE_PERIOD, calcular desde currentPeriodEnd
+            if (endDate && now > endDate) {
+                const graceEnd = new Date(endDate.getTime() + 5 * 24 * 60 * 60 * 1000);
+                const graceDiff = Math.ceil((graceEnd - now) / (1000 * 60 * 60 * 24));
+                graceDaysRemaining = Math.max(0, graceDiff);
+            }
         }
+        
+        // ✅ Determinar si debe redirigir (solo PAST_DUE o SUSPENDED)
+        const shouldRedirect = internalStatus === 'PAST_DUE' || internalStatus === 'SUSPENDED';
+        const allowPartialAccess = internalStatus === 'GRACE_PERIOD' || internalStatus === 'PENDING_PAYMENT' || internalStatus === 'UNDER_REVIEW';
         
         res.json({
             plan: sub.plan,
@@ -4962,7 +5029,10 @@ app.get('/api/subscription/status', verifyToken, async (req, res) => {
             paymentMethod: user.subscription?.paymentMethod,
             hasPendingPayment: !!pendingPayment,
             currentPeriodStart: sub.currentPeriodStart,
-            currentPeriodEnd: sub.currentPeriodEnd
+            currentPeriodEnd: sub.currentPeriodEnd,
+            // ✅ Flags para frontend
+            shouldRedirect, // Solo true para PAST_DUE o SUSPENDED
+            allowPartialAccess // true para GRACE_PERIOD, PENDING_PAYMENT, UNDER_REVIEW
         });
     } catch (e) {
         log.error({ err: e.message, userId: req.userId }, 'Error obteniendo estado de suscripción');
