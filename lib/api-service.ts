@@ -627,8 +627,22 @@ export const api = {
     },
 
     async reconcileSystem() {
-        return secureFetch<{ success: boolean; message: string; results: { payments: { repaired: number; total: number }; subscriptions: { repaired: number; total: number }; counters: { success: boolean } } }>(`${API_URL}/admin/reconcile`, {
+        return secureFetch<{ success: boolean; message: string; results: { payments: { repaired: number; total: number }; subscriptions: { repaired: number; total: number }; grace: { movedToGrace: number; total: number }; suspension: { suspended: number; total: number }; counters: { success: boolean } } }>(`${API_URL}/admin/reconcile`, {
             method: "POST",
         });
+    },
+
+    async repairUserBilling(userId: string) {
+        return secureFetch<{ success: boolean; message: string; userId: string; subscription: { id: string; status: string; plan: string; periodEnd: string }; repairs: string[]; hasApprovedPayment: boolean }>(`${API_URL}/admin/repair-user-billing/${userId}`, {
+            method: "POST",
+        });
+    },
+
+    async getBillingAlerts() {
+        return secureFetch<{ success: boolean; alerts: Array<{ type: string; severity: string; message: string; userId?: string; paymentId?: string; count?: number }> }>(`${API_URL}/admin/billing-alerts`);
+    },
+
+    async getBillingHealth() {
+        return secureFetch<{ success: boolean; healthScore: number; isHealthy: boolean; metrics: { totalPayments: number; approvedPayments: number; consistentPayments: number; inconsistentPayments: number }; alerts: number; recommendation: string }>(`${API_URL}/admin/billing-health`);
     },
 };

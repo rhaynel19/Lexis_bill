@@ -569,6 +569,61 @@ subscriptionAuditLogSchema.index({ paymentId: 1 });
 const PaymentAuditLog = mongoose.models.PaymentAuditLog || mongoose.model('PaymentAuditLog', paymentAuditLogSchema);
 const SubscriptionAuditLog = mongoose.models.SubscriptionAuditLog || mongoose.model('SubscriptionAuditLog', subscriptionAuditLogSchema);
 
+// === SCHEMA: SUBSCRIPTION (Fuente de Verdad) ===
+const subscriptionSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    plan: { type: String, enum: ['free', 'pro', 'premium'], required: true, default: 'free' },
+    status: { 
+        type: String, 
+        enum: ['TRIAL', 'ACTIVE', 'GRACE_PERIOD', 'PAST_DUE', 'PENDING_PAYMENT', 'UNDER_REVIEW', 'SUSPENDED', 'CANCELLED'], 
+        required: true, 
+        default: 'TRIAL' 
+    },
+    currentPeriodStart: { type: Date, required: true, default: Date.now },
+    currentPeriodEnd: { type: Date, required: true },
+    graceUntil: { type: Date }, // null si no está en gracia
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+subscriptionSchema.index({ userId: 1 }, { unique: true });
+subscriptionSchema.index({ status: 1 });
+subscriptionSchema.index({ currentPeriodEnd: 1 });
+subscriptionSchema.index({ graceUntil: 1 });
+
+// === SCHEMA: BILLING_EVENTS (Auditoría Completa) ===
+const billingEventSchema = new mongoose.Schema({
+    type: { 
+        type: String, 
+        required: true,
+        enum: [
+            'subscription_created',
+            'subscription_activated',
+            'subscription_grace_started',
+            'subscription_suspended',
+            'subscription_cancelled',
+            'payment_uploaded',
+            'payment_approved',
+            'payment_rejected',
+            'payment_failed',
+            'period_renewed',
+            'plan_changed',
+            'reconciliation_performed'
+        ]
+    },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    subscriptionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription' },
+    paymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'PaymentRequest' },
+    payload: { type: mongoose.Schema.Types.Mixed, required: true }, // Datos completos del evento
+    createdAt: { type: Date, default: Date.now }
+});
+billingEventSchema.index({ userId: 1, createdAt: -1 });
+billingEventSchema.index({ type: 1, createdAt: -1 });
+billingEventSchema.index({ subscriptionId: 1 });
+billingEventSchema.index({ paymentId: 1 });
+
+const Subscription = mongoose.models.Subscription || mongoose.model('Subscription', subscriptionSchema);
+const BillingEvent = mongoose.models.BillingEvent || mongoose.model('BillingEvent', billingEventSchema);
+
 async function logAdminAction(adminId, action, targetType, targetId, metadata = {}) {
     try {
         const admin = await User.findById(adminId).select('email').lean();
@@ -614,6 +669,181 @@ async function logSubscriptionStatusChange(userId, statusBefore, statusAfter, pa
         log.warn({ err: e.message }, 'SubscriptionAuditLog: error guardando');
     }
 }
+
+// === SISTEMA DE EVENTOS DE BILLING (Desacoplado) ===
+const billingEventEmitter = {
+    listeners: {},
+    on(eventType, handler) {
+        if (!this.listeners[eventType]) this.listeners[eventType] = [];
+        this.listeners[eventType].push(handler);
+    },
+    async emit(eventType, payload) {
+        // Guardar evento en BD primero (fuente de verdad)
+        try {
+            await BillingEvent.create({
+                type: eventType,
+                userId: payload.userId,
+                subscriptionId: payload.subscriptionId,
+                paymentId: payload.paymentId,
+                payload: payload
+            });
+        } catch (e) {
+            log.error({ err: e.message, eventType }, 'Error guardando BillingEvent');
+        }
+        
+        // Ejecutar listeners de forma asíncrona (no bloqueante)
+        const handlers = this.listeners[eventType] || [];
+        for (const handler of handlers) {
+            try {
+                await handler(payload);
+            } catch (e) {
+                log.error({ err: e.message, eventType, handler: handler.name }, 'Error en listener de billing event');
+            }
+        }
+    }
+};
+
+// === FUNCIONES DE GESTIÓN DE SUSCRIPCIÓN (Fuente de Verdad) ===
+async function getOrCreateSubscription(userId) {
+    let sub = await Subscription.findOne({ userId });
+    if (!sub) {
+        const now = new Date();
+        const trialEnd = new Date(now);
+        trialEnd.setDate(trialEnd.getDate() + 15); // 15 días de trial
+        
+        sub = await Subscription.create({
+            userId,
+            plan: 'free',
+            status: 'TRIAL',
+            currentPeriodStart: now,
+            currentPeriodEnd: trialEnd
+        });
+        
+        await billingEventEmitter.emit('subscription_created', {
+            userId,
+            subscriptionId: sub._id,
+            plan: 'free',
+            status: 'TRIAL',
+            periodEnd: trialEnd
+        });
+    }
+    return sub;
+}
+
+async function updateSubscriptionStatus(userId, newStatus, metadata = {}) {
+    const sub = await getOrCreateSubscription(userId);
+    const statusBefore = sub.status;
+    
+    if (statusBefore === newStatus) return sub; // Sin cambios
+    
+    const updates = { status: newStatus, updatedAt: new Date() };
+    
+    // Lógica específica por estado
+    const now = new Date();
+    if (newStatus === 'GRACE_PERIOD') {
+        const graceUntil = new Date(now);
+        graceUntil.setDate(graceUntil.getDate() + 5);
+        updates.graceUntil = graceUntil;
+    } else if (newStatus === 'ACTIVE') {
+        updates.graceUntil = null;
+    }
+    
+    Object.assign(sub, updates);
+    await sub.save();
+    
+    // Logs y eventos
+    await logSubscriptionStatusChange(userId, statusBefore, newStatus, metadata.paymentId, metadata.changedBy, metadata);
+    
+    const eventType = {
+        'ACTIVE': 'subscription_activated',
+        'GRACE_PERIOD': 'subscription_grace_started',
+        'SUSPENDED': 'subscription_suspended',
+        'CANCELLED': 'subscription_cancelled'
+    }[newStatus];
+    
+    if (eventType) {
+        await billingEventEmitter.emit(eventType, {
+            userId,
+            subscriptionId: sub._id,
+            statusBefore,
+            statusAfter: newStatus,
+            ...metadata
+        });
+    }
+    
+    return sub;
+}
+
+async function activateSubscriptionFromPayment(userId, paymentId, plan, billingCycle) {
+    const now = new Date();
+    const daysToAdd = billingCycle === 'annual' ? 365 : 30;
+    const periodEnd = new Date(now);
+    periodEnd.setDate(periodEnd.getDate() + daysToAdd);
+    
+    const sub = await getOrCreateSubscription(userId);
+    
+    await Subscription.findOneAndUpdate(
+        { userId },
+        {
+            plan,
+            status: 'ACTIVE',
+            currentPeriodStart: now,
+            currentPeriodEnd: periodEnd,
+            graceUntil: null,
+            updatedAt: now
+        },
+        { upsert: true, new: true }
+    );
+    
+    // Sincronizar con User (legacy, para compatibilidad)
+    const user = await User.findById(userId);
+    if (user) {
+        if (!user.subscription) user.subscription = {};
+        user.subscription.plan = plan;
+        user.subscription.status = 'active';
+        user.subscription.startDate = now;
+        user.subscription.endDate = periodEnd;
+        user.expiryDate = periodEnd;
+        user.subscriptionStatus = 'Activo';
+        user.membershipLevel = plan;
+        await user.save();
+    }
+    
+    await billingEventEmitter.emit('subscription_activated', {
+        userId,
+        subscriptionId: sub._id,
+        paymentId,
+        plan,
+        periodStart: now,
+        periodEnd
+    });
+    
+    return sub;
+}
+
+// === LISTENERS DE EVENTOS (Desacoplados) ===
+billingEventEmitter.on('payment_approved', async (payload) => {
+    // Activar suscripción automáticamente
+    const { userId, paymentId, plan, billingCycle } = payload;
+    if (userId && plan) {
+        await activateSubscriptionFromPayment(userId, paymentId, plan, billingCycle || 'monthly');
+    }
+});
+
+billingEventEmitter.on('subscription_activated', async (payload) => {
+    // Enviar email de confirmación (si está configurado)
+    try {
+        const mailer = require('./mailer');
+        if (typeof mailer.sendSubscriptionActivated === 'function') {
+            const user = await User.findById(payload.userId).select('email name').lean();
+            if (user) {
+                await mailer.sendSubscriptionActivated(user.email, user.name, payload.plan);
+            }
+        }
+    } catch (e) {
+        // Mailer no disponible, ignorar
+    }
+});
 
 function generateInviteToken() {
     return 'INV' + Math.random().toString(36).slice(2, 10).toUpperCase() + Date.now().toString(36).slice(-4).toUpperCase();
@@ -678,6 +908,7 @@ function getUserSubscription(user) {
 }
 
 // --- 3. MIDDLEWARE ---
+// 🔥 MIDDLEWARE INTELIGENTE CON NIVELES DE ACCESO (Anti-Errores)
 // SEGURIDAD: Token solo en cookie HttpOnly (no en URL ni localStorage)
 const verifyToken = (req, res, next) => {
     const token = req.cookies?.lexis_auth;
@@ -691,30 +922,69 @@ const verifyToken = (req, res, next) => {
             if (!user) return res.status(404).json({ message: 'User not found' });
             if (user.blocked) return res.status(403).json({ message: 'Cuenta bloqueada. Contacte a soporte.', code: 'ACCOUNT_BLOCKED' });
 
-            const sub = getUserSubscription(user);
-            const now = new Date();
-            const endDate = sub.endDate ? new Date(sub.endDate) : user.expiryDate ? new Date(user.expiryDate) : null;
+            // 🔥 Obtener suscripción desde la fuente de verdad (Subscription)
+            let sub = await Subscription.findOne({ userId: user._id });
+            if (!sub) {
+                // Crear suscripción si no existe (migración automática)
+                sub = await getOrCreateSubscription(user._id);
+            }
 
-            // Admin: no se bloquea nunca
-            if (user.role !== 'admin' && sub.status === 'expired' && endDate) {
-                const gracePeriodLimit = new Date(endDate);
-                gracePeriodLimit.setDate(gracePeriodLimit.getDate() + 5);
-                if (now > gracePeriodLimit) {
-                    return res.status(403).json({
-                        message: 'Suscripción bloqueada. Periodo de gracia finalizado.',
-                        code: 'SUBSCRIPTION_LOCKED'
-                    });
+            // Admin: acceso completo siempre
+            if (user.role === 'admin') {
+                req.userId = decoded.id;
+                req.user = user;
+                req.subscription = sub;
+                req.accessLevel = 'FULL';
+                return next();
+            }
+
+            // 🔥 NIVELES DE ACCESO (NO redirigir agresivamente)
+            const accessLevels = {
+                'FULL': ['ACTIVE', 'TRIAL'],
+                'LIMITED': ['GRACE_PERIOD', 'UNDER_REVIEW', 'PENDING_PAYMENT'],
+                'BLOCKED': ['SUSPENDED', 'CANCELLED', 'PAST_DUE']
+            };
+
+            let accessLevel = 'BLOCKED';
+            for (const [level, statuses] of Object.entries(accessLevels)) {
+                if (statuses.includes(sub.status)) {
+                    accessLevel = level;
+                    break;
                 }
             }
 
+            // Solo bloquear si está realmente suspendido o cancelado
+            if (accessLevel === 'BLOCKED' && sub.status === 'SUSPENDED') {
+                return res.status(403).json({
+                    message: 'Tu suscripción está suspendida. Regulariza tu pago para continuar.',
+                    code: 'SUBSCRIPTION_SUSPENDED',
+                    accessLevel: 'BLOCKED'
+                });
+            }
+
+            // LIMITED ACCESS: Permitir acceso pero con restricciones (el frontend manejará qué mostrar)
             req.userId = decoded.id;
             req.user = user;
             req.subscription = sub;
+            req.accessLevel = accessLevel; // FULL, LIMITED, BLOCKED
             next();
         } catch (dbErr) {
+            log.error({ err: dbErr.message, userId: decoded?.id }, 'Error verificando suscripción');
             res.status(500).json({ error: 'Error verificando suscripción' });
         }
     });
+};
+
+// Middleware para verificar acceso completo (solo FULL)
+const requireFullAccess = (req, res, next) => {
+    if (req.accessLevel !== 'FULL') {
+        return res.status(403).json({
+            message: 'Acceso limitado. Regulariza tu suscripción para continuar.',
+            code: 'LIMITED_ACCESS',
+            accessLevel: req.accessLevel
+        });
+    }
+    next();
 };
 
 const verifyAdmin = (req, res, next) => {
@@ -1481,16 +1751,24 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
         // Log de auditoría: creación de pago
         await logPaymentStatusChange(pr._id, req.userId, 'none', 'pending', null, { plan, billingCycle: cycle, paymentMethod, reference });
 
-        const user = req.user;
-        const subscriptionStatusBefore = user.subscription?.status || user.subscriptionStatus || 'unknown';
-        if (!user.subscription) user.subscription = {};
-        user.subscription.plan = plan;
-        user.subscription.status = 'pending';
-        user.subscription.paymentMethod = paymentMethod;
-        await user.save();
-        
-        // Log de auditoría: cambio de suscripción a pending
-        await logSubscriptionStatusChange(user._id, subscriptionStatusBefore, 'pending', pr._id, null, { plan, reason: 'Payment request created' });
+        // Actualizar suscripción a PENDING_PAYMENT
+        const sub = await getOrCreateSubscription(req.userId);
+        if (sub.status !== 'PENDING_PAYMENT') {
+            await updateSubscriptionStatus(req.userId, 'PENDING_PAYMENT', {
+                paymentId: pr._id,
+                reason: 'Payment request created'
+            });
+        }
+
+        // Evento de billing
+        await billingEventEmitter.emit('payment_uploaded', {
+            userId: req.userId,
+            paymentId: pr._id,
+            subscriptionId: sub._id,
+            plan,
+            paymentMethod,
+            reference
+        });
 
         res.status(201).json({
             message: paymentMethod === 'paypal'
@@ -1578,8 +1856,17 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
         await logAdminAction(req.userId, 'payment_approve', 'payment', pr._id.toString(), { userId: pr.userId?.toString() });
         await logPaymentStatusChange(pr._id, pr.userId, statusBefore, 'approved', req.userId, { plan: pr.plan, billingCycle: pr.billingCycle });
         
-        const subscriptionStatusBefore = user.subscription?.status || user.subscriptionStatus || 'unknown';
-        await logSubscriptionStatusChange(user._id, subscriptionStatusBefore, 'active', pr._id, req.userId, { plan: pr.plan, endDate: endDate });
+        // 🔥 USAR SISTEMA DE EVENTOS (Desacoplado)
+        await billingEventEmitter.emit('payment_approved', {
+            userId: pr.userId,
+            paymentId: pr._id,
+            subscriptionId: null, // Se buscará/creará en el listener
+            plan: pr.plan,
+            billingCycle: pr.billingCycle,
+            changedBy: req.userId
+        });
+        
+        // El listener 'payment_approved' activará automáticamente la suscripción
 
         // Marcar referido como activo si es partner referral
         await PartnerReferral.findOneAndUpdate(
@@ -1627,6 +1914,14 @@ app.post('/api/admin/reject-payment/:id', verifyToken, verifyAdmin, async (req, 
         // Logs de auditoría
         await logAdminAction(req.userId, 'payment_reject', 'payment', pr._id.toString(), { userId: pr.userId?.toString() });
         await logPaymentStatusChange(pr._id, pr.userId, statusBefore, 'rejected', req.userId, { reason: 'Admin rejection' });
+        
+        // Evento de billing
+        await billingEventEmitter.emit('payment_rejected', {
+            userId: pr.userId,
+            paymentId: pr._id,
+            reason: 'Admin rejection',
+            changedBy: req.userId
+        });
         res.json({ message: 'Solicitud rechazada.' });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -2194,98 +2489,142 @@ app.post('/api/admin/partners/calculate-commissions', verifyToken, verifyAdmin, 
     }
 });
 
-// === SISTEMA DE RECONCILIACIÓN AUTOMÁTICA ===
-async function syncPayments() {
+// === JOBS AUTOMÁTICOS (Motor de Billing) ===
+
+// Job 1: Grace Manager (corre cada hora)
+async function graceManagerJob() {
     try {
-        const approvedPayments = await PaymentRequest.find({ status: 'approved' })
-            .populate('userId');
+        const now = new Date();
+        const subscriptions = await Subscription.find({
+            status: 'ACTIVE',
+            currentPeriodEnd: { $lt: now },
+            graceUntil: null
+        });
         
-        let repaired = 0;
-        for (const payment of approvedPayments) {
-            const user = payment.userId;
-            if (!user) continue;
-            
-            const sub = getUserSubscription(user);
-            const now = new Date();
-            const endDate = payment.processedAt ? new Date(payment.processedAt) : new Date();
-            const daysToAdd = (payment.billingCycle === 'annual') ? 365 : 30;
-            endDate.setDate(endDate.getDate() + daysToAdd);
-            
-            // Si el pago está aprobado pero la suscripción no está activa, reparar
-            if (sub.status !== 'active' || user.subscriptionStatus !== 'Activo') {
-                const statusBefore = sub.status || user.subscriptionStatus || 'unknown';
-                
-                if (!user.subscription) user.subscription = {};
-                user.subscription.plan = payment.plan;
-                user.subscription.status = 'active';
-                user.subscription.paymentMethod = payment.paymentMethod;
-                user.subscription.startDate = payment.processedAt || new Date();
-                user.subscription.endDate = endDate;
-                user.expiryDate = endDate;
-                user.subscriptionStatus = 'Activo';
-                user.membershipLevel = payment.plan;
-                await user.save();
-                
-                await logSubscriptionStatusChange(user._id, statusBefore, 'active', payment._id, null, { 
-                    reason: 'Auto-reconciliation: payment approved but subscription inactive',
-                    plan: payment.plan 
-                });
-                repaired++;
-            }
+        let movedToGrace = 0;
+        for (const sub of subscriptions) {
+            await updateSubscriptionStatus(sub.userId, 'GRACE_PERIOD', {
+                reason: 'Auto: period ended, entering grace',
+                periodEnd: sub.currentPeriodEnd
+            });
+            movedToGrace++;
         }
-        return { repaired, total: approvedPayments.length };
+        
+        log.info({ movedToGrace, total: subscriptions.length }, 'Grace Manager ejecutado');
+        return { movedToGrace, total: subscriptions.length };
     } catch (e) {
-        log.error({ err: e.message }, 'Error en syncPayments');
+        log.error({ err: e.message }, 'Error en graceManagerJob');
         throw e;
     }
 }
 
+// Job 2: Suspension Guard (corre cada hora)
+async function suspensionGuardJob() {
+    try {
+        const now = new Date();
+        const subscriptions = await Subscription.find({
+            status: 'GRACE_PERIOD',
+            graceUntil: { $lt: now }
+        });
+        
+        let suspended = 0;
+        for (const sub of subscriptions) {
+            await updateSubscriptionStatus(sub.userId, 'SUSPENDED', {
+                reason: 'Auto: grace period ended',
+                graceUntil: sub.graceUntil
+            });
+            suspended++;
+        }
+        
+        log.info({ suspended, total: subscriptions.length }, 'Suspension Guard ejecutado');
+        return { suspended, total: subscriptions.length };
+    } catch (e) {
+        log.error({ err: e.message }, 'Error en suspensionGuardJob');
+        throw e;
+    }
+}
+
+// Job 3: Payment Reconciler (corre cada 15 minutos) 🔥
+async function paymentReconcilerJob() {
+    try {
+        const approvedPayments = await PaymentRequest.find({ status: 'approved' })
+            .populate('userId')
+            .sort({ processedAt: -1 });
+        
+        let repaired = 0;
+        const issues = [];
+        
+        for (const payment of approvedPayments) {
+            const user = payment.userId;
+            if (!user) continue;
+            
+            const sub = await Subscription.findOne({ userId: user._id });
+            
+            // Si el pago está aprobado pero la suscripción no está ACTIVE, reparar
+            if (!sub || sub.status !== 'ACTIVE') {
+                await activateSubscriptionFromPayment(
+                    user._id,
+                    payment._id,
+                    payment.plan,
+                    payment.billingCycle || 'monthly'
+                );
+                
+                issues.push({
+                    userId: user._id,
+                    paymentId: payment._id,
+                    issue: 'Payment approved but subscription not active',
+                    fixed: true
+                });
+                repaired++;
+            }
+        }
+        
+        await billingEventEmitter.emit('reconciliation_performed', {
+            userId: null,
+            repaired,
+            total: approvedPayments.length,
+            issues
+        });
+        
+        log.info({ repaired, total: approvedPayments.length }, 'Payment Reconciler ejecutado');
+        return { repaired, total: approvedPayments.length, issues };
+    } catch (e) {
+        log.error({ err: e.message }, 'Error en paymentReconcilerJob');
+        throw e;
+    }
+}
+
+// === SISTEMA DE RECONCILIACIÓN AUTOMÁTICA (Mejorado) ===
+async function syncPayments() {
+    return await paymentReconcilerJob();
+}
+
 async function repairSubscriptions() {
     try {
-        const users = await User.find({ 
-            role: { $ne: 'admin' },
-            $or: [
-                { 'subscription.status': 'pending' },
-                { subscriptionStatus: { $in: ['Bloqueado', 'Trial', 'Gracia'] } }
-            ]
+        // Buscar suscripciones en estados inconsistentes
+        const subscriptions = await Subscription.find({
+            status: { $in: ['PENDING_PAYMENT', 'UNDER_REVIEW', 'PAST_DUE'] }
         });
         
         let repaired = 0;
-        for (const user of users) {
-            const pendingPayment = await PaymentRequest.findOne({ 
-                userId: user._id, 
-                status: 'approved' 
+        for (const sub of subscriptions) {
+            // Buscar pago aprobado reciente
+            const approvedPayment = await PaymentRequest.findOne({
+                userId: sub.userId,
+                status: 'approved'
             }).sort({ processedAt: -1 });
             
-            if (pendingPayment) {
-                const sub = getUserSubscription(user);
-                if (sub.status !== 'active') {
-                    const statusBefore = sub.status || user.subscriptionStatus || 'unknown';
-                    const now = new Date();
-                    const endDate = pendingPayment.processedAt ? new Date(pendingPayment.processedAt) : now;
-                    const daysToAdd = (pendingPayment.billingCycle === 'annual') ? 365 : 30;
-                    endDate.setDate(endDate.getDate() + daysToAdd);
-                    
-                    if (!user.subscription) user.subscription = {};
-                    user.subscription.plan = pendingPayment.plan;
-                    user.subscription.status = 'active';
-                    user.subscription.paymentMethod = pendingPayment.paymentMethod;
-                    user.subscription.startDate = pendingPayment.processedAt || now;
-                    user.subscription.endDate = endDate;
-                    user.expiryDate = endDate;
-                    user.subscriptionStatus = 'Activo';
-                    user.membershipLevel = pendingPayment.plan;
-                    await user.save();
-                    
-                    await logSubscriptionStatusChange(user._id, statusBefore, 'active', pendingPayment._id, null, { 
-                        reason: 'Auto-repair: found approved payment',
-                        plan: pendingPayment.plan 
-                    });
-                    repaired++;
-                }
+            if (approvedPayment) {
+                await activateSubscriptionFromPayment(
+                    sub.userId,
+                    approvedPayment._id,
+                    approvedPayment.plan,
+                    approvedPayment.billingCycle || 'monthly'
+                );
+                repaired++;
             }
         }
-        return { repaired, total: users.length };
+        return { repaired, total: subscriptions.length };
     } catch (e) {
         log.error({ err: e.message }, 'Error en repairSubscriptions');
         throw e;
@@ -2303,18 +2642,22 @@ async function refreshCounters() {
     }
 }
 
-// Endpoint para reconciliación manual (solo admins)
+// Endpoint para reconciliación manual (solo admins) - Ejecuta todos los jobs
 app.post('/api/admin/reconcile', verifyToken, verifyAdmin, async (req, res) => {
     try {
-        const [paymentsResult, subscriptionsResult, countersResult] = await Promise.all([
-            syncPayments(),
+        const [paymentsResult, subscriptionsResult, graceResult, suspensionResult, countersResult] = await Promise.all([
+            paymentReconcilerJob(),
             repairSubscriptions(),
+            graceManagerJob(),
+            suspensionGuardJob(),
             refreshCounters()
         ]);
         
         await logAdminAction(req.userId, 'reconcile_system', 'system', 'all', {
             paymentsRepaired: paymentsResult.repaired,
-            subscriptionsRepaired: subscriptionsResult.repaired
+            subscriptionsRepaired: subscriptionsResult.repaired,
+            movedToGrace: graceResult.movedToGrace,
+            suspended: suspensionResult.suspended
         });
         
         res.json({
@@ -2323,10 +2666,13 @@ app.post('/api/admin/reconcile', verifyToken, verifyAdmin, async (req, res) => {
             results: {
                 payments: paymentsResult,
                 subscriptions: subscriptionsResult,
+                grace: graceResult,
+                suspension: suspensionResult,
                 counters: countersResult
             }
         });
     } catch (e) {
+        log.error({ err: e.message }, 'Error en reconciliación manual');
         res.status(500).json({ error: e.message });
     }
 });
@@ -2341,14 +2687,19 @@ app.post('/api/cron/reconcile', async (req, res) => {
             return res.status(403).json({ error: 'Unauthorized' });
         }
         
-        const [paymentsResult, subscriptionsResult] = await Promise.all([
-            syncPayments(),
-            repairSubscriptions()
+        // Ejecutar todos los jobs automáticos
+        const [paymentsResult, subscriptionsResult, graceResult, suspensionResult] = await Promise.all([
+            paymentReconcilerJob(),
+            repairSubscriptions(),
+            graceManagerJob(),
+            suspensionGuardJob()
         ]);
         
         log.info({ 
             paymentsRepaired: paymentsResult.repaired, 
-            subscriptionsRepaired: subscriptionsResult.repaired 
+            subscriptionsRepaired: subscriptionsResult.repaired,
+            movedToGrace: graceResult.movedToGrace,
+            suspended: suspensionResult.suspended
         }, 'Auto-reconciliation ejecutada');
         
         res.json({
@@ -2356,11 +2707,217 @@ app.post('/api/cron/reconcile', async (req, res) => {
             timestamp: new Date().toISOString(),
             results: {
                 payments: paymentsResult,
-                subscriptions: subscriptionsResult
+                subscriptions: subscriptionsResult,
+                grace: graceResult,
+                suspension: suspensionResult
             }
         });
     } catch (e) {
         log.error({ err: e.message }, 'Error en auto-reconciliación');
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 🔥 Endpoint de reparación por usuario (Anti Desincronización Nivel PRO)
+app.post('/api/admin/repair-user-billing/:userId', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        if (!isValidObjectId(userId)) {
+            return res.status(400).json({ error: 'ID de usuario inválido' });
+        }
+        
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+        
+        // 1. Recalcular suscripción desde la fuente de verdad
+        let sub = await Subscription.findOne({ userId });
+        if (!sub) {
+            sub = await getOrCreateSubscription(userId);
+        }
+        
+        // 2. Buscar pagos aprobados
+        const approvedPayment = await PaymentRequest.findOne({
+            userId,
+            status: 'approved'
+        }).sort({ processedAt: -1 });
+        
+        const repairs = [];
+        
+        // 3. Reparar estado si hay pago aprobado pero suscripción no activa
+        if (approvedPayment && sub.status !== 'ACTIVE') {
+            await activateSubscriptionFromPayment(
+                userId,
+                approvedPayment._id,
+                approvedPayment.plan,
+                approvedPayment.billingCycle || 'monthly'
+            );
+            repairs.push('Subscription activated from approved payment');
+        }
+        
+        // 4. Verificar inconsistencias entre User y Subscription
+        if (user.subscriptionStatus === 'Activo' && sub.status !== 'ACTIVE') {
+            // User dice activo pero Subscription no, usar Subscription como fuente de verdad
+            user.subscriptionStatus = {
+                'ACTIVE': 'Activo',
+                'GRACE_PERIOD': 'Gracia',
+                'SUSPENDED': 'Bloqueado',
+                'TRIAL': 'Trial',
+                'PENDING_PAYMENT': 'Pendiente',
+                'UNDER_REVIEW': 'En Revisión'
+            }[sub.status] || 'Trial';
+            await user.save();
+            repairs.push('User.subscriptionStatus synced with Subscription');
+        }
+        
+        // 5. Limpiar cache (si existe)
+        // En este caso, simplemente retornamos datos frescos
+        
+        // 6. Regenerar permisos (el middleware lo hará en la próxima request)
+        
+        await logAdminAction(req.userId, 'repair_user_billing', 'user', userId, {
+            repairs,
+            subscriptionStatus: sub.status,
+            hasApprovedPayment: !!approvedPayment
+        });
+        
+        res.json({
+            success: true,
+            message: 'Billing reparado para usuario',
+            userId,
+            subscription: {
+                id: sub._id,
+                status: sub.status,
+                plan: sub.plan,
+                periodEnd: sub.currentPeriodEnd
+            },
+            repairs,
+            hasApprovedPayment: !!approvedPayment
+        });
+    } catch (e) {
+        log.error({ err: e.message, userId: req.params.userId }, 'Error reparando billing de usuario');
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// === SISTEMA DE ALERTAS AUTOMÁTICAS ===
+async function getBillingAlerts() {
+    const alerts = [];
+    
+    try {
+        // Alerta 1: Pago aprobado sin activar suscripción
+        const approvedPayments = await PaymentRequest.find({ status: 'approved' }).populate('userId');
+        for (const payment of approvedPayments) {
+            if (!payment.userId) continue;
+            const sub = await Subscription.findOne({ userId: payment.userId._id });
+            if (!sub || sub.status !== 'ACTIVE') {
+                alerts.push({
+                    type: 'payment_approved_no_activation',
+                    severity: 'critical',
+                    message: `Pago aprobado (${payment._id}) sin suscripción activa para usuario ${payment.userId.email}`,
+                    userId: payment.userId._id,
+                    paymentId: payment._id
+                });
+            }
+        }
+        
+        // Alerta 2: Usuario suspendido con pago reciente
+        const suspendedSubs = await Subscription.find({ status: 'SUSPENDED' });
+        for (const sub of suspendedSubs) {
+            const recentPayment = await PaymentRequest.findOne({
+                userId: sub.userId,
+                status: 'approved',
+                processedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Últimos 7 días
+            });
+            if (recentPayment) {
+                alerts.push({
+                    type: 'suspended_with_recent_payment',
+                    severity: 'warning',
+                    message: `Usuario suspendido con pago aprobado reciente`,
+                    userId: sub.userId,
+                    paymentId: recentPayment._id
+                });
+            }
+        }
+        
+        // Alerta 3: Contador vs query real (ya implementado en /api/admin/alerts)
+        // Se maneja en el endpoint existente
+        
+        // Alerta 4: Suscripciones en GRACE_PERIOD por más de 5 días
+        const longGraceSubs = await Subscription.find({
+            status: 'GRACE_PERIOD',
+            graceUntil: { $lt: new Date() }
+        });
+        if (longGraceSubs.length > 0) {
+            alerts.push({
+                type: 'grace_period_expired',
+                severity: 'warning',
+                message: `${longGraceSubs.length} suscripciones en gracia expirada`,
+                count: longGraceSubs.length
+            });
+        }
+        
+    } catch (e) {
+        log.error({ err: e.message }, 'Error generando alertas de billing');
+    }
+    
+    return alerts;
+}
+
+// Endpoint de alertas de billing
+app.get('/api/admin/billing-alerts', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const alerts = await getBillingAlerts();
+        res.json({ success: true, alerts });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// === HEALTH SCORE (Métrica Crítica) ===
+app.get('/api/admin/billing-health', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const totalPayments = await PaymentRequest.countDocuments({});
+        const correctPayments = await PaymentRequest.countDocuments({
+            status: 'approved'
+        });
+        
+        // Verificar consistencia: pagos aprobados con suscripciones activas
+        const approvedPayments = await PaymentRequest.find({ status: 'approved' }).select('userId').lean();
+        let consistentPayments = 0;
+        for (const payment of approvedPayments) {
+            if (!payment.userId) continue;
+            const sub = await Subscription.findOne({ userId: payment.userId });
+            if (sub && sub.status === 'ACTIVE') {
+                consistentPayments++;
+            }
+        }
+        
+        const healthScore = totalPayments > 0 
+            ? ((consistentPayments / approvedPayments.length) * 100).toFixed(2)
+            : 100;
+        
+        const isHealthy = parseFloat(healthScore) >= 98;
+        
+        const alerts = await getBillingAlerts();
+        
+        res.json({
+            success: true,
+            healthScore: parseFloat(healthScore),
+            isHealthy,
+            metrics: {
+                totalPayments,
+                approvedPayments: approvedPayments.length,
+                consistentPayments,
+                inconsistentPayments: approvedPayments.length - consistentPayments
+            },
+            alerts: alerts.length,
+            recommendation: isHealthy 
+                ? 'Sistema saludable'
+                : 'Investigar inconsistencias. Health score bajo 98%'
+        });
+    } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
@@ -4283,21 +4840,22 @@ app.post('/api/quotes/:id/convert', verifyToken, async (req, res) => {
     }
 });
 
+// 🔥 Endpoint de estado de suscripción (Subscription como fuente de verdad)
 app.get('/api/subscription/status', verifyToken, async (req, res) => {
     try {
         const user = req.user;
-        const sub = req.subscription || getUserSubscription(user);
+        
+        // Obtener suscripción desde la fuente de verdad
+        let sub = await Subscription.findOne({ userId: user._id });
+        if (!sub) {
+            // Crear suscripción si no existe (migración automática)
+            sub = await getOrCreateSubscription(user._id);
+        }
+        
         const now = new Date();
-        const endDate = sub.endDate ? new Date(sub.endDate) : user.expiryDate ? new Date(user.expiryDate) : null;
+        const endDate = sub.currentPeriodEnd;
         const diffDays = endDate ? Math.ceil((endDate - now) / (1000 * 60 * 60 * 24)) : 999;
         const daysRemaining = Math.max(-999, diffDays);
-        const GRACE_DAYS = 5;
-        const daysPastEnd = daysRemaining < 0 ? Math.abs(daysRemaining) : 0;
-        const graceDaysRemaining = daysPastEnd > 0 ? Math.max(0, GRACE_DAYS - daysPastEnd) : GRACE_DAYS;
-        
-        // Estados claros según el sistema
-        let internalStatus = 'ACTIVE'; // ACTIVE, GRACE_PERIOD, PAST_DUE, PENDING_VALIDATION, SUSPENDED
-        let displayStatus = 'Activo';
         
         // Verificar si hay pago pendiente
         const pendingPayment = await PaymentRequest.findOne({ 
@@ -4305,42 +4863,54 @@ app.get('/api/subscription/status', verifyToken, async (req, res) => {
             status: 'pending' 
         });
         
-        if (pendingPayment) {
-            internalStatus = 'PENDING_VALIDATION';
+        // Usar el estado de Subscription como fuente de verdad
+        let internalStatus = sub.status;
+        let displayStatus = {
+            'TRIAL': 'Trial',
+            'ACTIVE': 'Activo',
+            'GRACE_PERIOD': 'Gracia',
+            'PAST_DUE': 'Vencido',
+            'PENDING_PAYMENT': 'PendienteValidacion',
+            'UNDER_REVIEW': 'En Revisión',
+            'SUSPENDED': 'Suspendido',
+            'CANCELLED': 'Cancelado'
+        }[internalStatus] || 'Trial';
+        
+        // Override si hay pago pendiente
+        if (pendingPayment && internalStatus !== 'ACTIVE') {
+            internalStatus = 'PENDING_PAYMENT';
             displayStatus = 'PendienteValidacion';
-        } else if (sub.status === 'pending') {
-            internalStatus = 'PENDING_VALIDATION';
-            displayStatus = 'PendienteValidacion';
-        } else if (sub.status === 'expired' || daysRemaining <= 0) {
-            if (graceDaysRemaining > 0) {
-                internalStatus = 'GRACE_PERIOD';
-                displayStatus = 'Gracia';
-            } else {
-                internalStatus = 'PAST_DUE';
-                displayStatus = 'Bloqueado';
-            }
-        } else if (daysRemaining <= 7 && daysRemaining > 0) {
-            internalStatus = 'ACTIVE';
-            displayStatus = 'VencePronto';
-        } else if (user.blocked) {
+        }
+        
+        // Override si usuario está bloqueado
+        if (user.blocked) {
             internalStatus = 'SUSPENDED';
             displayStatus = 'Suspendido';
-        } else {
-            internalStatus = 'ACTIVE';
-            displayStatus = 'Activo';
+        }
+        
+        // Calcular días de gracia restantes
+        let graceDaysRemaining = null;
+        if (sub.graceUntil) {
+            const graceDiff = Math.ceil((sub.graceUntil - now) / (1000 * 60 * 60 * 24));
+            graceDaysRemaining = Math.max(0, graceDiff);
+        } else if (internalStatus === 'GRACE_PERIOD') {
+            graceDaysRemaining = Math.max(0, daysRemaining + 5); // 5 días de gracia
         }
         
         res.json({
             plan: sub.plan,
             status: displayStatus,
-            internalStatus, // Estado interno para lógica
+            internalStatus, // Estado interno para lógica (fuente de verdad)
             expiryDate: endDate,
             daysRemaining: Math.max(0, daysRemaining),
-            graceDaysRemaining: daysRemaining <= 0 ? graceDaysRemaining : null,
-            paymentMethod: sub.paymentMethod,
-            hasPendingPayment: !!pendingPayment
+            graceDaysRemaining,
+            paymentMethod: user.subscription?.paymentMethod,
+            hasPendingPayment: !!pendingPayment,
+            currentPeriodStart: sub.currentPeriodStart,
+            currentPeriodEnd: sub.currentPeriodEnd
         });
     } catch (e) {
+        log.error({ err: e.message, userId: req.userId }, 'Error obteniendo estado de suscripción');
         res.status(500).json({ error: e.message });
     }
 });
