@@ -38,6 +38,7 @@ import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { EmotionalStatusWidget } from "@/components/dashboard/EmotionalStatusWidget";
 import { LexisBusinessCopilot } from "@/components/dashboard/LexisBusinessCopilot";
 import { AlertsBanner } from "@/components/AlertsBanner";
+import { NewInvoiceButton } from "@/components/NewInvoiceButton";
 
 import { usePreferences } from "@/components/providers/PreferencesContext";
 import { useAuth } from "@/components/providers/AuthContext";
@@ -161,15 +162,25 @@ export default function Dashboard() {
   }, [authUser?.fiscalStatus?.confirmed, userName]);
 
   useEffect(() => {
+    let cancelled = false;
+    
     const loadDashboardData = async () => {
       setIsLoading(true);
       setError("");
 
       try {
         if (!authUser) {
-          router.push("/login");
+          if (!cancelled) router.push("/login");
           return;
         }
+
+        // ✅ Verificar ruta actual ANTES de redirigir
+        if (typeof window !== "undefined" && window.location.pathname === '/pagos') {
+          if (!cancelled) setIsLoading(false);
+          return; // Ya está en la página correcta
+        }
+
+        if (cancelled) return;
 
         setFiscalState({
           suggested: authUser.fiscalStatus?.suggested || "",
@@ -179,11 +190,15 @@ export default function Dashboard() {
         // 2. Fetch subscription & fiscal status
         const { api } = await import("@/lib/api-service");
 
-        const status = await api.getSubscriptionStatus().catch(() => null);
+        // ✅ Forzar fetch sin cache para estado crítico
+        const status = await api.getSubscriptionStatus(true).catch(() => null);
+
+        if (cancelled) return;
 
         // CORREGIDO: Solo redirigir si PAST_DUE o SUSPENDED, NO durante GRACE_PERIOD o PENDING_VALIDATION
         if (status && status.internalStatus && (status.internalStatus === 'PAST_DUE' || status.internalStatus === 'SUSPENDED')) {
-          router.push("/pagos");
+          // ✅ Usar replace en vez de push para evitar historial
+          if (!cancelled) router.replace("/pagos");
           return;
         }
         // Si está en GRACE_PERIOD o PENDING_VALIDATION, permitir acceso parcial (mostrar banner)
@@ -317,24 +332,34 @@ export default function Dashboard() {
           setLexisContextualMessage("Aún no hay facturas. ¿Creamos la primera juntos?");
         }
       } catch (err: unknown) {
-        console.error("Dashboard Load Error:", err);
-        setError("Hubo un inconveniente técnico al cargar sus datos, nuestro equipo ha sido notificado.");
+        if (!cancelled) {
+          console.error("Dashboard Load Error:", err);
+          setError("Hubo un inconveniente técnico al cargar sus datos, nuestro equipo ha sido notificado.");
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadDashboardData();
 
     // Check for setup requirement from redirect
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("setup") === "required") {
-      toast.error("⚠️ Identidad Fiscal Requerida", {
-        description: "Confirma tu nombre fiscal para poder emitir comprobantes válidos.",
-        duration: 5000
-      });
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("setup") === "required") {
+        toast.error("⚠️ Identidad Fiscal Requerida", {
+          description: "Confirma tu nombre fiscal para poder emitir comprobantes válidos.",
+          duration: 5000
+        });
+      }
     }
-  }, [authUser]);
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser, router]);
 
   const handleRefresh = () => {
     const refresh = async () => {
@@ -607,13 +632,9 @@ export default function Dashboard() {
       <OnboardingWizard />
 
       {/* Botón flotante — Nueva Factura (solo desktop; en móvil usa el FAB circular del layout) */}
-      <Link
-        href="/nueva-factura"
-        className="hidden md:flex fixed bottom-6 right-6 z-50 items-center gap-2 h-14 px-6 rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/30 hover:bg-primary/90 hover:scale-105 active:scale-100 transition-all font-semibold text-base"
-      >
-        <Plus className="w-5 h-5" />
-        Nueva Factura
-      </Link>
+      <div className="hidden md:block fixed bottom-6 right-6 z-50">
+        <NewInvoiceButton variant="inline" className="h-14 px-6 rounded-2xl shadow-xl shadow-primary/30 hover:scale-105 active:scale-100 transition-all font-semibold text-base" />
+      </div>
     </div>
   );
 }

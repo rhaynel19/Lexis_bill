@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { LexisWord } from "@/components/LexisWord";
 import { LexisHelpPanel } from "@/components/LexisHelpPanel";
 import { useAuth } from "@/components/providers/AuthContext";
+import { NewInvoiceButton } from "@/components/NewInvoiceButton";
 import { cn } from "@/lib/utils";
 
 export default function ProtectedLayout({
@@ -173,11 +174,7 @@ export default function ProtectedLayout({
 
             {/* Mobile FAB (Floating Action Button) - bottom-28 evita solapamiento con barra nav */}
             <div className="fixed bottom-28 right-4 md:hidden z-50">
-                <Link href="/nueva-factura">
-                    <button className="h-14 w-14 bg-accent text-accent-foreground rounded-full shadow-xl shadow-amber-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all" aria-label="Nueva factura" title="Nueva factura">
-                        <Plus className="h-8 w-8" />
-                    </button>
-                </Link>
+                <NewInvoiceButton variant="fab" />
             </div>
 
             {/* Mobile Bottom Navigation Bar */}
@@ -231,10 +228,9 @@ function SidebarLinks({ isMobile = false, isAdmin = false, isPartner = false, on
                     <LayoutDashboard className="w-5 h-5 text-sidebar-primary" />
                     <span className="font-medium">Dashboard</span>
                 </Link>
-                <Link href="/nueva-factura" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold shadow-lg shadow-sidebar-primary/20 hover:scale-[1.02] transition-all")}>
-                    <Plus className="w-5 h-5" />
-                    <span>Nueva Factura</span>
-                </Link>
+                <div {...linkProps("")}>
+                    <NewInvoiceButton variant="sidebar" />
+                </div>
                 <div className="pt-4 pb-2 px-4 text-[10px] text-sidebar-foreground/50 uppercase tracking-widest font-bold border-t border-sidebar-border/30 mt-2">Documentos</div>
                 <Link href="/nueva-cotizacion" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors")}>
                     <FileText className="w-5 h-5 text-sidebar-foreground/60" />

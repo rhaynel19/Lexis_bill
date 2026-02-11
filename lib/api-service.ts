@@ -311,8 +311,20 @@ export const api = {
     },
 
     // Subscription & Payments
-    async getSubscriptionStatus() {
-        return secureFetch<any>(`${API_URL}/subscription/status`, { cacheKey: "subscription_status" });
+    async getSubscriptionStatus(forceRefresh = false) {
+        const cacheKey = forceRefresh ? undefined : "subscription_status";
+        const headers = forceRefresh ? { 'Cache-Control': 'no-cache' } : undefined;
+        return secureFetch<any>(`${API_URL}/subscription/status`, { 
+            cacheKey,
+            headers
+        });
+    },
+    
+    // ✅ Función para invalidar cache de suscripción
+    invalidateSubscriptionCache() {
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('cache_subscription_status');
+        }
     },
 
     async getPaymentHistory() {
@@ -352,12 +364,13 @@ export const api = {
         const body: Record<string, unknown> = { plan, billingCycle, paymentMethod };
         if (comprobanteImage) body.comprobanteImage = comprobanteImage;
         if (reference) body.reference = reference;
-        const res = await secureFetch<any>(`${API_URL}/membership/request-payment`, {
+        const res = await secureFetch<{ success: boolean; message: string; payment: any; subscription: any }>(`${API_URL}/membership/request-payment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
         });
-        if (typeof localStorage !== "undefined") localStorage.removeItem("cache_subscription_status");
+        // ✅ Invalidar cache de suscripción después de crear pago
+        this.invalidateSubscriptionCache();
         return res;
     },
 
@@ -367,11 +380,17 @@ export const api = {
     },
 
     async approvePayment(id: string) {
-        return secureFetch<any>(`${API_URL}/admin/approve-payment/${id}`, { method: "POST" });
+        const result = await secureFetch<any>(`${API_URL}/admin/approve-payment/${id}`, { method: "POST" });
+        // ✅ Invalidar cache después de aprobar pago (afecta suscripción)
+        this.invalidateSubscriptionCache();
+        return result;
     },
 
     async rejectPayment(id: string) {
-        return secureFetch<any>(`${API_URL}/admin/reject-payment/${id}`, { method: "POST" });
+        const result = await secureFetch<any>(`${API_URL}/admin/reject-payment/${id}`, { method: "POST" });
+        // ✅ Invalidar cache después de rechazar pago
+        this.invalidateSubscriptionCache();
+        return result;
     },
 
     async getAdminStats(query?: string) {

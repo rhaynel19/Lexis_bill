@@ -1722,9 +1722,18 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
             return res.status(400).json({ message: 'Método de pago inválido. Elige Transferencia o PayPal.' });
         }
 
+        // ✅ Validar comprobante ANTES de guardar
         if (paymentMethod === 'transferencia') {
-            if (!comprobanteImage || !comprobanteImage.startsWith('data:image/')) {
-                return res.status(400).json({ message: 'Debes subir el comprobante de transferencia para continuar.' });
+            if (!comprobanteImage || comprobanteImage.trim() === '') {
+                return res.status(400).json({ message: 'Debes subir un comprobante de transferencia' });
+            }
+            // ✅ Validar que sea una URL válida o base64
+            if (!comprobanteImage.startsWith('http') && !comprobanteImage.startsWith('data:image/') && !comprobanteImage.startsWith('data:')) {
+                return res.status(400).json({ message: 'Formato de comprobante inválido. Debe ser una imagen válida.' });
+            }
+            // ✅ Validar que tenga contenido (no solo prefijo)
+            if (comprobanteImage.startsWith('data:') && comprobanteImage.length < 100) {
+                return res.status(400).json({ message: 'El comprobante parece estar vacío. Intenta subirlo nuevamente.' });
             }
         }
 
@@ -1760,7 +1769,7 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
             });
         }
 
-        // Evento de billing
+        // ✅ Esperar evento (puede ser lento)
         await billingEventEmitter.emit('payment_uploaded', {
             userId: req.userId,
             paymentId: pr._id,
@@ -1770,11 +1779,27 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
             reference
         });
 
+        // ✅ Retornar estado actualizado de suscripción
+        const updatedStatus = await Subscription.findOne({ userId: req.userId });
+        
         res.status(201).json({
+            success: true,
             message: paymentMethod === 'paypal'
                 ? 'Tu solicitud fue registrada. Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).'
                 : 'Comprobante recibido. Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).',
-            paymentRequest: { id: pr._id, reference, plan, billingCycle: cycle, paymentMethod, status: 'pending' }
+            payment: {
+                id: pr._id,
+                reference,
+                plan,
+                billingCycle: cycle,
+                paymentMethod,
+                status: 'pending'
+            },
+            subscription: {
+                status: updatedStatus?.status || 'PENDING_PAYMENT',
+                plan: updatedStatus?.plan || plan,
+                currentPeriodEnd: updatedStatus?.currentPeriodEnd
+            }
         });
     } catch (e) {
         if (e.code === 11000) {
@@ -1792,7 +1817,15 @@ app.get('/api/admin/pending-payments', verifyToken, verifyAdmin, async (req, res
         const list = await PaymentRequest.find({
             status: 'pending',
             $or: [
-                { comprobanteImage: { $exists: true, $ne: null, $ne: '' } },
+                { 
+                    comprobanteImage: { 
+                        $exists: true, 
+                        $ne: null, 
+                        $ne: '',
+                        $type: 'string',
+                        $regex: /.+/ // Al menos un carácter
+                    }
+                },
                 { paymentMethod: 'paypal' }
             ]
         })
@@ -2228,12 +2261,22 @@ app.get('/api/admin/alerts', verifyToken, verifyAdmin, async (req, res) => {
                 role: { $ne: 'admin' },
                 $or: [{ lastLoginAt: null }, { lastLoginAt: { $lt: thirtyDaysAgo } }]
             }),
-            // CORREGIDO: Contar solo pagos con comprobante o PayPal (igual que en /api/admin/pending-payments)
+            // CORREGIDO: Contar solo pagos con comprobante válido o PayPal (igual que en /api/admin/pending-payments)
             PaymentRequest.countDocuments({
                 status: 'pending',
                 $or: [
-                    { comprobanteImage: { $exists: true, $ne: null, $ne: '' } },
-                    { paymentMethod: 'paypal' }
+                    { 
+                        comprobanteImage: { 
+                            $exists: true, 
+                            $ne: null, 
+                            $ne: '',
+                            $type: 'string',
+                            $regex: /.+/ // Al menos un carácter
+                        }
+                    },
+                    { 
+                        paymentMethod: 'paypal'
+                    }
                 ]
             }),
             User.countDocuments({ blocked: true })

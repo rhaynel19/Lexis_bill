@@ -21,6 +21,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useCallback } from "react";
+import { NewInvoiceButton } from "@/components/NewInvoiceButton";
 
 const LEXIS_COPILOT_COLLAPSED_KEY = "lexis-copilot-collapsed";
 const LEXIS_COPILOT_CACHE_KEY = "lexis-copilot-cache";
@@ -117,18 +118,37 @@ export function LexisBusinessCopilot() {
         setCollapsed(stored === "true");
     }, []);
 
-    const fetchWithRetry = useCallback(async (): Promise<BusinessCopilotData | null> => {
+    const fetchWithRetry = useCallback(async (signal?: AbortSignal): Promise<BusinessCopilotData | null> => {
         const { api } = await import("@/lib/api-service");
         for (let attempt = 0; attempt <= RETRY_ATTEMPTS; attempt++) {
+            if (signal?.aborted) throw new Error("cancelled");
+            
             try {
+                const timeoutId = setTimeout(() => {
+                    if (signal) signal.dispatchEvent(new Event('abort'));
+                }, REQUEST_TIMEOUT_MS);
+                
                 const res = await Promise.race([
                     api.getBusinessCopilot(),
-                    new Promise<never>((_, reject) =>
-                        setTimeout(() => reject(new Error("timeout")), REQUEST_TIMEOUT_MS)
-                    ),
+                    new Promise<never>((_, reject) => {
+                        if (signal) {
+                            signal.addEventListener('abort', () => {
+                                clearTimeout(timeoutId);
+                                reject(new Error("timeout"));
+                            });
+                        } else {
+                            setTimeout(() => {
+                                clearTimeout(timeoutId);
+                                reject(new Error("timeout"));
+                            }, REQUEST_TIMEOUT_MS);
+                        }
+                    }),
                 ]);
+                
+                clearTimeout(timeoutId);
                 return res;
-            } catch {
+            } catch (err: any) {
+                if (signal?.aborted || err.message === "cancelled") throw err;
                 if (attempt < RETRY_ATTEMPTS) {
                     await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
                 }
@@ -137,26 +157,130 @@ export function LexisBusinessCopilot() {
         return null;
     }, []);
 
-    const loadData = useCallback(async (userInitiated = false) => {
-        if (userInitiated) setIsRetrying(true);
+    useEffect(() => {
+        let cancelled = false;
+        let timeoutId: NodeJS.Timeout | null = null;
+        
+        const loadData = async () => {
+            setLoading(true);
+            setShowError(false);
+            setFromCache(false);
+            const startTime = Date.now();
+            
+            const controller = new AbortController();
+            
+            try {
+                const res = await fetchWithRetry(controller.signal);
+                
+                if (cancelled) return;
+                
+                const elapsed = Date.now() - startTime;
+                const minWaitRemaining = Math.max(0, MIN_LOADING_MS - elapsed);
+                
+                if (minWaitRemaining > 0) {
+                    await new Promise(r => {
+                        timeoutId = setTimeout(r, minWaitRemaining);
+                    });
+                }
+                
+                if (cancelled) return;
+                
+                if (res) {
+                    setData(res);
+                    setCachedData(res);
+                    setShowError(false);
+                } else {
+                    const cached = getCachedData();
+                    if (cached) {
+                        setData(cached);
+                        setFromCache(true);
+                        setShowError(true);
+                    } else {
+                        setData(null);
+                        setShowError(true);
+                    }
+                }
+            } catch (err: any) {
+                if (cancelled || err.message === "cancelled") return;
+                
+                const cached = getCachedData();
+                if (cached) {
+                    setData(cached);
+                    setFromCache(true);
+                    setShowError(true);
+                } else {
+                    setData(null);
+                    setShowError(true);
+                }
+            } finally {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            }
+        };
+        
+        loadData();
+        
+        return () => {
+            cancelled = true;
+            if (timeoutId) clearTimeout(timeoutId);
+        };
+    }, []); // ✅ Solo ejecutar una vez al montar
+
+    useEffect(() => {
+        if (!showError || loading) return;
+        
+        let cancelled = false;
+        const intervalId = setInterval(() => {
+            if (cancelled) return;
+            
+            fetchWithRetry().then(res => {
+                if (cancelled || !res) return;
+                setData(res);
+                setCachedData(res);
+                setFromCache(false);
+                setShowError(false);
+            }).catch(() => {
+                // Ignorar errores en retry automático
+            });
+        }, 15000);
+        
+        return () => {
+            cancelled = true;
+            clearInterval(intervalId);
+        };
+    }, [showError, loading]); // ✅ Sin fetchWithRetry en dependencias
+
+    const setCollapsedAndSave = (v: boolean) => {
+        setCollapsed(v);
+        try {
+            localStorage.setItem(LEXIS_COPILOT_COLLAPSED_KEY, String(v));
+        } catch { /* ignore */ }
+    };
+
+    const handleManualRetry = () => {
+        setIsRetrying(true);
         setLoading(true);
         setShowError(false);
         setFromCache(false);
-        const startTime = Date.now();
-
-        const res = await fetchWithRetry();
-
-        const elapsed = Date.now() - startTime;
-        const minWaitRemaining = Math.max(0, MIN_LOADING_MS - elapsed);
-        if (minWaitRemaining > 0) {
-            await new Promise(r => setTimeout(r, minWaitRemaining));
-        }
-
-        if (res) {
-            setData(res);
-            setCachedData(res);
-            setShowError(false);
-        } else {
+        
+        fetchWithRetry().then(res => {
+            if (res) {
+                setData(res);
+                setCachedData(res);
+                setShowError(false);
+            } else {
+                const cached = getCachedData();
+                if (cached) {
+                    setData(cached);
+                    setFromCache(true);
+                    setShowError(true);
+                } else {
+                    setData(null);
+                    setShowError(true);
+                }
+            }
+        }).catch(() => {
             const cached = getCachedData();
             if (cached) {
                 setData(cached);
@@ -166,38 +290,11 @@ export function LexisBusinessCopilot() {
                 setData(null);
                 setShowError(true);
             }
-        }
-        setLoading(false);
-        setIsRetrying(false);
-    }, [fetchWithRetry]);
-
-    useEffect(() => {
-        loadData(false);
-    }, []);
-
-    useEffect(() => {
-        if (!showError || loading) return;
-        const t = setInterval(() => {
-            fetchWithRetry().then(res => {
-                if (res) {
-                    setData(res);
-                    setCachedData(res);
-                    setFromCache(false);
-                    setShowError(false);
-                }
-            });
-        }, 15000);
-        return () => clearInterval(t);
-    }, [showError, loading, fetchWithRetry]);
-
-    const setCollapsedAndSave = (v: boolean) => {
-        setCollapsed(v);
-        try {
-            localStorage.setItem(LEXIS_COPILOT_COLLAPSED_KEY, String(v));
-        } catch { /* ignore */ }
+        }).finally(() => {
+            setLoading(false);
+            setIsRetrying(false);
+        });
     };
-
-    const handleManualRetry = () => loadData(true);
 
     if (loading && !data) {
         return (
@@ -589,11 +686,7 @@ export function LexisBusinessCopilot() {
                     )}
 
                     <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                        <Link href="/nueva-factura">
-                            <Button size="sm" className="bg-gradient-to-r from-slate-700 via-blue-600 to-violet-600 text-white border-0 hover:opacity-90">
-                                <FileText className="w-3.5 h-3.5 mr-1.5" /> Nueva factura
-                            </Button>
-                        </Link>
+                        <NewInvoiceButton variant="card" />
                         <Link href="/clientes">
                             <Button variant="outline" size="sm">Ver clientes</Button>
                         </Link>
@@ -609,11 +702,7 @@ export function LexisBusinessCopilot() {
                     <p className="text-sm text-slate-500 dark:text-slate-400 py-4">
                         Lexis analizará tu negocio cuando tengas facturas y clientes. Crea tu primera factura para comenzar.
                     </p>
-                    <Link href="/nueva-factura">
-                        <Button size="sm" className="bg-gradient-to-r from-slate-700 via-blue-600 to-violet-600 text-white border-0">
-                            Crear primera factura
-                        </Button>
-                    </Link>
+                    <NewInvoiceButton variant="card" />
                 </CardContent>
             )}
         </Card>
