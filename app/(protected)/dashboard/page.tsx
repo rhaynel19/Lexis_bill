@@ -181,10 +181,12 @@ export default function Dashboard() {
 
         const status = await api.getSubscriptionStatus().catch(() => null);
 
-        if (status && (status.status === 'Bloqueado' || status.graceDaysRemaining < 0)) {
+        // CORREGIDO: Solo redirigir si PAST_DUE o SUSPENDED, NO durante GRACE_PERIOD o PENDING_VALIDATION
+        if (status && status.internalStatus && (status.internalStatus === 'PAST_DUE' || status.internalStatus === 'SUSPENDED')) {
           router.push("/pagos");
           return;
         }
+        // Si está en GRACE_PERIOD o PENDING_VALIDATION, permitir acceso parcial (mostrar banner)
 
         // 3. Fetch Invoices from Server (paginado: 200 para stats del dashboard)
         const invRes = await api.getInvoices(1, 200);

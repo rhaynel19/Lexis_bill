@@ -541,6 +541,34 @@ adminAuditLogSchema.index({ createdAt: -1 });
 adminAuditLogSchema.index({ adminId: 1, createdAt: -1 });
 const AdminAuditLog = mongoose.models.AdminAuditLog || mongoose.model('AdminAuditLog', adminAuditLogSchema);
 
+// === SCHEMAS DE AUDITORÍA PARA PAGOS Y SUSCRIPCIONES ===
+const paymentAuditLogSchema = new mongoose.Schema({
+    paymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'PaymentRequest', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    statusBefore: { type: String, required: true },
+    statusAfter: { type: String, required: true },
+    changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // null si es automático
+    metadata: { type: mongoose.Schema.Types.Mixed },
+    timestamp: { type: Date, default: Date.now }
+});
+paymentAuditLogSchema.index({ paymentId: 1, timestamp: -1 });
+paymentAuditLogSchema.index({ userId: 1, timestamp: -1 });
+
+const subscriptionAuditLogSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    statusBefore: { type: String, required: true },
+    statusAfter: { type: String, required: true },
+    paymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'PaymentRequest' }, // Si fue por pago
+    changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // null si es automático
+    metadata: { type: mongoose.Schema.Types.Mixed },
+    timestamp: { type: Date, default: Date.now }
+});
+subscriptionAuditLogSchema.index({ userId: 1, timestamp: -1 });
+subscriptionAuditLogSchema.index({ paymentId: 1 });
+
+const PaymentAuditLog = mongoose.models.PaymentAuditLog || mongoose.model('PaymentAuditLog', paymentAuditLogSchema);
+const SubscriptionAuditLog = mongoose.models.SubscriptionAuditLog || mongoose.model('SubscriptionAuditLog', subscriptionAuditLogSchema);
+
 async function logAdminAction(adminId, action, targetType, targetId, metadata = {}) {
     try {
         const admin = await User.findById(adminId).select('email').lean();
@@ -554,6 +582,36 @@ async function logAdminAction(adminId, action, targetType, targetId, metadata = 
         });
     } catch (e) {
         log.warn({ err: e.message }, 'AdminAuditLog: error guardando');
+    }
+}
+
+async function logPaymentStatusChange(paymentId, userId, statusBefore, statusAfter, changedBy = null, metadata = {}) {
+    try {
+        await PaymentAuditLog.create({
+            paymentId,
+            userId,
+            statusBefore,
+            statusAfter,
+            changedBy,
+            metadata
+        });
+    } catch (e) {
+        log.warn({ err: e.message }, 'PaymentAuditLog: error guardando');
+    }
+}
+
+async function logSubscriptionStatusChange(userId, statusBefore, statusAfter, paymentId = null, changedBy = null, metadata = {}) {
+    try {
+        await SubscriptionAuditLog.create({
+            userId,
+            statusBefore,
+            statusAfter,
+            paymentId,
+            changedBy,
+            metadata
+        });
+    } catch (e) {
+        log.warn({ err: e.message }, 'SubscriptionAuditLog: error guardando');
     }
 }
 
@@ -1419,13 +1477,20 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
             status: 'pending'
         });
         await pr.save();
+        
+        // Log de auditoría: creación de pago
+        await logPaymentStatusChange(pr._id, req.userId, 'none', 'pending', null, { plan, billingCycle: cycle, paymentMethod, reference });
 
         const user = req.user;
+        const subscriptionStatusBefore = user.subscription?.status || user.subscriptionStatus || 'unknown';
         if (!user.subscription) user.subscription = {};
         user.subscription.plan = plan;
         user.subscription.status = 'pending';
         user.subscription.paymentMethod = paymentMethod;
         await user.save();
+        
+        // Log de auditoría: cambio de suscripción a pending
+        await logSubscriptionStatusChange(user._id, subscriptionStatusBefore, 'pending', pr._id, null, { plan, reason: 'Payment request created' });
 
         res.status(201).json({
             message: paymentMethod === 'paypal'
@@ -1503,11 +1568,18 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
         user.membershipLevel = pr.plan;
         await user.save();
 
+        const statusBefore = pr.status;
         pr.status = 'approved';
         pr.processedAt = now;
         pr.processedBy = req.userId;
         await pr.save();
+        
+        // Logs de auditoría
         await logAdminAction(req.userId, 'payment_approve', 'payment', pr._id.toString(), { userId: pr.userId?.toString() });
+        await logPaymentStatusChange(pr._id, pr.userId, statusBefore, 'approved', req.userId, { plan: pr.plan, billingCycle: pr.billingCycle });
+        
+        const subscriptionStatusBefore = user.subscription?.status || user.subscriptionStatus || 'unknown';
+        await logSubscriptionStatusChange(user._id, subscriptionStatusBefore, 'active', pr._id, req.userId, { plan: pr.plan, endDate: endDate });
 
         // Marcar referido como activo si es partner referral
         await PartnerReferral.findOneAndUpdate(
@@ -1546,11 +1618,15 @@ app.post('/api/admin/reject-payment/:id', verifyToken, verifyAdmin, async (req, 
             await user.save();
         }
 
+        const statusBefore = pr.status;
         pr.status = 'rejected';
         pr.processedAt = new Date();
         pr.processedBy = req.userId;
         await pr.save();
+        
+        // Logs de auditoría
         await logAdminAction(req.userId, 'payment_reject', 'payment', pr._id.toString(), { userId: pr.userId?.toString() });
+        await logPaymentStatusChange(pr._id, pr.userId, statusBefore, 'rejected', req.userId, { reason: 'Admin rejection' });
         res.json({ message: 'Solicitud rechazada.' });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -1857,7 +1933,14 @@ app.get('/api/admin/alerts', verifyToken, verifyAdmin, async (req, res) => {
                 role: { $ne: 'admin' },
                 $or: [{ lastLoginAt: null }, { lastLoginAt: { $lt: thirtyDaysAgo } }]
             }),
-            PaymentRequest.countDocuments({ status: 'pending' }),
+            // CORREGIDO: Contar solo pagos con comprobante o PayPal (igual que en /api/admin/pending-payments)
+            PaymentRequest.countDocuments({
+                status: 'pending',
+                $or: [
+                    { comprobanteImage: { $exists: true, $ne: null, $ne: '' } },
+                    { paymentMethod: 'paypal' }
+                ]
+            }),
             User.countDocuments({ blocked: true })
         ]);
 
@@ -2108,6 +2191,177 @@ app.post('/api/admin/partners/calculate-commissions', verifyToken, verifyAdmin, 
     } catch (e) {
         log.error({ err: e.message }, 'Error calculando comisiones');
         res.status(500).json({ message: 'Error al calcular comisiones', error: e.message });
+    }
+});
+
+// === SISTEMA DE RECONCILIACIÓN AUTOMÁTICA ===
+async function syncPayments() {
+    try {
+        const approvedPayments = await PaymentRequest.find({ status: 'approved' })
+            .populate('userId');
+        
+        let repaired = 0;
+        for (const payment of approvedPayments) {
+            const user = payment.userId;
+            if (!user) continue;
+            
+            const sub = getUserSubscription(user);
+            const now = new Date();
+            const endDate = payment.processedAt ? new Date(payment.processedAt) : new Date();
+            const daysToAdd = (payment.billingCycle === 'annual') ? 365 : 30;
+            endDate.setDate(endDate.getDate() + daysToAdd);
+            
+            // Si el pago está aprobado pero la suscripción no está activa, reparar
+            if (sub.status !== 'active' || user.subscriptionStatus !== 'Activo') {
+                const statusBefore = sub.status || user.subscriptionStatus || 'unknown';
+                
+                if (!user.subscription) user.subscription = {};
+                user.subscription.plan = payment.plan;
+                user.subscription.status = 'active';
+                user.subscription.paymentMethod = payment.paymentMethod;
+                user.subscription.startDate = payment.processedAt || new Date();
+                user.subscription.endDate = endDate;
+                user.expiryDate = endDate;
+                user.subscriptionStatus = 'Activo';
+                user.membershipLevel = payment.plan;
+                await user.save();
+                
+                await logSubscriptionStatusChange(user._id, statusBefore, 'active', payment._id, null, { 
+                    reason: 'Auto-reconciliation: payment approved but subscription inactive',
+                    plan: payment.plan 
+                });
+                repaired++;
+            }
+        }
+        return { repaired, total: approvedPayments.length };
+    } catch (e) {
+        log.error({ err: e.message }, 'Error en syncPayments');
+        throw e;
+    }
+}
+
+async function repairSubscriptions() {
+    try {
+        const users = await User.find({ 
+            role: { $ne: 'admin' },
+            $or: [
+                { 'subscription.status': 'pending' },
+                { subscriptionStatus: { $in: ['Bloqueado', 'Trial', 'Gracia'] } }
+            ]
+        });
+        
+        let repaired = 0;
+        for (const user of users) {
+            const pendingPayment = await PaymentRequest.findOne({ 
+                userId: user._id, 
+                status: 'approved' 
+            }).sort({ processedAt: -1 });
+            
+            if (pendingPayment) {
+                const sub = getUserSubscription(user);
+                if (sub.status !== 'active') {
+                    const statusBefore = sub.status || user.subscriptionStatus || 'unknown';
+                    const now = new Date();
+                    const endDate = pendingPayment.processedAt ? new Date(pendingPayment.processedAt) : now;
+                    const daysToAdd = (pendingPayment.billingCycle === 'annual') ? 365 : 30;
+                    endDate.setDate(endDate.getDate() + daysToAdd);
+                    
+                    if (!user.subscription) user.subscription = {};
+                    user.subscription.plan = pendingPayment.plan;
+                    user.subscription.status = 'active';
+                    user.subscription.paymentMethod = pendingPayment.paymentMethod;
+                    user.subscription.startDate = pendingPayment.processedAt || now;
+                    user.subscription.endDate = endDate;
+                    user.expiryDate = endDate;
+                    user.subscriptionStatus = 'Activo';
+                    user.membershipLevel = pendingPayment.plan;
+                    await user.save();
+                    
+                    await logSubscriptionStatusChange(user._id, statusBefore, 'active', pendingPayment._id, null, { 
+                        reason: 'Auto-repair: found approved payment',
+                        plan: pendingPayment.plan 
+                    });
+                    repaired++;
+                }
+            }
+        }
+        return { repaired, total: users.length };
+    } catch (e) {
+        log.error({ err: e.message }, 'Error en repairSubscriptions');
+        throw e;
+    }
+}
+
+async function refreshCounters() {
+    try {
+        // Limpiar caché de pagos pendientes
+        // El contador se recalcula en cada request de /api/admin/alerts
+        return { success: true };
+    } catch (e) {
+        log.error({ err: e.message }, 'Error en refreshCounters');
+        throw e;
+    }
+}
+
+// Endpoint para reconciliación manual (solo admins)
+app.post('/api/admin/reconcile', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const [paymentsResult, subscriptionsResult, countersResult] = await Promise.all([
+            syncPayments(),
+            repairSubscriptions(),
+            refreshCounters()
+        ]);
+        
+        await logAdminAction(req.userId, 'reconcile_system', 'system', 'all', {
+            paymentsRepaired: paymentsResult.repaired,
+            subscriptionsRepaired: subscriptionsResult.repaired
+        });
+        
+        res.json({
+            success: true,
+            message: 'Reconciliación completada',
+            results: {
+                payments: paymentsResult,
+                subscriptions: subscriptionsResult,
+                counters: countersResult
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Endpoint para reconciliación automática (cron job) - requiere secret
+app.post('/api/cron/reconcile', async (req, res) => {
+    try {
+        const cronSecret = process.env.CRON_SECRET || 'change-me-in-production';
+        const providedSecret = req.headers['x-cron-secret'] || req.body.secret;
+        
+        if (providedSecret !== cronSecret) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+        
+        const [paymentsResult, subscriptionsResult] = await Promise.all([
+            syncPayments(),
+            repairSubscriptions()
+        ]);
+        
+        log.info({ 
+            paymentsRepaired: paymentsResult.repaired, 
+            subscriptionsRepaired: subscriptionsResult.repaired 
+        }, 'Auto-reconciliation ejecutada');
+        
+        res.json({
+            success: true,
+            timestamp: new Date().toISOString(),
+            results: {
+                payments: paymentsResult,
+                subscriptions: subscriptionsResult
+            }
+        });
+    } catch (e) {
+        log.error({ err: e.message }, 'Error en auto-reconciliación');
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -4029,29 +4283,66 @@ app.post('/api/quotes/:id/convert', verifyToken, async (req, res) => {
     }
 });
 
-app.get('/api/subscription/status', verifyToken, (req, res) => {
-    const sub = req.subscription || getUserSubscription(req.user);
-    const now = new Date();
-    const endDate = sub.endDate ? new Date(sub.endDate) : req.user.expiryDate ? new Date(req.user.expiryDate) : null;
-    const diffDays = endDate ? Math.ceil((endDate - now) / (1000 * 60 * 60 * 24)) : 999;
-    const daysRemaining = Math.max(-999, diffDays);
-    const GRACE_DAYS = 5;
-    const daysPastEnd = daysRemaining < 0 ? Math.abs(daysRemaining) : 0;
-    const graceDaysRemaining = daysPastEnd > 0 ? Math.max(0, GRACE_DAYS - daysPastEnd) : GRACE_DAYS;
-    let displayStatus = 'Activo';
-    if (sub.status === 'expired' || daysRemaining <= 0) {
-        displayStatus = graceDaysRemaining > 0 ? 'Gracia' : 'Bloqueado';
-    } else if (daysRemaining <= 7) {
-        displayStatus = 'VencePronto';
+app.get('/api/subscription/status', verifyToken, async (req, res) => {
+    try {
+        const user = req.user;
+        const sub = req.subscription || getUserSubscription(user);
+        const now = new Date();
+        const endDate = sub.endDate ? new Date(sub.endDate) : user.expiryDate ? new Date(user.expiryDate) : null;
+        const diffDays = endDate ? Math.ceil((endDate - now) / (1000 * 60 * 60 * 24)) : 999;
+        const daysRemaining = Math.max(-999, diffDays);
+        const GRACE_DAYS = 5;
+        const daysPastEnd = daysRemaining < 0 ? Math.abs(daysRemaining) : 0;
+        const graceDaysRemaining = daysPastEnd > 0 ? Math.max(0, GRACE_DAYS - daysPastEnd) : GRACE_DAYS;
+        
+        // Estados claros según el sistema
+        let internalStatus = 'ACTIVE'; // ACTIVE, GRACE_PERIOD, PAST_DUE, PENDING_VALIDATION, SUSPENDED
+        let displayStatus = 'Activo';
+        
+        // Verificar si hay pago pendiente
+        const pendingPayment = await PaymentRequest.findOne({ 
+            userId: user._id, 
+            status: 'pending' 
+        });
+        
+        if (pendingPayment) {
+            internalStatus = 'PENDING_VALIDATION';
+            displayStatus = 'PendienteValidacion';
+        } else if (sub.status === 'pending') {
+            internalStatus = 'PENDING_VALIDATION';
+            displayStatus = 'PendienteValidacion';
+        } else if (sub.status === 'expired' || daysRemaining <= 0) {
+            if (graceDaysRemaining > 0) {
+                internalStatus = 'GRACE_PERIOD';
+                displayStatus = 'Gracia';
+            } else {
+                internalStatus = 'PAST_DUE';
+                displayStatus = 'Bloqueado';
+            }
+        } else if (daysRemaining <= 7 && daysRemaining > 0) {
+            internalStatus = 'ACTIVE';
+            displayStatus = 'VencePronto';
+        } else if (user.blocked) {
+            internalStatus = 'SUSPENDED';
+            displayStatus = 'Suspendido';
+        } else {
+            internalStatus = 'ACTIVE';
+            displayStatus = 'Activo';
+        }
+        
+        res.json({
+            plan: sub.plan,
+            status: displayStatus,
+            internalStatus, // Estado interno para lógica
+            expiryDate: endDate,
+            daysRemaining: Math.max(0, daysRemaining),
+            graceDaysRemaining: daysRemaining <= 0 ? graceDaysRemaining : null,
+            paymentMethod: sub.paymentMethod,
+            hasPendingPayment: !!pendingPayment
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
-    res.json({
-        plan: sub.plan,
-        status: displayStatus,
-        expiryDate: endDate,
-        daysRemaining: Math.max(0, daysRemaining),
-        graceDaysRemaining: daysRemaining <= 0 ? graceDaysRemaining : null,
-        paymentMethod: sub.paymentMethod
-    });
 });
 
 // Final export for Vercel

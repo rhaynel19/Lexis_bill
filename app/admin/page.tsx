@@ -10,7 +10,7 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
-import { CreditCard, Check, X, Loader2, RefreshCw, AlertCircle, ImageIcon, Search, ArrowLeft, AlertTriangle, Clock, Lock } from "lucide-react";
+import { CreditCard, Check, X, Loader2, RefreshCw, AlertCircle, ImageIcon, Search, ArrowLeft, AlertTriangle, Clock, Lock, Wrench } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useMemo } from "react";
@@ -24,6 +24,7 @@ export default function AdminPagosPendientes() {
     const [comprobanteView, setComprobanteView] = useState<string | null>(null);
     const [searchRef, setSearchRef] = useState("");
     const [alerts, setAlerts] = useState<Array<{ type: string; count: number; severity: string; message: string }>>([]);
+    const [isReconciling, setIsReconciling] = useState(false);
 
     const fetchPayments = async () => {
         try {
@@ -45,6 +46,25 @@ export default function AdminPagosPendientes() {
             setAlerts(res?.alerts ?? []);
         } catch {
             setAlerts([]);
+        }
+    };
+
+    const handleReconcile = async () => {
+        setIsReconciling(true);
+        try {
+            const { api } = await import("@/lib/api-service");
+            const res = await api.reconcileSystem();
+            toast.success(res?.message || "Reconciliación completada");
+            if (res?.results) {
+                const { payments, subscriptions } = res.results;
+                toast.info(`Pagos reparados: ${payments.repaired}/${payments.total}. Suscripciones reparadas: ${subscriptions.repaired}/${subscriptions.total}`);
+            }
+            fetchPayments();
+            fetchAlerts();
+        } catch (e: any) {
+            toast.error(e?.message || "Error al reconciliar");
+        } finally {
+            setIsReconciling(false);
         }
     };
 
@@ -144,6 +164,15 @@ export default function AdminPagosPendientes() {
                     </p>
                 </div>
                 <div className="flex gap-2">
+                    <Button 
+                        variant="outline" 
+                        className="gap-2 border-blue-500/50 text-blue-600 hover:bg-blue-50" 
+                        onClick={handleReconcile}
+                        disabled={isReconciling}
+                    >
+                        <Wrench className={`w-4 h-4 ${isReconciling ? "animate-spin" : ""}`} />
+                        Reconciliar
+                    </Button>
                     <Link href="/admin/dashboard">
                         <Button variant="outline">Ver Estadísticas</Button>
                     </Link>

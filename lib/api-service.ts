@@ -625,4 +625,10 @@ export const api = {
             body: JSON.stringify(data || {}),
         });
     },
+
+    async reconcileSystem() {
+        return secureFetch<{ success: boolean; message: string; results: { payments: { repaired: number; total: number }; subscriptions: { repaired: number; total: number }; counters: { success: boolean } } }>(`${API_URL}/admin/reconcile`, {
+            method: "POST",
+        });
+    },
 };
