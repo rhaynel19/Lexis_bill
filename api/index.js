@@ -3162,6 +3162,9 @@ app.get('/api/admin/metrics', verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // --- LEXIS BUSINESS COPILOT: Analytics inteligente (sin IA externa) ---
+// Importar BillingBrain
+const { BillingBrain, INSIGHT_PRIORITY } = require('./services/billing-brain');
+
 app.get('/api/business-copilot', verifyToken, async (req, res) => {
     const requestId = `copilot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const startTime = Date.now();
@@ -3499,6 +3502,13 @@ app.get('/api/business-copilot', verifyToken, async (req, res) => {
         else if (healthScore < 70) healthLabel = 'Estable';
         else if (healthScore < 90) healthLabel = 'Bueno';
 
+        // 🔥 BILLING BRAIN: Generar insights proactivos
+        const brain = new BillingBrain(userId, allInvoices, customers, ncfSettings);
+        const brainInsights = await brain.analyze();
+        
+        // Limitar insights a máximo 2 por sesión (evitar saturación)
+        const topInsights = brainInsights.slice(0, 2);
+
         res.json({
             alerts,
             clientRadar,
@@ -3526,7 +3536,9 @@ app.get('/api/business-copilot', verifyToken, async (req, res) => {
                 totalPendiente: totalBalancePendiente,
                 clientes: morosityList.slice(0, 10),
                 riesgoGeneral: totalBalancePendiente > 100000 ? 'alto' : totalBalancePendiente > 30000 ? 'medio' : totalBalancePendiente > 0 ? 'bajo' : 'ninguno'
-            }
+            },
+            // 🔥 Insights proactivos del Billing Brain
+            proactiveInsights: topInsights
         });
         log.info({
             requestId,

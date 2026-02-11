@@ -17,10 +17,12 @@ import {
     Radar,
     DollarSign,
     RefreshCw,
+    ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useCallback } from "react";
+import { motion } from "framer-motion";
 import { NewInvoiceButton } from "@/components/NewInvoiceButton";
 
 const LEXIS_COPILOT_COLLAPSED_KEY = "lexis-copilot-collapsed";
@@ -30,6 +32,22 @@ const MIN_LOADING_MS = 6000; // No mostrar error antes de 6 segundos
 const REQUEST_TIMEOUT_MS = 12000;
 const RETRY_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 2000;
+
+export interface ProactiveInsight {
+    id: string;
+    priority: 'critical' | 'important' | 'opportunity';
+    type: string;
+    title: string;
+    message: string;
+    humanMessage: string;
+    action: {
+        label: string;
+        url: string;
+        type: string;
+        data?: any;
+    };
+    metadata?: any;
+}
 
 export interface BusinessCopilotData {
     insufficientData?: boolean;
@@ -50,6 +68,7 @@ export interface BusinessCopilotData {
         clientes: Array<{ rnc: string; clientName: string; totalPendiente: number; facturasVencidas: number; diasMayorAntiguedad: number; nivel: string }>;
         riesgoGeneral: string;
     };
+    proactiveInsights?: ProactiveInsight[];
 }
 
 const formatCurrency = (n: number) =>
@@ -474,6 +493,71 @@ export function LexisBusinessCopilot() {
                     )}
                 </div>
             </CardHeader>
+
+            {/* 🔥 INSIGHTS PROACTIVOS DEL BILLING BRAIN */}
+            {data.proactiveInsights && data.proactiveInsights.length > 0 && (
+                <div className="px-6 pb-4 space-y-3">
+                    {data.proactiveInsights.map((insight) => {
+                        const priorityColors = {
+                            critical: "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/40 text-red-900 dark:text-red-100",
+                            important: "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 text-amber-900 dark:text-amber-100",
+                            opportunity: "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/40 text-blue-900 dark:text-blue-100"
+                        };
+                        const priorityIcons = {
+                            critical: AlertTriangle,
+                            important: AlertTriangle,
+                            opportunity: Zap
+                        };
+                        const Icon = priorityIcons[insight.priority] || Activity;
+
+                        return (
+                            <motion.div
+                                key={insight.id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className={cn(
+                                    "rounded-xl border p-4 flex items-start gap-3 transition-all",
+                                    priorityColors[insight.priority]
+                                )}
+                            >
+                                <div className={cn(
+                                    "p-2 rounded-lg shrink-0",
+                                    insight.priority === 'critical' && "bg-red-100 dark:bg-red-900/40",
+                                    insight.priority === 'important' && "bg-amber-100 dark:bg-amber-900/40",
+                                    insight.priority === 'opportunity' && "bg-blue-100 dark:bg-blue-900/40"
+                                )}>
+                                    <Icon className={cn(
+                                        "w-5 h-5",
+                                        insight.priority === 'critical' && "text-red-600 dark:text-red-400",
+                                        insight.priority === 'important' && "text-amber-600 dark:text-amber-400",
+                                        insight.priority === 'opportunity' && "text-blue-600 dark:text-blue-400"
+                                    )} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="font-semibold text-sm mb-1">{insight.title}</h4>
+                                    <p className="text-sm opacity-90 mb-3">{insight.humanMessage}</p>
+                                    {insight.action && (
+                                        <Link href={insight.action.url}>
+                                            <Button
+                                                size="sm"
+                                                className={cn(
+                                                    "gap-2",
+                                                    insight.priority === 'critical' && "bg-red-600 hover:bg-red-700 text-white",
+                                                    insight.priority === 'important' && "bg-amber-600 hover:bg-amber-700 text-white",
+                                                    insight.priority === 'opportunity' && "bg-blue-600 hover:bg-blue-700 text-white"
+                                                )}
+                                            >
+                                                {insight.action.label}
+                                                <ArrowRight className="w-3.5 h-3.5" />
+                                            </Button>
+                                        </Link>
+                                    )}
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </div>
+            )}
 
             {!collapsed && hasContent && (
                 <CardContent className="pt-0 space-y-6">
