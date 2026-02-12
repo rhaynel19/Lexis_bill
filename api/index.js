@@ -1834,6 +1834,30 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
     }
 });
 
+// Historial de pagos del usuario (pendientes + aprobados) para UI con feedback inmediato
+app.get('/api/payments/history', verifyToken, async (req, res) => {
+    try {
+        const list = await PaymentRequest.find({ userId: req.userId })
+            .sort({ requestedAt: -1 })
+            .limit(100)
+            .lean();
+        const planPrices = { pro: { monthly: MEMBERSHIP_PLANS.pro?.priceMonthly ?? 950, annual: MEMBERSHIP_PLANS.pro?.priceAnnual ?? 9500 } };
+        const items = list.map((p) => {
+            const amount = (p.plan && planPrices[p.plan]) ? (p.billingCycle === 'annual' ? planPrices[p.plan].annual : planPrices[p.plan].monthly) : 0;
+            return {
+                id: p._id.toString(),
+                reference: p.reference,
+                amount,
+                date: p.processedAt || p.requestedAt,
+                status: p.status
+            };
+        });
+        res.json(items);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // --- ADMIN: Pagos pendientes y validación ---
 // Solo mostrar solicitudes con evidencia: comprobante (transfer) o paypal (confirmación).
 // Excluye registros legacy sin comprobante creados por prepare-transfer antiguo.

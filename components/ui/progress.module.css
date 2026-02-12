@@ -1,0 +1,8 @@
+/* Barra de progreso interior: ancho controlado por variable CSS (se setea desde JS) */
+.progressBar {
+  height: 100%;
+  width: var(--progress-width, 0%);
+  flex: 1;
+  background-color: var(--primary);
+  transition: width 0.3s ease-in-out;
+}

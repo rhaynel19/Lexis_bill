@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import styles from "./progress.module.css";
 
 interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
     value?: number;
@@ -11,7 +12,14 @@ interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
 const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
     ({ className, value = 0, max = 100, ...props }, ref) => {
         const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
-        
+        const barRef = React.useRef<HTMLDivElement>(null);
+
+        React.useLayoutEffect(() => {
+            if (barRef.current) {
+                barRef.current.style.setProperty("--progress-width", `${percentage}%`);
+            }
+        }, [percentage]);
+
         return (
             <div
                 ref={ref}
@@ -21,10 +29,7 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
                 )}
                 {...props}
             >
-            <div
-                className="h-full w-full flex-1 bg-primary transition-all duration-300 ease-in-out"
-                style={{ width: `${percentage}%` }}
-            />
+                <div ref={barRef} className={styles.progressBar} />
             </div>
         );
     }

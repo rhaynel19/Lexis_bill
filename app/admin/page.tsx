@@ -73,6 +73,14 @@ export default function AdminPagosPendientes() {
         fetchAlerts();
     }, []);
 
+    // Polling: nuevas solicitudes aparecen sin refrescar (cada 20s)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            fetchPayments();
+        }, 20000);
+        return () => clearInterval(interval);
+    }, []);
+
     const handleApprove = async (id: string) => {
         setProcessingId(id);
         try {

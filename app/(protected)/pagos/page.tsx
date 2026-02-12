@@ -90,7 +90,7 @@ export default function PaymentsPage() {
 
             {/* Membresía: planes, método de pago, "He realizado el pago" */}
             <div className="mb-8">
-                <MembershipConfig />
+                <MembershipConfig onPaymentReported={loadData} />
             </div>
 
             <h2 className="text-lg font-semibold mb-4">Historial y Estado</h2>
@@ -143,39 +143,50 @@ export default function PaymentsPage() {
                                         <EmptyState
                                             icon={CreditCard}
                                             title="Sin pagos registrados"
-                                            description="Cuando actives tu membresía Pro, los pagos aparecerán aquí. ¿Te ayudo a elegir tu plan?"
+                                            description="Cuando reportes un pago, aparecerá aquí con estado «Pendiente de validación». Los aprobados se marcarán como completados."
                                         />
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                history.map((payment, i) => (
-                                    <TableRow key={i} className="hover:bg-slate-50 transition-colors border-slate-50">
-                                        <TableCell className="font-medium text-slate-600">
-                                            {new Date(payment.date).toLocaleDateString()}
-                                        </TableCell>
-                                        <TableCell className="font-mono text-xs text-slate-400">
-                                            {payment.reference}
-                                        </TableCell>
-                                        <TableCell className="font-bold text-slate-900">
-                                            RD$ {payment.amount.toLocaleString()}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge className="bg-emerald-50 text-emerald-700 border-none shadow-none font-bold text-[10px]">
-                                                COMPLETADO
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-primary hover:text-primary hover:bg-blue-50 gap-2"
-                                                onClick={() => handleDownloadReceipt(payment)}
-                                            >
-                                                <Download className="w-4 h-4" /> Recibo
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                history.map((payment, i) => {
+                                    const isPending = payment.status === "pending" || payment.status === "under_review";
+                                    return (
+                                        <TableRow key={payment.id || i} className="hover:bg-slate-50 transition-colors border-slate-50">
+                                            <TableCell className="font-medium text-slate-600">
+                                                {payment.date ? new Date(payment.date).toLocaleDateString() : "—"}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-xs text-slate-400">
+                                                {payment.reference}
+                                            </TableCell>
+                                            <TableCell className="font-bold text-slate-900">
+                                                RD$ {Number(payment.amount || 0).toLocaleString()}
+                                            </TableCell>
+                                            <TableCell>
+                                                {isPending ? (
+                                                    <Badge className="bg-amber-50 text-amber-700 border-amber-200 font-bold text-[10px]">
+                                                        Pendiente de validación
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge className="bg-emerald-50 text-emerald-700 border-none shadow-none font-bold text-[10px]">
+                                                        COMPLETADO
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {!isPending && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-primary hover:text-primary hover:bg-blue-50 gap-2"
+                                                        onClick={() => handleDownloadReceipt(payment)}
+                                                    >
+                                                        <Download className="w-4 h-4" /> Recibo
+                                                    </Button>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
                             )}
                         </TableBody>
                     </Table>
@@ -189,7 +200,7 @@ export default function PaymentsPage() {
                 <div>
                     <h4 className="font-bold text-slate-900 text-sm">Tu suscripción está segura</h4>
                     <p className="text-xs text-slate-500 leading-relaxed mt-1">
-                        Validamos los pagos en 24-48 horas. Para cualquier duda, contacta a soporte.
+                        Validamos los pagos en menos de 24 horas. Cualquier duda, contacta a soporte.
                     </p>
                 </div>
             </div>

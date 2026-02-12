@@ -13,7 +13,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; dot: string 
     expired: { label: "Expirado", color: "text-red-600", dot: "🔴" },
 };
 
-export function MembershipConfig() {
+export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: () => void } = {}) {
     const [plans, setPlans] = useState<any[]>([]);
     const [paymentInfo, setPaymentInfo] = useState<{ bankName: string; bankAccount: string; paypalEmail: string } | null>(null);
     const [subscription, setSubscription] = useState<any>(null);
@@ -26,6 +26,7 @@ export function MembershipConfig() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [transferReference, setTransferReference] = useState<{ reference: string } | null>(null);
+    const [paymentReportedState, setPaymentReportedState] = useState<{ reference: string } | null>(null);
 
     useEffect(() => {
         const load = async () => {
@@ -89,18 +90,23 @@ export function MembershipConfig() {
         setIsSubmitting(true);
         try {
             const { api } = await import("@/lib/api-service");
-            await api.requestMembershipPayment(
+            const res = await api.requestMembershipPayment(
                 selectedPlan,
                 selectedBilling,
                 selectedMethod,
                 selectedMethod === "transferencia" ? comprobante || undefined : undefined,
                 selectedMethod === "transferencia" ? transferReference?.reference : undefined
             );
-            toast.success("Solicitud registrada. Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).");
+            const reference = res?.payment?.reference || transferReference?.reference || "";
+            setPaymentReportedState({ reference });
+            if (res?.subscription) setSubscription(res.subscription);
+            else {
+                const status = await api.getSubscriptionStatus();
+                setSubscription(status);
+            }
             setComprobante(null);
             setPaypalConfirmed(false);
-            const status = await api.getSubscriptionStatus();
-            setSubscription(status);
+            onPaymentReported?.();
         } catch (e: unknown) {
             const msg = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "Error al registrar solicitud.";
             toast.error(msg);
@@ -328,9 +334,11 @@ export function MembershipConfig() {
                                         </div>
                                     )}
                                 </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Debes subir el comprobante antes de continuar.
-                                </p>
+                                {!comprobante && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Debes subir el comprobante antes de continuar.
+                                    </p>
+                                )}
                                 <p className="text-xs text-slate-500 italic border-l-2 border-amber-300 pl-3">
                                     Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).
                                 </p>
@@ -409,33 +417,65 @@ export function MembershipConfig() {
                                     </span>
                                 </label>
 
-                                <p className="text-xs text-muted-foreground">
-                                    Debes confirmar antes de continuar.
-                                </p>
+                                {!paypalConfirmed && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Debes confirmar antes de continuar.
+                                    </p>
+                                )}
                                 <p className="text-xs text-slate-500 italic border-l-2 border-amber-300 pl-3">
                                     Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).
                                 </p>
                             </div>
                         )}
 
-                        {canSubmit && (
+                        {canSubmit && !paymentReportedState && !hasPending && (
                             <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/50 space-y-1 text-sm">
                                 <p className="font-medium text-slate-700">Resumen de tu solicitud</p>
                                 <p className="text-slate-600">Plan Profesional • {selectedBilling === "annual" ? "Anual" : "Mensual"} • RD$ {selectedPrice.toLocaleString()} • {selectedMethod === "transferencia" ? "Transferencia" : "PayPal"}</p>
                                 <p className="text-xs text-amber-700 mt-1">Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).</p>
                             </div>
                         )}
-                        <Button
-                            onClick={handleRequestPayment}
-                            disabled={isSubmitting || hasPending || !canSubmit}
-                            className="w-full bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isSubmitting ? (
-                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
-                            ) : (
-                                <><CheckCircle2 className="w-4 h-4 mr-2" /> He realizado el pago</>
-                            )}
-                        </Button>
+
+                        {/* Pantalla de tranquilidad: se muestra inmediatamente después de reportar */}
+                        {(paymentReportedState || hasPending) && (
+                            <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50/80 p-5 space-y-3 animate-in fade-in duration-200">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-white">
+                                        <CheckCircle2 className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-emerald-900">Pago reportado correctamente</p>
+                                        <p className="text-sm text-emerald-800">
+                                            Nuestro equipo lo validará en menos de 24 horas. Te notificaremos cuando tu plan esté activo.
+                                        </p>
+                                    </div>
+                                </div>
+                                {paymentReportedState?.reference && (
+                                    <p className="text-xs text-emerald-700 font-mono">Referencia: {paymentReportedState.reference}</p>
+                                )}
+                            </div>
+                        )}
+
+                        {!paymentReportedState && !hasPending && (
+                            <Button
+                                onClick={handleRequestPayment}
+                                disabled={isSubmitting || !canSubmit}
+                                className="w-full bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
+                            >
+                                {isSubmitting ? (
+                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
+                                ) : (
+                                    <><CheckCircle2 className="w-4 h-4 mr-2" /> He realizado el pago</>
+                                )}
+                            </Button>
+                        )}
+
+                        {(paymentReportedState || hasPending) && (
+                            <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-sm font-medium">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                Pago reportado • En validación
+                            </div>
+                        )}
                     </>
                 )}
 

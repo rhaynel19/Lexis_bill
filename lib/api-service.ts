@@ -369,9 +369,16 @@ export const api = {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
         });
-        // ✅ Invalidar cache de suscripción después de crear pago
+        // ✅ Invalidar cache de suscripción y historial después de crear pago
         this.invalidateSubscriptionCache();
+        this.invalidatePaymentHistoryCache();
         return res;
+    },
+
+    invalidatePaymentHistoryCache() {
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('cache_payment_history');
+        }
     },
 
     // Admin - pagos pendientes y validación
