@@ -1781,7 +1781,8 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
             status: 'pending'
         });
         await pr.save();
-        
+        log.info({ paymentId: pr._id, userId: req.userId, reference, plan, paymentMethod }, 'PaymentRequest creado; aparecerá en admin/pagos pendientes');
+
         // Log de auditoría: creación de pago
         await logPaymentStatusChange(pr._id, req.userId, 'none', 'pending', null, { plan, billingCycle: cycle, paymentMethod, reference });
 
@@ -1859,26 +1860,12 @@ app.get('/api/payments/history', verifyToken, async (req, res) => {
 });
 
 // --- ADMIN: Pagos pendientes y validación ---
-// Solo mostrar solicitudes con evidencia: comprobante (transfer) o paypal (confirmación).
-// Excluye registros legacy sin comprobante creados por prepare-transfer antiguo.
+// Mostrar TODAS las solicitudes pending/under_review (últimos 90 días). Sin filtrar por comprobante
+// para evitar que ninguna solicitud creada por el usuario quede oculta en el panel.
 app.get('/api/admin/pending-payments', verifyToken, verifyAdmin, async (req, res) => {
     try {
-        // ✅ CORREGIDO: Solo contar pagos con estado PENDING o UNDER_REVIEW y con comprobante válido
         const list = await PaymentRequest.find({
-            status: { $in: ['pending', 'under_review'] }, // ✅ Incluir UNDER_REVIEW
-            $or: [
-                { 
-                    comprobanteImage: { 
-                        $exists: true, 
-                        $ne: null, 
-                        $ne: '',
-                        $type: 'string',
-                        $regex: /.+/ // Al menos un carácter
-                    }
-                },
-                { paymentMethod: 'paypal' }
-            ],
-            // ✅ Excluir pagos muy antiguos (más de 90 días) que pueden estar obsoletos
+            status: { $in: ['pending', 'under_review'] },
             requestedAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) }
         })
             .populate('userId', 'name email rnc')
@@ -2332,24 +2319,8 @@ app.get('/api/admin/alerts', verifyToken, verifyAdmin, async (req, res) => {
                 role: { $ne: 'admin' },
                 $or: [{ lastLoginAt: null }, { lastLoginAt: { $lt: thirtyDaysAgo } }]
             }),
-            // ✅ CORREGIDO: Contar solo pagos con estado PENDING o UNDER_REVIEW, comprobante válido o PayPal, y recientes
             PaymentRequest.countDocuments({
-                status: { $in: ['pending', 'under_review'] }, // ✅ Incluir UNDER_REVIEW
-                $or: [
-                    { 
-                        comprobanteImage: { 
-                            $exists: true, 
-                            $ne: null, 
-                            $ne: '',
-                            $type: 'string',
-                            $regex: /.+/ // Al menos un carácter
-                        }
-                    },
-                    { 
-                        paymentMethod: 'paypal'
-                    }
-                ],
-                // ✅ Excluir pagos muy antiguos (más de 90 días)
+                status: { $in: ['pending', 'under_review'] },
                 requestedAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) }
             }),
             User.countDocuments({ blocked: true })
@@ -3073,11 +3044,8 @@ app.get('/api/admin/stats', verifyToken, verifyAdmin, async (req, res) => {
             Invoice.find({ status: { $ne: 'cancelled' }, date: { $gte: startOfMonth, $lte: endOfMonth } }),
             Expense.find({}),
             PaymentRequest.countDocuments({
-                status: 'pending',
-                $or: [
-                    { comprobanteImage: { $exists: true, $ne: null, $ne: '' } },
-                    { paymentMethod: 'paypal' }
-                ]
+                status: { $in: ['pending', 'under_review'] },
+                requestedAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) }
             }),
             User.aggregate([
                 { $project: { plan: { $ifNull: ['$subscription.plan', { $ifNull: ['$membershipLevel', 'free'] }] } } },
@@ -3192,11 +3160,8 @@ app.get('/api/admin/metrics', verifyToken, verifyAdmin, async (req, res) => {
             User.countDocuments({ $or: [{ 'subscription.plan': 'pro' }, { membershipLevel: 'pro' }], role: { $ne: 'admin' } }),
             PaymentRequest.find({ status: 'approved' }).sort({ processedAt: -1 }),
             PaymentRequest.countDocuments({
-                status: 'pending',
-                $or: [
-                    { comprobanteImage: { $exists: true, $ne: null, $ne: '' } },
-                    { paymentMethod: 'paypal' }
-                ]
+                status: { $in: ['pending', 'under_review'] },
+                requestedAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) }
             }),
             User.countDocuments({
                 role: { $ne: 'admin' },

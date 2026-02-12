@@ -71,9 +71,19 @@ La UI traduce:
 
 ---
 
+## Corrección: pagos que no aparecían en admin
+
+**Problema:** En admin, "Solicitudes pendientes de validación" podía mostrar "No hay pagos pendientes" aunque el usuario hubiera reportado un pago.
+
+**Causa:** La consulta de `GET /api/admin/pending-payments` filtraba por comprobante válido (`$regex`, `$type: 'string'`) o PayPal. Cualquier caso límite (imagen muy grande, formato, etc.) hacía que el pago no apareciera.
+
+**Solución:** La consulta se simplificó: se listan **todas** las solicitudes con `status` en `['pending', 'under_review']` y `requestedAt` en los últimos 90 días, sin filtrar por comprobante. Así toda solicitud creada con "He realizado el pago" aparece en el panel. La misma lógica se aplicó a alertas, stats y metrics de admin.
+
+---
+
 ## Archivos tocados
 
-- `api/index.js`: nuevo `GET /api/payments/history`; lógica de request-payment sin cambios.
+- `api/index.js`: nuevo `GET /api/payments/history`; request-payment con log de creación; consultas de admin pending-payments/alerts/stats/metrics simplificadas (sin filtro por comprobante).
 - `lib/api-service.ts`: `invalidatePaymentHistoryCache()` y su uso tras `requestMembershipPayment`.
 - `components/MembershipConfig.tsx`: estado `paymentReportedState`, pantalla de tranquilidad, estado "Pago reportado • En validación", callback `onPaymentReported`, mensajes condicionados a comprobante/PayPal.
 - `app/(protected)/pagos/page.tsx`: `onPaymentReported={loadData}`, historial con badge por estado, texto del empty state y de "Tu suscripción está segura".
