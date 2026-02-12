@@ -232,7 +232,7 @@ export default function AdminUsuariosPage() {
         const rows = list.map((u) => {
             const days = getDaysUntilBlock(u);
             return [
-                u.name ?? "",
+                displayName(u),
                 u.email ?? "",
                 u.rnc ?? "",
                 roleLabel[u.role] ?? u.role,
@@ -417,7 +417,7 @@ export default function AdminUsuariosPage() {
                                                 className="cursor-pointer hover:bg-muted/50"
                                                 onClick={() => handleOpenDetail(u)}
                                             >
-                                                <TableCell className="font-medium">{u.name || "—"}</TableCell>
+                                                <TableCell className="font-medium">{displayName(u)}</TableCell>
                                                 <TableCell className="text-muted-foreground">{u.email || "—"}</TableCell>
                                                 <TableCell className="font-mono text-xs">{u.rnc || "—"}</TableCell>
                                                 <TableCell>
@@ -569,7 +569,7 @@ export default function AdminUsuariosPage() {
                         <div className="mt-6 space-y-6">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Nombre</p>
-                                <p className="font-medium">{detailData.name || "—"}</p>
+                                <p className="font-medium">{displayName(detailData)}</p>
                             </div>
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Email</p>

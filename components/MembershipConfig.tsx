@@ -9,7 +9,9 @@ import { toast } from "sonner";
 
 const STATUS_LABELS: Record<string, { label: string; color: string; dot: string }> = {
     active: { label: "Activo", color: "text-green-600", dot: "🟢" },
+    Activo: { label: "Activo", color: "text-green-600", dot: "🟢" },
     pending: { label: "Pendiente de pago", color: "text-amber-600", dot: "🟡" },
+    PendienteValidacion: { label: "Pendiente de validación", color: "text-amber-600", dot: "🟡" },
     expired: { label: "Expirado", color: "text-red-600", dot: "🔴" },
 };
 
@@ -55,7 +57,12 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
     const proPlan = plans.find((p: any) => p.id === "pro");
     const hasPro = proPlan?.available !== false;
     const selectedPrice = selectedBilling === "annual" ? (proPlan?.priceAnnual ?? 9500) : (proPlan?.priceMonthly ?? 950);
-    const hasPending = subscription?.status === "pending";
+    const hasPending = !!(
+        subscription?.hasPendingPayment ||
+        subscription?.internalStatus === "PENDING_PAYMENT" ||
+        subscription?.status === "pending" ||
+        subscription?.status === "PendienteValidacion"
+    );
 
     useEffect(() => {
         if (selectedMethod !== "transferencia" || selectedPlan === "free" || hasPending) {
