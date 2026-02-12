@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldCheck, Zap, Smartphone, Menu } from "lucide-react";
+import { FileCheck, BarChart3, Smartphone, Menu, Zap, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 export default function LandingPage() {
@@ -103,35 +103,35 @@ export default function LandingPage() {
                             <span className="text-lexis-gold">inteligencia fiscal.</span>
                         </h2>
                         <p className="text-slate-400 max-w-2xl mx-auto font-light">
-                            Mientras otros sistemas te confunden con términos extranjeros, Lexis Bill está construido desde cero pensando en la DGII y la realidad de nuestro país.
+                            Pensado para la DGII y la realidad dominicana. Sin términos confusos: facturación, reportes y cobros en un solo lugar.
                         </p>
                     </div>
-                    <div className="grid md:grid-cols-3 gap-16">
+                    <div className="grid md:grid-cols-3 gap-12 lg:gap-16">
                         <div className="text-center space-y-6 group cursor-default">
                             <div className="w-20 h-20 bg-lexis-gold/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-lexis-gold/10 group-hover:bg-lexis-gold/20 group-hover:-translate-y-2 transition-all duration-500">
-                                <ShieldCheck className="w-10 h-10 text-lexis-gold stroke-[1px] group-hover:opacity-80" />
+                                <FileCheck className="w-10 h-10 text-lexis-gold stroke-[1px] group-hover:opacity-80" />
                             </div>
-                            <h3 className="font-serif text-2xl font-bold">Blindaje RNC</h3>
+                            <h3 className="font-serif text-2xl font-bold">Datos fiscales más ordenados, menos errores</h3>
                             <p className="text-slate-400 leading-relaxed text-lg">
-                                Validación instantánea. Nunca vuelvas a emitir un documento con datos erróneos.
+                                Registra y organiza la información fiscal de tus clientes para mantener tus facturas más claras y reducir errores administrativos.
                             </p>
                         </div>
                         <div className="text-center space-y-6 group cursor-default">
                             <div className="w-20 h-20 bg-lexis-gold/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-lexis-gold/10 group-hover:bg-lexis-gold/20 group-hover:-translate-y-2 transition-all duration-500">
-                                <Zap className="w-10 h-10 text-lexis-gold stroke-[1px] group-hover:opacity-80" />
+                                <BarChart3 className="w-10 h-10 text-lexis-gold stroke-[1px] group-hover:opacity-80" />
                             </div>
-                            <h3 className="font-serif text-2xl font-bold">Cumplimiento Silencioso</h3>
+                            <h3 className="font-serif text-2xl font-bold">Reportes organizados para tu gestión contable</h3>
                             <p className="text-slate-400 leading-relaxed text-lg">
-                                Tus reportes 606 y 607 se construyen solos mientras tú trabajas.
+                                Centraliza tu información y genera reportes que facilitan el seguimiento administrativo de tu negocio.
                             </p>
                         </div>
                         <div className="text-center space-y-6 group cursor-default">
                             <div className="w-20 h-20 bg-lexis-gold/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-lexis-gold/10 group-hover:bg-lexis-gold/20 group-hover:-translate-y-2 transition-all duration-500">
                                 <Smartphone className="w-10 h-10 text-lexis-gold stroke-[1px] group-hover:opacity-80" />
                             </div>
-                            <h3 className="font-serif text-2xl font-bold">Movilidad Elite</h3>
+                            <h3 className="font-serif text-2xl font-bold">Factura sin atarte a una oficina</h3>
                             <p className="text-slate-400 leading-relaxed text-lg">
-                                Factura desde la palma de tu mano, con la misma elegancia que desde una oficina en la Anacaona.
+                                Accede a tu facturación desde cualquier dispositivo y gestiona tu negocio con mayor flexibilidad.
                             </p>
                         </div>
                     </div>
