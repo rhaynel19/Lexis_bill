@@ -400,6 +400,16 @@ export const api = {
         return result;
     },
 
+    async getAdminPaymentsHistory(params?: { page?: number; limit?: number }) {
+        const sp = new URLSearchParams();
+        if (params?.page) sp.set("page", String(params.page));
+        if (params?.limit) sp.set("limit", String(params.limit));
+        const query = sp.toString();
+        return secureFetch<{ list: Array<{ id: string; reference: string; plan: string; billingCycle: string; paymentMethod: string; amount: number; requestedAt: string; processedAt: string; userName?: string; userEmail?: string; processedByEmail?: string }>; total: number; page: number; limit: number }>(
+            `${API_URL}/admin/payments-history${query ? `?${query}` : ""}`
+        );
+    },
+
     async getAdminStats(query?: string) {
         return secureFetch<any>(`${API_URL}/admin/stats${query || ""}`);
     },

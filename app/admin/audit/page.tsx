@@ -17,6 +17,8 @@ const ACTION_LABELS: Record<string, string> = {
     payment_reject: "Rechazar pago",
     partner_approve: "Aprobar partner",
     partner_suspend: "Suspender partner",
+    reconcile_system: "Reconciliación del sistema",
+    repair_user_billing: "Reparar billing de usuario",
 };
 
 export default function AdminAuditPage() {

@@ -2019,6 +2019,46 @@ app.post('/api/admin/reject-payment/:id', verifyToken, verifyAdmin, async (req, 
     }
 });
 
+// --- ADMIN: Historial de pagos realizados (aprobados) ---
+app.get('/api/admin/payments-history', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(100, Math.max(10, parseInt(req.query.limit, 10) || 50));
+        const skip = (page - 1) * limit;
+        const planPrices = { pro: { monthly: MEMBERSHIP_PLANS.pro?.priceMonthly ?? 950, annual: MEMBERSHIP_PLANS.pro?.priceAnnual ?? 9500 } };
+        const [list, total] = await Promise.all([
+            PaymentRequest.find({ status: 'approved' })
+                .populate('userId', 'name email')
+                .populate('processedBy', 'email')
+                .sort({ processedAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            PaymentRequest.countDocuments({ status: 'approved' })
+        ]);
+        const items = list.map((p) => {
+            const amount = (p.plan && planPrices[p.plan]) ? (p.billingCycle === 'annual' ? planPrices[p.plan].annual : planPrices[p.plan].monthly) : 0;
+            return {
+                id: p._id.toString(),
+                reference: p.reference,
+                plan: p.plan,
+                billingCycle: p.billingCycle || 'monthly',
+                paymentMethod: p.paymentMethod,
+                amount,
+                requestedAt: p.requestedAt,
+                processedAt: p.processedAt,
+                userId: p.userId?._id?.toString(),
+                userName: p.userId?.name,
+                userEmail: p.userId?.email,
+                processedByEmail: p.processedBy?.email
+            };
+        });
+        res.json({ list: items, total, page, limit });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // --- ADMIN: Listado de usuarios registrados ---
 app.get('/api/admin/users', verifyToken, verifyAdmin, async (req, res) => {
     try {
