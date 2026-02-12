@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, ShieldCheck, Zap, Smartphone, Menu, FileCheck, BarChart3 } from "lucide-react";
+import { CheckCircle2, ShieldCheck, Zap, Smartphone, Menu, FileCheck, BarChart3, ClipboardList, Share2 } from "lucide-react";
 import Link from "next/link";
 
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -232,22 +232,31 @@ export default function LandingPage() {
       {/* New Section: Cómo Funciona */}
       <section className="py-32 bg-lexis-bg-darker border-y border-lexis-gold/5">
         <div className="container mx-auto px-4 sm:px-6 text-center">
-          <h2 className="font-serif text-4xl md:text-5xl font-bold mb-20 text-lexis-text-light">Tranquilidad en <span className="text-lexis-gold">3 pasos.</span></h2>
+          <h2 className="font-serif text-4xl md:text-5xl font-bold mb-20 text-lexis-text-light">Tu facturación bajo control en <span className="text-lexis-gold">3 pasos.</span></h2>
           <div className="grid md:grid-cols-3 gap-12">
-            <div className="space-y-6">
+            <div className="space-y-6 group cursor-default">
+              <div className="w-16 h-16 bg-lexis-gold/5 rounded-full flex items-center justify-center mx-auto border border-lexis-gold/10 group-hover:bg-lexis-gold/20 transition-all duration-300">
+                <ClipboardList className="w-8 h-8 text-lexis-gold stroke-[1px]" />
+              </div>
               <div className="text-5xl font-serif text-lexis-gold/20 font-bold italic">01</div>
-              <h3 className="text-xl font-bold">Carga tus rangos</h3>
-              <p className="text-slate-400 font-light px-4">Sube los NCF que la DGII te aprobó una sola vez. Lexis Bill los organiza y te avisa antes de que se gasten.</p>
+              <h3 className="text-xl font-bold">Organiza tus comprobantes desde el inicio</h3>
+              <p className="text-slate-400 font-light px-4">Registra tus rangos de NCF y mantén el control de tu numeración. Lexis Bill te alerta cuando necesites nuevos.</p>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-6 group cursor-default">
+              <div className="w-16 h-16 bg-lexis-gold/5 rounded-full flex items-center justify-center mx-auto border border-lexis-gold/10 group-hover:bg-lexis-gold/20 transition-all duration-300">
+                <ShieldCheck className="w-8 h-8 text-lexis-gold stroke-[1px]" />
+              </div>
               <div className="text-5xl font-serif text-lexis-gold/20 font-bold italic">02</div>
-              <h3 className="text-xl font-bold">Prepara tu envío</h3>
-              <p className="text-slate-400 font-light px-4">Entra los datos de tu cliente. Validamos su RNC al instante para que no cometas errores de digitación.</p>
+              <h3 className="text-xl font-bold">Menos errores, más confianza al facturar</h3>
+              <p className="text-slate-400 font-light px-4">Centraliza los datos de tus clientes y evita inconsistencias antes de emitir cualquier documento.</p>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-6 group cursor-default">
+              <div className="w-16 h-16 bg-lexis-gold/5 rounded-full flex items-center justify-center mx-auto border border-lexis-gold/10 group-hover:bg-lexis-gold/20 transition-all duration-300">
+                <Share2 className="w-8 h-8 text-lexis-gold stroke-[1px]" />
+              </div>
               <div className="text-5xl font-serif text-lexis-gold/20 font-bold italic">03</div>
-              <h3 className="text-xl font-bold">Delegar y Respirar</h3>
-              <p className="text-slate-400 font-light px-4">Envía por WhatsApp o email. Al final del mes, tus reportes 606 y 607 están listos para tu contador.</p>
+              <h3 className="text-xl font-bold">Factura hoy. Reporta sin estrés.</h3>
+              <p className="text-slate-400 font-light px-4">Comparte tus documentos fácilmente y mantén tus reportes listos para tu contador.</p>
             </div>
           </div>
         </div>
