@@ -130,9 +130,21 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.40 0.05 260);
   --sidebar-ring: oklch(0.85 0.1 85);
+
+  /* Campo descripción ítems: texto siempre visible (no heredar temas que lo ocultan) */
+  --input-descripcion-text: #0f172a;
+  --input-descripcion-bg: #ffffff;
 }
 
 /* --- DARK THEME (System Dark - Neutral) --- */
+.dark,
+[data-theme="dark"],
+[data-theme="midnight"],
+[data-theme="luxury"] {
+  --input-descripcion-text: #f1f5f9;
+  --input-descripcion-bg: #0f172a;
+}
+
 .dark,
 [data-theme="dark"] {
   --bg-primary: oklch(0.14 0.005 240);
@@ -373,6 +385,21 @@
   select,
   [role="button"] {
     min-height: 44px;
+  }
+
+  /* Campo descripción ítems factura: texto siempre visible al escribir (PC y móvil) */
+  input.input-descripcion-item {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    background-color: #ffffff !important;
+  }
+  .dark input.input-descripcion-item,
+  [data-theme="dark"] input.input-descripcion-item,
+  [data-theme="midnight"] input.input-descripcion-item,
+  [data-theme="luxury"] input.input-descripcion-item {
+    color: #f1f5f9 !important;
+    -webkit-text-fill-color: #f1f5f9 !important;
+    background-color: #0f172a !important;
   }
 
   @media (max-width: 640px) {
