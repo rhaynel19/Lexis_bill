@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Sparkles, Trophy } from "lucide-react";
 import { api } from "@/lib/api-service";
 import Link from "next/link";
@@ -8,21 +8,40 @@ import Link from "next/link";
 export function TrialHeaderBadge() {
     const [status, setStatus] = useState<any>(null);
 
-    useEffect(() => {
-        api.getSubscriptionStatus()
+    const fetchStatus = useCallback(() => {
+        api.invalidateSubscriptionCache();
+        api.getSubscriptionStatus(true)
             .then(data => setStatus(data))
             .catch(() => setStatus("error"));
     }, []);
 
+    useEffect(() => {
+        fetchStatus();
+    }, [fetchStatus]);
+
+    // Actualizar badge al volver a la pestaña (ej. tras pagar) o cuando se valida el pago
+    useEffect(() => {
+        const onFocus = () => fetchStatus();
+        const onSubscriptionUpdated = () => fetchStatus();
+        window.addEventListener("focus", onFocus);
+        window.addEventListener("subscription-updated", onSubscriptionUpdated);
+        return () => {
+            window.removeEventListener("focus", onFocus);
+            window.removeEventListener("subscription-updated", onSubscriptionUpdated);
+        };
+    }, [fetchStatus]);
+
     if (!status || status === "error") return null;
 
-    const isTrial = status.plan === "free" || status.status === "pending" || (status.daysRemaining != null && status.daysRemaining < 30);
-    if (isTrial || status.status === "pending") {
+    const isPending = status.status === "pending" || status.status === "PendienteValidacion" || status.hasPendingPayment;
+    const isTrial = status.plan === "free" || isPending || (status.daysRemaining != null && status.daysRemaining < 999 && status.daysRemaining < 30);
+
+    if (isTrial || isPending) {
         return (
             <Link href="/pagos">
                 <div className="group flex items-center gap-2 text-xs font-black bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-lg shadow-amber-500/20 active:scale-95">
                     <Sparkles className="w-3 h-3 animate-pulse" />
-                    {status.status === "pending" ? "PENDIENTE DE PAGO" : `PLAN FREE${status.daysRemaining != null && status.daysRemaining < 999 ? `: ${status.daysRemaining} DÍAS` : ""}`}
+                    {isPending ? "PENDIENTE DE PAGO" : `PLAN FREE${status.daysRemaining != null && status.daysRemaining < 999 ? `: ${status.daysRemaining} DÍAS` : ""}`}
                     <div className="hidden lg:block border-l border-white/30 ml-1 pl-2 text-[10px] font-bold">
                         UPGRADE
                     </div>
@@ -31,9 +50,13 @@ export function TrialHeaderBadge() {
         );
     }
 
+    // Plan activo (cliente ya pagó): mostrar plan actual
+    const planLabel = status.plan === "premium" ? "Plan Premium" : status.plan === "pro" ? "Plan Pro" : "Plan activo";
     return (
-        <div className="flex items-center gap-2 text-sm font-black text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 uppercase tracking-tighter">
-            <Trophy className="w-3.5 h-3.5 text-blue-600" /> Professional Edition
-        </div>
+        <Link href="/pagos">
+            <div className="flex items-center gap-2 text-sm font-black text-blue-700 bg-blue-50 dark:text-blue-200 dark:bg-blue-950/50 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-800 uppercase tracking-tighter hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
+                <Trophy className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> {planLabel}
+            </div>
+        </Link>
     );
 }

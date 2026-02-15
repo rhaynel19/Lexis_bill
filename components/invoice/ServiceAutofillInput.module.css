@@ -1,0 +1,20 @@
+.input {
+    font-size: 0.875rem;
+    min-width: 6rem;
+    opacity: 1;
+    color: #0f172a;
+    -webkit-text-fill-color: #0f172a;
+    background-color: #ffffff;
+    caret-color: #0f172a;
+}
+
+/* Dark: when html has .dark or data-theme is dark/midnight/luxury */
+:global(.dark) .input,
+:global([data-theme="dark"]) .input,
+:global([data-theme="midnight"]) .input,
+:global([data-theme="luxury"]) .input {
+    color: #f1f5f9;
+    -webkit-text-fill-color: #f1f5f9;
+    background-color: #0f172a;
+    caret-color: #f1f5f9;
+}

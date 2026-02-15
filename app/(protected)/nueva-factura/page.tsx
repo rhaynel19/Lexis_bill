@@ -15,6 +15,7 @@ import { numberToText } from "@/lib/number-to-text";
 import { downloadInvoicePDF, previewInvoicePDF, type InvoiceData } from "@/lib/pdf-generator";
 import { getNextSequenceNumber } from "@/lib/config";
 import { getDominicanDate } from "@/lib/date-utils";
+import { generateInvoiceWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp-utils";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Search, Mic, Save, BookOpen, Loader2, CheckCircle, MessageCircle, UserPlus, FileText, Eye, Sparkles, AlertTriangle, Zap, Copy, ClipboardPaste, CheckCircle2 } from "lucide-react";
@@ -567,7 +568,7 @@ export default function NewInvoice() {
     // Función para agregar una nueva línea de ítem (y enfocar la descripción de la nueva fila)
     const addItem = () => {
         const newItem: InvoiceItem = {
-            id: Date.now().toString(),
+            id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
             description: "",
             quantity: 1,
             price: 0,
@@ -589,7 +590,7 @@ export default function NewInvoice() {
         const item = items.find((i) => i.id === id);
         if (!item) return;
         const newItem: InvoiceItem = {
-            id: Date.now().toString(),
+            id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
             description: item.description,
             quantity: item.quantity,
             price: item.price,
@@ -748,6 +749,47 @@ export default function NewInvoice() {
 
         const companyOverride = authUser ? { companyName: authUser.fiscalStatus?.confirmed, rnc: authUser.rnc } : undefined;
         await previewInvoicePDF(invoiceData, companyOverride);
+    };
+
+    const buildProformaInvoiceData = (): InvoiceData => {
+        const validItems = items.filter(
+            (item) => item.description && Number(item.quantity) > 0 && Number(item.price) > 0
+        );
+        return {
+            id: "proforma",
+            sequenceNumber: "BORRADOR",
+            type: invoiceType,
+            clientName,
+            rnc,
+            date: getDominicanDate(),
+            items: validItems.map(item => ({
+                description: item.description,
+                quantity: Number(item.quantity),
+                price: Number(item.price),
+            })),
+            subtotal,
+            itbis,
+            isrRetention: isrRetention,
+            itbisRetention,
+            total: invoiceTotal,
+        };
+    };
+
+    const handleDownloadProformaPDF = async () => {
+        const invoiceData = buildProformaInvoiceData();
+        const companyOverride = authUser ? { companyName: authUser.fiscalStatus?.confirmed, rnc: authUser.rnc } : undefined;
+        await downloadInvoicePDF(invoiceData, companyOverride);
+        toast.success("Proforma descargada. Puedes enviarla al cliente antes de confirmar y emitir.");
+    };
+
+    const handleSendProformaWhatsApp = () => {
+        const companyName = authUser?.fiscalStatus?.confirmed || undefined;
+        const message = generateInvoiceWhatsAppMessage(
+            { clientName, ncfSequence: "PROFORMA", id: "proforma", total: invoiceTotal },
+            companyName
+        );
+        openWhatsApp(clientPhone || undefined, message);
+        toast.info("Abriendo WhatsApp. Adjunta el PDF de la proforma (descárgalo antes con «Solo Descargar PDF») antes de enviar.", { duration: 5000 });
     };
 
     const handlePreSubmit = (e: React.FormEvent) => {
@@ -947,6 +989,8 @@ export default function NewInvoice() {
                     onEdit={() => setShowPreview(false)}
                     onConfirm={handleConfirmSave}
                     isProcessing={isGenerating}
+                    onDownloadPDF={handleDownloadProformaPDF}
+                    onSendWhatsApp={handleSendProformaWhatsApp}
                 />
             </div>
         );
@@ -1347,7 +1391,7 @@ export default function NewInvoice() {
                                                                 {savedServices.length > 0 && (
                                                                     <div className="mt-1">
                                                                         <Select onValueChange={(val) => handleSelectService(item.id, val)}>
-                                                                            <SelectTrigger className="h-6 text-xs border-0 bg-transparent text-accent p-0 hover:underline shadow-none">
+                                                                            <SelectTrigger id={`select-saved-service-${item.id}`} className="h-6 text-xs border-0 bg-transparent text-accent p-0 hover:underline shadow-none">
                                                                                 <SelectValue placeholder="✨ O cargar de mi lista..." />
                                                                             </SelectTrigger>
                                                                             <SelectContent>
@@ -1456,16 +1500,15 @@ export default function NewInvoice() {
                                                                     <div className="flex items-center space-x-2 text-sm pl-2">
                                                                         <input
                                                                             type="checkbox"
-                                                                            id={`exempt-${item.id}`}
                                                                             checked={item.isExempt || false}
                                                                             onChange={(e) => updateItem(item.id, "isExempt", e.target.checked)}
                                                                             className="rounded border-border/30 text-accent focus:ring-accent"
-                                                                            aria-label="Gasto legal o suplido no gravable"
+                                                                            aria-label="Gasto legal o suplido no gravable (ítem)"
                                                                             title="Exento ITBIS"
                                                                         />
-                                                                        <Label htmlFor={`exempt-${item.id}`} className="font-normal text-muted-foreground">
+                                                                        <span className="font-normal text-muted-foreground">
                                                                             Gasto Legal / Suplido (No Gravable)
-                                                                        </Label>
+                                                                        </span>
                                                                     </div>
                                                                 </TableCell>
                                                             </TableRow>
@@ -1500,7 +1543,7 @@ export default function NewInvoice() {
                                                         </div>
                                                         {savedServices.length > 0 && (
                                                             <Select onValueChange={(val) => handleSelectService(item.id, val)}>
-                                                                <SelectTrigger className="h-6 text-xs border-0 bg-transparent text-accent p-0 mt-1 shadow-none"><SelectValue placeholder="✨ Cargar de mi lista..." /></SelectTrigger>
+                                                                <SelectTrigger id={`select-saved-service-mob-${item.id}`} className="h-6 text-xs border-0 bg-transparent text-accent p-0 mt-1 shadow-none"><SelectValue placeholder="✨ Cargar de mi lista..." /></SelectTrigger>
                                                                 <SelectContent>
                                                                     {savedServices.slice(0, 5).map((s, i) => (
                                                                         <SelectItem key={i} value={(s as any).name || (s as any).description || ""}>{(s as any).name || (s as any).description} - ${(s as any).price}</SelectItem>
@@ -1532,8 +1575,8 @@ export default function NewInvoice() {
                                                 </div>
                                                 {profession === "lawyer" && (
                                                     <div className="flex items-center gap-2 text-sm pt-1">
-                                                        <input type="checkbox" id={`exempt-mob-${item.id}`} checked={item.isExempt || false} onChange={(e) => updateItem(item.id, "isExempt", e.target.checked)} className="rounded border-border" aria-label="Gasto legal o suplido no gravable" title="Exento ITBIS" />
-                                                        <Label htmlFor={`exempt-mob-${item.id}`} className="text-muted-foreground">Gasto Legal / Suplido (No Gravable)</Label>
+                                                        <input type="checkbox" checked={item.isExempt || false} onChange={(e) => updateItem(item.id, "isExempt", e.target.checked)} className="rounded border-border" aria-label="Gasto legal o suplido no gravable (ítem)" title="Exento ITBIS" />
+                                                        <span className="text-muted-foreground">Gasto Legal / Suplido (No Gravable)</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -1574,7 +1617,7 @@ export default function NewInvoice() {
                                                         onClick={() => {
                                                             const desc = (s as any).name || (s as any).description || "";
                                                             const price = (s as any).price ?? 0;
-                                                            const newItem: InvoiceItem = { id: Date.now().toString(), description: desc, quantity: 1, price: price, isExempt: invoiceType === "44" };
+                                                            const newItem: InvoiceItem = { id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, description: desc, quantity: 1, price: price, isExempt: invoiceType === "44" };
                                                             setItems([...items, newItem]);
                                                             setFocusItemId(newItem.id);
                                                             toast.success(`"${desc}" agregado`);

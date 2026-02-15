@@ -15,6 +15,10 @@ interface DocumentPreviewProps {
     isProcessing?: boolean;
     isOpen?: boolean;
     onClose?: () => void;
+    /** Descargar PDF (proforma/borrador) antes de confirmar. Solo factura. */
+    onDownloadPDF?: () => void | Promise<void>;
+    /** Enviar por WhatsApp (proforma) antes de confirmar. Solo factura. */
+    onSendWhatsApp?: () => void | Promise<void>;
 }
 
 export function DocumentPreview({
@@ -24,7 +28,9 @@ export function DocumentPreview({
     onConfirm,
     isProcessing,
     isOpen = false,
-    onClose
+    onClose,
+    onDownloadPDF,
+    onSendWhatsApp,
 }: DocumentPreviewProps) {
     const handleClose = () => {
         if (onClose) onClose();
@@ -120,26 +126,52 @@ export function DocumentPreview({
 
             {/* Quick Actions (Beneath Preview) */}
             <div className="grid grid-cols-2 gap-4">
-                <Button
-                    variant="outline"
-                    className="h-16 flex flex-col items-center justify-center gap-1 border-border/30 hover:border-success hover:bg-success/5 hover:text-success transition-all"
-                    title="Guarda primero; luego podrás enviar por WhatsApp desde el detalle"
-                    aria-label="Enviar por WhatsApp (guarda antes)"
-                    onClick={() => toast.info("Guarda primero la cotización; luego podrás enviar por WhatsApp desde el detalle.", { duration: 4000 })}
-                >
-                    <Share2 className="w-5 h-5" />
-                    <span className="text-xs font-bold uppercase">Enviar WhatsApp</span>
-                </Button>
-                <Button
-                    variant="outline"
-                    className="h-16 flex flex-col items-center justify-center gap-1 border-border/30 hover:border-accent hover:bg-accent/5 hover:text-accent transition-all"
-                    title="Guarda la cotización; luego podrás descargar el PDF desde el detalle"
-                    aria-label="Descargar PDF (guarda antes)"
-                    onClick={() => toast.info("Guarda primero la cotización; luego podrás descargar el PDF desde el detalle.", { duration: 4000 })}
-                >
-                    <Download className="w-5 h-5" />
-                    <span className="text-xs font-bold uppercase">Solo Descargar PDF</span>
-                </Button>
+                {type === "invoice" && onSendWhatsApp ? (
+                    <Button
+                        variant="outline"
+                        className="h-16 flex flex-col items-center justify-center gap-1 border-border/30 hover:border-success hover:bg-success/5 hover:text-success transition-all"
+                        title="Enviar proforma por WhatsApp"
+                        aria-label="Enviar proforma por WhatsApp"
+                        onClick={() => onSendWhatsApp()}
+                    >
+                        <Share2 className="w-5 h-5" />
+                        <span className="text-xs font-bold uppercase">Enviar WhatsApp</span>
+                    </Button>
+                ) : (
+                    <Button
+                        variant="outline"
+                        className="h-16 flex flex-col items-center justify-center gap-1 border-border/30 hover:border-success hover:bg-success/5 hover:text-success transition-all opacity-70"
+                        title="Guarda primero la cotización; luego podrás enviar por WhatsApp desde el detalle"
+                        aria-label="Enviar por WhatsApp (guarda antes)"
+                        onClick={() => toast.info("Guarda primero la cotización; luego podrás enviar por WhatsApp desde el detalle.", { duration: 4000 })}
+                    >
+                        <Share2 className="w-5 h-5" />
+                        <span className="text-xs font-bold uppercase">Enviar WhatsApp</span>
+                    </Button>
+                )}
+                {type === "invoice" && onDownloadPDF ? (
+                    <Button
+                        variant="outline"
+                        className="h-16 flex flex-col items-center justify-center gap-1 border-border/30 hover:border-accent hover:bg-accent/5 hover:text-accent transition-all"
+                        title="Descargar proforma en PDF"
+                        aria-label="Descargar proforma PDF"
+                        onClick={() => onDownloadPDF()}
+                    >
+                        <Download className="w-5 h-5" />
+                        <span className="text-xs font-bold uppercase">Solo Descargar PDF</span>
+                    </Button>
+                ) : (
+                    <Button
+                        variant="outline"
+                        className="h-16 flex flex-col items-center justify-center gap-1 border-border/30 hover:border-accent hover:bg-accent/5 hover:text-accent transition-all opacity-70"
+                        title="Guarda la cotización; luego podrás descargar el PDF desde el detalle"
+                        aria-label="Descargar PDF (guarda antes)"
+                        onClick={() => toast.info("Guarda primero la cotización; luego podrás descargar el PDF desde el detalle.", { duration: 4000 })}
+                    >
+                        <Download className="w-5 h-5" />
+                        <span className="text-xs font-bold uppercase">Solo Descargar PDF</span>
+                    </Button>
+                )}
             </div>
         </div>
     );

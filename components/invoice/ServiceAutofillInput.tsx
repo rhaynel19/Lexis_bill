@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { api } from "@/lib/api-service";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import styles from "./ServiceAutofillInput.module.css";
 
 export interface AutofillService {
     description: string;
@@ -54,16 +55,6 @@ export function ServiceAutofillInput({
     const [highlight, setHighlight] = useState(-1);
     const containerRef = useRef<HTMLDivElement>(null);
     const debouncedQ = useDebounce(value.trim(), 250);
-    const [isDark, setIsDark] = useState(false);
-
-    useEffect(() => {
-        const el = document.documentElement;
-        const check = () => setIsDark(el.classList.contains("dark") || ["dark", "midnight", "luxury"].includes(el.getAttribute("data-theme") || ""));
-        check();
-        const obs = new MutationObserver(check);
-        obs.observe(el, { attributes: true, attributeFilter: ["class", "data-theme"] });
-        return () => obs.disconnect();
-    }, []);
 
     useEffect(() => {
         if (focusIfId !== itemId) return;
@@ -73,10 +64,6 @@ export function ServiceAutofillInput({
             onFocused?.();
         }
     }, [focusIfId, itemId, onFocused]);
-
-    const inputStyle = isDark
-        ? { color: "#f1f5f9", WebkitTextFillColor: "#f1f5f9", backgroundColor: "#0f172a", caretColor: "#f1f5f9", opacity: 1, fontSize: "0.875rem", minWidth: "6rem" }
-        : { color: "#0f172a", WebkitTextFillColor: "#0f172a", backgroundColor: "#ffffff", caretColor: "#0f172a", opacity: 1, fontSize: "0.875rem", minWidth: "6rem" };
 
     const fetchSuggestions = useCallback(async (q: string) => {
         setLoading(true);
@@ -153,9 +140,9 @@ export function ServiceAutofillInput({
                     autoComplete="off"
                     className={cn(
                         "flex h-9 w-full min-w-0 min-h-[2.25rem] rounded-md border border-input px-3 py-1 pr-8 text-base md:text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0",
+                        styles.input,
                         className
                     )}
-                    style={inputStyle}
                     data-descripcion-item
                 />
             </div>

@@ -37,12 +37,14 @@ export default function PaymentsPage() {
     const loadData = async () => {
         setIsLoading(true);
         try {
+            api.invalidateSubscriptionCache();
             const [historyData, statusData] = await Promise.all([
                 api.getPaymentHistory(),
-                api.getSubscriptionStatus()
+                api.getSubscriptionStatus(true)
             ]);
             setHistory(historyData);
             setStatus(statusData);
+            if (typeof window !== "undefined") window.dispatchEvent(new Event("subscription-updated"));
         } catch (error) {
             console.error("Error loading payments data:", error);
         } finally {
