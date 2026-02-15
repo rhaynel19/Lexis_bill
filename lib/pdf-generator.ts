@@ -159,11 +159,16 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     yPosition += 12;
 
     // ===== DATOS DEL COMPROBANTE (Derecha) =====
-    // Movemos el título a la derecha para estilo "Moderno"
+    // Proforma/Serie B: sin QR, título "Proforma", TOTAL PROFORMA. Serie B = tipos 01, 02, 14, 15 (no electrónicos).
+    const isProforma = invoiceData.sequenceNumber === "BORRADOR";
+    const isSerieB = ["01", "02", "14", "15"].includes(invoiceData.type);
+    const showQR = invoiceData.type !== "quote" && !isProforma && !isSerieB;
+
     const titleX = pageWidth - margin.right;
 
     let invoiceTitle = getInvoiceTypeName(invoiceData.type);
     if (invoiceData.type === "quote") invoiceTitle = "COTIZACIÓN";
+    else if (isProforma) invoiceTitle = "Proforma";
 
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
@@ -176,7 +181,7 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
         const quoteNum = invoiceData.sequenceNumber?.length > 8 ? `COT-${invoiceData.sequenceNumber.slice(-8)}` : (invoiceData.sequenceNumber || "COT");
         doc.text(`Número: ${quoteNum}`, titleX, margin.top + 20, { align: "right" });
     } else {
-        doc.text(`NCF: ${invoiceData.sequenceNumber}`, titleX, margin.top + 20, { align: "right" });
+        doc.text(isProforma ? "NCF: BORRADOR" : `NCF: ${invoiceData.sequenceNumber}`, titleX, margin.top + 20, { align: "right" });
     }
 
     doc.setFontSize(10);
@@ -269,11 +274,12 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     doc.line(summaryLabelX - 10, yPosition, summaryX, yPosition);
     yPosition += 8;
 
-    // Total Invoice (Subtotal + ITBIS)
+    // Total (Proforma o Factura)
     doc.setFont("helvetica", "bold");
     doc.setFontSize(APP_CONFIG.pdf.fontSize.subtitle);
-    doc.setTextColor(...blueColor); // Azul fuerte para el total
-    doc.text("TOTAL FACTURA:", summaryLabelX - 15, yPosition);
+    doc.setTextColor(...blueColor);
+    const totalLabel = isProforma ? "TOTAL PROFORMA:" : "TOTAL FACTURA:";
+    doc.text(totalLabel, summaryLabelX - 15, yPosition);
     doc.text(formatCurrency(invoiceData.total), summaryX, yPosition, { align: "right" });
     yPosition += 8;
 
@@ -326,19 +332,17 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     doc.text(`Son: ${totalEnLetras}`, margin.left, yPosition);
     yPosition += 15;
 
-    // ===== CÓDIGO QR (Solo para Facturas) =====
-    if (invoiceData.type !== "quote") {
+    // ===== CÓDIGO QR (Solo factura electrónica emitida; no proforma ni serie B) =====
+    if (showQR) {
         try {
             const qrDataURL = await generateQRCode(invoiceData);
             if (qrDataURL) {
-                // Posicionar QR en la esquina inferior derecha
                 const qrSize = 40;
                 const qrX = pageWidth - margin.right - qrSize;
                 const qrY = pageHeight - margin.bottom - qrSize - 15;
 
                 doc.addImage(qrDataURL, "PNG", qrX, qrY, qrSize, qrSize);
 
-                // Texto debajo del QR
                 doc.setFontSize(APP_CONFIG.pdf.fontSize.small);
                 doc.setFont("helvetica", "normal");
                 const qrLabel = invoiceData.sequenceNumber.startsWith("E")
@@ -357,12 +361,18 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     doc.setFont("helvetica", "normal");
     doc.setTextColor(APP_CONFIG.pdf.colors.secondary[0], APP_CONFIG.pdf.colors.secondary[1], APP_CONFIG.pdf.colors.secondary[2]);
     const isElectronic = invoiceData.sequenceNumber.startsWith("E");
-    const footerText = invoiceData.type === "quote"
-        ? "ESTE DOCUMENTO NO TIENE VALOR FISCAL"
-        : `Este documento es una representación impresa de un Comprobante Fiscal ${isElectronic ? "Electrónico" : ""}`;
-    const disclaimerText = invoiceData.type !== "quote"
-        ? "Comprobante interno. No constituye e-CF oficial hasta integración PSFE con DGII."
-        : "";
+    let footerText: string;
+    let disclaimerText = "";
+    if (invoiceData.type === "quote") {
+        footerText = "ESTE DOCUMENTO NO TIENE VALOR FISCAL";
+    } else if (isProforma) {
+        footerText = "Este documento es una PROFORMA. No tiene valor fiscal hasta su formalización.";
+    } else if (isSerieB) {
+        footerText = "Comprobante Fiscal (Serie B). No es factura electrónica.";
+    } else {
+        footerText = `Este documento es una representación impresa de un Comprobante Fiscal ${isElectronic ? "Electrónico" : ""}`;
+        disclaimerText = "Comprobante interno. No constituye e-CF oficial hasta integración PSFE con DGII.";
+    }
 
     doc.text(
         footerText,

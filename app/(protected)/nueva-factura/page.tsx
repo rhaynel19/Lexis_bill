@@ -991,6 +991,7 @@ export default function NewInvoice() {
                     isProcessing={isGenerating}
                     onDownloadPDF={handleDownloadProformaPDF}
                     onSendWhatsApp={handleSendProformaWhatsApp}
+                    isProforma
                 />
             </div>
         );

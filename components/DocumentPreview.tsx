@@ -19,6 +19,8 @@ interface DocumentPreviewProps {
     onDownloadPDF?: () => void | Promise<void>;
     /** Enviar por WhatsApp (proforma) antes de confirmar. Solo factura. */
     onSendWhatsApp?: () => void | Promise<void>;
+    /** Si es true y type es invoice, se muestra como PROFORMA (borrador/serie B). */
+    isProforma?: boolean;
 }
 
 export function DocumentPreview({
@@ -31,6 +33,7 @@ export function DocumentPreview({
     onClose,
     onDownloadPDF,
     onSendWhatsApp,
+    isProforma = false,
 }: DocumentPreviewProps) {
     const handleClose = () => {
         if (onClose) onClose();
@@ -69,8 +72,12 @@ export function DocumentPreview({
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start mb-12 relative z-10 gap-6">
                     <div>
-                        <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-2">{type === "invoice" ? "FACTURA" : "COTIZACIÓN"}</h1>
-                        <p className="text-muted-foreground text-sm uppercase tracking-widest">{type === "invoice" ? "E-CF (Borrador)" : "Propuesta Comercial"}</p>
+                        <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-2">
+                            {type === "invoice" ? (isProforma ? "PROFORMA" : "FACTURA") : "COTIZACIÓN"}
+                        </h1>
+                        <p className="text-muted-foreground text-sm uppercase tracking-widest">
+                            {type === "invoice" ? (isProforma ? "Proforma (borrador)" : "E-CF (Borrador)") : "Propuesta Comercial"}
+                        </p>
                     </div>
                     <div className="text-left sm:text-right">
                         <h2 className="text-xl font-bold text-foreground">{data.clientName}</h2>
@@ -117,7 +124,7 @@ export function DocumentPreview({
                             <span className="text-success">{data.itbis.toLocaleString("es-DO", { style: "currency", currency: "DOP" })}</span>
                         </div>
                         <div className="border-t border-border/20 pt-3 flex justify-between font-bold text-2xl text-accent">
-                            <span>Total</span>
+                            <span>{type === "invoice" && isProforma ? "Total proforma" : "Total"}</span>
                             <span>{data.total.toLocaleString("es-DO", { style: "currency", currency: "DOP" })}</span>
                         </div>
                     </div>
