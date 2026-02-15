@@ -75,8 +75,8 @@ export function ServiceAutofillInput({
     }, [focusIfId, itemId, onFocused]);
 
     const inputStyle = isDark
-        ? { color: "#f1f5f9", WebkitTextFillColor: "#f1f5f9", backgroundColor: "#0f172a", caretColor: "#f1f5f9", opacity: 1, fontSize: "0.875rem" }
-        : { color: "#0f172a", WebkitTextFillColor: "#0f172a", backgroundColor: "#ffffff", caretColor: "#0f172a", opacity: 1, fontSize: "0.875rem" };
+        ? { color: "#f1f5f9", WebkitTextFillColor: "#f1f5f9", backgroundColor: "#0f172a", caretColor: "#f1f5f9", opacity: 1, fontSize: "0.875rem", minWidth: "6rem" }
+        : { color: "#0f172a", WebkitTextFillColor: "#0f172a", backgroundColor: "#ffffff", caretColor: "#0f172a", opacity: 1, fontSize: "0.875rem", minWidth: "6rem" };
 
     const fetchSuggestions = useCallback(async (q: string) => {
         setLoading(true);
@@ -141,8 +141,8 @@ export function ServiceAutofillInput({
     const showDropdown = open && (suggestions.length > 0 || loading) && debouncedQ.length >= 1;
 
     return (
-        <div ref={containerRef} className={cn("relative", className)}>
-            <div className="relative">
+        <div ref={containerRef} className={cn("relative min-w-0 flex-1", className)}>
+            <div className="relative min-w-0 w-full">
                 <input
                     type="text"
                     value={value}
@@ -152,7 +152,7 @@ export function ServiceAutofillInput({
                     placeholder={placeholder}
                     autoComplete="off"
                     className={cn(
-                        "flex h-9 w-full min-h-[2.25rem] rounded-md border border-input px-3 py-1 pr-8 text-base md:text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0",
+                        "flex h-9 w-full min-w-0 min-h-[2.25rem] rounded-md border border-input px-3 py-1 pr-8 text-base md:text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0",
                         className
                     )}
                     style={inputStyle}
