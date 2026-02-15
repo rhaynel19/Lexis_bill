@@ -21,6 +21,10 @@ interface ServiceAutofillInputProps {
     placeholder?: string;
     className?: string;
     exemptDefault?: boolean;
+    /** Si coincide con itemId, el input recibe foco (ej. al agregar ítem). */
+    focusIfId?: string | null;
+    /** Llamado cuando se aplicó el foco para limpiar focusIfId en el padre. */
+    onFocused?: () => void;
 }
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -42,6 +46,8 @@ export function ServiceAutofillInput({
     onSelectService,
     placeholder = "Descripción...",
     className,
+    focusIfId,
+    onFocused,
 }: ServiceAutofillInputProps) {
     const [suggestions, setSuggestions] = useState<AutofillService[]>([]);
     const [loading, setLoading] = useState(false);
@@ -49,6 +55,15 @@ export function ServiceAutofillInput({
     const [highlight, setHighlight] = useState(-1);
     const containerRef = useRef<HTMLDivElement>(null);
     const debouncedQ = useDebounce(value.trim(), 250);
+
+    useEffect(() => {
+        if (focusIfId !== itemId) return;
+        const input = containerRef.current?.querySelector<HTMLInputElement>("input");
+        if (input) {
+            input.focus();
+            onFocused?.();
+        }
+    }, [focusIfId, itemId, onFocused]);
 
     const fetchSuggestions = useCallback(async (q: string) => {
         setLoading(true);

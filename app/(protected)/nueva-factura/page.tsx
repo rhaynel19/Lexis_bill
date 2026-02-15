@@ -17,7 +17,7 @@ import { getNextSequenceNumber } from "@/lib/config";
 import { getDominicanDate } from "@/lib/date-utils";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Search, Mic, Save, BookOpen, Loader2, CheckCircle, MessageCircle, UserPlus, FileText, Eye, Sparkles, AlertTriangle, Zap } from "lucide-react";
+import { Search, Mic, Save, BookOpen, Loader2, CheckCircle, MessageCircle, UserPlus, FileText, Eye, Sparkles, AlertTriangle, Zap, Copy, ClipboardPaste, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { handleNumericKeyDown } from "@/lib/input-validators";
 import { InvoicePreview } from "@/components/invoice/InvoicePreview";
@@ -56,6 +56,9 @@ export default function NewInvoice() {
     const [applyRetentions, setApplyRetentions] = useState(false);
     const [itbisRetentionRate, setItbisRetentionRate] = useState(0.30); // 30% por defecto
     const [showPreview, setShowPreview] = useState(false);
+    const [showPasteItemsDialog, setShowPasteItemsDialog] = useState(false);
+    const [pasteItemsText, setPasteItemsText] = useState("");
+    const [focusItemId, setFocusItemId] = useState<string | null>(null);
 
     // Smart RNC States
     const [isClientLocked, setIsClientLocked] = useState(false);
@@ -561,7 +564,7 @@ export default function NewInvoice() {
         updateItem(itemId, "description", "Honorarios Profesionales por Asesoría Legal");
     };
 
-    // Función para agregar una nueva línea de ítem
+    // Función para agregar una nueva línea de ítem (y enfocar la descripción de la nueva fila)
     const addItem = () => {
         const newItem: InvoiceItem = {
             id: Date.now().toString(),
@@ -571,6 +574,7 @@ export default function NewInvoice() {
             isExempt: invoiceType === "44", // Auto-exempt if E44
         };
         setItems([...items, newItem]);
+        setFocusItemId(newItem.id);
     };
 
     // Función para eliminar un ítem
@@ -578,6 +582,55 @@ export default function NewInvoice() {
         if (items.length > 1) {
             setItems(items.filter((item) => item.id !== id));
         }
+    };
+
+    // Duplicar ítem (copia descripción, cantidad y precio)
+    const duplicateItem = (id: string) => {
+        const item = items.find((i) => i.id === id);
+        if (!item) return;
+        const newItem: InvoiceItem = {
+            id: Date.now().toString(),
+            description: item.description,
+            quantity: item.quantity,
+            price: item.price,
+            isExempt: item.isExempt,
+        };
+        const idx = items.findIndex((i) => i.id === id);
+        const next = [...items];
+        next.splice(idx + 1, 0, newItem);
+        setItems(next);
+        toast.success("Ítem duplicado. Edita cantidad o precio si necesitas.");
+    };
+
+    // Pegar ítems desde Excel/lista (líneas con Descripción, Cantidad, Precio separados por tab o coma)
+    const handlePasteItems = () => {
+        const text = pasteItemsText.trim();
+        if (!text) {
+            toast.error("Pega el contenido primero (ej. desde Excel).");
+            return;
+        }
+        const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        const newItems: InvoiceItem[] = lines.map((line) => {
+            const parts = line.includes("\t") ? line.split("\t") : line.split(/,\s*/);
+            const desc = (parts[0] || "").trim();
+            const qty = parts.length >= 2 ? (parseFloat(parts[1]) || 1) : 1;
+            const price = parts.length >= 3 ? (parseFloat(parts[2].replace(/[^0-9.]/g, "")) || 0) : 0;
+            return {
+                id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+                description: desc,
+                quantity: qty,
+                price: price,
+                isExempt: invoiceType === "44",
+            };
+        });
+        if (newItems.length === 0) {
+            toast.error("No se encontraron líneas válidas. Usa tab o coma entre Descripción, Cantidad y Precio.");
+            return;
+        }
+        setItems((prev) => [...prev, ...newItems]);
+        setShowPasteItemsDialog(false);
+        setPasteItemsText("");
+        toast.success(`${newItems.length} ítem(s) agregado(s). Revisa y ajusta si hace falta.`);
     };
 
     // Función para actualizar un ítem específico
@@ -588,6 +641,9 @@ export default function NewInvoice() {
             )
         );
     };
+
+    const isItemComplete = (item: InvoiceItem) =>
+        String(item.description).trim() !== "" && Number(item.quantity) > 0 && Number(item.price) >= 0;
 
     // CÁLCULOS AUTOMÁTICOS
 
@@ -1244,11 +1300,12 @@ export default function NewInvoice() {
                                 <CardHeader>
                                     <CardTitle>Ítems de la Factura</CardTitle>
                                     <CardDescription>
-                                        Agrega los productos o servicios a facturar
+                                        Agrega los productos o servicios a facturar. Escribe en Descripción o elige de tu lista; usa el micrófono para dictar.
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="overflow-x-auto">
+                                    {/* Vista tabla (escritorio) */}
+                                    <div className="hidden md:block overflow-x-auto">
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
@@ -1262,7 +1319,10 @@ export default function NewInvoice() {
                                             <TableBody>
                                                 {items.map((item) => (
                                                     <Fragment key={item.id}>
-                                                        <TableRow>
+                                                        <TableRow
+                                                            data-item-row
+                                                            className={isItemComplete(item) ? "border-l-4 border-l-green-500/80 bg-green-500/5" : ""}
+                                                        >
                                                             {/* Descripción con autofill inteligente */}
                                                             <TableCell>
                                                                 <div className="relative flex gap-1">
@@ -1271,7 +1331,9 @@ export default function NewInvoice() {
                                                                         value={item.description}
                                                                         onChange={(v) => updateItem(item.id, "description", v)}
                                                                         onSelectService={handleAutofillSelectService(item.id)}
-                                                                        placeholder="Escribe para autocompletar..."
+                                                                        placeholder="Ej: Consultoría, Reparación, Honorarios..."
+                                                                        focusIfId={focusItemId}
+                                                                        onFocused={() => setFocusItemId(null)}
                                                                     />
                                                                     <button
                                                                         type="button"
@@ -1301,11 +1363,18 @@ export default function NewInvoice() {
                                                             {/* Cantidad */}
                                                             <TableCell>
                                                                 <Input
+                                                                    data-item-field="quantity"
                                                                     type="number"
                                                                     min="1"
                                                                     value={item.quantity}
                                                                     onFocus={(e) => e.target.select()}
-                                                                    onKeyDown={(e) => handleNumericKeyDown(e, false)}
+                                                                    onKeyDown={(e) => {
+                                                                        handleNumericKeyDown(e, false);
+                                                                        if (e.key === "Enter") {
+                                                                            e.preventDefault();
+                                                                            (e.target as HTMLInputElement).closest("tr")?.querySelector<HTMLInputElement>('[data-item-field="price"]')?.focus();
+                                                                        }
+                                                                    }}
                                                                     onChange={(e) =>
                                                                         updateItem(item.id, "quantity", e.target.value)
                                                                     }
@@ -1315,13 +1384,27 @@ export default function NewInvoice() {
                                                             {/* Precio */}
                                                             <TableCell>
                                                                 <Input
+                                                                    data-item-field="price"
                                                                     type="number"
                                                                     min="0"
                                                                     step="0.01"
                                                                     placeholder="0.00"
                                                                     value={item.price}
                                                                     onFocus={(e) => e.target.select()}
-                                                                    onKeyDown={(e) => handleNumericKeyDown(e, true)}
+                                                                    onKeyDown={(e) => {
+                                                                        handleNumericKeyDown(e, true);
+                                                                        if (e.key === "Enter") {
+                                                                            e.preventDefault();
+                                                                            const tr = (e.target as HTMLInputElement).closest("tr[data-item-row]");
+                                                                            const tbody = tr?.closest("tbody");
+                                                                            const itemRowsList = tbody ? Array.from(tbody.querySelectorAll("tr[data-item-row]")) : [];
+                                                                            const idx = tr ? itemRowsList.indexOf(tr) : -1;
+                                                                            const nextTr = idx >= 0 && idx < itemRowsList.length - 1 ? itemRowsList[idx + 1] : null;
+                                                                            const nextQ = nextTr?.querySelector<HTMLInputElement>('[data-item-field="quantity"]');
+                                                                            if (nextQ) nextQ.focus();
+                                                                            else addItem();
+                                                                        }
+                                                                    }}
                                                                     onChange={(e) =>
                                                                         updateItem(item.id, "price", e.target.value)
                                                                     }
@@ -1333,8 +1416,24 @@ export default function NewInvoice() {
                                                                 {formatCurrency(Number(item.quantity) * Number(item.price))}
                                                             </TableCell>
 
-                                                            {/* Botón eliminar */}
-                                                            <TableCell>
+                                                            {/* Acciones: completo, duplicar y eliminar */}
+                                                            <TableCell className="space-x-1">
+                                                                {isItemComplete(item) && (
+                                                                    <span className="text-green-600 dark:text-green-400" title="Fila completa">
+                                                                        <CheckCircle2 className="w-4 h-4 inline" aria-hidden />
+                                                                    </span>
+                                                                )}
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => duplicateItem(item.id)}
+                                                                    className="text-muted-foreground hover:text-foreground"
+                                                                    title="Duplicar ítem"
+                                                                    aria-label="Duplicar ítem"
+                                                                >
+                                                                    <Copy className="w-4 h-4" />
+                                                                </Button>
                                                                 {items.length > 1 && (
                                                                     <Button
                                                                         type="button"
@@ -1342,6 +1441,8 @@ export default function NewInvoice() {
                                                                         size="sm"
                                                                         onClick={() => removeItem(item.id)}
                                                                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                                        title="Eliminar ítem"
+                                                                        aria-label="Eliminar ítem"
                                                                     >
                                                                         ✕
                                                                     </Button>
@@ -1375,17 +1476,145 @@ export default function NewInvoice() {
                                         </Table>
                                     </div>
 
-                                    {/* Botón para agregar más ítems */}
-                                    <div className="mt-4">
+                                    {/* Vista tarjetas (móvil) */}
+                                    <div className="md:hidden space-y-4">
+                                        {items.map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className={`rounded-xl border p-4 space-y-3 ${isItemComplete(item) ? "border-green-500/50 bg-green-500/5" : "border-border"}`}
+                                            >
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="flex-1 min-w-0">
+                                                        <Label className="text-xs text-muted-foreground">Descripción</Label>
+                                                        <div className="flex gap-1 mt-1">
+                                                            <ServiceAutofillInput
+                                                                itemId={item.id}
+                                                                value={item.description}
+                                                                onChange={(v) => updateItem(item.id, "description", v)}
+                                                                onSelectService={handleAutofillSelectService(item.id)}
+                                                                placeholder="Ej: Consultoría..."
+                                                                focusIfId={focusItemId}
+                                                                onFocused={() => setFocusItemId(null)}
+                                                            />
+                                                            <button type="button" onClick={() => handleVoiceDictation(item.id)} className="shrink-0 p-2 text-muted-foreground hover:text-accent rounded" title="Dictado"><Mic className="w-4 h-4" /></button>
+                                                        </div>
+                                                        {savedServices.length > 0 && (
+                                                            <Select onValueChange={(val) => handleSelectService(item.id, val)}>
+                                                                <SelectTrigger className="h-6 text-xs border-0 bg-transparent text-accent p-0 mt-1 shadow-none"><SelectValue placeholder="✨ Cargar de mi lista..." /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    {savedServices.slice(0, 5).map((s, i) => (
+                                                                        <SelectItem key={i} value={(s as any).name || (s as any).description || ""}>{(s as any).name || (s as any).description} - ${(s as any).price}</SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        )}
+                                                    </div>
+                                                    {isItemComplete(item) && <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />}
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <Label className="text-xs text-muted-foreground">Cantidad</Label>
+                                                        <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(item.id, "quantity", e.target.value)} className="mt-1" />
+                                                    </div>
+                                                    <div>
+                                                        <Label className="text-xs text-muted-foreground">Precio Unit.</Label>
+                                                        <Input type="number" min="0" step="0.01" value={item.price} onChange={(e) => updateItem(item.id, "price", e.target.value)} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center justify-between pt-2 border-t">
+                                                    <span className="font-semibold text-foreground">{formatCurrency(Number(item.quantity) * Number(item.price))}</span>
+                                                    <div className="flex gap-1">
+                                                        <Button type="button" variant="ghost" size="sm" onClick={() => duplicateItem(item.id)} title="Duplicar"><Copy className="w-4 h-4" /></Button>
+                                                        {items.length > 1 && (
+                                                            <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(item.id)} className="text-destructive hover:bg-destructive/10"><span aria-hidden>✕</span></Button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                {profession === "lawyer" && (
+                                                    <div className="flex items-center gap-2 text-sm pt-1">
+                                                        <input type="checkbox" id={`exempt-mob-${item.id}`} checked={item.isExempt || false} onChange={(e) => updateItem(item.id, "isExempt", e.target.checked)} className="rounded border-border" aria-label="Gasto legal o suplido no gravable" title="Exento ITBIS" />
+                                                        <Label htmlFor={`exempt-mob-${item.id}`} className="text-muted-foreground">Gasto Legal / Suplido (No Gravable)</Label>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Botones: agregar ítem y pegar desde Excel/lista */}
+                                    <div className="mt-4 flex flex-wrap gap-2">
                                         <Button
                                             type="button"
                                             variant="outline"
                                             onClick={addItem}
-                                            className="w-full md:w-auto"
+                                            className="w-full sm:w-auto"
                                         >
                                             ➕ Agregar Ítem
                                         </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setShowPasteItemsDialog(true)}
+                                            className="w-full sm:w-auto gap-1.5"
+                                        >
+                                            <ClipboardPaste className="w-4 h-4" />
+                                            Pegar ítems
+                                        </Button>
                                     </div>
+                                    {savedServices.length > 0 && (
+                                        <div className="mt-3">
+                                            <p className="text-xs text-muted-foreground mb-2">Cargar de tu lista (un clic):</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {savedServices.slice(0, 5).map((s, i) => (
+                                                    <Button
+                                                        key={i}
+                                                        type="button"
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        className="text-xs h-8"
+                                                        onClick={() => {
+                                                            const desc = (s as any).name || (s as any).description || "";
+                                                            const price = (s as any).price ?? 0;
+                                                            const newItem: InvoiceItem = { id: Date.now().toString(), description: desc, quantity: 1, price: price, isExempt: invoiceType === "44" };
+                                                            setItems([...items, newItem]);
+                                                            setFocusItemId(newItem.id);
+                                                            toast.success(`"${desc}" agregado`);
+                                                        }}
+                                                    >
+                                                        {(s as any).name || (s as any).description} — {formatCurrency(Number((s as any).price) || 0)}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <p className="mt-2 text-xs text-muted-foreground">
+                                        Pegar ítems: copia desde Excel o una lista (cada línea = un ítem; separa Descripción, Cantidad y Precio con tab o coma).
+                                    </p>
+
+                                    <Dialog open={showPasteItemsDialog} onOpenChange={setShowPasteItemsDialog}>
+                                        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+                                            <DialogHeader>
+                                                <DialogTitle>Pegar ítems desde Excel o lista</DialogTitle>
+                                                <DialogDescription>
+                                                    Pega aquí las líneas copiadas. Cada línea = un ítem. Separa Descripción, Cantidad y Precio con tabulador (Excel) o coma.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <textarea
+                                                value={pasteItemsText}
+                                                onChange={(e) => setPasteItemsText(e.target.value)}
+                                                placeholder={"Consultoría\t1\t2500\nReparación\t2\t1500"}
+                                                className="min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                aria-label="Texto a pegar"
+                                            />
+                                            <DialogFooter>
+                                                <Button type="button" variant="outline" onClick={() => { setShowPasteItemsDialog(false); setPasteItemsText(""); }}>
+                                                    Cancelar
+                                                </Button>
+                                                <Button type="button" onClick={handlePasteItems}>
+                                                    Cargar ítems
+                                                </Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
 
                                     {/* Opciones de Retención */}
                                     <div className="mt-8 p-4 bg-muted/30 rounded-lg border border-border/10">
