@@ -20,6 +20,7 @@ const TIPOS_MIXTO = [
     { value: "efectivo", label: "Efectivo" },
     { value: "transferencia", label: "Transferencia" },
     { value: "tarjeta", label: "Tarjeta" },
+    { value: "credito", label: "Venta a crédito" },
 ];
 
 export interface PagoMixtoItem {

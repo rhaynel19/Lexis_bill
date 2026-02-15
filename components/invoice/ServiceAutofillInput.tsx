@@ -115,14 +115,20 @@ export function ServiceAutofillInput({
     return (
         <div ref={containerRef} className={cn("relative", className)}>
             <div className="relative">
-                <Input
+    <Input
                     type="text"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     onFocus={() => setOpen(true)}
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder}
-                    className="pr-8"
+                    className={cn(
+                        "pr-8 min-h-[2.25rem]",
+                        "text-slate-900 dark:text-slate-100 placeholder:text-muted-foreground",
+                        "bg-white dark:bg-slate-900 border-input",
+                        "caret-slate-900 dark:caret-slate-100",
+                        className
+                    )}
                     autoComplete="off"
                 />
             </div>
