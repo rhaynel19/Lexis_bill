@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api-service";
-import { Loader2, Package } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface AutofillService {
@@ -55,6 +54,16 @@ export function ServiceAutofillInput({
     const [highlight, setHighlight] = useState(-1);
     const containerRef = useRef<HTMLDivElement>(null);
     const debouncedQ = useDebounce(value.trim(), 250);
+    const [isDark, setIsDark] = useState(false);
+
+    useEffect(() => {
+        const el = document.documentElement;
+        const check = () => setIsDark(el.classList.contains("dark") || ["dark", "midnight", "luxury"].includes(el.getAttribute("data-theme") || ""));
+        check();
+        const obs = new MutationObserver(check);
+        obs.observe(el, { attributes: true, attributeFilter: ["class", "data-theme"] });
+        return () => obs.disconnect();
+    }, []);
 
     useEffect(() => {
         if (focusIfId !== itemId) return;
@@ -64,6 +73,10 @@ export function ServiceAutofillInput({
             onFocused?.();
         }
     }, [focusIfId, itemId, onFocused]);
+
+    const inputStyle = isDark
+        ? { color: "#f1f5f9", WebkitTextFillColor: "#f1f5f9", backgroundColor: "#0f172a", caretColor: "#f1f5f9", opacity: 1, fontSize: "0.875rem" }
+        : { color: "#0f172a", WebkitTextFillColor: "#0f172a", backgroundColor: "#ffffff", caretColor: "#0f172a", opacity: 1, fontSize: "0.875rem" };
 
     const fetchSuggestions = useCallback(async (q: string) => {
         setLoading(true);
@@ -130,25 +143,20 @@ export function ServiceAutofillInput({
     return (
         <div ref={containerRef} className={cn("relative", className)}>
             <div className="relative">
-<Input
+                <input
                     type="text"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     onFocus={() => setOpen(true)}
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder}
+                    autoComplete="off"
                     className={cn(
-                        "input-descripcion-item",
-                        "pr-8 min-h-[2.25rem]",
-                        "placeholder:text-muted-foreground",
+                        "flex h-9 w-full min-h-[2.25rem] rounded-md border border-input px-3 py-1 pr-8 text-base md:text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0",
                         className
                     )}
-                    style={{
-                        color: "var(--input-descripcion-text)",
-                        WebkitTextFillColor: "var(--input-descripcion-text)",
-                        backgroundColor: "var(--input-descripcion-bg)",
-                    }}
-                    autoComplete="off"
+                    style={inputStyle}
+                    data-descripcion-item
                 />
             </div>
 
