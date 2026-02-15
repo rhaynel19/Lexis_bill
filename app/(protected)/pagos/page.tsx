@@ -29,6 +29,7 @@ export default function PaymentsPage() {
     const [history, setHistory] = useState<any[]>([]);
     const [status, setStatus] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     useEffect(() => {
         loadData();
@@ -36,6 +37,7 @@ export default function PaymentsPage() {
 
     const loadData = async () => {
         setIsLoading(true);
+        setLoadError(null);
         try {
             api.invalidateSubscriptionCache();
             const [historyData, statusData] = await Promise.all([
@@ -45,8 +47,10 @@ export default function PaymentsPage() {
             setHistory(historyData);
             setStatus(statusData);
             if (typeof window !== "undefined") window.dispatchEvent(new Event("subscription-updated"));
-        } catch (error) {
-            console.error("Error loading payments data:", error);
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : "Error de conexión";
+            setLoadError(msg);
+            toast.error("No pudimos cargar los datos de pagos. Revisa tu conexión e intenta de nuevo.");
         } finally {
             setIsLoading(false);
         }
@@ -89,6 +93,16 @@ export default function PaymentsPage() {
                     </Badge>
                 )}
             </div>
+
+            {/* Error de carga con Reintentar */}
+            {loadError && (
+                <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-destructive">{loadError}</p>
+                    <Button variant="outline" size="sm" onClick={loadData} className="border-destructive/30 text-destructive hover:bg-destructive/10">
+                        Reintentar
+                    </Button>
+                </div>
+            )}
 
             {/* Membresía: planes, método de pago, "He realizado el pago" */}
             <div className="mb-8">

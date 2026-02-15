@@ -14,15 +14,10 @@ export const APP_CONFIG = {
         website: "www.tuempresa.com",
     },
 
-    // Configuración de secuencias e-CF
-    // En producción, estos números deben venir de la base de datos
+    // Configuración de secuencias (Serie B y Serie E). En producción, deben venir de la base de datos.
     sequences: {
-        "31": 1, // Factura de Crédito Fiscal
-        "32": 1, // Factura de Consumo
-        "33": 1, // Nota de Débito
-        "34": 1, // Nota de Crédito
-        "44": 1, // Regímenes Especiales
-        "45": 1, // Gastos Menores
+        "01": 1, "02": 1, "04": 1, "14": 1, "15": 1, // Serie B
+        "31": 1, "32": 1, "33": 1, "34": 1, "44": 1, "45": 1, // Serie E (e-CF)
     },
 
     // Configuración de APIs de facturación electrónica
@@ -90,6 +85,12 @@ export function getNextSequenceNumber(type: string): string {
 
     return sequenceNumber;
 }
+
+/** Tipos NCF Serie B (comprobantes no electrónicos). Sin código QR. */
+export const SERIE_B_TYPES = ["01", "02", "04", "14", "15"] as const;
+
+/** Tipos NCF Serie E (e-CF, facturación electrónica). Llevan código QR cuando están emitidos. */
+export const SERIE_E_TYPES = ["31", "32", "33", "34", "44", "45"] as const;
 
 /**
  * Obtiene el nombre completo del tipo de comprobante

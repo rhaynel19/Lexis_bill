@@ -336,7 +336,8 @@ export default function Dashboard() {
       } catch (err: unknown) {
         if (!cancelled) {
           console.error("Dashboard Load Error:", err);
-          setError("Hubo un inconveniente técnico al cargar sus datos, nuestro equipo ha sido notificado.");
+          setError("Hubo un inconveniente técnico al cargar sus datos. Usa «Reintentar» o recarga la página.");
+          toast.error("No pudimos cargar el dashboard. Revisa tu conexión e intenta de nuevo.");
         }
       } finally {
         if (!cancelled) {

@@ -1,11 +1,11 @@
 "use client";
 
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { CheckCircle2, Fingerprint, Lock, Mail, MessageCircle, AlertCircle, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { LexisWord } from "@/components/LexisWord";
@@ -13,8 +13,20 @@ import { useAuth } from "@/components/providers/AuthContext";
 
 const LAST_EMAIL_KEY = "lexis_last_email";
 
-export default function LoginPage() {
+/** Rutas internas permitidas para redirect post-login (evita open redirect). */
+const ALLOWED_REDIRECT_PREFIXES = ["/dashboard", "/nueva-factura", "/nueva-cotizacion", "/cotizaciones", "/reportes", "/configuracion", "/clientes", "/gastos", "/pagos", "/documentos", "/partners", "/onboarding"];
+
+function getSafeRedirect(redirect: string | null): string {
+    if (!redirect || typeof redirect !== "string") return "/dashboard";
+    const path = redirect.trim().split("?")[0];
+    if (!path.startsWith("/") || path.startsWith("//")) return "/dashboard";
+    const allowed = ALLOWED_REDIRECT_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
+    return allowed ? path : "/dashboard";
+}
+
+function LoginForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { setUser } = useAuth();
     const [email, setEmail] = useState(() => {
         if (typeof window === "undefined") return "";
@@ -62,7 +74,8 @@ export default function LoginPage() {
 
     const handleBiometricDecision = (_decision: boolean) => {
         setShowBiometric(false);
-        router.push("/dashboard");
+        const redirect = searchParams.get("redirect");
+        router.push(getSafeRedirect(redirect));
     };
 
     const startRecovery = (channel: "whatsapp" | "email") => {
@@ -242,5 +255,22 @@ export default function LoginPage() {
             </Dialog>
 
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-lexis-bg-deep px-4">
+                <Card className="w-full max-w-md bg-white/95 backdrop-blur border-none shadow-2xl p-8">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-12 h-12 border-4 border-lexis-gold border-t-transparent rounded-full animate-spin" />
+                        <p className="text-slate-500 text-sm">Cargando...</p>
+                    </div>
+                </Card>
+            </div>
+        }>
+            <LoginForm />
+        </Suspense>
     );
 }

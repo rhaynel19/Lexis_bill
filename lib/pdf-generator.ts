@@ -6,7 +6,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import QRCode from "qrcode";
-import { APP_CONFIG, formatDateDominican, getInvoiceTypeName } from "./config";
+import { APP_CONFIG, formatDateDominican, getInvoiceTypeName, SERIE_B_TYPES, SERIE_E_TYPES } from "./config";
 import { numberToText } from "./number-to-text";
 
 // Interfaz para los datos de la factura
@@ -74,6 +74,27 @@ function formatCurrency(amount: number): string {
 export interface CompanyOverride {
     companyName?: string;
     rnc?: string;
+}
+
+type DocumentKind = "quote" | "proforma" | "serie_b" | "serie_e";
+
+/**
+ * Determina el tipo de documento para aplicar la lógica correcta (Serie B vs Serie E).
+ * - Proforma: borrador (NCF BORRADOR), sin QR, título "Proforma".
+ * - Serie B: tipos 01, 02, 14, 15 → sin QR, pie "Comprobante Serie B".
+ * - Serie E: tipos 31, 32, 33, 34, 44, 45 → con QR si ya está emitido (NCF real).
+ */
+function getDocumentKind(invoiceData: InvoiceData): { kind: DocumentKind; isProforma: boolean; isSerieB: boolean; isSerieE: boolean; showQR: boolean } {
+    if (invoiceData.type === "quote") {
+        return { kind: "quote", isProforma: false, isSerieB: false, isSerieE: false, showQR: false };
+    }
+    const isProforma = invoiceData.sequenceNumber === "BORRADOR";
+    const isSerieB = (SERIE_B_TYPES as readonly string[]).includes(invoiceData.type);
+    const isSerieE = (SERIE_E_TYPES as readonly string[]).includes(invoiceData.type);
+    // QR solo para Serie E ya emitida (NCF real, no borrador)
+    const showQR = isSerieE && !isProforma;
+    const kind: DocumentKind = isProforma ? "proforma" : isSerieB ? "serie_b" : "serie_e";
+    return { kind, isProforma, isSerieB, isSerieE, showQR };
 }
 
 /**
@@ -159,16 +180,16 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     yPosition += 12;
 
     // ===== DATOS DEL COMPROBANTE (Derecha) =====
-    // Proforma/Serie B: sin QR, título "Proforma", TOTAL PROFORMA. Serie B = tipos 01, 02, 14, 15 (no electrónicos).
-    const isProforma = invoiceData.sequenceNumber === "BORRADOR";
-    const isSerieB = ["01", "02", "14", "15"].includes(invoiceData.type);
-    const showQR = invoiceData.type !== "quote" && !isProforma && !isSerieB;
+    // Lógica separada: Serie B (sin QR) vs Serie E (e-CF, con QR)
+    const { kind, isProforma, isSerieB, isSerieE, showQR } = getDocumentKind(invoiceData);
 
     const titleX = pageWidth - margin.right;
 
-    let invoiceTitle = getInvoiceTypeName(invoiceData.type);
-    if (invoiceData.type === "quote") invoiceTitle = "COTIZACIÓN";
-    else if (isProforma) invoiceTitle = "Proforma";
+    let invoiceTitle: string;
+    if (kind === "quote") invoiceTitle = "COTIZACIÓN";
+    else if (kind === "proforma") invoiceTitle = "Proforma";
+    else if (kind === "serie_b") invoiceTitle = getInvoiceTypeName(invoiceData.type);
+    else invoiceTitle = getInvoiceTypeName(invoiceData.type); // serie_e
 
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
@@ -274,11 +295,11 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     doc.line(summaryLabelX - 10, yPosition, summaryX, yPosition);
     yPosition += 8;
 
-    // Total (Proforma o Factura)
+    // Total según tipo de documento (Proforma vs Factura Serie B/E)
     doc.setFont("helvetica", "bold");
     doc.setFontSize(APP_CONFIG.pdf.fontSize.subtitle);
     doc.setTextColor(...blueColor);
-    const totalLabel = isProforma ? "TOTAL PROFORMA:" : "TOTAL FACTURA:";
+    const totalLabel = kind === "proforma" ? "TOTAL PROFORMA:" : "TOTAL FACTURA:";
     doc.text(totalLabel, summaryLabelX - 15, yPosition);
     doc.text(formatCurrency(invoiceData.total), summaryX, yPosition, { align: "right" });
     yPosition += 8;
@@ -332,7 +353,7 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     doc.text(`Son: ${totalEnLetras}`, margin.left, yPosition);
     yPosition += 15;
 
-    // ===== CÓDIGO QR (Solo factura electrónica emitida; no proforma ni serie B) =====
+    // ===== CÓDIGO QR (Solo Serie E emitida; Serie B y proforma no llevan QR) =====
     if (showQR) {
         try {
             const qrDataURL = await generateQRCode(invoiceData);
@@ -355,23 +376,27 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
         }
     }
 
-    // ===== PIE DE PÁGINA =====
+    // ===== PIE DE PÁGINA (lógica Serie B vs Serie E) =====
     const footerY = pageHeight - margin.bottom - 10;
     doc.setFontSize(APP_CONFIG.pdf.fontSize.small);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(APP_CONFIG.pdf.colors.secondary[0], APP_CONFIG.pdf.colors.secondary[1], APP_CONFIG.pdf.colors.secondary[2]);
-    const isElectronic = invoiceData.sequenceNumber.startsWith("E");
     let footerText: string;
     let disclaimerText = "";
-    if (invoiceData.type === "quote") {
-        footerText = "ESTE DOCUMENTO NO TIENE VALOR FISCAL";
-    } else if (isProforma) {
-        footerText = "Este documento es una PROFORMA. No tiene valor fiscal hasta su formalización.";
-    } else if (isSerieB) {
-        footerText = "Comprobante Fiscal (Serie B). No es factura electrónica.";
-    } else {
-        footerText = `Este documento es una representación impresa de un Comprobante Fiscal ${isElectronic ? "Electrónico" : ""}`;
-        disclaimerText = "Comprobante interno. No constituye e-CF oficial hasta integración PSFE con DGII.";
+    switch (kind) {
+        case "quote":
+            footerText = "ESTE DOCUMENTO NO TIENE VALOR FISCAL";
+            break;
+        case "proforma":
+            footerText = "Este documento es una PROFORMA. No tiene valor fiscal hasta su formalización.";
+            break;
+        case "serie_b":
+            footerText = "Comprobante Fiscal (Serie B). No es factura electrónica.";
+            break;
+        case "serie_e":
+            footerText = "Este documento es una representación impresa de un Comprobante Fiscal Electrónico.";
+            disclaimerText = "Comprobante interno. No constituye e-CF oficial hasta integración PSFE con DGII.";
+            break;
     }
 
     doc.text(

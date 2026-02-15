@@ -1684,17 +1684,72 @@ app.post('/api/auth/profile', verifyToken, async (req, res) => {
     }
 });
 
-// --- Referencia única LEX-XXXX para transferencias ---
+// --- Referencia única LEX-XXXXXX para transferencias (alta entropía, sin colisiones) ---
 async function generateUniquePaymentReference() {
-    for (let attempt = 0; attempt < 20; attempt++) {
-        const num = Math.floor(1000 + Math.random() * 9000);
+    for (let attempt = 0; attempt < 25; attempt++) {
+        const num = Math.floor(100000 + Math.random() * 900000);
         const ref = `LEX-${num}`;
         const exists = await PaymentRequest.findOne({ reference: ref });
         if (!exists) return ref;
     }
-    const fallback = `LEX-${Date.now().toString().slice(-4)}`;
+    const fallback = `LEX-${Date.now().toString(36).toUpperCase().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
     return fallback;
 }
+
+// --- WEBHOOKS (PayPal → MongoDB, sin verifyToken) ---
+// Fuente de verdad: Subscription y PaymentRequest en MongoDB. No usar servicio en memoria.
+app.post('/api/webhooks/paypal', async (req, res) => {
+    try {
+        const event = req.body;
+        const eventType = event?.event_type;
+        log.info({ eventType }, 'Webhook PayPal recibido');
+
+        const resource = event?.resource || {};
+        const customId = resource.custom_id || resource.custom;
+        const userId = customId && isValidObjectId(customId) ? new mongoose.Types.ObjectId(customId) : null;
+
+        if (!userId) {
+            log.warn({ eventType, customId }, 'Webhook PayPal sin custom_id válido (userId); ignorado');
+            return res.status(200).json({ received: true });
+        }
+
+        switch (eventType) {
+            case 'BILLING.SUBSCRIPTION.ACTIVATED':
+                await getOrCreateSubscription(userId);
+                await activateSubscriptionFromPayment(userId, null, 'pro', 'monthly');
+                log.info({ userId }, 'Suscripción activada por PayPal');
+                break;
+
+            case 'PAYMENT.SALE.COMPLETED': {
+                const amount = resource.amount?.total;
+                const billingCycle = (resource.billing_agreement_id || resource.plan_id) ? 'monthly' : 'monthly';
+                await getOrCreateSubscription(userId);
+                await activateSubscriptionFromPayment(userId, null, 'pro', billingCycle);
+                log.info({ userId, amount }, 'Pago PayPal completado; suscripción activada');
+                break;
+            }
+
+            case 'BILLING.SUBSCRIPTION.CANCELLED':
+            case 'BILLING.SUBSCRIPTION.EXPIRED':
+                await updateSubscriptionStatus(userId, 'CANCELLED', { reason: eventType });
+                log.info({ userId, eventType }, 'Suscripción cancelada/expirada por PayPal');
+                break;
+
+            case 'BILLING.SUBSCRIPTION.SUSPENDED':
+                await updateSubscriptionStatus(userId, 'SUSPENDED', { reason: 'PayPal suspended' });
+                log.info({ userId }, 'Suscripción suspendida por PayPal');
+                break;
+
+            default:
+                log.info({ eventType }, 'Evento PayPal no manejado');
+        }
+
+        res.status(200).json({ received: true });
+    } catch (err) {
+        log.error({ err: err.message }, 'Error procesando webhook PayPal');
+        res.status(200).json({ received: true, error: err.message });
+    }
+});
 
 // --- MEMBRESÍAS (Manual: Transferencia / PayPal) ---
 app.get('/api/membership/plans', (req, res) => {
@@ -1767,8 +1822,9 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
             });
         }
 
-        const reference = clientReference && /^LEX-\d{4}$/.test(String(clientReference).trim())
-            ? String(clientReference).trim()
+        const refTrim = clientReference && String(clientReference).trim();
+        const reference = (refTrim && /^LEX-\d{4,10}$/.test(refTrim)) || (refTrim && /^LEX-[A-Z0-9]+-\d{3}$/.test(refTrim))
+            ? refTrim
             : await generateUniquePaymentReference();
 
         const pr = new PaymentRequest({

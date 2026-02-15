@@ -13,7 +13,7 @@ import { validateRNCOrCedula, autoFormatRNCOrCedula } from "@/lib/validators";
 import { validateRNC } from "@/lib/rnc-validator";
 import { numberToText } from "@/lib/number-to-text";
 import { downloadInvoicePDF, previewInvoicePDF, type InvoiceData } from "@/lib/pdf-generator";
-import { getNextSequenceNumber } from "@/lib/config";
+import { getNextSequenceNumber, SERIE_B_TYPES, SERIE_E_TYPES } from "@/lib/config";
 import { getDominicanDate } from "@/lib/date-utils";
 import { generateInvoiceWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp-utils";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -49,6 +49,8 @@ export default function NewInvoice() {
 
     // Estados para los campos del formulario
     const [invoiceType, setInvoiceType] = useState("");
+    /** Serie E (electrónica) cuando true; Serie B (tradicional) cuando false. Viene de Configuración > Facturación Electrónica Activa. */
+    const [useSerieE, setUseSerieE] = useState<boolean>(true);
     const [clientName, setClientName] = useState("");
     const [rnc, setRnc] = useState("");
     const [clientPhone, setClientPhone] = useState("");
@@ -311,10 +313,21 @@ export default function NewInvoice() {
             restoreDraft();
         }
 
-        // Load Profession and User Details from Config/User
+        // Load Profession and User Details from Config/User (incl. Serie B vs E)
         const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
         if (config.exequatur) setExequatur(config.exequatur);
+        setUseSerieE(config.hasElectronicBilling === true);
     }, [authUser]);
+
+    // Ajustar tipo de comprobante al rango configurado (Serie B o E)
+    useEffect(() => {
+        const allowed = useSerieE ? (SERIE_E_TYPES as readonly string[]) : (SERIE_B_TYPES as readonly string[]);
+        if (invoiceType && !allowed.includes(invoiceType)) {
+            setInvoiceType(useSerieE ? "32" : "02");
+        } else if (!invoiceType) {
+            setInvoiceType(useSerieE ? "32" : "02");
+        }
+    }, [useSerieE, invoiceType]);
 
     // Save Draft on Change (API + localStorage backup)
     useEffect(() => {
@@ -1004,8 +1017,10 @@ export default function NewInvoice() {
             <div className="mb-8 flex items-center justify-between">
                 <div>
                     <h2 className="text-3xl font-bold text-accent">Nueva Factura</h2>
-                    <p className="text-muted-foreground">Crear comprobante fiscal electrónico (e-CF)</p>
-                    <p className="text-xs text-muted-foreground/80 mt-1">Tu borrador se guarda automáticamente y está disponible en todos tus dispositivos.</p>
+                    <p className="text-muted-foreground">
+                        {useSerieE ? "Crear comprobante fiscal electrónico (e-CF, Serie E)" : "Crear comprobante fiscal (Serie B)"}
+                    </p>
+                    <p className="text-xs text-muted-foreground/80 mt-1">Según configuración. Tu borrador se guarda automáticamente.</p>
                 </div>
                 <Link href="/dashboard">
                     <Button variant="outline">← Volver</Button>
@@ -1044,39 +1059,47 @@ export default function NewInvoice() {
                                 <CardHeader>
                                     <CardTitle>Información del Comprobante</CardTitle>
                                     <CardDescription>
-                                        Selecciona el tipo de comprobante fiscal electrónico
+                                        {useSerieE
+                                            ? "Serie E (electrónica): según tu configuración. NCF con código QR al emitir."
+                                            : "Serie B (tradicional): según tu configuración. Sin código QR."}
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    {/* Selector de Tipo de e-CF */}
+                                    {/* Selector de Tipo según Serie B o E (configuración) */}
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2">
-                                            <Label htmlFor="invoice-type">Tipo de Comprobante (e-CF) *</Label>
-                                            <ContextualHelp text="NCF: Número de Comprobante Fiscal. B01/E31 para empresas (RNC 9 dígitos), B02/E32 para consumidor final. El tipo debe coincidir con el cliente." mode="popover" />
+                                            <Label htmlFor="invoice-type">Tipo de Comprobante *</Label>
+                                            <ContextualHelp text="NCF: Número de Comprobante Fiscal. El rango (Serie B o E) lo defines en Configuración. B01/E31 para empresas (RNC 9 dígitos), B02/E32 para consumidor final." mode="popover" />
                                         </div>
                                         <Select value={invoiceType} onValueChange={setInvoiceType}>
                                             <SelectTrigger id="invoice-type">
                                                 <SelectValue placeholder="Selecciona el tipo de comprobante" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/30">Comprobantes Tradicionales (B)</div>
-                                                <SelectItem value="01">01 - Crédito Fiscal</SelectItem>
-                                                <SelectItem value="02">02 - Consumo</SelectItem>
-                                                <SelectItem value="04">04 - Nota de Crédito</SelectItem>
-                                                <SelectItem value="14">14 - Regímenes Especiales</SelectItem>
-                                                <SelectItem value="15">15 - Gubernamental</SelectItem>
-
-                                                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/30 mt-2">Comprobantes Electrónicos (E)</div>
-                                                <SelectItem value="31">31 - Crédito Fiscal</SelectItem>
-                                                <SelectItem value="32">32 - Consumo</SelectItem>
-                                                <SelectItem value="33">33 - Nota de Débito</SelectItem>
-                                                <SelectItem value="34">34 - Nota de Crédito</SelectItem>
-                                                <SelectItem value="44">44 - Regímenes Especiales</SelectItem>
-                                                <SelectItem value="45">45 - Gubernamental</SelectItem>
+                                                {useSerieE ? (
+                                                    <>
+                                                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/30">Serie E (electrónica)</div>
+                                                        <SelectItem value="31">31 - Crédito Fiscal</SelectItem>
+                                                        <SelectItem value="32">32 - Consumo</SelectItem>
+                                                        <SelectItem value="33">33 - Nota de Débito</SelectItem>
+                                                        <SelectItem value="34">34 - Nota de Crédito</SelectItem>
+                                                        <SelectItem value="44">44 - Regímenes Especiales</SelectItem>
+                                                        <SelectItem value="45">45 - Gubernamental</SelectItem>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/30">Serie B (tradicional)</div>
+                                                        <SelectItem value="01">01 - Crédito Fiscal</SelectItem>
+                                                        <SelectItem value="02">02 - Consumo</SelectItem>
+                                                        <SelectItem value="04">04 - Nota de Crédito</SelectItem>
+                                                        <SelectItem value="14">14 - Regímenes Especiales</SelectItem>
+                                                        <SelectItem value="15">15 - Gubernamental</SelectItem>
+                                                    </>
+                                                )}
                                             </SelectContent>
                                         </Select>
                                         <p className="text-xs text-muted-foreground">
-                                            💡 Tipo 31 incluye retención de ISR del 10%
+                                            {useSerieE ? "💡 Tipo 31 incluye retención de ISR del 10%. Cambia a Serie B en Configuración si facturas sin e-CF." : "💡 Sin código QR. Activa Facturación Electrónica en Configuración para Serie E."}
                                         </p>
                                     </div>
                                 </CardContent>
