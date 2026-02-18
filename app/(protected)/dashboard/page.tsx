@@ -125,6 +125,7 @@ export default function Dashboard() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [previousMonthRevenue, setPreviousMonthRevenue] = useState(0);
   const [pendingInvoices, setPendingInvoices] = useState(0);
+  const [totalPorCobrar, setTotalPorCobrar] = useState(0);
   const [predictiveAlerts, setPredictiveAlerts] = useState<string[]>([]);
   const [totalClients, setTotalClients] = useState(0);
   const [recentInvoices, setRecentInvoices] = useState<Invoice[]>([]);
@@ -212,6 +213,7 @@ export default function Dashboard() {
         setTargetInvoices(statsRes.targetInvoices);
         setEstimatedTaxes(statsRes.monthlyTaxes);
         setPendingInvoices(statsRes.pendingInvoices);
+        setTotalPorCobrar(statsRes.totalPorCobrar ?? 0);
         setTotalClients(statsRes.totalClients);
         setChartData(statsRes.chartData || [0, 0, 0, 0]);
         setMonthLabels(statsRes.monthLabels || []);
@@ -545,21 +547,24 @@ export default function Dashboard() {
               </Card>
             )}
 
-            {/* Tarjeta: Facturas Pendientes */}
+            {/* Tarjeta: Cuentas por cobrar = venta a crédito no cobrada + pagos parciales (ej. parte transferencia, parte por cobrar) */}
             <Card className="bg-white border text-foreground shadow-sm">
               <CardHeader className="pb-2">
                 <CardDescription className="text-muted-foreground font-medium uppercase tracking-wider text-xs">
-                  {mode === 'simple' ? "Te deben (Por cobrar)" : "Facturas Pendientes"}
+                  {mode === 'simple' ? "Te deben (Por cobrar)" : "Cuentas por cobrar"}
                 </CardDescription>
                 <CardTitle className="text-3xl font-bold text-foreground">
                   {pendingInvoices}
                 </CardTitle>
+                {totalPorCobrar > 0 && (
+                  <p className="text-sm font-medium text-muted-foreground mt-1">{formatCurrency(totalPorCobrar)}</p>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="mt-6 w-full bg-secondary/20 rounded-full h-1.5">
                   <div className={cn("bg-secondary h-1.5 rounded-full transition-all", pendingInvoices > 0 ? "w-[60%]" : "w-0")}></div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">En proceso de cobro</p>
+                <p className="text-xs text-muted-foreground mt-2">Venta a crédito y pagos parciales (ej. parte transferencia, parte por cobrar)</p>
               </CardContent>
             </Card>
           </div>

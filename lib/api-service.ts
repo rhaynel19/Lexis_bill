@@ -131,6 +131,7 @@ export const api = {
             monthlyTaxes: number;
             invoiceCount: number;
             pendingInvoices: number;
+            totalPorCobrar: number;
             totalClients: number;
             chartData: number[];
             monthLabels: string[];

@@ -4373,7 +4373,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
         const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
 
-        const [currentMonthAgg, prevMonthAgg, pendingCount, chartAgg, clientCount] = await Promise.all([
+        const [currentMonthAgg, prevMonthAgg, porCobrarAgg, chartAgg, clientCount] = await Promise.all([
             Invoice.aggregate([
                 { $match: { userId: userId, date: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth }, status: { $ne: 'cancelled' } } },
                 { $group: { _id: null, revenue: { $sum: '$total' }, itbis: { $sum: '$itbis' }, count: { $sum: 1 } } }
@@ -4382,7 +4382,17 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
                 { $match: { userId: userId, date: { $gte: startOfPrevMonth, $lte: endOfPrevMonth }, status: { $ne: 'cancelled' } } },
                 { $group: { _id: null, revenue: { $sum: '$total' }, count: { $sum: 1 } } }
             ]),
-            Invoice.countDocuments({ userId, status: 'pending' }),
+            // Cuentas por cobrar: venta a crédito (tipoPago credito) no cobrada + cualquier factura con saldo pendiente (ej. pagos parciales: mitad transferencia, mitad por cobrar)
+            Invoice.aggregate([
+                { $match: { userId, status: { $ne: 'cancelled' }, $or: [
+                    { estadoPago: { $in: ['pendiente', 'parcial'] } },
+                    { balancePendiente: { $gt: 0 } },
+                    { status: 'pending' },
+                    { tipoPago: 'credito', balancePendiente: { $gt: 0 } },
+                    { tipoPago: 'credito', estadoPago: { $in: ['pendiente', 'parcial'] } }
+                ] } },
+                { $group: { _id: null, count: { $sum: 1 }, totalPorCobrar: { $sum: { $cond: [{ $gt: [{ $ifNull: ['$balancePendiente', 0] }, 0] }, '$balancePendiente', '$total'] } } } }
+            ]),
             Invoice.aggregate([
                 { $match: { userId, status: { $ne: 'cancelled' } } },
                 { $project: { year: { $year: '$date' }, month: { $month: '$date' }, total: 1 } },
@@ -4402,6 +4412,9 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
         const previousMonthRevenue = (prevMonthAgg[0] && prevMonthAgg[0].revenue) || 0;
         const prevMonthCount = (prevMonthAgg[0] && prevMonthAgg[0].count) || 0;
         const totalClients = (clientCount[0] && clientCount[0].total) || 0;
+        const porCobrarRow = porCobrarAgg[0];
+        const pendingInvoices = (porCobrarRow && porCobrarRow.count) || 0;
+        const totalPorCobrar = (porCobrarRow && porCobrarRow.totalPorCobrar) || 0;
 
         const byMonth = new Map();
         chartAgg.forEach((r) => byMonth.set(`${r._id.year}-${String(r._id.month).padStart(2, '0')}`, r.total));
@@ -4419,7 +4432,8 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
             previousMonthRevenue,
             monthlyTaxes,
             invoiceCount,
-            pendingInvoices: pendingCount,
+            pendingInvoices,
+            totalPorCobrar,
             totalClients,
             chartData: last4MonthsData,
             monthLabels,
