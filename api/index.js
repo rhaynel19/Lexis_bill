@@ -1828,7 +1828,8 @@ app.get('/api/membership/payment-info', verifyToken, (req, res) => {
         bankAccount: process.env.LEXISBILL_BANK_ACCOUNT || '789042660',
         bankHolder: process.env.LEXISBILL_BANK_HOLDER || 'Fraimel Trinidad',
         bankHolderDoc: process.env.LEXISBILL_BANK_HOLDER_DOC || '22301660929',
-        paypalEmail: process.env.LEXISBILL_PAYPAL_EMAIL || 'pagos@lexisbill.com'
+        paypalEmail: process.env.LEXISBILL_PAYPAL_EMAIL || 'pagos@lexisbill.com',
+        paypalMeUrl: process.env.LEXISBILL_PAYPAL_ME_URL || 'https://paypal.me/frameltrinidad'
     });
 });
 
@@ -4358,6 +4359,74 @@ app.delete('/api/documents/:id', verifyToken, async (req, res) => {
         if (!r) return res.status(404).json({ message: 'Documento no encontrado' });
         res.json({ success: true });
     } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Stats del dashboard por agregación (evita cargar 200 facturas en memoria)
+app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
+    try {
+        const userId = req.userId;
+        const now = new Date();
+        const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+
+        const [currentMonthAgg, prevMonthAgg, pendingCount, chartAgg, clientCount] = await Promise.all([
+            Invoice.aggregate([
+                { $match: { userId: userId, date: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth }, status: { $ne: 'cancelled' } } },
+                { $group: { _id: null, revenue: { $sum: '$total' }, itbis: { $sum: '$itbis' }, count: { $sum: 1 } } }
+            ]),
+            Invoice.aggregate([
+                { $match: { userId: userId, date: { $gte: startOfPrevMonth, $lte: endOfPrevMonth }, status: { $ne: 'cancelled' } } },
+                { $group: { _id: null, revenue: { $sum: '$total' }, count: { $sum: 1 } } }
+            ]),
+            Invoice.countDocuments({ userId, status: 'pending' }),
+            Invoice.aggregate([
+                { $match: { userId, status: { $ne: 'cancelled' } } },
+                { $project: { year: { $year: '$date' }, month: { $month: '$date' }, total: 1 } },
+                { $group: { _id: { year: '$year', month: '$month' }, total: { $sum: '$total' } } },
+                { $sort: { '_id.year': 1, '_id.month': 1 } }
+            ]),
+            Invoice.aggregate([
+                { $match: { userId } },
+                { $group: { _id: '$clientRnc' } },
+                { $count: 'total' }
+            ])
+        ]);
+
+        const monthlyRevenue = (currentMonthAgg[0] && currentMonthAgg[0].revenue) || 0;
+        const monthlyTaxes = (currentMonthAgg[0] && currentMonthAgg[0].itbis) || 0;
+        const invoiceCount = (currentMonthAgg[0] && currentMonthAgg[0].count) || 0;
+        const previousMonthRevenue = (prevMonthAgg[0] && prevMonthAgg[0].revenue) || 0;
+        const prevMonthCount = (prevMonthAgg[0] && prevMonthAgg[0].count) || 0;
+        const totalClients = (clientCount[0] && clientCount[0].total) || 0;
+
+        const byMonth = new Map();
+        chartAgg.forEach((r) => byMonth.set(`${r._id.year}-${String(r._id.month).padStart(2, '0')}`, r.total));
+        const last4MonthsData = [];
+        const monthLabels = [];
+        for (let i = 3; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            last4MonthsData.push(byMonth.get(key) || 0);
+            monthLabels.push(d.toLocaleDateString('es-DO', { month: 'short' }));
+        }
+
+        res.json({
+            monthlyRevenue,
+            previousMonthRevenue,
+            monthlyTaxes,
+            invoiceCount,
+            pendingInvoices: pendingCount,
+            totalClients,
+            chartData: last4MonthsData,
+            monthLabels,
+            targetInvoices: Math.max(prevMonthCount, 1)
+        });
+    } catch (e) {
+        log.error({ err: e.message, userId: req.userId }, 'Dashboard stats error');
         res.status(500).json({ error: e.message });
     }
 });

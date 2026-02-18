@@ -123,6 +123,21 @@ export const api = {
         return res;
     },
 
+    /** Stats del dashboard por agregación (sin cargar todas las facturas) */
+    async getDashboardStats() {
+        return secureFetch<{
+            monthlyRevenue: number;
+            previousMonthRevenue: number;
+            monthlyTaxes: number;
+            invoiceCount: number;
+            pendingInvoices: number;
+            totalClients: number;
+            chartData: number[];
+            monthLabels: string[];
+            targetInvoices: number;
+        }>(`${API_URL}/dashboard/stats`, { cacheKey: undefined });
+    },
+
     // NCF Settings
     async getNcfSettings() {
         return secureFetch<any[]>(`${API_URL}/ncf-settings`, {

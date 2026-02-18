@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { APP_CONFIG } from "@/lib/config";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   FileText,
@@ -162,216 +162,199 @@ export default function Dashboard() {
     }
   }, [authUser?.fiscalStatus?.confirmed, userName]);
 
-  useEffect(() => {
-    let cancelled = false;
-    
-    const loadDashboardData = async () => {
-      setIsLoading(true);
-      setError("");
+  const cancelledRef = useRef(false);
 
-      try {
-        if (!authUser) {
-          if (!cancelled) router.push("/login");
-          return;
-        }
+  const loadDashboardData = useCallback(async () => {
+    setIsLoading(true);
+    setError("");
+    cancelledRef.current = false;
 
-        // ✅ Verificar ruta actual ANTES de redirigir
-        if (typeof window !== "undefined" && window.location.pathname === '/pagos') {
-          if (!cancelled) setIsLoading(false);
-          return; // Ya está en la página correcta
-        }
+    try {
+      if (!authUser) {
+        if (!cancelledRef.current) router.push("/login");
+        return;
+      }
 
-        if (cancelled) return;
+      if (typeof window !== "undefined" && window.location.pathname === "/pagos") {
+        if (!cancelledRef.current) setIsLoading(false);
+        return;
+      }
 
-        setFiscalState({
-          suggested: authUser.fiscalStatus?.suggested || "",
-          confirmed: authUser.fiscalStatus?.confirmed || null
+      if (cancelledRef.current) return;
+
+      setFiscalState({
+        suggested: authUser.fiscalStatus?.suggested || "",
+        confirmed: authUser.fiscalStatus?.confirmed || null
+      });
+
+      const { api } = await import("@/lib/api-service");
+      const status = await api.getSubscriptionStatus(true).catch(() => null);
+
+      if (cancelledRef.current) return;
+
+      if (status && status.shouldRedirect === true) {
+        if (!cancelledRef.current) router.replace("/pagos");
+        return;
+      }
+
+      // Intentar stats por agregación (menos carga) y solo 50 facturas para la lista
+      const [statsRes, invRes] = await Promise.all([
+        api.getDashboardStats().catch(() => null),
+        api.getInvoices(1, 50)
+      ]);
+
+      const invoices: Invoice[] = invRes?.data || [];
+      setRecentInvoices(invoices);
+
+      if (statsRes) {
+        setTotalRevenue(statsRes.monthlyRevenue);
+        setPreviousMonthRevenue(statsRes.previousMonthRevenue);
+        setTargetInvoices(statsRes.targetInvoices);
+        setEstimatedTaxes(statsRes.monthlyTaxes);
+        setPendingInvoices(statsRes.pendingInvoices);
+        setTotalClients(statsRes.totalClients);
+        setChartData(statsRes.chartData || [0, 0, 0, 0]);
+        setMonthLabels(statsRes.monthLabels || []);
+        setMonthlyStats({
+          revenue: statsRes.monthlyRevenue,
+          invoiceCount: statsRes.invoiceCount,
+          clientCount: statsRes.totalClients
         });
-
-        // 2. Fetch subscription & fiscal status
-        const { api } = await import("@/lib/api-service");
-
-        // ✅ Forzar fetch sin cache para estado crítico
-        const status = await api.getSubscriptionStatus(true).catch(() => null);
-
-        if (cancelled) return;
-
-        // ✅ CORREGIDO: Solo redirigir si shouldRedirect es true (PAST_DUE o SUSPENDED)
-        // NO redirigir durante GRACE_PERIOD, PENDING_PAYMENT o UNDER_REVIEW (permitir acceso parcial)
-        if (status && status.shouldRedirect === true) {
-          // ✅ Usar replace en vez de push para evitar historial
-          if (!cancelled) router.replace("/pagos");
-          return;
-        }
-        // Si está en GRACE_PERIOD, PENDING_PAYMENT o UNDER_REVIEW, permitir acceso parcial (mostrar banner)
-
-        // 3. Fetch Invoices from Server (paginado: 200 para stats del dashboard)
-        const invRes = await api.getInvoices(1, 200);
-        const invoices: Invoice[] = invRes?.data || [];
-
-        if (invoices && invoices.length > 0) {
+      } else {
+        // Fallback: calcular desde facturas (comportamiento anterior)
+        if (invoices.length > 0) {
           const now = new Date();
           const currentMonth = now.getMonth();
           const currentYear = now.getFullYear();
-
-          // Calcular el total facturado del mes actual
           const monthlyInvoices = invoices.filter((inv) => {
             const invDate = new Date(inv.date);
             return invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear;
           });
-
           const monthlyRevenue = monthlyInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
           setTotalRevenue(monthlyRevenue);
-
-          // Ingresos del mes anterior (para insight real)
           const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
           const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
           const previousMonthlyInvoices = invoices.filter((inv) => {
             const invDate = new Date(inv.date);
             return invDate.getMonth() === prevMonth && invDate.getFullYear() === prevYear;
           });
-          const prevRevenue = previousMonthlyInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
-          setPreviousMonthRevenue(prevRevenue);
+          setPreviousMonthRevenue(previousMonthlyInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0));
           setTargetInvoices(Math.max(previousMonthlyInvoices.length, 1));
-
-          // ITBIS (18% simplified or from data)
-          const monthlyTaxes = monthlyInvoices.reduce((sum, inv) => sum + (inv.itbis || 0), 0);
-          setEstimatedTaxes(monthlyTaxes);
-
-          // Contar facturas pendientes
-          const pending = invoices.filter((inv) => inv.status === "pending").length;
-          setPendingInvoices(pending);
-
-          // Contar clientes únicos (por RNC)
-          const uniqueClients = new Set(invoices.map((inv) => inv.rnc || inv.clientRnc || ""));
-          setTotalClients(uniqueClients.size);
-
-          // Facturas para Centro de Control (50 para tabla con paginación)
-          setRecentInvoices(invoices.slice(0, 50));
-
-          // Datos para el gráfico (Últimos 4 meses)
+          setEstimatedTaxes(monthlyInvoices.reduce((sum, inv) => sum + (inv.itbis || 0), 0));
+          setPendingInvoices(invoices.filter((inv) => inv.status === "pending").length);
+          setTotalClients(new Set(invoices.map((inv) => inv.rnc || inv.clientRnc || "")).size);
           const last4MonthsData = [];
           const labels = [];
           for (let i = 3; i >= 0; i--) {
             const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const monthDetails = invoices.filter(inv => {
+            const monthDetails = invoices.filter((inv) => {
               const invDate = new Date(inv.date);
               return invDate.getMonth() === d.getMonth() && invDate.getFullYear() === d.getFullYear();
             });
-            const total = monthDetails.reduce((sum, inv) => sum + (inv.total || 0), 0);
-            last4MonthsData.push(total);
-            labels.push(d.toLocaleDateString('es-DO', { month: 'short' }));
+            last4MonthsData.push(monthDetails.reduce((sum, inv) => sum + (inv.total || 0), 0));
+            labels.push(d.toLocaleDateString("es-DO", { month: "short" }));
           }
           setChartData(last4MonthsData);
           setMonthLabels(labels);
-
-          // Resumen mensual para Lexis
           setMonthlyStats({
             revenue: monthlyRevenue,
             invoiceCount: monthlyInvoices.length,
-            clientCount: uniqueClients.size
+            clientCount: new Set(invoices.map((inv) => inv.rnc || inv.clientRnc || "")).size
           });
         }
+      }
 
-        // Check NCF Health + predictive alerts con datos reales
-        try {
-          const ncfSettings = await api.getNcfSettings() as NcfSetting[];
-          const typeToLabel: Record<string, string> = { "01": "B01", "02": "B02", "31": "E31", "32": "E32", "14": "B14", "15": "B15", "44": "E44", "45": "E45" };
-          const activeSettings = (ncfSettings || []).filter((s: NcfSetting) => s.isActive);
-          let firstSummary: NcfSequenceSummary | null = null;
-          let lowSummary: NcfSequenceSummary | null = null;
-          for (const s of activeSettings) {
-            const remaining = (s.finalNumber ?? 0) - (s.currentValue ?? 0);
-            const expiryStr = s.expiryDate
-              ? new Date(s.expiryDate).toLocaleDateString("es-DO", { day: "2-digit", month: "2-digit", year: "numeric" })
-              : "";
-            const summary: NcfSequenceSummary = {
-              type: s.type,
-              typeLabel: typeToLabel[s.type] || `tipo ${s.type}`,
-              remaining: Math.max(0, remaining),
-              expiryDate: expiryStr
-            };
-            if (!firstSummary) firstSummary = summary;
-            if (remaining < 20 && remaining >= 0 && !lowSummary) {
-              lowSummary = summary;
-              setIsFiscalHealthy(false);
-              setLowNcfType(s.type);
-            }
+      try {
+        const ncfSettings = (await api.getNcfSettings()) as NcfSetting[];
+        const typeToLabel: Record<string, string> = { "01": "B01", "02": "B02", "31": "E31", "32": "E32", "14": "B14", "15": "B15", "44": "E44", "45": "E45" };
+        const activeSettings = (ncfSettings || []).filter((s: NcfSetting) => s.isActive);
+        let firstSummary: NcfSequenceSummary | null = null;
+        let lowSummary: NcfSequenceSummary | null = null;
+        for (const s of activeSettings) {
+          const remaining = (s.finalNumber ?? 0) - (s.currentValue ?? 0);
+          const expiryStr = s.expiryDate ? new Date(s.expiryDate).toLocaleDateString("es-DO", { day: "2-digit", month: "2-digit", year: "numeric" }) : "";
+          const summary: NcfSequenceSummary = {
+            type: s.type,
+            typeLabel: typeToLabel[s.type] || `tipo ${s.type}`,
+            remaining: Math.max(0, remaining),
+            expiryDate: expiryStr
+          };
+          if (!firstSummary) firstSummary = summary;
+          if (remaining < 20 && remaining >= 0 && !lowSummary) {
+            lowSummary = summary;
+            setIsFiscalHealthy(false);
+            setLowNcfType(s.type);
           }
-          setNcfSequenceSummary(firstSummary);
-          setNcfLowSequence(lowSummary);
-          // Alertas predictivas con datos reales (NCF, pendientes, clientes recurrentes)
-          const { PredictiveService: Pred } = await import("@/lib/predictive-service");
-          const pending = (invRes?.data || []).filter((inv: Invoice) => inv.status === "pending").length;
-          const alerts = Pred.getPredictiveAlerts({
-            ncfSettings: ncfSettings as { type: string; currentValue: number; finalNumber: number; isActive?: boolean }[],
-            invoices: (invRes?.data || []) as { date: string; total?: number; status?: string; rnc?: string; clientRnc?: string; clientName?: string }[],
-            pendingCount: pending
-          });
-          setPredictiveAlerts(alerts);
+        }
+        setNcfSequenceSummary(firstSummary);
+        setNcfLowSequence(lowSummary);
+        const { PredictiveService: Pred } = await import("@/lib/predictive-service");
+        const pending = statsRes ? statsRes.pendingInvoices : (invRes?.data || []).filter((inv: Invoice) => inv.status === "pending").length;
+        const alerts = Pred.getPredictiveAlerts({
+          ncfSettings: ncfSettings as { type: string; currentValue: number; finalNumber: number; isActive?: boolean }[],
+          invoices: (invRes?.data || []) as { date: string; total?: number; status?: string; rnc?: string; clientRnc?: string; clientName?: string }[],
+          pendingCount: pending
+        });
+        setPredictiveAlerts(alerts);
 
-          // Mensaje contextual de Lexis
-          const todayStr = new Date().toISOString().slice(0, 10);
-          const invoicesToday = (invRes?.data || []).filter((inv: { date?: string }) => inv.date && inv.date.startsWith(todayStr));
-          const dayOfMonth = new Date().getDate();
-          if (invoicesToday.length === 0 && (invRes?.data || []).length > 0) {
-            setLexisContextualMessage("Hoy no has emitido facturas. ¿Creamos una?");
-          } else if (lowSummary) {
-            setLexisContextualMessage(`Tu secuencia ${lowSummary.typeLabel} se está agotando (quedan ${lowSummary.remaining}). ¿Te guío para solicitar más?`);
-          } else if (pending > 0) {
-            setLexisContextualMessage(`Tienes ${pending} factura${pending !== 1 ? "s" : ""} pendiente${pending !== 1 ? "s" : ""} de cobro. ¿Te ayudo con un recordatorio?`);
-          } else if (dayOfMonth >= 25) {
-            setLexisContextualMessage("Se acerca el cierre de mes. ¿Ya tienes listos tus reportes 606 y 607?");
-          } else {
-            setLexisContextualMessage("Aquí está tu resumen. ¿En qué te ayudo hoy?");
-          }
-        } catch (e) { console.error("NCF Settings Fetch Error:", e); }
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const invoicesToday = (invRes?.data || []).filter((inv: { date?: string }) => inv.date && inv.date.startsWith(todayStr));
+        const dayOfMonth = new Date().getDate();
+        if (invoicesToday.length === 0 && (invRes?.data || []).length > 0) {
+          setLexisContextualMessage("Hoy no has emitido facturas. ¿Creamos una?");
+        } else if (lowSummary) {
+          setLexisContextualMessage(`Tu secuencia ${lowSummary.typeLabel} se está agotando (quedan ${lowSummary.remaining}). ¿Te guío para solicitar más?`);
+        } else if (pending > 0) {
+          setLexisContextualMessage(`Tienes ${pending} factura${pending !== 1 ? "s" : ""} pendiente${pending !== 1 ? "s" : ""} de cobro. ¿Te ayudo con un recordatorio?`);
+        } else if (dayOfMonth >= 25) {
+          setLexisContextualMessage("Se acerca el cierre de mes. ¿Ya tienes listos tus reportes 606 y 607?");
+        } else {
+          setLexisContextualMessage("Aquí está tu resumen. ¿En qué te ayudo hoy?");
+        }
+      } catch (e) {
+        console.error("NCF Settings Fetch Error:", e);
+      }
 
-        // Si no hay facturas, establecer stats en cero
-        if (!invRes?.data || (invRes.data as unknown[]).length === 0) {
+      if ((!statsRes && (!invRes?.data || (invRes.data as unknown[]).length === 0)) || (statsRes && statsRes.invoiceCount === 0)) {
+        if (!statsRes) {
           setMonthlyStats({ revenue: 0, invoiceCount: 0, clientCount: 0 });
           setTargetInvoices(undefined);
-          setLexisContextualMessage("Aún no hay facturas. ¿Creamos la primera juntos?");
         }
-      } catch (err: unknown) {
-        if (!cancelled) {
-          console.error("Dashboard Load Error:", err);
-          setError("Hubo un inconveniente técnico al cargar sus datos. Usa «Reintentar» o recarga la página.");
-          toast.error("No pudimos cargar el dashboard. Revisa tu conexión e intenta de nuevo.");
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        setLexisContextualMessage("Aún no hay facturas. ¿Creamos la primera juntos?");
       }
-    };
-
-    loadDashboardData();
-
-    // Check for setup requirement from redirect
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get("setup") === "required") {
-        toast.error("⚠️ Identidad Fiscal Requerida", {
-          description: "Confirma tu nombre fiscal para poder emitir comprobantes válidos.",
-          duration: 5000
-        });
+    } catch (err: unknown) {
+      if (!cancelledRef.current) {
+        console.error("Dashboard Load Error:", err);
+        setError("Hubo un inconveniente técnico al cargar sus datos. Usa «Reintentar» para volver a intentar.");
+        toast.error("No pudimos cargar el dashboard. Revisa tu conexión e intenta de nuevo.");
+      }
+    } finally {
+      if (!cancelledRef.current) {
+        setIsLoading(false);
       }
     }
-    
-    return () => {
-      cancelled = true;
-    };
   }, [authUser, router]);
 
-  const handleRefresh = () => {
-    const refresh = async () => {
-      const { api } = await import("@/lib/api-service");
-      const invRes = await api.getInvoices(1, 200);
-      const invoices = invRes?.data || [];
-      setRecentInvoices(invoices.slice(0, 50));
+  useEffect(() => {
+    loadDashboardData();
+    return () => {
+      cancelledRef.current = true;
     };
-    refresh();
+  }, [loadDashboardData]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("setup") === "required") {
+      toast.error("⚠️ Identidad Fiscal Requerida", {
+        description: "Confirma tu nombre fiscal para poder emitir comprobantes válidos.",
+        duration: 5000
+      });
+    }
+  }, []);
+
+  const handleRefresh = () => {
+    loadDashboardData();
   };
 
   // Función para formatear números como moneda dominicana
@@ -522,7 +505,7 @@ export default function Dashboard() {
           <div className="bg-red-50 border border-red-200 p-6 rounded-2xl text-center mb-8">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <p className="text-red-800 font-medium">{error}</p>
-            <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>Reintentar</Button>
+            <Button variant="outline" className="mt-4" onClick={() => loadDashboardData()}>Reintentar</Button>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-3 mb-8 animate-in fade-in duration-700">

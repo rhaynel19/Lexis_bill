@@ -17,7 +17,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; dot: string 
 
 export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: () => void } = {}) {
     const [plans, setPlans] = useState<any[]>([]);
-    const [paymentInfo, setPaymentInfo] = useState<{ bankName: string; bankAccount: string; bankHolder?: string; bankHolderDoc?: string; paypalEmail: string } | null>(null);
+    const [paymentInfo, setPaymentInfo] = useState<{ bankName: string; bankAccount: string; bankHolder?: string; bankHolderDoc?: string; paypalEmail: string; paypalMeUrl?: string } | null>(null);
     const [subscription, setSubscription] = useState<any>(null);
     const [selectedPlan, setSelectedPlan] = useState<string>("pro");
     const [selectedBilling, setSelectedBilling] = useState<"monthly" | "annual">("annual");
@@ -379,22 +379,54 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                         )}
 
                         {selectedMethod === "paypal" && paymentInfo && (
-                            <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-4">
-                                <p className="font-medium text-slate-700 flex items-center gap-2">
-                                    <CreditCard className="w-4 h-4" /> Envía a PayPal
+                            <div className="p-4 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4">
+                                <p className="font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                                    <CreditCard className="w-4 h-4" /> Paga con PayPal
                                 </p>
 
-                                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                                    <p className="text-sm text-amber-900 font-semibold">Monto a enviar</p>
-                                    <p className="text-2xl font-bold text-amber-700 mt-0.5">
+                                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                                    <p className="text-sm text-amber-900 dark:text-amber-200 font-semibold">Monto a enviar</p>
+                                    <p className="text-2xl font-bold text-amber-700 dark:text-amber-400 mt-0.5">
                                         RD$ {selectedPrice}
                                     </p>
                                 </div>
 
+                                {paymentInfo.paypalMeUrl && (
+                                    <div className="space-y-2">
+                                        <Label className="text-slate-600 dark:text-slate-300 text-sm">Enlace de pago (PayPal.Me)</Label>
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                            <a
+                                                href={paymentInfo.paypalMeUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[#0070ba] hover:bg-[#005ea6] text-white font-semibold transition-colors"
+                                            >
+                                                <CreditCard className="w-5 h-5" />
+                                                Abrir PayPal.Me para pagar
+                                            </a>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="shrink-0"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(paymentInfo.paypalMeUrl!);
+                                                    toast.success("Enlace copiado");
+                                                }}
+                                            >
+                                                <Copy className="w-4 h-4 mr-1" /> Copiar enlace
+                                            </Button>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            {paymentInfo.paypalMeUrl}
+                                        </p>
+                                    </div>
+                                )}
+
                                 <div className="space-y-1">
-                                    <Label className="text-slate-600 text-sm">Email de PayPal</Label>
+                                    <Label className="text-slate-600 dark:text-slate-300 text-sm">Email de PayPal</Label>
                                     <div className="flex items-center gap-2">
-                                        <code className="flex-1 px-3 py-2 bg-slate-100 rounded-lg text-sm font-mono truncate">
+                                        <code className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-sm font-mono truncate">
                                             {paymentInfo.paypalEmail}
                                         </code>
                                         <Button
@@ -413,12 +445,12 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                 </div>
 
                                 <div className="space-y-1">
-                                    <Label className="text-slate-600 text-sm">Incluye en la nota del pago</Label>
+                                    <Label className="text-slate-600 dark:text-slate-300 text-sm">Incluye en la nota del pago</Label>
                                     <p className="text-xs text-muted-foreground">
-                                        Para identificar tu solicitud, escribe esto en el concepto/nota:
+                                        Para identificar tu solicitud, incluye esto en la nota del pago en PayPal:
                                     </p>
                                     <div className="flex items-center gap-2">
-                                        <code className="flex-1 px-3 py-2 bg-slate-100 rounded-lg text-sm font-mono truncate">
+                                        <code className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-sm font-mono truncate">
                                             LexisBill {selectedPlan} {userEmail ? `- ${userEmail}` : ""}
                                         </code>
                                         <Button
@@ -437,16 +469,16 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                     </div>
                                 </div>
 
-                                <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-amber-200 bg-amber-50/50 hover:bg-amber-50 transition-colors">
+                                <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors">
                                     <input
                                         type="checkbox"
                                         checked={paypalConfirmed}
                                         onChange={(e) => setPaypalConfirmed(e.target.checked)}
                                         className="mt-0.5 accent-amber-600"
                                     />
-                                    <span className="text-sm text-slate-700">
-                                        Confirmo que envié el pago por <strong>RD$ {selectedPrice}</strong> a{" "}
-                                        <strong>{paymentInfo.paypalEmail}</strong> e incluí mi correo en la nota del pago.
+                                    <span className="text-sm text-slate-700 dark:text-slate-300">
+                                        Confirmo que envié el pago por <strong>RD$ {selectedPrice}</strong>{" "}
+                                        {paymentInfo.paypalMeUrl ? "mediante el enlace PayPal.Me" : `a ${paymentInfo.paypalEmail}`} e incluí la nota indicada arriba.
                                     </span>
                                 </label>
 
