@@ -556,9 +556,7 @@ export default function Dashboard() {
                 <CardTitle className="text-3xl font-bold text-foreground">
                   {pendingInvoices}
                 </CardTitle>
-                {totalPorCobrar > 0 && (
-                  <p className="text-sm font-medium text-muted-foreground mt-1">{formatCurrency(totalPorCobrar)}</p>
-                )}
+                <p className="text-sm font-medium text-muted-foreground mt-1">{formatCurrency(totalPorCobrar)}</p>
               </CardHeader>
               <CardContent>
                 <div className="mt-6 w-full bg-secondary/20 rounded-full h-1.5">
