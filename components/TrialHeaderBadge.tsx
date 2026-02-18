@@ -50,12 +50,12 @@ export function TrialHeaderBadge() {
         );
     }
 
-    // Plan activo (cliente ya pagó): mostrar plan actual
-    const planLabel = status.plan === "premium" ? "Plan Premium" : status.plan === "pro" ? "Plan Pro" : "Plan activo";
+    // Plan activo (cliente ya pagó): mensaje de confianza, sin "Plan Free"
+    const planLabel = "Suscripción activa";
     return (
-        <Link href="/pagos">
-            <div className="flex items-center gap-2 text-sm font-black text-blue-700 bg-blue-50 dark:text-blue-200 dark:bg-blue-950/50 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-800 uppercase tracking-tighter hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
-                <Trophy className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> {planLabel}
+        <Link href="/pagos" title="Tu cuenta está completamente habilitada. Ya puedes operar sin interrupciones.">
+            <div className="flex items-center gap-2 text-xs font-black text-emerald-800 bg-emerald-50 dark:text-emerald-200 dark:bg-emerald-950/60 px-3 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-800 uppercase tracking-tighter hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-sm">
+                <Trophy className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> {planLabel}
             </div>
         </Link>
     );

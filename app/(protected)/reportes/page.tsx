@@ -21,6 +21,7 @@ import { api } from "@/lib/api-service";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { FiscalDisclaimerModal } from "@/components/FiscalDisclaimerModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export default function ReportsPage() {
@@ -32,6 +33,7 @@ export default function ReportsPage() {
     const [reportToDownload, setReportToDownload] = useState<"606" | "607" | null>(null);
     const [isDownloading, setIsDownloading] = useState(false);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    const [itbisSummaryOpen, setItbisSummaryOpen] = useState(false);
 
     const months = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -270,7 +272,11 @@ export default function ReportsPage() {
                                         <Link href="/gastos" className="text-xs text-accent hover:underline px-2 py-1 block">
                                             ¿Faltan gastos? Ir a Gastos 606
                                         </Link>
-                                        <Button variant="ghost" className="w-full justify-between font-bold h-10 text-muted-foreground hover:text-accent">
+                                        <Button
+                                            variant="ghost"
+                                            className="w-full justify-between font-bold h-10 text-muted-foreground hover:text-accent"
+                                            onClick={(e) => { e.stopPropagation(); setItbisSummaryOpen(true); }}
+                                        >
                                             Resumen ITBIS <ArrowUpRight className="w-4 h-4" />
                                         </Button>
                                     </div>
@@ -311,6 +317,32 @@ export default function ReportsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Modal Resumen ITBIS */}
+            <Dialog open={itbisSummaryOpen} onOpenChange={setItbisSummaryOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Calculator className="w-5 h-5 text-accent" />
+                            Resumen ITBIS — {months[selectedMonth - 1]} {selectedYear}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-2">
+                        <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                            <span className="text-sm font-medium text-muted-foreground">ITBIS cobrado</span>
+                            <span className="font-bold">RD$ {(summary?.itbis ?? 0).toLocaleString("es-DO")}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                            <span className="text-sm font-medium text-muted-foreground">Subtotal neto</span>
+                            <span className="font-bold">RD$ {(summary?.subtotal ?? 0).toLocaleString("es-DO")}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                            <span className="text-sm font-medium text-muted-foreground">Comprobantes</span>
+                            <span className="font-bold">{summary?.count ?? 0}</span>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {reportToDownload && (
                 <FiscalDisclaimerModal

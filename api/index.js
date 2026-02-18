@@ -89,8 +89,20 @@ const sanitizeItems = (items) => {
 };
 
 const app = express();
-app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
+
+// Webhook PayPal: debe recibir body raw para verificación de firma (registrar ANTES de express.json)
+let paypalWebhookHandler;
+app.post('/api/webhooks/paypal', express.raw({ type: 'application/json', limit: '1mb' }), (req, res, next) => {
+    req.rawBody = req.body;
+    try { req.body = JSON.parse(req.body.toString()); } catch (e) { return res.status(400).json({ error: 'Invalid JSON' }); }
+    next();
+}, (req, res) => {
+    if (paypalWebhookHandler) return paypalWebhookHandler(req, res);
+    res.status(503).json({ error: 'Webhook not ready' });
+});
+
+app.use(express.json({ limit: '50mb' }));
 
 // CORS: en producción usar origen explícito; en dev permitir credenciales
 const corsOrigin = process.env.CORS_ORIGIN;
@@ -1686,20 +1698,74 @@ app.post('/api/auth/profile', verifyToken, async (req, res) => {
 
 // --- Referencia única LEX-XXXXXX para transferencias (alta entropía, sin colisiones) ---
 async function generateUniquePaymentReference() {
-    for (let attempt = 0; attempt < 25; attempt++) {
+    for (let attempt = 0; attempt < 30; attempt++) {
+        const part = Date.now().toString(36).toUpperCase().slice(-5);
         const num = Math.floor(100000 + Math.random() * 900000);
-        const ref = `LEX-${num}`;
+        const ref = `LEX-${part}-${num}`;
         const exists = await PaymentRequest.findOne({ reference: ref });
         if (!exists) return ref;
     }
-    const fallback = `LEX-${Date.now().toString(36).toUpperCase().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+    const fallback = `LEX-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     return fallback;
 }
 
-// --- WEBHOOKS (PayPal → MongoDB, sin verifyToken) ---
-// Fuente de verdad: Subscription y PaymentRequest en MongoDB. No usar servicio en memoria.
-app.post('/api/webhooks/paypal', async (req, res) => {
+// --- WEBHOOKS (PayPal → MongoDB) ---
+// Fuente de verdad: Subscription y PaymentRequest en MongoDB. Body raw en req.rawBody para verificación.
+async function verifyPayPalWebhook(req) {
+    const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+    const clientId = process.env.PAYPAL_CLIENT_ID;
+    const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+    if (!webhookId || !clientId || !clientSecret) {
+        if (isProd) { log.warn('Webhook PayPal: faltan PAYPAL_WEBHOOK_ID/CLIENT_ID/CLIENT_SECRET; rechazando en producción'); return false; }
+        return true;
+    }
+    const transmissionId = req.headers['paypal-transmission-id'];
+    const transmissionTime = req.headers['paypal-transmission-time'];
+    const transmissionSig = req.headers['paypal-transmission-sig'];
+    const certUrl = req.headers['paypal-cert-url'];
+    if (!transmissionId || !transmissionTime || !transmissionSig || !certUrl) {
+        log.warn('Webhook PayPal: faltan cabeceras de firma');
+        return false;
+    }
     try {
+        const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+        const verifyRes = await fetch(
+            (process.env.PAYPAL_API_BASE || 'https://api-m.paypal.com') + '/v1/notifications/verify-webhook-signature',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Basic ${auth}`
+                },
+                body: JSON.stringify({
+                    auth_algo: 'SHA256withRSA',
+                    cert_url: certUrl,
+                    transmission_id: transmissionId,
+                    transmission_sig: transmissionSig,
+                    transmission_time: transmissionTime,
+                    webhook_id: webhookId
+                })
+            }
+        );
+        if (!verifyRes.ok) {
+            log.warn({ status: verifyRes.status }, 'PayPal verify-webhook-signature falló');
+            return false;
+        }
+        const data = await verifyRes.json();
+        return data.verification_status === 'SUCCESS';
+    } catch (e) {
+        log.error({ err: e.message }, 'Error verificando firma webhook PayPal');
+        return false;
+    }
+}
+
+paypalWebhookHandler = async (req, res) => {
+    try {
+        if (isProd && req.rawBody && !(await verifyPayPalWebhook(req))) {
+            log.warn('Webhook PayPal con firma inválida; rechazado');
+            return res.status(401).json({ error: 'Invalid signature' });
+        }
+
         const event = req.body;
         const eventType = event?.event_type;
         log.info({ eventType }, 'Webhook PayPal recibido');
@@ -1749,17 +1815,19 @@ app.post('/api/webhooks/paypal', async (req, res) => {
         log.error({ err: err.message }, 'Error procesando webhook PayPal');
         res.status(200).json({ received: true, error: err.message });
     }
-});
+};
 
 // --- MEMBRESÍAS (Manual: Transferencia / PayPal) ---
 app.get('/api/membership/plans', (req, res) => {
     res.json({ plans: Object.values(MEMBERSHIP_PLANS) });
 });
 
-app.get('/api/membership/payment-info', (req, res) => {
+app.get('/api/membership/payment-info', verifyToken, (req, res) => {
     res.json({
         bankName: process.env.LEXISBILL_BANK_NAME || 'Banco Popular Dominicano',
-        bankAccount: process.env.LEXISBILL_BANK_ACCOUNT || 'XXX-XXXXXX-X',
+        bankAccount: process.env.LEXISBILL_BANK_ACCOUNT || '789042660',
+        bankHolder: process.env.LEXISBILL_BANK_HOLDER || 'Fraimel Trinidad',
+        bankHolderDoc: process.env.LEXISBILL_BANK_HOLDER_DOC || '22301660929',
         paypalEmail: process.env.LEXISBILL_PAYPAL_EMAIL || 'pagos@lexisbill.com'
     });
 });
@@ -1823,20 +1891,35 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
         }
 
         const refTrim = clientReference && String(clientReference).trim();
-        const reference = (refTrim && /^LEX-\d{4,10}$/.test(refTrim)) || (refTrim && /^LEX-[A-Z0-9]+-\d{3}$/.test(refTrim))
-            ? refTrim
-            : await generateUniquePaymentReference();
+        const refValid = (refTrim && /^LEX-\d{4,10}$/.test(refTrim)) || (refTrim && /^LEX-[A-Z0-9]+-\d{3}$/.test(refTrim)) || (refTrim && /^LEX-[A-Z0-9]+-\d{5,6}$/.test(refTrim));
+        let reference = refValid ? refTrim : await generateUniquePaymentReference();
 
-        const pr = new PaymentRequest({
-            userId: req.userId,
-            plan,
-            billingCycle: cycle,
-            paymentMethod,
-            reference,
-            comprobanteImage: paymentMethod === 'transferencia' ? comprobanteImage : undefined,
-            status: 'pending'
-        });
-        await pr.save();
+        let pr = null;
+        for (let saveAttempt = 0; saveAttempt < 2; saveAttempt++) {
+            try {
+                        pr = new PaymentRequest({
+                    userId: req.userId,
+                    plan,
+                    billingCycle: cycle,
+                    paymentMethod,
+                    reference,
+                    comprobanteImage: paymentMethod === 'transferencia' ? comprobanteImage : undefined,
+                    status: 'pending'
+                });
+                await pr.save();
+                break;
+            } catch (saveErr) {
+                if (saveErr.code === 11000 && saveAttempt === 0) {
+                    reference = await generateUniquePaymentReference();
+                    continue;
+                }
+                throw saveErr;
+            }
+        }
+        if (!pr) {
+            return res.status(500).json({ error: 'No se pudo generar la referencia de pago. Intenta de nuevo.' });
+        }
+
         log.info({ paymentId: pr._id, userId: req.userId, reference, plan, paymentMethod }, 'PaymentRequest creado; aparecerá en admin/pagos pendientes');
 
         // Log de auditoría: creación de pago
@@ -1998,24 +2081,7 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
             await activateSubscriptionFromPayment(pr.userId, pr._id, pr.plan, pr.billingCycle || 'monthly');
         }
         
-        // ✅ Retornar estado actualizado
-        const finalSub = await Subscription.findOne({ userId: pr.userId });
-        res.json({
-            success: true,
-            message: 'Pago aprobado y suscripción activada correctamente.',
-            payment: {
-                id: pr._id,
-                status: pr.status,
-                plan: pr.plan
-            },
-            subscription: {
-                status: finalSub?.status || 'ACTIVE',
-                plan: finalSub?.plan || pr.plan,
-                currentPeriodEnd: finalSub?.currentPeriodEnd
-            }
-        });
-
-        // Marcar referido como activo si es partner referral
+        // Marcar referido como activo si es partner referral (antes de enviar respuesta)
         await PartnerReferral.findOneAndUpdate(
             { userId: pr.userId },
             { status: 'active', subscribedAt: now }
@@ -2029,7 +2095,22 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
             }
         } catch (err) { log.warn({ err: err.message }, 'Email pago aprobado no enviado'); }
 
-        res.json({ message: 'Pago aprobado. Membresía activada por 30 días.' });
+        // Una sola respuesta al cliente
+        const finalSub = await Subscription.findOne({ userId: pr.userId });
+        res.json({
+            success: true,
+            message: 'Pago aprobado. Membresía activada por 30 días.',
+            payment: {
+                id: pr._id,
+                status: pr.status,
+                plan: pr.plan
+            },
+            subscription: {
+                status: finalSub?.status || 'ACTIVE',
+                plan: finalSub?.plan || pr.plan,
+                currentPeriodEnd: finalSub?.currentPeriodEnd
+            }
+        });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -2041,7 +2122,7 @@ app.post('/api/admin/reject-payment/:id', verifyToken, verifyAdmin, async (req, 
             return res.status(400).json({ message: 'ID de solicitud inválido' });
         }
         const pr = await PaymentRequest.findById(req.params.id);
-        if (!pr || pr.status !== 'pending') {
+        if (!pr || !['pending', 'under_review'].includes(pr.status)) {
             return res.status(404).json({ message: 'Solicitud no encontrada o ya procesada.' });
         }
 
@@ -4314,9 +4395,12 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
     }
 
     const sub = req.subscription || getUserSubscription(req.user);
-    if (sub.status === 'expired') {
+    const blockedStatuses = ['SUSPENDED', 'CANCELLED', 'PAST_DUE'];
+    const isExpired = blockedStatuses.includes(sub.status) ||
+        (sub.currentPeriodEnd && new Date() > new Date(sub.currentPeriodEnd) && !sub.graceUntil);
+    if (isExpired) {
         return res.status(403).json({
-            message: 'Tu membresía ha expirado. Actualiza tu plan en Configuración.',
+            message: 'Tu membresía ha expirado o está suspendida. Actualiza tu plan en Pagos.',
             code: 'SUBSCRIPTION_EXPIRED'
         });
     }

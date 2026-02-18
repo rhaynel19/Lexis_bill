@@ -17,7 +17,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; dot: string 
 
 export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: () => void } = {}) {
     const [plans, setPlans] = useState<any[]>([]);
-    const [paymentInfo, setPaymentInfo] = useState<{ bankName: string; bankAccount: string; paypalEmail: string } | null>(null);
+    const [paymentInfo, setPaymentInfo] = useState<{ bankName: string; bankAccount: string; bankHolder?: string; bankHolderDoc?: string; paypalEmail: string } | null>(null);
     const [subscription, setSubscription] = useState<any>(null);
     const [selectedPlan, setSelectedPlan] = useState<string>("pro");
     const [selectedBilling, setSelectedBilling] = useState<"monthly" | "annual">("annual");
@@ -269,19 +269,20 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                         </div>
 
                         {selectedMethod === "transferencia" && paymentInfo && (
-                            <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-4">
-                                <p className="font-medium text-slate-700 flex items-center gap-2">
-                                    <Building2 className="w-4 h-4" /> Datos para transferencia
-                                </p>
-                                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                                    <p className="text-sm text-amber-900 font-semibold">Monto a transferir</p>
-                                    <p className="text-2xl font-bold text-amber-700">RD$ {selectedPrice}</p>
+                            <div className="p-4 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4">
+                                <h4 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                    <Building2 className="w-4 h-4 text-accent" /> Datos bancarios para tu pago
+                                </h4>
+                                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                                    <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 uppercase tracking-wider">Monto a transferir</p>
+                                    <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">RD$ {selectedPrice}</p>
                                 </div>
                                 {transferReference && (
-                                    <div className="p-3 bg-slate-900 rounded-lg border border-slate-700 space-y-1">
-                                        <p className="text-xs text-slate-300 uppercase tracking-wider font-semibold">Referencia (ponla en el concepto de la transferencia)</p>
+                                    <div className="p-4 bg-slate-900 dark:bg-slate-800 rounded-xl border border-slate-700 space-y-2">
+                                        <p className="text-xs text-slate-300 uppercase tracking-wider font-semibold">Referencia única</p>
+                                        <p className="text-xs text-amber-300/90">Debes colocar esta referencia en el concepto de la transferencia.</p>
                                         <div className="flex items-center gap-2">
-                                            <code className="flex-1 px-3 py-2 bg-slate-800 rounded text-lg font-bold text-amber-400 font-mono tracking-wider">
+                                            <code className="flex-1 px-3 py-2.5 bg-slate-800 rounded-lg text-lg font-bold text-amber-400 font-mono tracking-wider">
                                                 {transferReference.reference}
                                             </code>
                                             <Button
@@ -297,11 +298,36 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                                 <Copy className="w-4 h-4" />
                                             </Button>
                                         </div>
-                                        <p className="text-xs text-slate-400">Sin esta referencia no podemos activar tu plan automáticamente.</p>
                                     </div>
                                 )}
-                                <p className="text-sm"><strong>Banco:</strong> {paymentInfo.bankName}</p>
-                                <p className="text-sm font-mono"><strong>Cuenta:</strong> {paymentInfo.bankAccount}</p>
+                                <div className="grid gap-2 rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-800/50">
+                                    <p className="text-sm"><span className="text-muted-foreground">Banco:</span> <strong>{paymentInfo.bankName}</strong></p>
+                                    {paymentInfo.bankHolder && (
+                                        <p className="text-sm"><span className="text-muted-foreground">Titular:</span> <strong>{paymentInfo.bankHolder}</strong></p>
+                                    )}
+                                    {paymentInfo.bankHolderDoc && (
+                                        <p className="text-sm"><span className="text-muted-foreground">Documento (RNC/Cédula):</span> <strong className="font-mono">{paymentInfo.bankHolderDoc}</strong></p>
+                                    )}
+                                    <p className="text-sm"><span className="text-muted-foreground">Cuenta:</span> <strong className="font-mono">{paymentInfo.bankAccount}</strong></p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full gap-2"
+                                    onClick={() => {
+                                        const lines = [
+                                            `Banco: ${paymentInfo.bankName}`,
+                                            paymentInfo.bankHolder ? `Titular: ${paymentInfo.bankHolder}` : "",
+                                            paymentInfo.bankHolderDoc ? `Documento: ${paymentInfo.bankHolderDoc}` : "",
+                                            `Cuenta: ${paymentInfo.bankAccount}`,
+                                            transferReference ? `Referencia: ${transferReference.reference}` : ""
+                                        ].filter(Boolean);
+                                        navigator.clipboard.writeText(lines.join("\n"));
+                                        toast.success("Datos copiados al portapapeles");
+                                    }}
+                                >
+                                    <Copy className="w-4 h-4" /> Copiar datos
+                                </Button>
                                 <div className="space-y-2">
                                     <Label className="text-slate-700">Comprobante de pago *</Label>
                                     <p className="text-xs text-muted-foreground">Sube una captura de pantalla o foto del comprobante.</p>
@@ -346,8 +372,8 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                         Debes subir el comprobante antes de continuar.
                                     </p>
                                 )}
-                                <p className="text-xs text-slate-500 italic border-l-2 border-amber-300 pl-3">
-                                    Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).
+                                <p className="text-xs text-slate-500 dark:text-slate-400 border-l-2 border-accent/50 pl-3">
+                                    Tu pago será validado por nuestro equipo financiero. La activación del plan puede tardar hasta 24 horas.
                                 </p>
                             </div>
                         )}
