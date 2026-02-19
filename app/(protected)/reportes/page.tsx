@@ -274,7 +274,7 @@ export default function ReportsPage() {
                                         </Link>
                                         <Button
                                             variant="ghost"
-                                            className="w-full justify-between font-bold h-10 text-muted-foreground hover:text-accent"
+                                            className="w-full justify-between font-bold h-10 text-muted-foreground hover:bg-muted/80 hover:text-accent border-0"
                                             onClick={(e) => { e.stopPropagation(); setItbisSummaryOpen(true); }}
                                         >
                                             Resumen ITBIS <ArrowUpRight className="w-4 h-4" />

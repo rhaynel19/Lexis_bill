@@ -621,7 +621,7 @@ export default function Dashboard() {
       <OnboardingWizard />
       <SmartTutorial />
 
-      {/* Botón flotante — Nueva Factura (solo desktop; en móvil usa el FAB circular del layout) */}
+      {/* Botón flotante Nueva Factura (desktop); en móvil usa el FAB del layout */}
       <div className="hidden md:block fixed bottom-6 right-6 z-50">
         <NewInvoiceButton variant="inline" className="h-14 px-6 rounded-2xl shadow-xl shadow-primary/30 hover:scale-105 active:scale-100 transition-all font-semibold text-base" />
       </div>

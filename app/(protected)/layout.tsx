@@ -172,7 +172,7 @@ export default function ProtectedLayout({
             <SupportChat />
             <CommandMenu />
 
-            {/* Mobile FAB: oculto en /pagos para no competir con "He realizado el pago" (modo concentración) */}
+            {/* Mobile FAB: oculto en /pagos para no competir con "He realizado el pago" */}
             {pathname !== "/pagos" && (
                 <div className="fixed bottom-28 right-4 md:hidden z-50">
                     <NewInvoiceButton variant="fab" />

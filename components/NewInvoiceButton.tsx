@@ -33,7 +33,7 @@ export function NewInvoiceButton({ variant = "inline", className }: NewInvoiceBu
     if (variant === "sidebar") {
         return (
             <Link href="/nueva-factura">
-                <Button className={cn("flex items-center gap-3 px-4 py-3 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold shadow-lg shadow-sidebar-primary/20 hover:scale-[1.02] transition-all", className)}>
+                <Button className={cn("flex items-center gap-3 px-4 py-3 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold shadow-lg shadow-sidebar-primary/20 hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground hover:scale-[1.02] transition-all", className)}>
                     <Plus className="w-5 h-5" />
                     <span>Nueva Factura</span>
                 </Button>
