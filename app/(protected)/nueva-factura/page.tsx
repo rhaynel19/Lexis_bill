@@ -18,7 +18,7 @@ import { getDominicanDate } from "@/lib/date-utils";
 import { generateInvoiceWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp-utils";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Search, Mic, Save, BookOpen, Loader2, CheckCircle, MessageCircle, UserPlus, FileText, Eye, Sparkles, AlertTriangle, Zap, Copy, ClipboardPaste, CheckCircle2 } from "lucide-react";
+import { Search, Mic, Save, BookOpen, Loader2, CheckCircle, MessageCircle, UserPlus, FileText, Eye, Sparkles, AlertTriangle, Zap, Copy, ClipboardPaste, CheckCircle2, Mail, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { handleNumericKeyDown } from "@/lib/input-validators";
 import { InvoicePreview } from "@/components/invoice/InvoicePreview";
@@ -187,6 +187,8 @@ export default function NewInvoice() {
     // Autofill inteligente
     const [lastInvoiceFromAutofill, setLastInvoiceFromAutofill] = useState<AutofillLastInvoice | null>(null);
     const [habitualTipoPago, setHabitualTipoPago] = useState<string | undefined>(undefined);
+    // Cargar ítems de última factura de este cliente
+    const [loadingLastItems, setLoadingLastItems] = useState(false);
 
     // Métricas de tiempo (para "Factura creada en tiempo récord")
     const invoiceCreateStartRef = useRef<number>(Date.now());
@@ -275,8 +277,8 @@ export default function NewInvoice() {
                 })));
             }
             localStorage.removeItem("invoiceToClone");
-        } else {
-            // Restore Draft: API first, fallback localStorage
+        } else if (!searchParams.get("rnc") && !searchParams.get("name")) {
+            // Restore Draft solo si no vinimos desde "Facturar a este cliente" (query params tienen prioridad)
             const restoreDraft = async () => {
                 try {
                     const { api } = await import("@/lib/api-service");
@@ -523,6 +525,34 @@ export default function NewInvoice() {
         if (inv.ncfType) setInvoiceType(inv.ncfType);
         setLastInvoiceFromAutofill(null);
         toast.success("Configuración aplicada.", { description: "Precio sugerido basado en tus últimas facturas." });
+    };
+
+    const handleLoadLastInvoiceItems = async () => {
+        const cleanRnc = rnc.replace(/[^0-9]/g, "");
+        if (cleanRnc.length < 9) return;
+        setLoadingLastItems(true);
+        try {
+            const { api } = await import("@/lib/api-service");
+            const history = await api.getCustomerHistory(cleanRnc) as { items?: { description?: string; quantity?: number; price?: number; isExempt?: boolean }[] }[];
+            const last = Array.isArray(history) ? history[0] : null;
+            if (!last?.items?.length) {
+                toast.info("No hay facturas previas para este cliente.");
+                return;
+            }
+            const its: InvoiceItem[] = last.items.map((i, idx) => ({
+                id: Date.now().toString() + idx,
+                description: i.description ?? "",
+                quantity: i.quantity ?? 1,
+                price: i.price ?? 0,
+                isExempt: i.isExempt ?? false,
+            }));
+            setItems(its);
+            toast.success("Ítems de la última factura cargados. Revisa y ajusta si hace falta.");
+        } catch {
+            toast.error("No se pudo cargar el historial del cliente.");
+        } finally {
+            setLoadingLastItems(false);
+        }
     };
 
     const handleSelectService = (itemId: string, serviceName: string) => {
@@ -970,12 +1000,29 @@ export default function NewInvoice() {
 
     const handleWhatsAppShare = () => {
         const text = `Hola *${clientName}*! 🇩🇴\n\nLe envío su comprobante fiscal *${lastInvoiceNCF}* por valor de *${formatCurrency(total)}*.\n\n📎 Te envío adjunto el PDF del comprobante.\n\nGracias por preferirnos.`;
-        let phone = clientPhone.replace(/[^\d]/g, '');
-        // Auto-fix Dominican Numbers (10 digits -> 1 + 10 digits)
+        let phone = (clientPhone || "").replace(/[^\d]/g, '');
         if (phone.length === 10 && (phone.startsWith("809") || phone.startsWith("829") || phone.startsWith("849"))) {
             phone = "1" + phone;
         }
+        if (!phone) {
+            toast.info("Añade el teléfono del cliente para enviar por WhatsApp.");
+            return;
+        }
         window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+    };
+
+    const handleEmailShare = () => {
+        const cleanRnc = (rnc || "").replace(/[^0-9]/g, "");
+        const clientEmail = savedClients.find((c: any) => (c.rnc || "").replace(/[^0-9]/g, "") === cleanRnc)?.email;
+        const to = (clientEmail && clientEmail.trim()) ? clientEmail.trim() : "";
+        const subject = `Comprobante fiscal ${lastInvoiceNCF} - ${new Date().toLocaleDateString("es-DO")}`;
+        const body = `Estimado/a ${clientName},\n\nAdjunto encontrará su comprobante fiscal ${lastInvoiceNCF} por valor de ${formatCurrency(total)}.\n\nGracias por su preferencia.`;
+        if (to) {
+            window.open(`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+        } else {
+            window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+            toast.info("Abre tu correo y escribe la dirección del cliente para enviar.");
+        }
     };
 
     // Función auxiliar para obtener el nombre del tipo de comprobante
@@ -1127,6 +1174,32 @@ export default function NewInvoice() {
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
+                                    {/* Facturar de nuevo a (últimos 5 por última factura) */}
+                                    {savedClients.length > 0 && (
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-xs font-medium text-muted-foreground shrink-0">Facturar de nuevo a:</span>
+                                            {[...savedClients]
+                                                .sort((a, b) => {
+                                                    const da = (a as { lastInvoiceDate?: string }).lastInvoiceDate ? new Date((a as any).lastInvoiceDate).getTime() : 0;
+                                                    const db = (b as { lastInvoiceDate?: string }).lastInvoiceDate ? new Date((b as any).lastInvoiceDate).getTime() : 0;
+                                                    return db - da;
+                                                })
+                                                .slice(0, 5)
+                                                .map((c: any) => (
+                                                    <Button
+                                                        key={c.rnc}
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-8 text-xs gap-1"
+                                                        onClick={() => handleSelectClient(c.rnc)}
+                                                    >
+                                                        <Receipt className="w-3.5 h-3.5" />
+                                                        {c.name}
+                                                    </Button>
+                                                ))}
+                                        </div>
+                                    )}
                                     {/* Autofill inteligente + Selector rápido */}
                                     <div className="space-y-3">
                                         <Label className="text-muted-foreground">🔍 Buscar cliente (autofill inteligente)</Label>
@@ -1152,7 +1225,7 @@ export default function NewInvoice() {
                                         )}
                                     </div>
 
-                                    {/* USAR LA MISMA + Repetir última factura */}
+                                    {/* USAR LA MISMA + Repetir última factura + Cargar ítems de última factura */}
                                     {lastInvoiceFromAutofill?.items?.length && rnc && (
                                         <div className="p-4 rounded-lg border-2 border-accent/40 bg-accent/10 space-y-2">
                                             <p className="text-sm font-medium text-foreground">¿Deseas usar la misma configuración que la última factura?</p>
@@ -1162,6 +1235,21 @@ export default function NewInvoice() {
                                                 </Button>
                                                 <span className="text-xs text-muted-foreground">Clonar ítems, tipo de pago y NCF — &lt;10 seg</span>
                                             </div>
+                                        </div>
+                                    )}
+                                    {rnc.replace(/[^0-9]/g, "").length >= 9 && (
+                                        <div className="flex flex-wrap gap-2 items-center">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="gap-1.5"
+                                                onClick={handleLoadLastInvoiceItems}
+                                                disabled={loadingLastItems}
+                                            >
+                                                {loadingLastItems ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
+                                                Cargar ítems de última factura
+                                            </Button>
                                         </div>
                                     )}
 
@@ -1979,9 +2067,21 @@ export default function NewInvoice() {
                         </p>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <Button onClick={handleWhatsAppShare} className="w-full bg-[#25D366] hover:bg-[#128C7E] flex gap-2">
-                            <MessageCircle className="w-4 h-4" /> Enviar por WhatsApp
-                        </Button>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <Button
+                                onClick={handleWhatsAppShare}
+                                className="w-full bg-[#25D366] hover:bg-[#128C7E] flex gap-2"
+                                variant={clientPhone?.trim() ? "default" : "outline"}
+                            >
+                                <MessageCircle className="w-4 h-4" /> Enviar por WhatsApp
+                            </Button>
+                            <Button variant="outline" onClick={handleEmailShare} className="w-full flex gap-2">
+                                <Mail className="w-4 h-4" /> Enviar por email
+                            </Button>
+                        </div>
+                        {!clientPhone?.trim() && (
+                            <p className="text-xs text-muted-foreground">Añade el teléfono del cliente en la factura para enviar por WhatsApp directamente.</p>
+                        )}
                         <div className="grid grid-cols-2 gap-2">
                             <Button variant="outline" onClick={() => router.push('/')} className="gap-2">
                                 <FileText className="w-4 h-4" /> Ir al Dashboard
@@ -1991,6 +2091,7 @@ export default function NewInvoice() {
                                 setItems([{ id: "1", description: "", quantity: 1, price: 0, isExempt: false }]);
                                 setClientName("");
                                 setRnc("");
+                                setClientPhone("");
                                 setLastInvoiceNCF("");
                             }} className="gap-2">
                                 <UserPlus className="w-4 h-4" /> Nueva Factura

@@ -65,10 +65,16 @@ export default function CustomersPage() {
         }
     };
 
-    const filteredCustomers = customers.filter(c =>
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.rnc.includes(searchTerm)
-    );
+    const filteredCustomers = customers
+        .filter(c =>
+            c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.rnc.includes(searchTerm)
+        )
+        .sort((a, b) => {
+            const dateA = a.lastInvoiceDate ? new Date(a.lastInvoiceDate).getTime() : 0;
+            const dateB = b.lastInvoiceDate ? new Date(b.lastInvoiceDate).getTime() : 0;
+            return dateB - dateA;
+        });
 
     const openDetails = (customer: any) => {
         setSelectedCustomer(customer);
@@ -161,6 +167,22 @@ export default function CustomersPage() {
 
             {showMigration && (
                 <CustomerMigration onImportSuccess={loadCustomers} />
+            )}
+
+            {!showMigration && customers.length > 0 && !isLoading && (
+                <Card className="border-emerald-200 bg-emerald-50/50 mb-6">
+                    <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div>
+                            <p className="font-semibold text-emerald-900">Tienes {customers.length} cliente{customers.length !== 1 ? "s" : ""} registrado{customers.length !== 1 ? "s" : ""}</p>
+                            <p className="text-sm text-emerald-700 mt-0.5">Factura rápido: usa el botón <strong>Facturar</strong> en cada fila o abre el cliente y pulsa «Nueva Factura para este cliente».</p>
+                        </div>
+                        <Link href="/nueva-factura">
+                            <Button variant="outline" className="border-emerald-300 text-emerald-800 hover:bg-emerald-100 gap-2 shrink-0">
+                                <Receipt className="w-4 h-4" /> Ir a Nueva factura
+                            </Button>
+                        </Link>
+                    </CardContent>
+                </Card>
             )}
 
             {!showMigration && customers.length === 0 && !isLoading && (

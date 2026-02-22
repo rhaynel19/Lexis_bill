@@ -23,7 +23,8 @@ import {
   Download,
   Share2,
   HelpCircle,
-  Ban
+  Ban,
+  Receipt
 } from "lucide-react";
 import { toast } from "sonner";
 import { SubscriptionAlert } from "@/components/SubscriptionAlert";
@@ -148,6 +149,7 @@ export default function Dashboard() {
   const [lexisContextualMessage, setLexisContextualMessage] = useState<string>("");
   const [monthlyStats, setMonthlyStats] = useState<{ revenue: number; invoiceCount: number; clientCount: number } | undefined>(undefined);
   const [targetInvoices, setTargetInvoices] = useState<number | undefined>(undefined);
+  const [frequentClients, setFrequentClients] = useState<{ name: string; rnc: string; phone?: string; lastInvoiceDate?: string }[]>([]);
   const userName = authUser?.name ?? "";
   // Nombre para el saludo: perfil del usuario (configuración) > nombre fiscal > nombre de usuario
   const [welcomeName, setWelcomeName] = useState(userName || authUser?.fiscalStatus?.confirmed || APP_CONFIG.company.name);
@@ -199,10 +201,18 @@ export default function Dashboard() {
       }
 
       // Intentar stats por agregación (menos carga) y solo 50 facturas para la lista
-      const [statsRes, invRes] = await Promise.all([
+      const [statsRes, invRes, customersRes] = await Promise.all([
         api.getDashboardStats().catch(() => null),
-        api.getInvoices(1, 50)
+        api.getInvoices(1, 50),
+        api.getCustomers().catch(() => [])
       ]);
+      const customersList = (customersRes || []) as { name: string; rnc: string; phone?: string; lastInvoiceDate?: string }[];
+      const sorted = [...customersList].sort((a, b) => {
+        const da = a.lastInvoiceDate ? new Date(a.lastInvoiceDate).getTime() : 0;
+        const db = b.lastInvoiceDate ? new Date(b.lastInvoiceDate).getTime() : 0;
+        return db - da;
+      });
+      if (!cancelledRef.current) setFrequentClients(sorted.slice(0, 5));
 
       const invoices: Invoice[] = invRes?.data || [];
       setRecentInvoices(invoices);
@@ -566,6 +576,35 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {/* Facturar a cliente frecuente */}
+        {!isLoading && frequentClients.length > 0 && (
+          <Card className="mb-8 border-emerald-100 bg-emerald-50/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Users className="w-5 h-5 text-emerald-600" />
+                Facturar a cliente frecuente
+              </CardTitle>
+              <CardDescription>Los que más has facturado recientemente. Un clic y listo.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {frequentClients.map((c) => {
+                  const q = new URLSearchParams({ rnc: c.rnc, name: c.name });
+                  if (c.phone) q.set("phone", c.phone);
+                  return (
+                    <Link key={c.rnc} href={`/nueva-factura?${q.toString()}`}>
+                      <Button variant="outline" size="sm" className="gap-2 border-emerald-200 text-emerald-800 hover:bg-emerald-100">
+                        <Receipt className="w-4 h-4" />
+                        {c.name}
+                      </Button>
+                    </Link>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Estado de secuencia NCF: alerta solo si quedan pocos; si no, mensaje informativo con datos reales */}

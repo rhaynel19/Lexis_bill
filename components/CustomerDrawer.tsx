@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Mail, Phone, Calendar, Hash, FileText, ChevronRight, UserCircle2 } from "lucide-react";
+import { MessageCircle, Mail, Phone, Calendar, Hash, FileText, ChevronRight, UserCircle2, Receipt } from "lucide-react";
 import { api } from "@/lib/api-service";
 
 interface CustomerDrawerProps {
@@ -148,8 +149,20 @@ export function CustomerDrawer({ isOpen, onClose, customer }: CustomerDrawerProp
                 </div>
 
                 <SheetFooter className="p-6 bg-slate-50 border-t flex flex-col gap-2">
-                    <Button className="w-full h-12 text-sm font-bold shadow-lg shadow-primary/20">Nueva Factura</Button>
-                    <Button variant="ghost" className="w-full text-slate-500 h-12">Editar Datos</Button>
+                    <Link
+                        href={`/nueva-factura?${new URLSearchParams({
+                            rnc: customer.rnc || "",
+                            name: customer.name || "",
+                            ...(customer.phone ? { phone: customer.phone } : {})
+                        }).toString()}`}
+                        className="w-full"
+                        onClick={() => onClose()}
+                    >
+                        <Button className="w-full h-12 text-sm font-bold shadow-lg shadow-primary/20 gap-2">
+                            <Receipt className="w-5 h-5" /> Nueva Factura para este cliente
+                        </Button>
+                    </Link>
+                    <Button variant="ghost" className="w-full text-slate-500 h-12" onClick={onClose}>Cerrar</Button>
                 </SheetFooter>
             </SheetContent>
         </Sheet>

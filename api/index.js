@@ -4216,6 +4216,26 @@ app.get('/api/customers', verifyToken, async (req, res) => {
     }
 });
 
+// Historial de facturas de un cliente (por RNC) — para "Cargar ítems de última factura"
+app.get('/api/customers/:rnc/history', verifyToken, async (req, res) => {
+    try {
+        const rnc = (req.params.rnc || '').replace(/[^0-9]/g, '');
+        if (!rnc) return res.status(400).json({ message: 'RNC requerido' });
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
+        const invoices = await Invoice.find({
+            userId: req.userId,
+            clientRnc: rnc,
+            status: { $nin: ['cancelled'] }
+        })
+            .sort({ date: -1 })
+            .limit(limit)
+            .lean();
+        res.json(invoices);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Importación masiva de clientes (CSV/JSON) - límites: 5MB body, 20,000 filas
 const CUSTOMER_IMPORT_MAX_ROWS = 20000;
 const CUSTOMER_IMPORT_MAX_BYTES = 5 * 1024 * 1024;
