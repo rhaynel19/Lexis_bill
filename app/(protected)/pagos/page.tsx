@@ -57,23 +57,35 @@ export default function PaymentsPage() {
     };
 
     const handleDownloadReceipt = (payment: any) => {
-        // Simple mock receipt download
-        const receiptText = `
-        LEXIS BILL - RECIBO DE PAGO
-        ---------------------------
-        Referencia: ${payment.reference}
-        Fecha: ${new Date(payment.date).toLocaleString()}
-        Monto: RD$ ${payment.amount.toLocaleString()}
-        Estado: COMPLETADO
-        ---------------------------
-        ¡Gracias por usar Lexis Bill!
-        `;
-        const blob = new Blob([receiptText], { type: "text/plain" });
+        const d = payment.date ? new Date(payment.date) : new Date();
+        const dateStr = d.toLocaleDateString("es-DO", { day: "2-digit", month: "2-digit", year: "numeric" });
+        const timeStr = d.toLocaleTimeString("es-DO", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        const concept = payment.plan ? `Plan ${String(payment.plan).toUpperCase()} - Lexis Bill` : "Suscripción Lexis Bill";
+        const statusLabel = (payment.status === "pending" || payment.status === "under_review") ? "Pendiente de validación" : "COMPLETADO";
+        const receiptText = [
+            "",
+            "  LEXIS BILL — RECIBO DE PAGO",
+            "  ─────────────────────────────────",
+            "",
+            `  Referencia:    ${payment.reference || "—"}`,
+            `  Fecha:         ${dateStr} ${timeStr}`,
+            `  Concepto:      ${concept}`,
+            `  Monto:         RD$ ${Number(payment.amount || 0).toLocaleString("es-DO")}`,
+            `  Estado:        ${statusLabel}`,
+            "",
+            "  ─────────────────────────────────",
+            "  Conserve este comprobante para sus registros.",
+            "",
+            "  Gracias por confiar en Lexis Bill.",
+            ""
+        ].join("\n");
+        const blob = new Blob([receiptText], { type: "text/plain;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `Recibo_${payment.reference}.txt`;
+        link.download = `Recibo_${payment.reference || "LEX"}.txt`;
         link.click();
+        URL.revokeObjectURL(url);
     };
 
     return (
