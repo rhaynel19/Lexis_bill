@@ -362,6 +362,30 @@ export const api = {
         return secureFetch<any>(`${API_URL}/auth/me`, { cacheKey: "auth_me" });
     },
 
+    /** Políticas legales: listado actual (versiones y títulos) */
+    async getPoliciesCurrent() {
+        return secureFetch<{ policies: Array<{ slug: string; version: number; title: string; effectiveAt: string }>; requiredSlugs: string[] }>(
+            `${API_URL}/policies/current`,
+            { cacheKey: "policies_current" }
+        );
+    },
+    /** Una política por slug (contenido completo) */
+    async getPolicy(slug: string) {
+        return secureFetch<{ slug: string; version: number; title: string; content: string; effectiveAt: string }>(
+            `${API_URL}/policies/${encodeURIComponent(slug)}`
+        );
+    },
+    /** Registrar aceptación de políticas (requiere auth) */
+    async acceptPolicies(acceptances: Array<{ slug: string; version: number }>) {
+        const res = await secureFetch<{ success: boolean; message: string }>(`${API_URL}/policies/accept`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ acceptances }),
+        });
+        if (typeof window !== "undefined") localStorage.removeItem("cache_auth_me");
+        return res;
+    },
+
     // Membresías (planes y solicitar pago manual)
     async getMembershipPlans() {
         return secureFetch<any>(`${API_URL}/membership/plans`, { cacheKey: "membership_plans" });

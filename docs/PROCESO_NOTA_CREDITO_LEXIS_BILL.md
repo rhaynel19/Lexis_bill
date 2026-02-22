@@ -54,6 +54,23 @@
 
 En la app, el modal menciona **e-CF 34**; la secuencia a usar depende de los lotes NCF configurados por el usuario (tipo 34 o 04).
 
+## Plazo de 30 días (DGII) — ¿Se puede emitir fuera de fecha?
+
+**Sí.** En República Dominicana **no está prohibido** emitir una nota de crédito después de los 30 días. El plazo de 30 días afecta el **tratamiento fiscal**, no la posibilidad de emitir el comprobante.
+
+- **Dentro de los 30 días** desde la factura original:
+  - Se reporta normalmente.
+  - El contribuyente conserva el **crédito fiscal ITBIS** (si aplica).
+
+- **Después de los 30 días**:
+  - La nota de crédito **sí puede emitirse**.
+  - Debe reportarse en los formatos **606** (cliente) y **607** (proveedor) del mes correspondiente.
+  - Se reporta **solo el valor pagado, sin incluir el ITBIS**.
+  - **Se pierde el crédito fiscal ITBIS** (Art. 8 y 28, Reglamento 293-11).
+  - El proveedor debe completar la casilla "Otras Operaciones (Positivas)" del Anexo A del formulario IT-1 cuando corresponda.
+
+En Lexis Bill **no se bloquea** la emisión de la nota de crédito por antigüedad de la factura. Si la factura tiene más de 30 días, la app muestra un aviso informativo para que el usuario conozca las consecuencias fiscales.
+
 ## Notas
 
 - La factura original en el modelo `Invoice` tiene campos `annulledBy` y `modifiedNcf` para vincular la anulación.

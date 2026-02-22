@@ -457,6 +457,17 @@ const quoteSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+// Políticas legales: aceptación por usuario (versionado, inmutable)
+const policyAcceptanceSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    policySlug: { type: String, required: true },
+    policyVersion: { type: Number, required: true },
+    acceptedAt: { type: Date, default: Date.now },
+    ip: { type: String }
+});
+policyAcceptanceSchema.index({ userId: 1, policySlug: 1, policyVersion: 1 }, { unique: true });
+policyAcceptanceSchema.index({ userId: 1, policySlug: 1 });
+
 // Avoid "OverwriteModelError" in serverless environments
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const PaymentRequest = mongoose.models.PaymentRequest || mongoose.model('PaymentRequest', paymentRequestSchema);
@@ -469,6 +480,7 @@ const Customer = mongoose.models.Customer || mongoose.model('Customer', customer
 const SupportTicket = mongoose.models.SupportTicket || mongoose.model('SupportTicket', supportTicketSchema);
 const Expense = mongoose.models.Expense || mongoose.model('Expense', expenseSchema);
 const Quote = mongoose.models.Quote || mongoose.model('Quote', quoteSchema);
+const PolicyAcceptance = mongoose.models.PolicyAcceptance || mongoose.model('PolicyAcceptance', policyAcceptanceSchema);
 const UserDocument = mongoose.models.UserDocument || mongoose.model('UserDocument', userDocumentSchema);
 const FiscalAuditLog = mongoose.models.FiscalAuditLog || mongoose.model('FiscalAuditLog', fiscalAuditLogSchema);
 
@@ -908,6 +920,7 @@ function generateResetToken() {
 }
 
 const { validate607Format, validate606Format, validateNcfStructure } = require('./dgii-validator');
+const { getCurrentPolicies, getPolicy, getRequiredVersions, REQUIRED_POLICY_SLUGS } = require('./policies-content');
 
 function getUserSubscription(user) {
     // Usuario oficial/admin: acceso total siempre (plan Pro, sin bloqueos)
@@ -1246,6 +1259,29 @@ app.post('/api/auth/register', async (req, res) => {
 
         await newUser.save();
 
+        // === Políticas legales: registrar aceptación en registro ===
+        const acceptedPolicyVersions = req.body.acceptedPolicyVersions;
+        if (acceptedPolicyVersions && typeof acceptedPolicyVersions === 'object') {
+            const requiredVersions = getRequiredVersions();
+            const ip = (req.headers['x-forwarded-for'] || req.connection?.remoteAddress || '').toString().split(',')[0].trim().slice(0, 45);
+            for (const slug of REQUIRED_POLICY_SLUGS) {
+                const version = parseInt(acceptedPolicyVersions[slug], 10);
+                if (requiredVersions[slug] != null && version === requiredVersions[slug]) {
+                    try {
+                        await PolicyAcceptance.create({
+                            userId: newUser._id,
+                            policySlug: slug,
+                            policyVersion: version,
+                            ip,
+                            acceptedAt: new Date()
+                        });
+                    } catch (policyErr) {
+                        if (policyErr.code !== 11000) log.warn({ err: policyErr.message }, 'Policy acceptance create');
+                    }
+                }
+            }
+        }
+
         // === PROGRAMA PARTNERS: Registrar referido si hay código válido ===
         const referralCode = sanitizeString(req.body.referralCode || '', 20).toUpperCase();
         if (referralCode) {
@@ -1437,6 +1473,24 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
         const createdBeforeOnboarding = user.createdAt && new Date(user.createdAt) < new Date('2026-02-01');
         const onboardingCompleted = user.onboardingCompleted === true || createdBeforeOnboarding;
 
+        const requiredVersions = getRequiredVersions();
+        const acceptances = await PolicyAcceptance.find({ userId: user._id }).lean();
+        const acceptedBySlug = (acceptances || []).reduce((acc, a) => {
+            if (!acc[a.policySlug] || acc[a.policySlug] < a.policyVersion) acc[a.policySlug] = a.policyVersion;
+            return acc;
+        }, {});
+        let needsPolicyAcceptance = false;
+        const policiesToAccept = [];
+        for (const slug of REQUIRED_POLICY_SLUGS) {
+            const requiredVer = requiredVersions[slug];
+            if (requiredVer == null) continue;
+            if ((acceptedBySlug[slug] || 0) < requiredVer) {
+                needsPolicyAcceptance = true;
+                const p = getPolicy(slug);
+                if (p) policiesToAccept.push({ slug: p.slug, version: p.version, title: p.title });
+            }
+        }
+
         res.json({
             id: user._id,
             email: user.email,
@@ -1447,8 +1501,61 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
             subscription: sub,
             fiscalStatus: { suggested: user.suggestedFiscalName, confirmed: user.confirmedFiscalName },
             partner,
-            onboardingCompleted
+            onboardingCompleted,
+            needsPolicyAcceptance: needsPolicyAcceptance || undefined,
+            policiesToAccept: policiesToAccept.length ? policiesToAccept : undefined
         });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- Políticas legales (públicas: lectura; aceptación: con auth) ---
+app.get('/api/policies/current', async (req, res) => {
+    try {
+        const current = getCurrentPolicies();
+        const list = Object.keys(current).map(slug => {
+            const p = current[slug];
+            return { slug: p.slug, version: p.version, title: p.title, effectiveAt: p.effectiveAt };
+        });
+        res.json({ policies: list, requiredSlugs: REQUIRED_POLICY_SLUGS });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/policies/:slug', async (req, res) => {
+    try {
+        const slug = sanitizeString(req.params.slug, 50);
+        const policy = getPolicy(slug);
+        if (!policy) return res.status(404).json({ message: 'Política no encontrada' });
+        res.json(policy);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/policies/accept', verifyToken, async (req, res) => {
+    try {
+        const acceptances = req.body.acceptances;
+        if (!Array.isArray(acceptances) || acceptances.length === 0) {
+            return res.status(400).json({ message: 'Se requiere al menos una aceptación (slug y version).' });
+        }
+        const requiredVersions = getRequiredVersions();
+        const ip = (req.headers['x-forwarded-for'] || req.connection?.remoteAddress || '').toString().split(',')[0].trim().slice(0, 45);
+        for (const item of acceptances) {
+            const slug = sanitizeString(String(item.slug || ''), 50);
+            const version = Math.max(0, parseInt(item.version, 10) || 0);
+            const current = getPolicy(slug);
+            if (!current || current.version !== version) continue;
+            if (REQUIRED_POLICY_SLUGS.includes(slug) && requiredVersions[slug] !== version) continue;
+            await PolicyAcceptance.findOneAndUpdate(
+                { userId: req.userId, policySlug: slug, policyVersion: version },
+                { $setOnInsert: { userId: req.userId, policySlug: slug, policyVersion: version, ip, acceptedAt: new Date() } },
+                { upsert: true }
+            );
+        }
+        res.json({ success: true, message: 'Aceptación registrada' });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -4675,7 +4782,13 @@ app.post('/api/invoices/:invoiceId/credit-note', verifyToken, async (req, res) =
         await session.commitTransaction();
         session.endSession();
 
-        res.status(201).json({ ncf: fullNcf, message: 'Nota de crédito emitida correctamente' });
+        const invoiceDate = original.date ? new Date(original.date) : null;
+        const daysSince = invoiceDate ? Math.floor((Date.now() - invoiceDate.getTime()) / (24 * 60 * 60 * 1000)) : 0;
+        const warning = daysSince > 30
+            ? 'Factura con más de 30 días: el ITBIS de esta nota de crédito no genera crédito fiscal. Reporte en 606/607 según corresponda (Regl. 293-11).'
+            : undefined;
+
+        res.status(201).json({ ncf: fullNcf, message: 'Nota de crédito emitida correctamente', warning });
     } catch (err) {
         await session.abortTransaction();
         session.endSession();

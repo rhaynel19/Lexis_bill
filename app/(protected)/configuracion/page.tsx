@@ -108,6 +108,9 @@ export default function Configuration() {
             <div className="mb-8">
                 <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2">Mi Oficina Fiscal</h1>
                 <p className="text-sm sm:text-base text-gray-500">Personalice la apariencia de sus documentos y datos fiscales.</p>
+                <a href="/ayuda" className="inline-flex items-center gap-2 mt-3 text-sm font-medium text-primary hover:underline">
+                    Centro de Ayuda — Manual de uso y tutoriales
+                </a>
             </div>
 
             {configLocked && (
@@ -281,6 +284,23 @@ export default function Configuration() {
                     </Button>
                 </div>
             </div>
+
+            {/* Documentos legales */}
+            <Card className="border-none shadow-lg bg-white/50 backdrop-blur-sm">
+                <CardHeader>
+                    <CardTitle className="text-xl">Documentos legales</CardTitle>
+                    <CardDescription>Políticas y condiciones de Lexis Bill. Consulte y descargue cuando lo necesite.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ul className="grid gap-2 sm:grid-cols-2">
+                        <li><a href="/terminos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Términos y Condiciones</a></li>
+                        <li><a href="/privacidad" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Política de Privacidad</a></li>
+                        <li><a href="/uso-aceptable" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Política de Uso Aceptable</a></li>
+                        <li><a href="/limitacion-responsabilidad" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Limitación de Responsabilidad</a></li>
+                        <li><a href="/reembolsos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Política de Reembolsos</a></li>
+                    </ul>
+                </CardContent>
+            </Card>
 
             {/* Support Section */}
             <div className="mt-12 pt-12 border-t border-border/20">

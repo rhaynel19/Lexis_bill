@@ -13,6 +13,8 @@ export interface AuthUser {
     fiscalStatus?: { suggested?: string; confirmed?: string };
     partner?: { referralCode: string; status: string; tier?: string } | null;
     onboardingCompleted?: boolean;
+    needsPolicyAcceptance?: boolean;
+    policiesToAccept?: Array<{ slug: string; version: number; title: string }>;
 }
 
 interface AuthContextType {

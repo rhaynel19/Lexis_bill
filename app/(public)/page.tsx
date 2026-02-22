@@ -471,9 +471,12 @@ export default function LandingPage() {
           </div>
           <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-slate-500 uppercase tracking-widest">
             <p>© {new Date().getFullYear()} Lexis Bill. Todos los derechos reservados.</p>
-            <div className="flex gap-8">
-              <Link href="/terminos" className="hover:text-lexis-gold">Términos</Link>
+            <div className="flex flex-wrap justify-center gap-6 md:gap-8">
+              <Link href="/terminos" className="hover:text-lexis-gold">Términos y Condiciones</Link>
               <Link href="/privacidad" className="hover:text-lexis-gold">Privacidad</Link>
+              <Link href="/uso-aceptable" className="hover:text-lexis-gold">Uso Aceptable</Link>
+              <Link href="/limitacion-responsabilidad" className="hover:text-lexis-gold">Limitación de Responsabilidad</Link>
+              <Link href="/reembolsos" className="hover:text-lexis-gold">Reembolsos</Link>
             </div>
           </div>
         </div>

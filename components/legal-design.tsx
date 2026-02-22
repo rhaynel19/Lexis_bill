@@ -45,7 +45,11 @@ export function TermsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                     </section>
                 </div>
 
-                <DialogFooter className="p-6 bg-slate-50 border-t border-slate-200">
+                <DialogFooter className="p-6 bg-slate-50 border-t border-slate-200 flex-col gap-3">
+                    <div className="flex gap-4 text-xs text-slate-500 w-full justify-center">
+                        <Link href="/terminos" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#0A192F]">Términos completos</Link>
+                        <Link href="/privacidad" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#0A192F]">Privacidad completa</Link>
+                    </div>
                     <Button
                         onClick={onClose}
                         className="w-full bg-[#D4AF37] hover:bg-[#B8962E] text-[#0A192F] font-bold h-12 shadow-lg shadow-[#D4AF37]/20"
@@ -74,14 +78,14 @@ export function LegalCheckbox({ id, checked, onChange, onOpenModal }: { id: stri
             </div>
             <div className="text-[11px] leading-tight text-slate-500">
                 <label htmlFor={id} className="cursor-pointer">
-                    He leído y acepto el {" "}
+                    Acepto los {" "}
                 </label>
                 <button
                     type="button"
                     onClick={onOpenModal}
                     className="text-[#0A192F] font-bold underline decoration-[#D4AF37] underline-offset-2 hover:text-blue-700 transition-colors"
                 >
-                    Compromiso de Privacidad y T&C
+                    Términos y Condiciones y la Política de Privacidad
                 </button>
             </div>
         </div>
@@ -110,8 +114,11 @@ export function TrustFooter() {
                     <div>
                         <h5 className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] mb-4">Legal</h5>
                         <ul className="space-y-2 text-[11px] text-slate-500 font-medium">
+                            <li><Link href="/terminos" className="hover:text-[#F9F6EE] transition-colors">Términos y Condiciones</Link></li>
                             <li><Link href="/privacidad" className="hover:text-[#F9F6EE] transition-colors">Privacidad</Link></li>
-                            <li><button className="hover:text-[#F9F6EE] transition-colors">Términos</button></li>
+                            <li><Link href="/uso-aceptable" className="hover:text-[#F9F6EE] transition-colors">Uso Aceptable</Link></li>
+                            <li><Link href="/limitacion-responsabilidad" className="hover:text-[#F9F6EE] transition-colors">Limitación de Responsabilidad</Link></li>
+                            <li><Link href="/reembolsos" className="hover:text-[#F9F6EE] transition-colors">Reembolsos</Link></li>
                         </ul>
                     </div>
                 </div>

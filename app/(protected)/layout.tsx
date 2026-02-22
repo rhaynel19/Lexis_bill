@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { ShieldAlert } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { CommandMenu } from "@/components/command-menu";
-import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt, CreditCard, FolderLock, Users, Handshake, Ban } from "lucide-react";
+import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Receipt, CreditCard, FolderLock, Users, Handshake, Ban, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TrialHeaderBadge } from "@/components/TrialHeaderBadge";
@@ -35,6 +35,12 @@ export default function ProtectedLayout({
             try {
                 const me = await refresh();
                 if (me) {
+                    if (me.needsPolicyAcceptance && !window.location.pathname.startsWith("/aceptar-politicas")) {
+                        router.replace("/aceptar-politicas");
+                        setIsLoading(false);
+                        setLoading(false);
+                        return;
+                    }
                     if (me.onboardingCompleted === false && !window.location.pathname.startsWith("/onboarding")) {
                         router.replace("/onboarding");
                         return;
@@ -202,7 +208,11 @@ export default function ProtectedLayout({
                     <CreditCard className="w-5 h-5 shrink-0" />
                     <span className="text-[9px] font-medium uppercase truncate w-full text-center">Pagar</span>
                 </Link>
-                <Link href="/configuracion" className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-accent min-w-0 flex-1">
+                <Link href="/ayuda" className={cn("flex flex-col items-center gap-0.5 min-w-0 flex-1 transition-colors", pathname === "/ayuda" ? "text-accent font-medium" : "text-muted-foreground hover:text-accent")}>
+                    <HelpCircle className="w-5 h-5 shrink-0" />
+                    <span className="text-[9px] font-medium uppercase truncate w-full text-center">Ayuda</span>
+                </Link>
+                <Link href="/configuracion" className={cn("flex flex-col items-center gap-0.5 min-w-0 flex-1 transition-colors", pathname === "/configuracion" ? "text-accent font-medium" : "text-muted-foreground hover:text-accent")}>
                     <Settings className="w-5 h-5 shrink-0" />
                     <span className="text-[9px] font-medium uppercase truncate w-full text-center">Perfil</span>
                 </Link>
@@ -262,6 +272,10 @@ function SidebarLinks({ isMobile = false, isAdmin = false, isPartner = false, on
                 <Link href="/documentos" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors")}>
                     <FolderLock className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Documentos</span>
+                </Link>
+                <Link href="/ayuda" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors")}>
+                    <HelpCircle className="w-5 h-5 text-sidebar-foreground/60" />
+                    <span className="text-sm">Centro de Ayuda</span>
                 </Link>
                 <Link href="/configuracion" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors")}>
                     <Settings className="w-5 h-5 text-sidebar-foreground/60" />

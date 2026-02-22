@@ -28,6 +28,9 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
             setNewNcf(res.ncf);
             setStep('success');
             onSuccess();
+            if (res.warning) {
+                toast.warning("Aviso fiscal", { description: res.warning, duration: 8000 });
+            }
         } catch (error: any) {
             const msg = error?.message || error?.error || "No se pudo generar la nota de crédito.";
             const needsConfig = msg.includes("lote") || msg.includes("E34") || msg.includes("B04") || msg.includes("Configuración");
@@ -41,6 +44,10 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
     };
 
     if (!invoice) return null;
+
+    const invoiceDate = invoice.date ? new Date(invoice.date) : null;
+    const daysSince = invoiceDate ? Math.floor((Date.now() - invoiceDate.getTime()) / (24 * 60 * 60 * 1000)) : 0;
+    const isOver30Days = daysSince > 30;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -59,6 +66,15 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
                         </DialogHeader>
 
                         <div className="py-6 space-y-4">
+                            {isOver30Days && (
+                                <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800 flex items-start gap-3">
+                                    <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                                    <div className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+                                        <p className="font-semibold mb-1">Factura con más de 30 días</p>
+                                        <p>Puede emitir la nota de crédito. Según la DGII (Regl. 293-11), después de 30 días el ITBIS de esta NC no genera crédito fiscal y debe reportarse en 606/607 según corresponda.</p>
+                                    </div>
+                                </div>
+                            )}
                             <div className="bg-muted/30 p-4 rounded-xl border border-border/20">
                                 <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-2">Factura original</p>
                                 <p className="font-mono text-sm font-semibold">{(invoice.ncfSequence || invoice.ncfType || invoice.id || "").toString().slice(-11)}</p>

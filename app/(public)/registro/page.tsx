@@ -48,6 +48,7 @@ function RegisterForm() {
     });
     const [inviteValid, setInviteValid] = useState<boolean | null>(null);
     const [checkingAuth, setCheckingAuth] = useState(true);
+    const [policyVersions, setPolicyVersions] = useState<Record<string, number>>({});
 
     // Si ya está logueado, redirigir (evitar duplicidad de cuenta)
     useEffect(() => {
@@ -65,6 +66,19 @@ function RegisterForm() {
             .catch(() => { if (!cancelled) setCheckingAuth(false); });
         return () => { cancelled = true; };
     }, [invite, tipoPartner, router]);
+
+    // Versiones actuales de políticas (para enviar en registro)
+    useEffect(() => {
+        let cancelled = false;
+        api.getPoliciesCurrent().then((res) => {
+            if (!cancelled && res?.policies) {
+                const versions: Record<string, number> = {};
+                res.policies.forEach((p: { slug: string; version: number }) => { versions[p.slug] = p.version; });
+                setPolicyVersions(versions);
+            }
+        }).catch(() => {});
+        return () => { cancelled = true; };
+    }, []);
 
     // Validar token de invitación partner (cuando hay ?invite=)
     useEffect(() => {
@@ -124,8 +138,11 @@ function RegisterForm() {
 
         setIsLoading(true);
 
+        const acceptedPolicyVersions = (policyVersions.terms != null && policyVersions.privacy != null)
+            ? { terms: policyVersions.terms, privacy: policyVersions.privacy }
+            : undefined;
         try {
-            await api.register({ ...form, plan, suggestedName: rncStatus.name, referralCode: ref || undefined });
+            await api.register({ ...form, plan, suggestedName: rncStatus.name, referralCode: ref || undefined, acceptedPolicyVersions });
 
             // Auto login (cookie HttpOnly); usuario desde API, no localStorage
             await api.login(form.email, form.password);
