@@ -1027,9 +1027,11 @@ const NCF_TYPES_BUSINESS = ['01', '31'];
 const NCF_TYPES_CONSUMER = ['02', '32'];
 const NCF_TYPES_EDUCATION = ['14'];
 const NCF_TYPES_GOVERNMENT = ['15', '45'];
+const NCF_TYPES_CREDIT_NOTE = ['04', '34']; // B04 / E34 Nota de Crédito
 
 function validateNcfForClient(ncfType, clientRnc) {
     if (!clientRnc) return { valid: true };
+    if (NCF_TYPES_CREDIT_NOTE.includes(ncfType)) return { valid: true }; // NC se emite al mismo cliente que la factura original
     const cleanRnc = (clientRnc || '').replace(/[^\d]/g, '');
     const isBusiness = cleanRnc.length === 9;
     const isGov = cleanRnc.startsWith('4') || cleanRnc.length === 11; // simplificado: cédula o gubernamental
@@ -4583,6 +4585,81 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
         await session.abortTransaction();
         session.endSession();
         res.status(500).json({ error: error.message });
+    }
+});
+
+// --- Nota de Crédito (anular factura con e-CF 34 o B04) ---
+app.post('/api/invoices/:invoiceId/credit-note', verifyToken, async (req, res) => {
+    const invoiceId = req.params.invoiceId;
+    if (!invoiceId) return res.status(400).json({ message: 'ID de factura requerido' });
+
+    const subscription = req.subscription || getUserSubscription(req.user);
+    const blockedStatuses = ['SUSPENDED', 'CANCELLED', 'PAST_DUE'];
+    const isExpired = blockedStatuses.includes(subscription.status) ||
+        (subscription.currentPeriodEnd && new Date() > new Date(subscription.currentPeriodEnd) && !subscription.graceUntil);
+    if (isExpired) {
+        return res.status(403).json({ message: 'Tu membresía ha expirado o está suspendida. Actualiza tu plan en Pagos.', code: 'SUBSCRIPTION_EXPIRED' });
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const original = await Invoice.findOne({ _id: invoiceId, userId: req.userId }).session(session).lean();
+        if (!original) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: 'Factura no encontrada' });
+        }
+        if (original.annulledBy) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: 'Esta factura ya fue anulada con una nota de crédito.' });
+        }
+        if (original.status === 'cancelled') {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: 'Esta factura ya está anulada.' });
+        }
+
+        const creditNoteType = (original.ncfType && String(original.ncfType).startsWith('3')) ? '34' : '04';
+        const fullNcf = await getNextNcf(req.userId, creditNoteType, session, original.clientRnc);
+
+        const creditNote = new Invoice({
+            userId: req.userId,
+            clientName: original.clientName,
+            clientRnc: original.clientRnc,
+            ncfType: creditNoteType,
+            ncfSequence: fullNcf,
+            items: original.items || [],
+            subtotal: original.subtotal,
+            itbis: original.itbis,
+            total: original.total,
+            date: new Date(),
+            status: 'paid',
+            tipoPago: 'efectivo',
+            montoPagado: original.total,
+            balancePendiente: 0,
+            estadoPago: 'pagado',
+            fechaPago: new Date(),
+            modifiedNcf: original.ncfSequence
+        });
+        await creditNote.save({ session });
+
+        await Invoice.updateOne(
+            { _id: invoiceId, userId: req.userId },
+            { $set: { status: 'cancelled', annulledBy: fullNcf } },
+            { session }
+        );
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(201).json({ ncf: fullNcf, message: 'Nota de crédito emitida correctamente' });
+    } catch (err) {
+        await session.abortTransaction();
+        session.endSession();
+        log.error({ err: err.message, userId: req.userId, invoiceId }, 'Credit note error');
+        res.status(500).json({ message: err.message || 'No se pudo generar la nota de crédito' });
     }
 });
 
