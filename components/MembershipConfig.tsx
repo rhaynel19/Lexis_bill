@@ -154,7 +154,7 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                     <p className={`text-lg font-bold ${statusInfo.color}`}>
                         {statusInfo.dot} {statusInfo.label}
                         {subscription?.plan && (
-                            <span className="ml-2 text-slate-700 font-normal">— Plan {subscription.plan}</span>
+                            <span className="ml-2 text-slate-700 font-normal">— Plan {subscription.plan === "pro" ? "Profesional" : subscription.plan}</span>
                         )}
                     </p>
                     {subscription?.daysRemaining != null && subscription.daysRemaining < 999 && (
@@ -501,6 +501,30 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                             </div>
                         )}
 
+                        {/* CTA siempre visible: botón principal con mensaje cuando está deshabilitado */}
+                        {!paymentReportedState && !hasPending && (
+                            <div className="space-y-2">
+                                {!canSubmit && selectedPlan !== "free" && (
+                                    <p className="text-sm text-amber-700 font-medium">
+                                        {selectedMethod === "transferencia"
+                                            ? "Sube el comprobante de transferencia arriba para continuar."
+                                            : "Marca la casilla de confirmación de PayPal para continuar."}
+                                    </p>
+                                )}
+                                <Button
+                                    onClick={handleRequestPayment}
+                                    disabled={isSubmitting || !canSubmit}
+                                    className="w-full h-12 text-base font-semibold bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150"
+                                >
+                                    {isSubmitting ? (
+                                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
+                                    ) : (
+                                        <><CheckCircle2 className="w-4 h-4 mr-2" /> He realizado el pago</>
+                                    )}
+                                </Button>
+                            </div>
+                        )}
+
                         {/* Pantalla de tranquilidad: se muestra inmediatamente después de reportar */}
                         {(paymentReportedState || hasPending) && (
                             <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50/80 p-5 space-y-3 animate-in fade-in duration-200">
@@ -519,20 +543,6 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                     <p className="text-xs text-emerald-700 font-mono">Referencia: {paymentReportedState.reference}</p>
                                 )}
                             </div>
-                        )}
-
-                        {!paymentReportedState && !hasPending && (
-                            <Button
-                                onClick={handleRequestPayment}
-                                disabled={isSubmitting || !canSubmit}
-                                className="w-full bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
-                            >
-                                {isSubmitting ? (
-                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
-                                ) : (
-                                    <><CheckCircle2 className="w-4 h-4 mr-2" /> He realizado el pago</>
-                                )}
-                            </Button>
                         )}
 
                         {(paymentReportedState || hasPending) && (
