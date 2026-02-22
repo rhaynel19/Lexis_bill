@@ -12,7 +12,7 @@ import { api } from "@/lib/api-service";
 import { AlertTriangle, Plus, CheckCircle2, Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-export function ComprobantesConfig() {
+export function ComprobantesConfig({ locked = false }: { locked?: boolean }) {
     const [batches, setBatches] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -107,7 +107,7 @@ export function ComprobantesConfig() {
                 </CardHeader>
                 <CardContent className="p-6 space-y-6">
                     {/* Formulario para Nuevo Lote */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 ${locked ? "opacity-70 pointer-events-none" : ""}`}>
                         <div className="space-y-2">
                             <Label>Modo de Facturación</Label>
                             <Select
@@ -116,6 +116,7 @@ export function ComprobantesConfig() {
                                     const defaultType = v === "electronic" ? "31" : "01";
                                     setNewBatch({ ...newBatch, sequenceType: v, type: defaultType });
                                 }}
+                                disabled={locked}
                             >
                                 <SelectTrigger>
                                     <SelectValue />
@@ -128,7 +129,7 @@ export function ComprobantesConfig() {
                         </div>
                         <div className="space-y-2">
                             <Label>Tipo de Comprobante</Label>
-                            <Select value={newBatch.type} onValueChange={(v) => setNewBatch({ ...newBatch, type: v })}>
+                            <Select value={newBatch.type} onValueChange={(v) => setNewBatch({ ...newBatch, type: v })} disabled={locked}>
                                 <SelectTrigger>
                                     <SelectValue />
                                 </SelectTrigger>
@@ -155,14 +156,14 @@ export function ComprobantesConfig() {
                         </div>
                         <div className="space-y-2">
                             <Label>Desde</Label>
-                            <Input type="number" value={newBatch.initialNumber} onChange={(e) => setNewBatch({ ...newBatch, initialNumber: parseInt(e.target.value) })} />
+                            <Input type="number" value={newBatch.initialNumber} onChange={(e) => setNewBatch({ ...newBatch, initialNumber: parseInt(e.target.value) })} disabled={locked} />
                         </div>
                         <div className="space-y-2">
                             <Label>Hasta</Label>
-                            <Input type="number" value={newBatch.finalNumber} onChange={(e) => setNewBatch({ ...newBatch, finalNumber: parseInt(e.target.value) })} />
+                            <Input type="number" value={newBatch.finalNumber} onChange={(e) => setNewBatch({ ...newBatch, finalNumber: parseInt(e.target.value) })} disabled={locked} />
                         </div>
                         <div className="flex items-end">
-                            <Button className="w-full gap-2" onClick={handleAddBatch} disabled={isSaving}>
+                            <Button className="w-full gap-2" onClick={handleAddBatch} disabled={isSaving || locked}>
                                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                                 Agregar Lote
                             </Button>
@@ -212,7 +213,9 @@ export function ComprobantesConfig() {
                                                 </span>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                {canEditOrDelete ? (
+                                                {locked ? (
+                                                    <span className="text-xs text-slate-400">Bloqueado</span>
+                                                ) : canEditOrDelete ? (
                                                     <div className="flex justify-end gap-2">
                                                         <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => openEdit(batch)} title="Modificar lote">
                                                             <Pencil className="w-3.5 h-3.5" /> Modificar

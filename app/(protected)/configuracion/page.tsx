@@ -35,7 +35,7 @@ export default function Configuration() {
     useEffect(() => {
         const stored = localStorage.getItem("appConfig");
         const lockedStored = typeof window !== "undefined" ? localStorage.getItem("configLocked") : null;
-        if (lockedStored !== "false") setConfigLocked(true);
+        setConfigLocked(lockedStored !== "false");
         if (stored) {
             try {
                 const data = JSON.parse(stored);
@@ -50,10 +50,12 @@ export default function Configuration() {
     }, [profession]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (configLocked) return;
         setConfig({ ...config, [e.target.id]: e.target.value });
     };
 
     const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        if (configLocked) return;
         setConfig({ ...config, profession: e.target.value });
     };
 
@@ -137,12 +139,14 @@ export default function Configuration() {
                             {/* Logo Upload */}
                             <div className="space-y-3">
                                 <Label className="text-slate-600">Logo de Empresa</Label>
-                                <div className={`border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center transition-colors relative min-h-[160px] ${configLocked ? "opacity-70 cursor-not-allowed bg-slate-50" : "hover:bg-slate-50 cursor-pointer"}`}>
-                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'logo')} aria-label="Subir logo de empresa" title="Subir logo" disabled={configLocked} />
+                                <div className={`border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center transition-colors relative min-h-[160px] ${configLocked ? "opacity-70 cursor-not-allowed bg-slate-50 pointer-events-none" : "hover:bg-slate-50 cursor-pointer"}`}>
+                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'logo')} aria-label="Subir logo de empresa" title="Subir logo" disabled={configLocked} tabIndex={configLocked ? -1 : 0} />
                                     {logoPreview ? (
                                         <div className="relative w-full h-32">
                                             <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
-                                            <Button variant="ghost" size="sm" className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-white shadow-md border" onClick={(e) => { e.stopPropagation(); setLogoPreview(null) }}>✕</Button>
+                                            {!configLocked && (
+                                                <Button type="button" variant="ghost" size="sm" className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-white shadow-md border pointer-events-auto" onClick={(e) => { e.stopPropagation(); setLogoPreview(null); }}>✕</Button>
+                                            )}
                                         </div>
                                     ) : (
                                         <>
@@ -159,12 +163,14 @@ export default function Configuration() {
                             {/* Seal Upload */}
                             <div className="space-y-3">
                                 <Label className="text-slate-600">Sello Digital / Firma</Label>
-                                <div className={`border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center transition-colors relative min-h-[160px] ${configLocked ? "opacity-70 cursor-not-allowed bg-slate-50" : "hover:bg-slate-50 cursor-pointer"}`}>
-                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'seal')} aria-label="Subir sello digital o firma" title="Subir sello" disabled={configLocked} />
+                                <div className={`border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center transition-colors relative min-h-[160px] ${configLocked ? "opacity-70 cursor-not-allowed bg-slate-50 pointer-events-none" : "hover:bg-slate-50 cursor-pointer"}`}>
+                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, 'seal')} aria-label="Subir sello digital o firma" title="Subir sello" disabled={configLocked} tabIndex={configLocked ? -1 : 0} />
                                     {sealPreview ? (
                                         <div className="relative w-full h-32">
                                             <img src={sealPreview} alt="Sello" className="w-full h-full object-contain" />
-                                            <Button variant="ghost" size="sm" className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-white shadow-md border" onClick={(e) => { e.stopPropagation(); setSealPreview(null) }}>✕</Button>
+                                            {!configLocked && (
+                                                <Button type="button" variant="ghost" size="sm" className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-white shadow-md border pointer-events-auto" onClick={(e) => { e.stopPropagation(); setSealPreview(null); }}>✕</Button>
+                                            )}
                                         </div>
                                     ) : (
                                         <>
@@ -182,7 +188,7 @@ export default function Configuration() {
                 </Card>
 
                 {/* NCF Configuration Section */}
-                <ComprobantesConfig />
+                <ComprobantesConfig locked={configLocked} />
 
                 {/* Preferencias de Facturación */}
                 <Card className="border-none shadow-lg bg-indigo-50/50 backdrop-blur-sm border-indigo-100 italic">
@@ -266,7 +272,7 @@ export default function Configuration() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="bankAccount">Número de Cuenta</Label>
-                                <Input id="bankAccount" value={config.bankAccount} onChange={handleChange} placeholder="Ej: 771234567" className="bg-white border-blue-100" />
+                                <Input id="bankAccount" value={config.bankAccount} onChange={handleChange} placeholder="Ej: 771234567" className="bg-white border-blue-100" disabled={configLocked} />
                             </div>
                         </div>
 
