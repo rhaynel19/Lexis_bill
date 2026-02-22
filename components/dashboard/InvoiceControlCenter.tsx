@@ -254,9 +254,21 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
         toast.info("📲 Abriendo WhatsApp. Adjunta el PDF antes de enviar.", { duration: 4000 });
     };
 
-    const handleClone = (inv: Invoice) => {
-        localStorage.setItem("invoiceToClone", JSON.stringify(inv));
-        router.push("/nueva-factura");
+    const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+
+    const handleDuplicate = async (inv: Invoice) => {
+        const id = inv._id || inv.id;
+        if (!id || duplicatingId) return;
+        setDuplicatingId(id);
+        try {
+            const { api } = await import("@/lib/api-service");
+            const res = await api.duplicateInvoice(id);
+            router.push(`/nueva-factura?from=${encodeURIComponent(res.fromInvoiceId)}&fromNcf=${encodeURIComponent(res.fromInvoiceNcf || "")}`);
+        } catch (e: any) {
+            toast.error(e?.message || "No se pudo crear el borrador.");
+        } finally {
+            setDuplicatingId(null);
+        }
     };
 
     const handleCreditNote = (inv: Invoice) => {
@@ -586,9 +598,11 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                                                                         <FileText className="w-4 h-4" />
                                                                     </Button>
                                                                 )}
-                                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleClone(inv)} title="Duplicar factura">
-                                                                    <Repeat className="w-4 h-4" />
-                                                                </Button>
+                                                                {inv.status !== "cancelled" && !inv.annulledBy && (
+                                                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleDuplicate(inv)} title="Facturar de nuevo" disabled={!!duplicatingId}>
+                                                                        <Repeat className="w-4 h-4" />
+                                                                    </Button>
+                                                                )}
                                                             </div>
                                                         </TableCell>
                                                     </TableRow>
@@ -630,8 +644,8 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                                                     <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleWhatsApp(inv); }}>
                                                         <MessageCircle className="w-3.5 h-3.5 mr-1" /> WhatsApp
                                                     </Button>
-                                                    <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleClone(inv); }}>
-                                                        <Repeat className="w-3.5 h-3.5 mr-1" /> Duplicar
+                                                    <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleDuplicate(inv); }} disabled={!!duplicatingId}>
+                                                        <Repeat className="w-3.5 h-3.5 mr-1" /> Facturar de nuevo
                                                     </Button>
                                                 </div>
                                             </div>

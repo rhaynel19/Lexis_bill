@@ -16,7 +16,7 @@ import {
 import Link from "next/link";
 
 export default function CheckoutPage() {
-    const [paymentMethod, setPaymentMethod] = useState<"card" | "transfer">("card");
+    const [paymentMethod, setPaymentMethod] = useState<"card" | "transfer">("transfer");
 
     return (
         <div className="min-h-screen bg-lexis-bg-deep text-lexis-text-light font-sans p-6 md:p-12 selection:bg-lexis-gold/30">
@@ -126,13 +126,13 @@ export default function CheckoutPage() {
 
                                             <div className="pt-6 border-t border-white/5">
                                                 <p className="text-[10px] text-slate-500 text-center mb-2 italic">
-                                                    Próximamente: pago con tarjeta vía Stripe. Los datos de tarjeta no se procesan ni almacenan en este formulario.
+                                                    Por ahora solo aceptamos transferencia y PayPal. Pago con tarjeta se habilitará cuando el negocio crezca (RNC, etc.).
                                                 </p>
                                                 <p className="text-[10px] text-slate-500 text-center mb-4 italic">
-                                                    Por ahora, usa transferencia bancaria o visita la sección Pagar.
+                                                    Usa transferencia en esta página o ve a <strong>Pagar</strong> (transferencia / PayPal) dentro de tu cuenta.
                                                 </p>
                                                 <Button type="button" disabled className="relative overflow-hidden group w-full h-14 text-lg bg-lexis-gold/50 text-[#0A192F] font-bold rounded-xl cursor-not-allowed">
-                                                    <span className="relative z-10">Pago con tarjeta próximamente</span>
+                                                    <span className="relative z-10">Pago con tarjeta — próximamente</span>
                                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] transition-none"></div>
                                                     <style dangerouslySetInnerHTML={{
                                                         __html: `

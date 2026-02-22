@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-service";
 import { FileText, AlertCircle, Loader2, CheckCircle } from "lucide-react";
+import { toast } from "sonner";
 
 interface CreditNoteModalProps {
     isOpen: boolean;
@@ -18,6 +20,7 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
     const [step, setStep] = useState<'confirm' | 'success'>('confirm');
     const [newNcf, setNewNcf] = useState("");
 
+    const router = useRouter();
     const handleConfirm = async () => {
         setIsProcessing(true);
         try {
@@ -26,7 +29,12 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
             setStep('success');
             onSuccess();
         } catch (error: any) {
-            alert("Error: " + (error.message || "No se pudo generar la nota de crédito"));
+            const msg = error?.message || error?.error || "No se pudo generar la nota de crédito.";
+            const needsConfig = msg.includes("lote") || msg.includes("E34") || msg.includes("B04") || msg.includes("Configuración");
+            toast.error(needsConfig ? "Configuración requerida" : "Error", {
+                description: msg,
+                action: needsConfig ? { label: "Ir a Configuración", onClick: () => { onClose(); router.push("/configuracion"); } } : undefined
+            });
         } finally {
             setIsProcessing(false);
         }

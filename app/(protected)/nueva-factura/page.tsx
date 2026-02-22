@@ -292,6 +292,9 @@ export default function NewInvoice() {
                         if (d.clientName) setClientName(d.clientName);
                         if (d.rnc) setRnc(d.rnc);
                         if (d.invoiceType) setInvoiceType(d.invoiceType);
+                        if (d.tipoPago) setTipoPago(d.tipoPago);
+                        if (d.tipoPagoOtro) setTipoPagoOtro(d.tipoPagoOtro);
+                        if (Array.isArray(d.pagoMixto) && d.pagoMixto.length > 0) setPagoMixto(d.pagoMixto.map((p: any) => ({ tipo: p.tipo || "efectivo", monto: Number(p.monto) || 0 })));
                         toast.info("📂 Borrador restaurado automáticamente.");
                         return;
                     }
@@ -332,7 +335,7 @@ export default function NewInvoice() {
     // Save Draft on Change (API + localStorage backup)
     useEffect(() => {
         if (!isGenerating && !showSuccessModal) {
-            const draft = { items, clientName, rnc, invoiceType };
+            const draft = { items, clientName, rnc, invoiceType, tipoPago, tipoPagoOtro, pagoMixto };
             localStorage.setItem("invoiceDraft", JSON.stringify(draft));
             const timer = setTimeout(() => {
                 import("@/lib/api-service").then(({ api }) =>
@@ -341,7 +344,7 @@ export default function NewInvoice() {
             }, 500);
             return () => clearTimeout(timer);
         }
-    }, [items, clientName, rnc, invoiceType, isGenerating, showSuccessModal]);
+    }, [items, clientName, rnc, invoiceType, tipoPago, tipoPagoOtro, pagoMixto, isGenerating, showSuccessModal]);
 
     // Auto-llenar nombre cuando el RNC tiene 9 u 11 dígitos (consulta DGII / API después de dejar de escribir)
     useEffect(() => {
@@ -1026,6 +1029,16 @@ export default function NewInvoice() {
                     <Button variant="outline">← Volver</Button>
                 </Link>
             </div>
+
+            {/* Banner: Facturar de nuevo (basado en factura anterior) */}
+            {searchParams.get("from") && (
+                <div className="mb-6 p-4 rounded-xl border border-primary/30 bg-primary/5 flex items-center gap-3">
+                    <FileText className="w-5 h-5 text-primary shrink-0" />
+                    <p className="text-sm text-foreground">
+                        Estás creando una nueva factura basada en la <strong>Factura #{searchParams.get("fromNcf") || searchParams.get("from")}</strong>. Se asignará un nuevo NCF y fecha al confirmar.
+                    </p>
+                </div>
+            )}
 
             {/* Template Bar */}
             <div className="flex gap-2 mb-6 overflow-x-auto pb-2">

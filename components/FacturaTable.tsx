@@ -84,9 +84,21 @@ export function FacturaTable({ invoices, onRefresh, onRequestCreditNote }: Factu
         window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
     };
 
-    const handleClone = (inv: Invoice) => {
-        localStorage.setItem("invoiceToClone", JSON.stringify(inv));
-        router.push("/nueva-factura");
+    const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+    const handleDuplicate = async (inv: Invoice) => {
+        const id = inv._id || inv.id;
+        if (!id || duplicatingId) return;
+        setDuplicatingId(id);
+        try {
+            const { api } = await import("@/lib/api-service");
+            const res = await api.duplicateInvoice(id);
+            router.push(`/nueva-factura?from=${encodeURIComponent(res.fromInvoiceId)}&fromNcf=${encodeURIComponent(res.fromInvoiceNcf || "")}`);
+        } catch (e: any) {
+            const { toast } = await import("sonner");
+            toast.error(e?.message || "No se pudo crear el borrador.");
+        } finally {
+            setDuplicatingId(null);
+        }
     };
 
     const handleViewInvoice = (inv: Invoice) => {
@@ -255,6 +267,9 @@ export function FacturaTable({ invoices, onRefresh, onRequestCreditNote }: Factu
                                                             <DropdownMenuContent align="end">
                                                                 <DropdownMenuItem onClick={() => handleWhatsApp(inv)}>WhatsApp</DropdownMenuItem>
                                                                 <DropdownMenuItem onClick={() => handleDownloadPDF(inv)}>PDF</DropdownMenuItem>
+                                                                {inv.status !== "cancelled" && !inv.annulledBy && (
+                                                                    <DropdownMenuItem onClick={() => handleDuplicate(inv)}>Facturar de nuevo</DropdownMenuItem>
+                                                                )}
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </div>
@@ -300,6 +315,11 @@ export function FacturaTable({ invoices, onRefresh, onRequestCreditNote }: Factu
                                             <Button variant="outline" size="sm" className="h-9 w-10 p-0" onClick={(e) => { e.stopPropagation(); handleDownloadPDF(inv); }}>
                                                 <Download className="w-4 h-4" />
                                             </Button>
+                                            {inv.status !== "cancelled" && !inv.annulledBy && (
+                                                <Button variant="outline" size="sm" className="flex-1 h-9" onClick={(e) => { e.stopPropagation(); handleDuplicate(inv); }} disabled={!!duplicatingId}>
+                                                    Facturar de nuevo
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}

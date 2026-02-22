@@ -390,6 +390,9 @@ const invoiceDraftSchema = new mongoose.Schema({
     clientName: String,
     rnc: String,
     invoiceType: String,
+    tipoPago: { type: String, default: 'efectivo' },
+    tipoPagoOtro: String,
+    pagoMixto: [{ tipo: String, monto: Number }],
     updatedAt: { type: Date, default: Date.now }
 });
 invoiceDraftSchema.index({ userId: 1 }, { unique: true });
@@ -1174,10 +1177,15 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Tickets (Merged from legacy api/server.js)
-app.post('/api/tickets', async (req, res) => {
+app.post('/api/tickets', verifyToken, async (req, res) => {
     try {
-        const { userId, rnc, type, description } = req.body;
-        const newTicket = new SupportTicket({ userId, rnc, type, description });
+        const rnc = sanitizeString((req.body.rnc || '').toString(), 20).replace(/[^0-9]/g, '');
+        const type = sanitizeString((req.body.type || 'support').toString(), 50);
+        const description = sanitizeString((req.body.description || '').toString(), 2000);
+        if (!description || description.length < 10) {
+            return res.status(400).json({ message: 'La descripción del ticket debe tener al menos 10 caracteres.' });
+        }
+        const newTicket = new SupportTicket({ userId: req.userId, rnc, type, description });
         await newTicket.save();
         res.status(201).json({ message: 'Ticket creado exitosamente' });
     } catch (error) {
@@ -4090,8 +4098,10 @@ app.delete('/api/ncf-settings/:id', verifyToken, async (req, res) => {
 
 app.get('/api/customers', verifyToken, async (req, res) => {
     try {
+        const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 500));
         const customers = await Customer.find({ userId: req.userId }, "name rnc phone email lastInvoiceDate")
             .sort({ name: 1 })
+            .limit(limit)
             .lean();
         res.json(customers);
     } catch (error) {
@@ -4222,10 +4232,20 @@ app.get('/api/invoice-draft', verifyToken, async (req, res) => {
 
 app.put('/api/invoice-draft', verifyToken, async (req, res) => {
     try {
-        const { items, clientName, rnc, invoiceType } = req.body;
+        const { items, clientName, rnc, invoiceType, tipoPago, tipoPagoOtro, pagoMixto } = req.body;
+        const update = {
+            items: items || [],
+            clientName: clientName || '',
+            rnc: rnc || '',
+            invoiceType: invoiceType || '',
+            updatedAt: new Date()
+        };
+        if (tipoPago !== undefined) update.tipoPago = tipoPago;
+        if (tipoPagoOtro !== undefined) update.tipoPagoOtro = tipoPagoOtro;
+        if (Array.isArray(pagoMixto)) update.pagoMixto = pagoMixto.filter(p => p && (p.tipo || p.monto != null));
         const draft = await InvoiceDraft.findOneAndUpdate(
             { userId: req.userId },
-            { items: items || [], clientName: clientName || '', rnc: rnc || '', invoiceType: invoiceType || '', updatedAt: new Date() },
+            update,
             { upsert: true, new: true }
         );
         res.json(draft);
@@ -4304,7 +4324,8 @@ app.post('/api/invoice-templates', verifyToken, async (req, res) => {
 const MAX_DOC_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 app.get('/api/documents', verifyToken, async (req, res) => {
     try {
-        const docs = await UserDocument.find({ userId: req.userId }).sort({ createdAt: -1 });
+        const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
+        const docs = await UserDocument.find({ userId: req.userId }).sort({ createdAt: -1 }).limit(limit);
         res.json(docs.map(d => ({
             id: d._id.toString(),
             name: d.name,
@@ -4659,7 +4680,87 @@ app.post('/api/invoices/:invoiceId/credit-note', verifyToken, async (req, res) =
         await session.abortTransaction();
         session.endSession();
         log.error({ err: err.message, userId: req.userId, invoiceId }, 'Credit note error');
-        res.status(500).json({ message: err.message || 'No se pudo generar la nota de crédito' });
+        const msg = err.message || 'No se pudo generar la nota de crédito';
+        const isNcfConfig = /secuencias|lote|Configure|vencido/.test(msg);
+        res.status(isNcfConfig ? 400 : 500).json({
+            message: isNcfConfig
+                ? 'Para emitir notas de crédito necesitas un lote de Nota de Crédito (E34 o B04). Ve a Configuración → Comprobantes fiscales y agrega un lote para tipo 34 o 04.'
+                : msg,
+            code: isNcfConfig ? 'NCF_LOTE_REQUIRED' : undefined
+        });
+    }
+});
+
+// --- Facturar de nuevo: clonar factura a borrador (sin NCF, sin fecha) ---
+app.post('/api/invoices/:id/duplicate', verifyToken, async (req, res) => {
+    const invoiceId = req.params.id;
+    if (!invoiceId) return res.status(400).json({ message: 'ID de factura requerido' });
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const original = await Invoice.findOne({ _id: invoiceId, userId: req.userId }).session(session).lean();
+        if (!original) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: 'Factura no encontrada' });
+        }
+        if (original.status === 'cancelled' || original.annulledBy) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: 'No se puede reutilizar una factura anulada.' });
+        }
+
+        const clientRnc = (original.clientRnc || '').replace(/[^\d]/g, '');
+        const customerExists = await Customer.findOne({ userId: req.userId, rnc: clientRnc }).session(session);
+        if (!customerExists && !original.clientName) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: 'El cliente de esta factura ya no está disponible.' });
+        }
+
+        const items = (original.items || []).map(({ description, quantity, price, isExempt }) => ({
+            description: description || '',
+            quantity: quantity ?? 1,
+            price: price ?? 0,
+            isExempt: !!isExempt
+        }));
+        const tipoPago = ['efectivo', 'transferencia', 'tarjeta', 'credito', 'mixto', 'otro'].includes(original.tipoPago) ? original.tipoPago : 'efectivo';
+        const pagoMixto = Array.isArray(original.pagoMixto) && original.pagoMixto.length > 0
+            ? original.pagoMixto.filter(p => p && (p.tipo || p.monto > 0)).map(p => ({ tipo: String(p.tipo || '').slice(0, 30), monto: Number(p.monto) || 0 }))
+            : [];
+
+        const draftPayload = {
+            userId: req.userId,
+            items,
+            clientName: original.clientName || '',
+            rnc: original.clientRnc || '',
+            invoiceType: original.ncfType || '32',
+            tipoPago,
+            tipoPagoOtro: original.tipoPago === 'otro' ? (original.tipoPagoOtro || '') : '',
+            pagoMixto,
+            updatedAt: new Date()
+        };
+
+        await InvoiceDraft.findOneAndUpdate(
+            { userId: req.userId },
+            draftPayload,
+            { upsert: true, new: true, session }
+        );
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(201).json({
+            success: true,
+            fromInvoiceId: original._id.toString(),
+            fromInvoiceNcf: original.ncfSequence || ''
+        });
+    } catch (err) {
+        await session.abortTransaction();
+        session.endSession();
+        log.error({ err: err.message, userId: req.userId, invoiceId }, 'Duplicate invoice error');
+        res.status(500).json({ message: err.message || 'No se pudo crear el borrador.' });
     }
 });
 
@@ -4865,18 +4966,14 @@ app.get('/api/reports/607', verifyToken, async (req, res) => {
 // --- GESTIÓN DE GASTOS (606) ---
 app.get('/api/expenses', verifyToken, async (req, res) => {
     try {
-        const page = parseInt(req.query.page, 10);
-        const limit = parseInt(req.query.limit, 10);
-        if (page && limit) {
-            const skip = (page - 1) * limit;
-            const [data, total] = await Promise.all([
-                Expense.find({ userId: req.userId }).sort({ date: -1 }).skip(skip).limit(Math.min(limit, 500)).lean(),
-                Expense.countDocuments({ userId: req.userId })
-            ]);
-            return res.json({ data, total, page, limit, pages: Math.ceil(total / limit) });
-        }
-        const expenses = await Expense.find({ userId: req.userId }).sort({ date: -1 });
-        res.json(expenses);
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
+        const skip = (page - 1) * limit;
+        const [data, total] = await Promise.all([
+            Expense.find({ userId: req.userId }).sort({ date: -1 }).skip(skip).limit(limit).lean(),
+            Expense.countDocuments({ userId: req.userId })
+        ]);
+        res.json({ data, total, page, limit, pages: Math.ceil(total / limit) });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -4884,16 +4981,29 @@ app.get('/api/expenses', verifyToken, async (req, res) => {
 
 app.post('/api/expenses', verifyToken, async (req, res) => {
     try {
-        const { supplierName, supplierRnc, ncf, amount, itbis, category, date } = req.body;
+        const supplierName = sanitizeString(req.body.supplierName, 200);
+        const supplierRnc = sanitizeString((req.body.supplierRnc || '').toString(), 20).replace(/[^0-9]/g, '');
+        const ncf = sanitizeString(req.body.ncf, 50);
+        const category = sanitizeString(req.body.category, 50);
+        const amount = Math.max(0, Math.min(Number(req.body.amount) || 0, 999999999));
+        const itbis = Math.max(0, Math.min(Number(req.body.itbis) || 0, 999999999));
+        let date = new Date();
+        if (req.body.date) {
+            const d = new Date(req.body.date);
+            if (!isNaN(d.getTime())) date = d;
+        }
+        if (!supplierName || !supplierRnc || !ncf || amount <= 0) {
+            return res.status(400).json({ message: 'Proveedor, RNC, NCF y monto son requeridos.' });
+        }
         const newExpense = new Expense({
             userId: req.userId,
             supplierName,
             supplierRnc,
             ncf,
             amount,
-            itbis: itbis || 0,
-            category,
-            date: date || new Date()
+            itbis,
+            category: category || '01',
+            date
         });
         await newExpense.save();
         res.status(201).json(newExpense);
@@ -5104,8 +5214,6 @@ app.post('/api/reports/reminder', verifyToken, async (req, res) => {
 // --- COTIZACIONES (Quotes) - MongoDB, no localStorage ---
 app.get('/api/quotes', verifyToken, async (req, res) => {
     try {
-        const page = parseInt(req.query.page, 10);
-        const limit = parseInt(req.query.limit, 10);
         const mapQuote = (q) => ({
             id: q._id.toString(),
             _id: q._id,
@@ -5121,16 +5229,14 @@ app.get('/api/quotes', verifyToken, async (req, res) => {
             validUntil: q.validUntil,
             invoiceId: q.invoiceId
         });
-        if (page && limit) {
-            const skip = (page - 1) * limit;
-            const [quotes, total] = await Promise.all([
-                Quote.find({ userId: req.userId }).sort({ lastSavedAt: -1 }).skip(skip).limit(Math.min(limit, 500)).lean(),
-                Quote.countDocuments({ userId: req.userId })
-            ]);
-            return res.json({ data: quotes.map(mapQuote), total, page, limit, pages: Math.ceil(total / limit) });
-        }
-        const quotes = await Quote.find({ userId: req.userId }).sort({ lastSavedAt: -1 });
-        res.json(quotes.map(mapQuote));
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
+        const skip = (page - 1) * limit;
+        const [quotes, total] = await Promise.all([
+            Quote.find({ userId: req.userId }).sort({ lastSavedAt: -1 }).skip(skip).limit(limit).lean(),
+            Quote.countDocuments({ userId: req.userId })
+        ]);
+        res.json({ data: quotes.map(mapQuote), total, page, limit, pages: Math.ceil(total / limit) });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

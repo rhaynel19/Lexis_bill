@@ -235,7 +235,7 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                             {premiumPlan.comingSoonNote || "Próximamente"}
                                         </p>
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            Se agregará en el futuro.
+                                            Más opciones de pago (tarjeta, etc.) cuando el negocio crezca.
                                         </p>
                                     </div>
                                 )}

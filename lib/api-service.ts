@@ -176,6 +176,14 @@ export const api = {
         return secureFetch<any>(`${API_URL}/invoices/${invoiceId}/credit-note`, { method: "POST" });
     },
 
+    /** Facturar de nuevo: clona factura a borrador (sin NCF). Redirigir a /nueva-factura?from=id&fromNcf=... */
+    async duplicateInvoice(invoiceId: string) {
+        return secureFetch<{ success: boolean; fromInvoiceId: string; fromInvoiceNcf: string }>(
+            `${API_URL}/invoices/${invoiceId}/duplicate`,
+            { method: "POST", cacheKey: undefined }
+        );
+    },
+
     // Customers (CRM)
     async getCustomers() {
         return secureFetch<any[]>(`${API_URL}/customers`, {
@@ -275,8 +283,9 @@ export const api = {
         return data as { sent: boolean; period?: string; reason?: string };
     },
 
-    async getQuotes() {
-        return secureFetch<any[]>(`${API_URL}/quotes`, { cacheKey: "quotes_list" });
+    async getQuotes(page = 1, limit = 500) {
+        const res = await secureFetch<{ data: any[]; total: number; page: number; limit: number; pages: number }>(`${API_URL}/quotes?page=${page}&limit=${limit}`, { cacheKey: "quotes_list" });
+        return res.data ?? [];
     },
 
     async createQuote(data: { [key: string]: unknown }) {
@@ -309,9 +318,10 @@ export const api = {
         return res;
     },
 
-    // Expenses (606)
-    async getExpenses() {
-        return secureFetch<any[]>(`${API_URL}/expenses`);
+    // Expenses (606) — API devuelve { data, total, page, limit, pages }; exponemos array para compatibilidad
+    async getExpenses(page = 1, limit = 500) {
+        const res = await secureFetch<{ data: any[]; total: number; page: number; limit: number; pages: number }>(`${API_URL}/expenses?page=${page}&limit=${limit}`);
+        return res.data ?? [];
     },
 
     async saveExpense(expenseData: any) {
@@ -537,7 +547,7 @@ export const api = {
         return secureFetch<any>(`${API_URL}/invoice-draft`);
     },
 
-    async saveInvoiceDraft(data: { items: any[]; clientName?: string; rnc?: string; invoiceType?: string }) {
+    async saveInvoiceDraft(data: { items: any[]; clientName?: string; rnc?: string; invoiceType?: string; tipoPago?: string; tipoPagoOtro?: string; pagoMixto?: { tipo: string; monto: number }[] }) {
         return secureFetch<any>(`${API_URL}/invoice-draft`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
