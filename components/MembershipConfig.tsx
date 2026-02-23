@@ -113,6 +113,7 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
             }
             setComprobante(null);
             setPaypalConfirmed(false);
+            toast.success("Solicitud registrada. Validamos tu pago en 24-48 horas laborables; te notificaremos cuando esté activo.");
             onPaymentReported?.();
         } catch (e: unknown) {
             const msg = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "Error al registrar solicitud.";

@@ -36,6 +36,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-service";
 import { DGIIQRParser } from "@/lib/qr-parser";
@@ -44,7 +49,7 @@ import { ContextualHelp } from "@/components/ui/contextual-help";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import jsQR from "jsqr";
-import { ZoomIn, ZoomOut, Maximize2, Layers, Keyboard, Upload } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize2, Layers, Keyboard, Upload, Pencil } from "lucide-react";
 import styles from "./gastos.module.css";
 
 const EXPENSE_CATEGORIES = [
@@ -61,6 +66,14 @@ const EXPENSE_CATEGORIES = [
     { id: "11", name: "Gastos por Donaciones" },
 ];
 
+const PAYMENT_METHODS_606 = [
+    { id: "01", name: "Efectivo" },
+    { id: "02", name: "Cheque" },
+    { id: "03", name: "Tarjeta de crédito/débito" },
+    { id: "04", name: "Transferencia" },
+    { id: "05", name: "Otros" },
+];
+
 export default function GastosPage() {
     const [expenses, setExpenses] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -69,6 +82,10 @@ export default function GastosPage() {
     const [isScanning, setIsScanning] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddOpen, setIsAddOpen] = useState(false);
+    const [filterMonth, setFilterMonth] = useState<number | null>(null);
+    const [filterYear, setFilterYear] = useState<number | null>(null);
+    const [filterCategory, setFilterCategory] = useState<string | null>(null);
+    const [editingExpense, setEditingExpense] = useState<any>(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -78,8 +95,10 @@ export default function GastosPage() {
         amount: "",
         itbis: "",
         category: "02",
+        paymentMethod: "01",
         date: new Date().toISOString().split('T')[0]
     });
+    const [formErrors, setFormErrors] = useState<{ supplierRnc?: string; ncf?: string; amount?: string }>({});
 
     const [scannedImage, setScannedImage] = useState<string | null>(null);
     const [zoom, setZoom] = useState(1);
@@ -111,9 +130,31 @@ export default function GastosPage() {
         }
     };
 
+    const validateForm = (): boolean => {
+        const err: { supplierRnc?: string; ncf?: string; amount?: string } = {};
+        const rncClean = (formData.supplierRnc || "").replace(/[^0-9]/g, "");
+        if (rncClean.length && rncClean.length !== 9 && rncClean.length !== 11) {
+            err.supplierRnc = "RNC/Cédula debe tener 9 (empresa) u 11 (cédula) dígitos.";
+        }
+        const ncfClean = (formData.ncf || "").replace(/[\s-]/g, "");
+        if (ncfClean.length && (ncfClean.length < 11 || (!ncfClean.startsWith("B") && !ncfClean.startsWith("E")))) {
+            err.ncf = "NCF debe iniciar con B o E y tener al menos 11 caracteres (ej: B0100001234).";
+        }
+        const amt = parseFloat(formData.amount);
+        if (!formData.amount || isNaN(amt) || amt <= 0) {
+            err.amount = "Monto debe ser mayor que 0.";
+        }
+        setFormErrors(err);
+        return Object.keys(err).length === 0;
+    };
+
     const handleSaveExpense = async (andAddAnother = false) => {
         if (!formData.supplierName || !formData.supplierRnc || !formData.ncf || !formData.amount) {
             toast.error("Por favor completa los campos requeridos");
+            return;
+        }
+        if (!validateForm()) {
+            toast.error("Corrige los errores marcados antes de guardar.");
             return;
         }
 
@@ -123,11 +164,18 @@ export default function GastosPage() {
                 ...formData,
                 amount: parseFloat(formData.amount),
                 itbis: parseFloat(formData.itbis) || 0,
+                paymentMethod: formData.paymentMethod || "01",
             };
-            await api.saveExpense(payload);
-            toast.success("Gasto registrado correctamente");
+            if (editingExpense?._id) {
+                await api.updateExpense(editingExpense._id, payload);
+                toast.success("Gasto actualizado correctamente");
+                setEditingExpense(null);
+            } else {
+                await api.saveExpense(payload);
+                toast.success("Gasto registrado correctamente");
+            }
             loadExpenses();
-            if (andAddAnother) {
+            if (andAddAnother && !editingExpense) {
                 resetForm();
             } else {
                 setIsAddOpen(false);
@@ -175,6 +223,7 @@ export default function GastosPage() {
                         amount: parsed.amount ?? "",
                         itbis: parsed.itbis ?? "",
                         category: "02",
+                        paymentMethod: "01",
                         date: parsed.date ? parsed.date.split("-").reverse().join("-") : new Date().toISOString().split("T")[0],
                     });
                     setDataFromScan(true);
@@ -207,6 +256,7 @@ export default function GastosPage() {
                         amount: parsed.amount.toString(),
                         itbis: parsed.itbis.toString(),
                         category: parsed.category,
+                        paymentMethod: "01",
                         date: parsed.date || new Date().toISOString().split("T")[0],
                     });
                     setDataFromScan(true);
@@ -230,8 +280,10 @@ export default function GastosPage() {
             amount: "",
             itbis: "",
             category: "02",
+            paymentMethod: "01",
             date: new Date().toISOString().split("T")[0],
         });
+        setFormErrors({});
         if (!dialogAlreadyOpen) setIsAddOpen(true);
         setIsScanning(false);
     };
@@ -282,9 +334,12 @@ export default function GastosPage() {
             amount: "",
             itbis: "",
             category: "02",
+            paymentMethod: "01",
             date: new Date().toISOString().split("T")[0],
         });
+        setFormErrors({});
         setDataFromScan(false);
+        setEditingExpense(null);
         if (scannedImage) {
             URL.revokeObjectURL(scannedImage);
             setScannedImage(null);
@@ -296,18 +351,43 @@ export default function GastosPage() {
         setZoom(1);
     };
 
+    const openEditForm = (exp: any) => {
+        setFormData({
+            supplierName: exp.supplierName || "",
+            supplierRnc: exp.supplierRnc || "",
+            ncf: exp.ncf || "",
+            amount: String(exp.amount ?? ""),
+            itbis: String(exp.itbis ?? ""),
+            category: exp.category || "02",
+            paymentMethod: exp.paymentMethod || "01",
+            date: exp.date ? new Date(exp.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+        });
+        setEditingExpense(exp);
+        setFormErrors({});
+        setIsAddOpen(true);
+    };
+
     const openManualForm = () => {
         resetForm();
         setIsAddOpen(true);
     };
 
-    const filteredExpenses = expenses.filter(exp =>
-        exp.supplierName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        exp.ncf.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        exp.supplierRnc.includes(searchQuery)
-    );
+    const filteredExpenses = expenses.filter(exp => {
+        const matchSearch = !searchQuery || exp.supplierName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            exp.ncf.toLowerCase().includes(searchQuery.toLowerCase()) || exp.supplierRnc.includes(searchQuery);
+        if (!matchSearch) return false;
+        const d = new Date(exp.date);
+        const matchMonth = filterMonth == null || (d.getMonth() + 1) === filterMonth;
+        const matchYear = filterYear == null || d.getFullYear() === filterYear;
+        const matchCategory = filterCategory == null || exp.category === filterCategory;
+        return matchMonth && matchYear && matchCategory;
+    });
 
     const totalGastos = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+    const frequentSuppliers = Array.from(
+        new Map(expenses.map(e => [e.supplierRnc?.replace(/[^0-9]/g, "") || "", { name: e.supplierName, rnc: e.supplierRnc }])).values()
+    ).filter((s): s is { name: string; rnc: string } => !!s.name && !!s.rnc).slice(0, 6);
 
     return (
         <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
@@ -364,9 +444,9 @@ export default function GastosPage() {
                             </div>
                         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background border-border/20 shadow-2xl">
                             <DialogHeader>
-                                <DialogTitle className="text-2xl font-serif">Registrar Gasto 606</DialogTitle>
+                                <DialogTitle className="text-2xl font-serif">{editingExpense ? "Editar Gasto 606" : "Registrar Gasto 606"}</DialogTitle>
                                 <DialogDescription>
-                                    Completa los datos del comprobante. Puedes subir una foto o PDF después (opcional) o escanear primero y corregir aquí.
+                                    {editingExpense ? "Modifica los datos del comprobante y guarda." : "Completa los datos del comprobante. Puedes subir una foto o PDF después (opcional) o escanear primero y corregir aquí."}
                                 </DialogDescription>
                             </DialogHeader>
 
@@ -446,6 +526,23 @@ export default function GastosPage() {
 
                                 {/* Formulario: en móvil arriba para ver todas las opciones (Tipo de Gasto, Fecha, etc.) */}
                                 <div className="space-y-4 order-1 md:order-2">
+                                    {frequentSuppliers.length > 0 && (
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-xs font-medium text-muted-foreground shrink-0">Suplidores usados:</span>
+                                            {frequentSuppliers.map((s) => (
+                                                <Button
+                                                    key={s.rnc}
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-7 text-xs"
+                                                    onClick={() => setFormData(prev => ({ ...prev, supplierName: s.name, supplierRnc: s.rnc }))}
+                                                >
+                                                    {s.name}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    )}
                                     <div className="space-y-2">
                                         <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Suplidor / Comercio</label>
                                         <Input
@@ -460,16 +557,20 @@ export default function GastosPage() {
                                             <Input
                                                 placeholder="RNC / Cédula"
                                                 value={formData.supplierRnc}
-                                                onChange={e => setFormData({ ...formData, supplierRnc: e.target.value })}
+                                                onChange={e => { setFormData({ ...formData, supplierRnc: e.target.value }); if (formErrors.supplierRnc) setFormErrors({ ...formErrors, supplierRnc: undefined }); }}
+                                                className={formErrors.supplierRnc ? "border-destructive" : ""}
                                             />
+                                            {formErrors.supplierRnc && <p className="text-xs text-destructive">{formErrors.supplierRnc}</p>}
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">NCF</label>
                                             <Input
-                                                placeholder="Ej: B0100001234 (o vacío si la tirilla no trae NCF)"
+                                                placeholder="Ej: B0100001234"
                                                 value={formData.ncf}
-                                                onChange={e => setFormData({ ...formData, ncf: e.target.value })}
+                                                onChange={e => { setFormData({ ...formData, ncf: e.target.value }); if (formErrors.ncf) setFormErrors({ ...formErrors, ncf: undefined }); }}
+                                                className={formErrors.ncf ? "border-destructive" : ""}
                                             />
+                                            {formErrors.ncf && <p className="text-xs text-destructive">{formErrors.ncf}</p>}
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
@@ -479,11 +580,12 @@ export default function GastosPage() {
                                                 <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                                 <Input
                                                     type="number"
-                                                    className="pl-9"
+                                                    className={cn("pl-9", formErrors.amount && "border-destructive")}
                                                     value={formData.amount}
-                                                    onChange={e => setFormData({ ...formData, amount: e.target.value })}
+                                                    onChange={e => { setFormData({ ...formData, amount: e.target.value }); if (formErrors.amount) setFormErrors({ ...formErrors, amount: undefined }); }}
                                                 />
                                             </div>
+                                            {formErrors.amount && <p className="text-xs text-destructive">{formErrors.amount}</p>}
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">ITBIS (Opcional)</label>
@@ -514,6 +616,22 @@ export default function GastosPage() {
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Forma de pago (DGII 606)</label>
+                                        <Select
+                                            value={formData.paymentMethod}
+                                            onValueChange={val => setFormData({ ...formData, paymentMethod: val })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecciona forma de pago" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {PAYMENT_METHODS_606.map(p => (
+                                                    <SelectItem key={p.id} value={p.id}>{p.id} - {p.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
                                         <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Fecha de Factura</label>
                                         <Input
                                             type="date"
@@ -525,12 +643,14 @@ export default function GastosPage() {
                             </div>
 
                             <DialogFooter className="flex-col sm:flex-row gap-2">
-                                <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={isSaving} className="w-full sm:w-auto">Cancelar</Button>
-                                <Button variant="secondary" onClick={() => handleSaveExpense(true)} disabled={isSaving} className="w-full sm:w-auto">
-                                    {isSaving ? "Guardando…" : "Guardar y registrar otro"}
-                                </Button>
+                                <Button variant="outline" onClick={() => { setIsAddOpen(false); setEditingExpense(null); }} disabled={isSaving} className="w-full sm:w-auto">Cancelar</Button>
+                                {!editingExpense && (
+                                    <Button variant="secondary" onClick={() => handleSaveExpense(true)} disabled={isSaving} className="w-full sm:w-auto">
+                                        {isSaving ? "Guardando…" : "Guardar y registrar otro"}
+                                    </Button>
+                                )}
                                 <Button onClick={() => handleSaveExpense(false)} disabled={isSaving} className="w-full sm:w-auto">
-                                    {isSaving ? "Guardando…" : "Guardar Gasto"}
+                                    {isSaving ? "Guardando…" : editingExpense ? "Guardar cambios" : "Guardar Gasto"}
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
@@ -558,8 +678,32 @@ export default function GastosPage() {
                         <p className="text-[10px] text-muted-foreground mt-2">Listos para el envío mensual</p>
                     </CardContent>
                 </Card>
-                <BonusCard title="Salud Fiscal" icon={ShieldCheck} text="88%" color="text-green-500" />
-                <BonusCard title="Reporte 606" icon={FileText} text="Pendiente" color="text-amber-500" />
+                <Card className="bg-card/30 border-border/5">
+                    <CardContent className="p-6">
+                        <div className="flex justify-between items-center mb-1">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Salud Fiscal</p>
+                            <ShieldCheck className="w-4 h-4 text-green-500" />
+                        </div>
+                        <h3 className="text-lg font-black">
+                            {expenses.length
+                                ? `${Math.round((expenses.filter(e => e.supplierName && e.supplierRnc && e.ncf && e.amount != null).length / expenses.length) * 100)}%`
+                                : "100%"}
+                        </h3>
+                        <p className="text-[10px] text-muted-foreground mt-1">Gastos con datos completos</p>
+                    </CardContent>
+                </Card>
+                <Card className="bg-card/30 border-border/5">
+                    <CardContent className="p-6">
+                        <div className="flex justify-between items-center mb-1">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Reporte 606</p>
+                            <FileText className="w-4 h-4 text-amber-500" />
+                        </div>
+                        <Link href="/reportes" className="text-lg font-black text-amber-600 hover:underline">
+                            Descargar en Reportes
+                        </Link>
+                        <p className="text-[10px] text-muted-foreground mt-1">Por mes en Reportes fiscales</p>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Filters & Search */}
@@ -573,10 +717,52 @@ export default function GastosPage() {
                         onChange={e => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <Button variant="outline" className="h-10 border-border/10 gap-2">
-                    <Filter className="w-4 h-4" />
-                    Filtros
-                </Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="h-10 border-border/10 gap-2">
+                            <Filter className="w-4 h-4" />
+                            Filtros
+                            {(filterMonth != null || filterYear != null || filterCategory != null) && (
+                                <span className="bg-accent/20 text-accent rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">!</span>
+                            )}
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64 p-3 space-y-3">
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Mes</p>
+                        <Select value={filterMonth?.toString() ?? "all"} onValueChange={(v) => setFilterMonth(v === "all" ? null : parseInt(v, 10))}>
+                            <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos</SelectItem>
+                                {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+                                    <SelectItem key={m} value={String(m)}>{["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"][m-1]}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Año</p>
+                        <Select value={filterYear?.toString() ?? "all"} onValueChange={(v) => setFilterYear(v === "all" ? null : parseInt(v, 10))}>
+                            <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos</SelectItem>
+                                {[new Date().getFullYear(), new Date().getFullYear() - 1].map(y => (
+                                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Categoría DGII</p>
+                        <Select value={filterCategory ?? "all"} onValueChange={(v) => setFilterCategory(v === "all" ? null : v)}>
+                            <SelectTrigger className="h-9"><SelectValue placeholder="Todas" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas</SelectItem>
+                                {EXPENSE_CATEGORIES.map(c => (
+                                    <SelectItem key={c.id} value={c.id}>{c.id} - {c.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button variant="ghost" size="sm" className="w-full" onClick={() => { setFilterMonth(null); setFilterYear(null); setFilterCategory(null); }}>
+                            Limpiar filtros
+                        </Button>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
 
             {/* List Section */}
@@ -630,6 +816,7 @@ export default function GastosPage() {
                         <ExpenseItem
                             key={exp._id}
                             expense={exp}
+                            onEdit={() => openEditForm(exp)}
                             onDelete={() => handleDeleteExpense(exp._id)}
                         />
                     ))
@@ -643,7 +830,7 @@ export default function GastosPage() {
     );
 }
 
-function ExpenseItem({ expense, onDelete }: { expense: any, onDelete: () => void }) {
+function ExpenseItem({ expense, onEdit, onDelete }: { expense: any; onEdit: () => void; onDelete: () => void }) {
     const categoryName = EXPENSE_CATEGORIES.find(c => c.id === expense.category)?.name || "Gasto";
 
     return (
@@ -674,14 +861,14 @@ function ExpenseItem({ expense, onDelete }: { expense: any, onDelete: () => void
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-0.5">Monto Total</p>
                         <p className="text-xl font-black text-foreground">RD$ {expense.amount.toLocaleString()}</p>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                        onClick={onDelete}
-                    >
-                        <Trash2 className="w-5 h-5" />
-                    </Button>
+                    <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="text-muted-foreground/50 hover:text-accent hover:bg-accent/10" onClick={onEdit} title="Editar">
+                            <Pencil className="w-5 h-5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10" onClick={onDelete} title="Eliminar">
+                            <Trash2 className="w-5 h-5" />
+                        </Button>
+                    </div>
                 </div>
             </CardContent>
         </Card>

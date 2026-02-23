@@ -5120,6 +5120,9 @@ app.post('/api/expenses', verifyToken, async (req, res) => {
         const category = sanitizeString(req.body.category, 50);
         const amount = Math.max(0, Math.min(Number(req.body.amount) || 0, 999999999));
         const itbis = Math.max(0, Math.min(Number(req.body.itbis) || 0, 999999999));
+        const paymentMethod = ['01', '02', '03', '04', '05', '06', '07', '08'].includes(String(req.body.paymentMethod || '').trim())
+            ? String(req.body.paymentMethod).trim()
+            : '01';
         let date = new Date();
         if (req.body.date) {
             const d = new Date(req.body.date);
@@ -5136,11 +5139,52 @@ app.post('/api/expenses', verifyToken, async (req, res) => {
             amount,
             itbis,
             category: category || '01',
-            date
+            date,
+            paymentMethod
         });
         await newExpense.save();
         res.status(201).json(newExpense);
     } catch (error) {
+        log.error({ err: error.message, userId: req.userId }, 'Error creando gasto');
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.patch('/api/expenses/:id', verifyToken, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: 'ID de gasto inválido' });
+        }
+        const supplierName = req.body.supplierName != null ? sanitizeString(req.body.supplierName, 200) : undefined;
+        const supplierRnc = req.body.supplierRnc != null ? String(req.body.supplierRnc).replace(/[^0-9]/g, '') : undefined;
+        const ncf = req.body.ncf != null ? sanitizeString(req.body.ncf, 50) : undefined;
+        const category = req.body.category != null ? sanitizeString(req.body.category, 50) : undefined;
+        const amount = req.body.amount != null ? Math.max(0, Math.min(Number(req.body.amount) || 0, 999999999)) : undefined;
+        const itbis = req.body.itbis != null ? Math.max(0, Math.min(Number(req.body.itbis) || 0, 999999999)) : undefined;
+        const paymentMethod = req.body.paymentMethod != null && ['01', '02', '03', '04', '05', '06', '07', '08'].includes(String(req.body.paymentMethod).trim()) ? String(req.body.paymentMethod).trim() : undefined;
+        let date = undefined;
+        if (req.body.date) {
+            const d = new Date(req.body.date);
+            if (!isNaN(d.getTime())) date = d;
+        }
+        const update = {};
+        if (supplierName !== undefined) update.supplierName = supplierName;
+        if (supplierRnc !== undefined) update.supplierRnc = supplierRnc;
+        if (ncf !== undefined) update.ncf = ncf;
+        if (category !== undefined) update.category = category;
+        if (amount !== undefined) update.amount = amount;
+        if (itbis !== undefined) update.itbis = itbis;
+        if (paymentMethod !== undefined) update.paymentMethod = paymentMethod;
+        if (date !== undefined) update.date = date;
+        const updated = await Expense.findOneAndUpdate(
+            { _id: req.params.id, userId: req.userId },
+            { $set: update },
+            { new: true }
+        );
+        if (!updated) return res.status(404).json({ message: 'Gasto no encontrado' });
+        res.json(updated);
+    } catch (error) {
+        log.error({ err: error.message, expenseId: req.params.id }, 'Error actualizando gasto');
         res.status(500).json({ error: error.message });
     }
 });

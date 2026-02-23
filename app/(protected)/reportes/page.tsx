@@ -34,6 +34,7 @@ export default function ReportsPage() {
     const [isDownloading, setIsDownloading] = useState(false);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [itbisSummaryOpen, setItbisSummaryOpen] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     const months = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -53,11 +54,14 @@ export default function ReportsPage() {
 
     const loadSummary = async () => {
         setIsLoading(true);
+        setLoadError(null);
         try {
             const data = await api.getTaxSummary(selectedMonth, selectedYear);
             setSummary(data);
         } catch (error) {
-            console.error("Error loading tax summary:", error);
+            const msg = error instanceof Error ? error.message : "Error de conexión";
+            setLoadError(msg);
+            toast.error("No pudimos cargar el resumen. Revisa tu conexión e intenta de nuevo.");
         } finally {
             setIsLoading(false);
         }
@@ -151,6 +155,15 @@ export default function ReportsPage() {
                     </select>
                 </div>
             </div>
+
+            {loadError && (
+                <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-destructive">{loadError}</p>
+                    <Button variant="outline" size="sm" onClick={loadSummary} className="border-destructive/30 text-destructive hover:bg-destructive/10 shrink-0">
+                        Reintentar
+                    </Button>
+                </div>
+            )}
 
             {/* Tax Dashboard Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">

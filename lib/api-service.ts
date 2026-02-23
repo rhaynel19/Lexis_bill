@@ -332,6 +332,14 @@ export const api = {
         });
     },
 
+    async updateExpense(id: string, data: Record<string, unknown>) {
+        return secureFetch<any>(`${API_URL}/expenses/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+    },
+
     async deleteExpense(id: string) {
         return secureFetch<any>(`${API_URL}/expenses/${id}`, { method: "DELETE" });
     },
