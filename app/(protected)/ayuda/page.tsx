@@ -3,12 +3,20 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Download, FileText, HelpCircle, BookOpen, MessageCircle, ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Download, FileText, HelpCircle, BookOpen, MessageCircle, ArrowRight, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { generateManualPdf } from "@/lib/manual-pdf";
+import { setShowGuideAgain } from "@/components/onboarding/FirstTimeGuide";
 
 export default function AyudaPage() {
+    const router = useRouter();
     const [downloading, setDownloading] = useState(false);
+
+    const handleShowGuideAgain = () => {
+        setShowGuideAgain();
+        router.push("/dashboard");
+    };
 
     const handleDownloadManual = async () => {
         setDownloading(true);
@@ -51,6 +59,27 @@ export default function AyudaPage() {
                         >
                             <Download className="w-5 h-5" />
                             {downloading ? "Generando…" : "Descargar Manual en PDF"}
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                {/* Guía de inicio de nuevo */}
+                <Card className="border-primary/20">
+                    <CardHeader>
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                                <Sparkles className="w-6 h-6 text-primary" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-xl">Guía de inicio</CardTitle>
+                                <CardDescription>¿Primera vez o quieres repasar los pasos? Vuelve a ver la guía rápida.</CardDescription>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <Button variant="outline" className="gap-2 w-full sm:w-auto" onClick={handleShowGuideAgain}>
+                            <Sparkles className="w-4 h-4" />
+                            Ver guía de inicio de nuevo
                         </Button>
                     </CardContent>
                 </Card>

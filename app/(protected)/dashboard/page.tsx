@@ -36,7 +36,7 @@ import { InvoiceControlCenter } from "@/components/dashboard/InvoiceControlCente
 import { TaxHealthWidget } from "@/components/TaxHealthWidget";
 import { FiscalNamePrompt } from "@/components/FiscalNamePrompt";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
-import { SmartTutorial } from "@/components/SmartTutorial";
+import { FirstTimeGuide } from "@/components/onboarding/FirstTimeGuide";
 import { EmotionalStatusWidget } from "@/components/dashboard/EmotionalStatusWidget";
 import { LexisBusinessCopilot } from "@/components/dashboard/LexisBusinessCopilot";
 import { AlertsBanner } from "@/components/AlertsBanner";
@@ -658,7 +658,7 @@ export default function Dashboard() {
 
       </div>
       <OnboardingWizard />
-      <SmartTutorial />
+      <FirstTimeGuide />
 
       {/* Botón flotante Nueva Factura (desktop); en móvil usa el FAB del layout */}
       <div className="hidden md:block fixed bottom-6 right-6 z-50">

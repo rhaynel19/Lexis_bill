@@ -32,20 +32,20 @@ export function OnboardingWizard() {
 
     return (
         <Dialog open={!isOnboarded}>
-            <DialogContent className="sm:max-w-2xl bg-[#0A192F] border-[#D4AF37]/20 text-[#F9F6EE] p-0 overflow-hidden [&>button]:hidden">
-                <div className="flex h-[500px]">
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] bg-[#0A192F] border-[#D4AF37]/20 text-[#F9F6EE] p-0 overflow-hidden [&>button]:hidden flex flex-col">
+                <div className="flex flex-col md:flex-row min-h-0 flex-1 max-h-[85vh]">
                     {/* Sidebar Progress */}
-                    <div className="w-1/3 bg-[#081221] p-8 hidden md:flex flex-col justify-between border-r border-[#D4AF37]/10">
+                    <div className="w-full md:w-1/3 bg-[#081221] p-4 md:p-8 flex md:flex-col flex-row items-center justify-between gap-4 border-b md:border-b-0 md:border-r border-[#D4AF37]/10 shrink-0">
                         <div>
                             <h2 className="text-2xl font-serif font-bold text-[#D4AF37] mb-2">Lexis Bill</h2>
                             <p className="text-slate-400 text-sm">Configuración Inicial</p>
                         </div>
-                        <div className="space-y-6">
+                        <div className="flex md:flex-col flex-row gap-2 md:gap-6 md:space-y-0">
                             {[1, 2, 3, 4].map((i) => (
-                                <div key={i} className="flex items-center gap-3">
+                                <div key={i} className="flex items-center gap-2 md:gap-3">
                                     <div
                                         className={cn(
-                                            "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border transition-colors",
+                                            "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border transition-colors shrink-0",
                                             step === i
                                                 ? "bg-[#D4AF37] text-[#0A192F] border-[#D4AF37]"
                                                 : step > i
@@ -55,7 +55,7 @@ export function OnboardingWizard() {
                                     >
                                         {step > i ? <CheckCircle2 className="w-4 h-4" /> : i}
                                     </div>
-                                    <span className={cn("text-sm", step === i ? "text-white font-medium" : "text-slate-500")}>
+                                    <span className={cn("text-xs md:text-sm hidden sm:inline", step === i ? "text-white font-medium" : "text-slate-500")}>
                                         {i === 1 && "Profesión"}
                                         {i === 2 && "Clientes"}
                                         {i === 3 && "Fiscalidad"}
@@ -64,13 +64,13 @@ export function OnboardingWizard() {
                                 </div>
                             ))}
                         </div>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-slate-500 hidden md:block">
                             Solo toma unos minutos.
                         </div>
                     </div>
 
                     {/* Main Content */}
-                    <div className="flex-1 p-8 md:p-12 overflow-y-auto">
+                    <div className="flex-1 p-4 sm:p-6 md:p-12 overflow-y-auto min-h-0">
                         <AnimatePresence mode="wait">
                             {step === 1 && (
                                 <motion.div
@@ -95,7 +95,7 @@ export function OnboardingWizard() {
                                                     }, 200);
                                                 }}
                                                 className={cn(
-                                                    "flex flex-col items-center justify-center gap-3 p-4 rounded-xl border transition-all hover:scale-105",
+                                                    "flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl border transition-all hover:scale-[1.02] active:scale-[0.98] min-h-[44px]",
                                                     selectedProf === p.id
                                                         ? "bg-[#D4AF37] text-[#0A192F] border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20"
                                                         : "bg-white/5 border-white/10 hover:bg-white/10"
@@ -244,7 +244,7 @@ export function OnboardingWizard() {
                                         Modo Simple activado. Si tienes dudas, pregúntame en cualquier momento.
                                     </p>
 
-                                    <Button onClick={completeOnboarding} className="w-full h-14 text-lg bg-[#D4AF37] hover:bg-[#B8962E] text-[#0A192F] font-bold rounded-xl mt-8 shadow-xl shadow-[#D4AF37]/20 animate-pulse">
+                                    <Button onClick={completeOnboarding} className="w-full min-h-[48px] h-14 text-base sm:text-lg bg-[#D4AF37] hover:bg-[#B8962E] text-[#0A192F] font-bold rounded-xl mt-6 sm:mt-8 shadow-xl shadow-[#D4AF37]/20">
                                         Empezar a Facturar
                                     </Button>
                                 </motion.div>
