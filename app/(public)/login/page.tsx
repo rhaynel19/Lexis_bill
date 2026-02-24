@@ -94,6 +94,7 @@ function LoginForm() {
         setError("");
         setIsLoading(true);
 
+        const payload = { email, password: "[REDACTED]" };
         try {
             const { api } = await import("@/lib/api-service");
             await api.login(email, password);
@@ -104,7 +105,22 @@ function LoginForm() {
             setShowBiometric(true);
 
         } catch (err: any) {
-            setError(getLoginErrorMessage(err));
+            const status = err?.status ?? err?.response?.status;
+            const data = err?.data ?? err?.response?.data ?? err?.data;
+            const message = err?.message ?? err?.response?.data?.message ?? "";
+
+            console.log("[LOGIN ERROR] STATUS:", status);
+            console.log("[LOGIN ERROR] DATA:", data);
+            console.log("[LOGIN ERROR] MESSAGE:", message);
+            console.log("[LOGIN ERROR] REQUEST PAYLOAD:", payload);
+
+            const statusText = status != null ? `HTTP ${status}` : "Error";
+            const serverMsg = typeof data?.message === "string" ? data.message : (data?.error ?? message);
+            const displayMsg = serverMsg ? `${statusText}: ${serverMsg}` : statusText;
+            const extra = data && typeof data === "object" && Object.keys(data).length > 1
+                ? ` | Respuesta: ${JSON.stringify(data)}`
+                : "";
+            setError(displayMsg + extra);
         } finally {
             setIsLoading(false);
         }

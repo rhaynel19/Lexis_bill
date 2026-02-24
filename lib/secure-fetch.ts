@@ -62,32 +62,28 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
 
             clearTimeout(id);
 
-            // Manejo de Errores HTTP
+            // Manejo de Errores HTTP (objeto con status, message y data para que el caller pueda mostrar el error real)
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 const errorMessage = errorData.message || errorData.error || `Server Error: ${response.status}`;
+                const errPayload = { status: response.status, message: errorMessage, data: errorData };
 
                 // Sesión expirada o no autorizado: redirigir a login
                 if (response.status === 401 && typeof window !== 'undefined') {
                     toast.error("Tu sesión expiró o no es válida. Inicia sesión de nuevo.");
                     window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
-                    throw { status: 401, message: errorMessage };
+                    throw errPayload;
                 }
 
                 // Suscripción bloqueada (días de gracia pasados): redirigir a pagos
                 if (response.status === 403 && errorData.code === 'SUBSCRIPTION_LOCKED' && typeof window !== 'undefined') {
                     toast.error("Tu cuenta está bloqueada por falta de pago. Regulariza para seguir usando Lexis Bill.");
                     window.location.href = "/pagos?locked=1";
-                    throw { status: 403, message: errorMessage, code: errorData.code };
+                    throw errPayload;
                 }
 
-                // Si es un error 4xx (Cliente), no reintentar
-                if (response.status >= 400 && response.status < 500) {
-                    throw { status: response.status, message: errorMessage };
-                }
-
-                // Si es 5xx (Servidor), lanzar error con el mensaje detallado
-                throw new Error(errorMessage);
+                // 4xx y 5xx: lanzar objeto con status, message y data para diagnóstico
+                throw errPayload;
             }
 
             const data = await response.json();
