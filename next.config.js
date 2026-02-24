@@ -71,7 +71,9 @@ const nextConfig = {
         ];
     },
 
-    // Proxy /api al backend (dev y producción). En producción NEXT_PUBLIC_API_URL debe apuntar al API real.
+    // Proxy /api al backend (dev y producción).
+    // IMPORTANTE: En producción hay que definir NEXT_PUBLIC_API_URL (ej. https://api.tudominio.com/api).
+    // Si no está definida, las rewrites quedan vacías y POST /api/auth/login lo atiende el host del frontend → 405 Method Not Allowed.
     async rewrites() {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         if (apiUrl) {
