@@ -39,10 +39,14 @@ export default function Configuration() {
         if (stored) {
             try {
                 const data = JSON.parse(stored);
-                setConfig(prev => ({ ...prev, ...data }));
-                if (data.logo) setLogoPreview(data.logo);
-                if (data.seal) setSealPreview(data.seal);
-            } catch {}
+                if (data && typeof data === "object") {
+                    setConfig(prev => ({ ...prev, ...data }));
+                    if (data.logo) setLogoPreview(data.logo);
+                    if (data.seal) setSealPreview(data.seal);
+                }
+            } catch {
+                // localStorage corrupto o formato antiguo: ignorar y usar estado por defecto
+            }
         }
         if (profession) {
             setConfig(prev => ({ ...prev, profession }));

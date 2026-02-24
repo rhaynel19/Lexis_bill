@@ -20,6 +20,11 @@ if (isProd && !process.env.NEXT_PUBLIC_SENTRY_DSN) {
     console.error('❌ FATAL: NEXT_PUBLIC_SENTRY_DSN requerido en producción. Cree proyecto en sentry.io');
     process.exit(1);
 }
+const CRON_SECRET = process.env.CRON_SECRET;
+if (isProd && (!CRON_SECRET || CRON_SECRET === 'change-me-in-production')) {
+    console.error('❌ FATAL: CRON_SECRET debe estar definido en producción y no usar el valor por defecto.');
+    process.exit(1);
+}
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -139,6 +144,13 @@ const uploadLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 20,
     message: { message: 'Demasiados archivos. Espera un momento.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+const rncLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    message: { message: 'Demasiadas consultas de RNC. Espera un momento.' },
     standardHeaders: true,
     legacyHeaders: false
 });
@@ -4000,7 +4012,7 @@ app.get('/api/status', async (req, res) => {
 });
 
 // Rest of endpoints (Invoices, Customers, etc.)
-app.get('/api/rnc/:number', async (req, res) => {
+app.get('/api/rnc/:number', rncLimiter, async (req, res) => {
     const { number } = req.params;
     const cleanNumber = number.replace(/\D/g, "");
 
@@ -4013,7 +4025,7 @@ app.get('/api/rnc/:number', async (req, res) => {
     res.json({ valid: true, rnc: cleanNumber, name, type: cleanNumber.length === 9 ? 'JURIDICA' : 'FISICA' });
 });
 
-app.post('/api/validate-rnc', async (req, res) => {
+app.post('/api/validate-rnc', rncLimiter, async (req, res) => {
     try {
         const { rnc } = req.body;
         if (!rnc) return res.status(400).json({ valid: false, message: 'RNC requerido' });
