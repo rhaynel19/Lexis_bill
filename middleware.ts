@@ -19,7 +19,9 @@ const PROTECTED_PATHS = [
     "/pagos",
     "/documentos",
     "/partners",
-    "/admin"
+    "/partner",
+    "/admin",
+    "/ayuda"
 ];
 
 export function middleware(request: NextRequest) {
@@ -52,6 +54,8 @@ export const config = {
         "/pagos/:path*",
         "/documentos/:path*",
         "/partners/:path*",
-        "/admin/:path*"
+        "/partner/:path*",
+        "/admin/:path*",
+        "/ayuda/:path*"
     ]
 };

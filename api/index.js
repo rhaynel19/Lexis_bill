@@ -1190,7 +1190,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Tickets (Merged from legacy api/server.js)
-app.post('/api/tickets', verifyToken, async (req, res) => {
+app.post('/api/tickets', verifyToken, verifyClient, async (req, res) => {
     try {
         const rnc = sanitizeString((req.body.rnc || '').toString(), 20).replace(/[^0-9]/g, '');
         const type = sanitizeString((req.body.type || 'support').toString(), 50);
@@ -1716,6 +1716,14 @@ const verifyPartner = async (req, res, next) => {
     next();
 };
 
+/** Solo cuentas cliente (user/admin). Rechaza partners en endpoints de facturación/NCF/reportes. */
+const verifyClient = (req, res, next) => {
+    if (req.user && req.user.role === 'partner') {
+        return res.status(403).json({ message: 'Acceso denegado. Esta función es solo para cuentas de cliente.' });
+    }
+    next();
+};
+
 app.get('/api/partners/me', verifyToken, verifyPartner, async (req, res) => {
     try {
         const p = req.partner;
@@ -1939,7 +1947,7 @@ app.get('/api/membership/plans', (req, res) => {
     res.json({ plans: Object.values(MEMBERSHIP_PLANS) });
 });
 
-app.get('/api/membership/payment-info', verifyToken, (req, res) => {
+app.get('/api/membership/payment-info', verifyToken, verifyClient, (req, res) => {
     res.json({
         bankName: process.env.LEXISBILL_BANK_NAME || 'Banco Popular Dominicano',
         bankAccount: process.env.LEXISBILL_BANK_ACCOUNT || '789042660',
@@ -1952,7 +1960,7 @@ app.get('/api/membership/payment-info', verifyToken, (req, res) => {
 
 // Preparar transferencia: devuelve SOLO referencia única LEX-XXXX. NO crea PaymentRequest.
 // La solicitud se crea ÚNICAMENTE cuando el usuario sube comprobante en request-payment.
-app.post('/api/membership/prepare-transfer', verifyToken, async (req, res) => {
+app.post('/api/membership/prepare-transfer', verifyToken, verifyClient, async (req, res) => {
     try {
         const { plan, billingCycle } = req.body;
         if (!plan || plan !== 'pro') {
@@ -1966,7 +1974,7 @@ app.post('/api/membership/prepare-transfer', verifyToken, async (req, res) => {
 });
 
 // Crear solicitud de validación SOLO cuando existe evidencia: comprobante (transfer) o confirmación (paypal).
-app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
+app.post('/api/membership/request-payment', verifyToken, verifyClient, async (req, res) => {
     try {
         const { plan, billingCycle, paymentMethod, comprobanteImage, reference: clientReference } = req.body;
 
@@ -2093,7 +2101,7 @@ app.post('/api/membership/request-payment', verifyToken, async (req, res) => {
 });
 
 // Historial de pagos del usuario (pendientes + aprobados) para UI con feedback inmediato
-app.get('/api/payments/history', verifyToken, async (req, res) => {
+app.get('/api/payments/history', verifyToken, verifyClient, async (req, res) => {
     try {
         const list = await PaymentRequest.find({ userId: req.userId })
             .sort({ requestedAt: -1 })
@@ -3498,7 +3506,7 @@ app.get('/api/admin/metrics', verifyToken, verifyAdmin, async (req, res) => {
 // Importar BillingBrain
 const { BillingBrain, INSIGHT_PRIORITY } = require('./services/billing-brain');
 
-app.get('/api/business-copilot', verifyToken, async (req, res) => {
+app.get('/api/business-copilot', verifyToken, verifyClient, async (req, res) => {
     const requestId = `copilot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const startTime = Date.now();
     const userId = req.userId;
@@ -3892,7 +3900,7 @@ app.get('/api/business-copilot', verifyToken, async (req, res) => {
 });
 
 // --- Modo preventivo: riesgo del cliente antes de facturar a crédito ---
-app.get('/api/client-payment-risk', verifyToken, async (req, res) => {
+app.get('/api/client-payment-risk', verifyToken, verifyClient, async (req, res) => {
     try {
         const cleanRnc = (req.query.rnc || '').replace(/[^\d]/g, '');
         if (!cleanRnc || cleanRnc.length < 9) return res.json({ riskScore: 50, level: 'unknown' });
@@ -3949,7 +3957,7 @@ app.get('/api/client-payment-risk', verifyToken, async (req, res) => {
 });
 
 // --- Alertas proactivas: NCF bajo, secuencias por vencer, suscripciones por vencer ---
-app.get('/api/alerts', verifyToken, async (req, res) => {
+app.get('/api/alerts', verifyToken, verifyClient, async (req, res) => {
     try {
         const alerts = [];
         const now = new Date();
@@ -4027,7 +4035,7 @@ app.post('/api/validate-rnc', async (req, res) => {
 });
 
 // --- GESTIÓN DE COMPROBANTES (NCF) ---
-app.get('/api/ncf-settings', verifyToken, async (req, res) => {
+app.get('/api/ncf-settings', verifyToken, verifyClient, async (req, res) => {
     try {
         const settings = await NCFSettings.find({ userId: req.userId }).sort({ type: 1 });
         res.json(settings);
@@ -4036,7 +4044,7 @@ app.get('/api/ncf-settings', verifyToken, async (req, res) => {
     }
 });
 
-app.post('/api/ncf-settings', verifyToken, async (req, res) => {
+app.post('/api/ncf-settings', verifyToken, verifyClient, async (req, res) => {
     try {
         const { type, sequenceType, initialNumber, finalNumber, expiryDate } = req.body;
 
@@ -4069,7 +4077,7 @@ app.post('/api/ncf-settings', verifyToken, async (req, res) => {
 });
 
 // Actualizar lote NCF solo si no se ha usado (currentValue === initialNumber)
-app.put('/api/ncf-settings/:id', verifyToken, async (req, res) => {
+app.put('/api/ncf-settings/:id', verifyToken, verifyClient, async (req, res) => {
     try {
         const setting = await NCFSettings.findOne({ _id: req.params.id, userId: req.userId });
         if (!setting) return res.status(404).json({ error: 'Lote no encontrado.' });
@@ -4088,7 +4096,7 @@ app.put('/api/ncf-settings/:id', verifyToken, async (req, res) => {
 });
 
 // --- AUTOFILL INTELIGENTE ---
-app.get('/api/autofill/suggestions', verifyToken, async (req, res) => {
+app.get('/api/autofill/suggestions', verifyToken, verifyClient, async (req, res) => {
     try {
         const q = (req.query.q || '').trim().toLowerCase();
         const rnc = (req.query.rnc || '').replace(/[^\d]/g, '');
@@ -4189,7 +4197,7 @@ app.get('/api/autofill/suggestions', verifyToken, async (req, res) => {
 });
 
 // Borrar lote NCF solo si no se ha usado (currentValue === initialNumber)
-app.delete('/api/ncf-settings/:id', verifyToken, async (req, res) => {
+app.delete('/api/ncf-settings/:id', verifyToken, verifyClient, async (req, res) => {
     try {
         const setting = await NCFSettings.findOne({ _id: req.params.id, userId: req.userId });
         if (!setting) return res.status(404).json({ error: 'Lote no encontrado.' });
@@ -4203,7 +4211,7 @@ app.delete('/api/ncf-settings/:id', verifyToken, async (req, res) => {
     }
 });
 
-app.get('/api/customers', verifyToken, async (req, res) => {
+app.get('/api/customers', verifyToken, verifyClient, async (req, res) => {
     try {
         const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 500));
         const customers = await Customer.find({ userId: req.userId }, "name rnc phone email lastInvoiceDate")
@@ -4217,7 +4225,7 @@ app.get('/api/customers', verifyToken, async (req, res) => {
 });
 
 // Historial de facturas de un cliente (por RNC) — para "Cargar ítems de última factura"
-app.get('/api/customers/:rnc/history', verifyToken, async (req, res) => {
+app.get('/api/customers/:rnc/history', verifyToken, verifyClient, async (req, res) => {
     try {
         const rnc = (req.params.rnc || '').replace(/[^0-9]/g, '');
         if (!rnc) return res.status(400).json({ message: 'RNC requerido' });
@@ -4240,7 +4248,7 @@ app.get('/api/customers/:rnc/history', verifyToken, async (req, res) => {
 const CUSTOMER_IMPORT_MAX_ROWS = 20000;
 const CUSTOMER_IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 
-app.post('/api/customers/import', verifyToken, async (req, res) => {
+app.post('/api/customers/import', verifyToken, verifyClient, async (req, res) => {
     try {
         const data = req.body;
         if (!Array.isArray(data)) {
@@ -4302,7 +4310,7 @@ app.post('/api/customers/import', verifyToken, async (req, res) => {
     }
 });
 
-app.post('/api/customers', verifyToken, async (req, res) => {
+app.post('/api/customers', verifyToken, verifyClient, async (req, res) => {
     try {
         // === SANITIZACIÓN DE INPUTS ===
         const sanitizedData = {
@@ -4329,7 +4337,7 @@ app.post('/api/customers', verifyToken, async (req, res) => {
     }
 });
 
-app.delete('/api/customers/:id', verifyToken, async (req, res) => {
+app.delete('/api/customers/:id', verifyToken, verifyClient, async (req, res) => {
     try {
         // === VALIDACIÓN DE OBJECTID ===
         if (!isValidObjectId(req.params.id)) {
@@ -4348,7 +4356,7 @@ app.delete('/api/customers/:id', verifyToken, async (req, res) => {
 });
 
 // --- BORRADOR Y PLANTILLAS DE FACTURA ---
-app.get('/api/invoice-draft', verifyToken, async (req, res) => {
+app.get('/api/invoice-draft', verifyToken, verifyClient, async (req, res) => {
     try {
         const draft = await InvoiceDraft.findOne({ userId: req.userId });
         res.json(draft || null);
@@ -4357,7 +4365,7 @@ app.get('/api/invoice-draft', verifyToken, async (req, res) => {
     }
 });
 
-app.put('/api/invoice-draft', verifyToken, async (req, res) => {
+app.put('/api/invoice-draft', verifyToken, verifyClient, async (req, res) => {
     try {
         const { items, clientName, rnc, invoiceType, tipoPago, tipoPagoOtro, pagoMixto } = req.body;
         const update = {
@@ -4381,7 +4389,7 @@ app.put('/api/invoice-draft', verifyToken, async (req, res) => {
     }
 });
 
-app.delete('/api/invoice-draft', verifyToken, async (req, res) => {
+app.delete('/api/invoice-draft', verifyToken, verifyClient, async (req, res) => {
     try {
         await InvoiceDraft.deleteOne({ userId: req.userId });
         res.json({ success: true });
@@ -4391,7 +4399,7 @@ app.delete('/api/invoice-draft', verifyToken, async (req, res) => {
 });
 
 // Servicios predefinidos (factura) — migrado desde localStorage
-app.get('/api/services', verifyToken, async (req, res) => {
+app.get('/api/services', verifyToken, verifyClient, async (req, res) => {
     try {
         const doc = await UserServices.findOne({ userId: req.userId });
         res.json(doc?.services || []);
@@ -4400,7 +4408,7 @@ app.get('/api/services', verifyToken, async (req, res) => {
     }
 });
 
-app.put('/api/services', verifyToken, async (req, res) => {
+app.put('/api/services', verifyToken, verifyClient, async (req, res) => {
     try {
         const services = Array.isArray(req.body.services) ? req.body.services.slice(0, 50).map(s => ({
             description: sanitizeString(s?.description || '', 500),
@@ -4419,7 +4427,7 @@ app.put('/api/services', verifyToken, async (req, res) => {
     }
 });
 
-app.get('/api/invoice-templates', verifyToken, async (req, res) => {
+app.get('/api/invoice-templates', verifyToken, verifyClient, async (req, res) => {
     try {
         const templates = await InvoiceTemplate.find({ userId: req.userId }).sort({ createdAt: -1 });
         res.json(templates);
@@ -4428,7 +4436,7 @@ app.get('/api/invoice-templates', verifyToken, async (req, res) => {
     }
 });
 
-app.post('/api/invoice-templates', verifyToken, async (req, res) => {
+app.post('/api/invoice-templates', verifyToken, verifyClient, async (req, res) => {
     try {
         const { name, invoiceType, items, clientName, rnc } = req.body;
         if (!name) return res.status(400).json({ message: 'Nombre requerido' });
@@ -4449,7 +4457,7 @@ app.post('/api/invoice-templates', verifyToken, async (req, res) => {
 
 // --- BÓVEDA DE DOCUMENTOS (persistencia en MongoDB) ---
 const MAX_DOC_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
-app.get('/api/documents', verifyToken, async (req, res) => {
+app.get('/api/documents', verifyToken, verifyClient, async (req, res) => {
     try {
         const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
         const docs = await UserDocument.find({ userId: req.userId }).sort({ createdAt: -1 }).limit(limit);
@@ -4465,7 +4473,7 @@ app.get('/api/documents', verifyToken, async (req, res) => {
     }
 });
 
-app.post('/api/documents', verifyToken, async (req, res) => {
+app.post('/api/documents', verifyToken, verifyClient, async (req, res) => {
     try {
         const { name, type, data } = req.body;
         if (!name || !data) return res.status(400).json({ message: 'Nombre y archivo requeridos' });
@@ -4487,7 +4495,7 @@ app.post('/api/documents', verifyToken, async (req, res) => {
     }
 });
 
-app.get('/api/documents/:id', verifyToken, async (req, res) => {
+app.get('/api/documents/:id', verifyToken, verifyClient, async (req, res) => {
     try {
         if (!isValidObjectId(req.params.id)) {
             return res.status(400).json({ message: 'ID de documento inválido' });
@@ -4500,7 +4508,7 @@ app.get('/api/documents/:id', verifyToken, async (req, res) => {
     }
 });
 
-app.delete('/api/documents/:id', verifyToken, async (req, res) => {
+app.delete('/api/documents/:id', verifyToken, verifyClient, async (req, res) => {
     try {
         if (!isValidObjectId(req.params.id)) {
             return res.status(400).json({ message: 'ID de documento inválido' });
@@ -4514,7 +4522,7 @@ app.delete('/api/documents/:id', verifyToken, async (req, res) => {
 });
 
 // Stats del dashboard por agregación (evita cargar 200 facturas en memoria)
-app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
+app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
     try {
         const userId = req.userId;
         const now = new Date();
@@ -4595,7 +4603,7 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
     }
 });
 
-app.get('/api/invoices', verifyToken, async (req, res) => {
+app.get('/api/invoices', verifyToken, verifyClient, async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
         const limit = Math.min(500, Math.max(10, parseInt(req.query.limit, 10) || 50));
@@ -4610,7 +4618,7 @@ app.get('/api/invoices', verifyToken, async (req, res) => {
     }
 });
 
-app.post('/api/invoices', verifyToken, async (req, res) => {
+app.post('/api/invoices', verifyToken, verifyClient, async (req, res) => {
     // Bloqueo: Onboarding obligatorio
     const createdBeforeOnboarding = req.user.createdAt && new Date(req.user.createdAt) < new Date('2026-02-01');
     if (!req.user.onboardingCompleted && !createdBeforeOnboarding) {
@@ -4737,7 +4745,7 @@ app.post('/api/invoices', verifyToken, async (req, res) => {
 });
 
 // --- Nota de Crédito (anular factura con e-CF 34 o B04) ---
-app.post('/api/invoices/:invoiceId/credit-note', verifyToken, async (req, res) => {
+app.post('/api/invoices/:invoiceId/credit-note', verifyToken, verifyClient, async (req, res) => {
     const invoiceId = req.params.invoiceId;
     if (!invoiceId) return res.status(400).json({ message: 'ID de factura requerido' });
 
@@ -4825,7 +4833,7 @@ app.post('/api/invoices/:invoiceId/credit-note', verifyToken, async (req, res) =
 });
 
 // --- Facturar de nuevo: clonar factura a borrador (sin NCF, sin fecha) ---
-app.post('/api/invoices/:id/duplicate', verifyToken, async (req, res) => {
+app.post('/api/invoices/:id/duplicate', verifyToken, verifyClient, async (req, res) => {
     const invoiceId = req.params.id;
     if (!invoiceId) return res.status(400).json({ message: 'ID de factura requerido' });
 
@@ -4897,7 +4905,7 @@ app.post('/api/invoices/:id/duplicate', verifyToken, async (req, res) => {
     }
 });
 
-app.get('/api/reports/summary', verifyToken, async (req, res) => {
+app.get('/api/reports/summary', verifyToken, verifyClient, async (req, res) => {
     try {
         const { month, year } = req.query;
         const startDate = new Date(year, month - 1, 1);
@@ -4929,7 +4937,7 @@ app.get('/api/reports/summary', verifyToken, async (req, res) => {
 });
 
 // --- Tax Health (Bolsillo Fiscal) - datos reales desde DB ---
-app.get('/api/reports/tax-health', verifyToken, async (req, res) => {
+app.get('/api/reports/tax-health', verifyToken, verifyClient, async (req, res) => {
     try {
         const { month, year } = req.query;
         const now = new Date();
@@ -4977,7 +4985,7 @@ app.get('/api/reports/tax-health', verifyToken, async (req, res) => {
 });
 
 // --- REPORTE 607 (VENTAS) - Pre-validación + Log Fiscal ---
-app.get('/api/reports/607/validate', verifyToken, async (req, res) => {
+app.get('/api/reports/607/validate', verifyToken, verifyClient, async (req, res) => {
     if (!req.user.confirmedFiscalName) {
         return res.status(403).json({ valid: false, message: 'Confirma tu nombre fiscal para generar reportes.' });
     }
@@ -5027,7 +5035,7 @@ app.get('/api/reports/607/validate', verifyToken, async (req, res) => {
     }
 });
 
-app.get('/api/reports/607', verifyToken, async (req, res) => {
+app.get('/api/reports/607', verifyToken, verifyClient, async (req, res) => {
     if (!req.user.confirmedFiscalName) {
         return res.status(403).json({ message: 'Confirma tu nombre fiscal para generar reportes.' });
     }
@@ -5097,7 +5105,7 @@ app.get('/api/reports/607', verifyToken, async (req, res) => {
 });
 
 // --- GESTIÓN DE GASTOS (606) ---
-app.get('/api/expenses', verifyToken, async (req, res) => {
+app.get('/api/expenses', verifyToken, verifyClient, async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
         const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
@@ -5112,7 +5120,7 @@ app.get('/api/expenses', verifyToken, async (req, res) => {
     }
 });
 
-app.post('/api/expenses', verifyToken, async (req, res) => {
+app.post('/api/expenses', verifyToken, verifyClient, async (req, res) => {
     try {
         const supplierName = sanitizeString(req.body.supplierName, 200);
         const supplierRnc = sanitizeString((req.body.supplierRnc || '').toString(), 20).replace(/[^0-9]/g, '');
@@ -5150,7 +5158,7 @@ app.post('/api/expenses', verifyToken, async (req, res) => {
     }
 });
 
-app.patch('/api/expenses/:id', verifyToken, async (req, res) => {
+app.patch('/api/expenses/:id', verifyToken, verifyClient, async (req, res) => {
     try {
         if (!isValidObjectId(req.params.id)) {
             return res.status(400).json({ message: 'ID de gasto inválido' });
@@ -5189,7 +5197,7 @@ app.patch('/api/expenses/:id', verifyToken, async (req, res) => {
     }
 });
 
-app.delete('/api/expenses/:id', verifyToken, async (req, res) => {
+app.delete('/api/expenses/:id', verifyToken, verifyClient, async (req, res) => {
     try {
         if (!isValidObjectId(req.params.id)) {
             return res.status(400).json({ message: 'ID de gasto inválido' });
@@ -5204,7 +5212,7 @@ app.delete('/api/expenses/:id', verifyToken, async (req, res) => {
 // --- REPORTE 606 (COMPRAS/GASTOS) - Pre-validación + Log Fiscal ---
 const DGII_EXPENSE_CATEGORIES = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11'];
 
-app.get('/api/reports/606/validate', verifyToken, async (req, res) => {
+app.get('/api/reports/606/validate', verifyToken, verifyClient, async (req, res) => {
     if (!req.user.confirmedFiscalName) {
         return res.status(403).json({ valid: false, message: 'Confirma tu nombre fiscal para generar reportes.' });
     }
@@ -5273,7 +5281,7 @@ app.get('/api/reports/606/validate', verifyToken, async (req, res) => {
     }
 });
 
-app.get('/api/reports/606', verifyToken, async (req, res) => {
+app.get('/api/reports/606', verifyToken, verifyClient, async (req, res) => {
     if (!req.user.confirmedFiscalName) {
         return res.status(403).json({ message: 'Confirma tu nombre fiscal para generar reportes.' });
     }
@@ -5366,7 +5374,7 @@ app.get('/api/reports/606', verifyToken, async (req, res) => {
 });
 
 // Recordatorio 606/607: enviar email al entrar a Reportes (máximo 1 por periodo por usuario)
-app.post('/api/reports/reminder', verifyToken, async (req, res) => {
+app.post('/api/reports/reminder', verifyToken, verifyClient, async (req, res) => {
     try {
         const now = new Date();
         const y = now.getFullYear();
@@ -5389,7 +5397,7 @@ app.post('/api/reports/reminder', verifyToken, async (req, res) => {
 });
 
 // --- COTIZACIONES (Quotes) - MongoDB, no localStorage ---
-app.get('/api/quotes', verifyToken, async (req, res) => {
+app.get('/api/quotes', verifyToken, verifyClient, async (req, res) => {
     try {
         const mapQuote = (q) => ({
             id: q._id.toString(),
@@ -5419,7 +5427,7 @@ app.get('/api/quotes', verifyToken, async (req, res) => {
     }
 });
 
-app.post('/api/quotes', verifyToken, async (req, res) => {
+app.post('/api/quotes', verifyToken, verifyClient, async (req, res) => {
     try {
         // === SANITIZACIÓN DE INPUTS ===
         const clientName = sanitizeString(req.body.clientName, 200);
@@ -5454,7 +5462,7 @@ app.post('/api/quotes', verifyToken, async (req, res) => {
     }
 });
 
-app.put('/api/quotes/:id', verifyToken, async (req, res) => {
+app.put('/api/quotes/:id', verifyToken, verifyClient, async (req, res) => {
     try {
         // === VALIDACIÓN DE OBJECTID ===
         if (!isValidObjectId(req.params.id)) {
@@ -5483,7 +5491,7 @@ app.put('/api/quotes/:id', verifyToken, async (req, res) => {
     }
 });
 
-app.delete('/api/quotes/:id', verifyToken, async (req, res) => {
+app.delete('/api/quotes/:id', verifyToken, verifyClient, async (req, res) => {
     try {
         if (!isValidObjectId(req.params.id)) {
             return res.status(400).json({ message: 'ID de cotización inválido' });
@@ -5501,7 +5509,7 @@ app.delete('/api/quotes/:id', verifyToken, async (req, res) => {
 });
 
 // Convertir cotización a factura - marca como converted, asocia invoiceId, bloquea doble facturación
-app.post('/api/quotes/:id/convert', verifyToken, async (req, res) => {
+app.post('/api/quotes/:id/convert', verifyToken, verifyClient, async (req, res) => {
     // === VALIDACIÓN DE OBJECTID ===
     if (!isValidObjectId(req.params.id)) {
         return res.status(400).json({ message: 'ID de cotización inválido' });
@@ -5557,7 +5565,7 @@ app.post('/api/quotes/:id/convert', verifyToken, async (req, res) => {
 });
 
 // 🔥 Endpoint de estado de suscripción (Subscription como fuente de verdad)
-app.get('/api/subscription/status', verifyToken, async (req, res) => {
+app.get('/api/subscription/status', verifyToken, verifyClient, async (req, res) => {
     try {
         const user = req.user;
         

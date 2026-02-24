@@ -14,7 +14,7 @@ import { useAuth } from "@/components/providers/AuthContext";
 const LAST_EMAIL_KEY = "lexis_last_email";
 
 /** Rutas internas permitidas para redirect post-login (evita open redirect). */
-const ALLOWED_REDIRECT_PREFIXES = ["/dashboard", "/nueva-factura", "/nueva-cotizacion", "/cotizaciones", "/reportes", "/configuracion", "/clientes", "/gastos", "/pagos", "/documentos", "/partners", "/onboarding"];
+const ALLOWED_REDIRECT_PREFIXES = ["/dashboard", "/nueva-factura", "/nueva-cotizacion", "/cotizaciones", "/reportes", "/configuracion", "/clientes", "/gastos", "/pagos", "/documentos", "/partners", "/partner", "/onboarding", "/ayuda"];
 
 function getSafeRedirect(redirect: string | null): string {
     if (!redirect || typeof redirect !== "string") return "/dashboard";
@@ -22,6 +22,16 @@ function getSafeRedirect(redirect: string | null): string {
     if (!path.startsWith("/") || path.startsWith("//")) return "/dashboard";
     const allowed = ALLOWED_REDIRECT_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
     return allowed ? path : "/dashboard";
+}
+
+/** Redirect post-login según rol: partner activo → /partner/dashboard; resto → dashboard o redirect permitido. */
+function getPostLoginPath(me: { role?: string; partner?: { status?: string } | null } | null, redirect: string | null): string {
+    if (me?.role === "partner" && me?.partner?.status === "active") {
+        const path = redirect?.trim().split("?")[0] ?? "";
+        if (path.startsWith("/partner")) return getSafeRedirect(redirect);
+        return "/partner/dashboard";
+    }
+    return getSafeRedirect(redirect);
 }
 
 function LoginForm() {
@@ -35,6 +45,7 @@ function LoginForm() {
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
+    const [postLoginPath, setPostLoginPath] = useState<string>("/dashboard");
 
     // Recovery States
     const [showRecovery, setShowRecovery] = useState(false);
@@ -55,9 +66,9 @@ function LoginForm() {
             const { api } = await import("@/lib/api-service");
             await api.login(email, password);
             localStorage.setItem(LAST_EMAIL_KEY, email);
-            // Usuario desde API (cookie HttpOnly; no guardamos user en localStorage)
             const me = await api.getMe();
             setUser(me || null);
+            setPostLoginPath(getPostLoginPath(me, searchParams.get("redirect")));
             setShowBiometric(true);
 
         } catch (err: any) {
@@ -74,8 +85,7 @@ function LoginForm() {
 
     const handleBiometricDecision = (_decision: boolean) => {
         setShowBiometric(false);
-        const redirect = searchParams.get("redirect");
-        router.push(getSafeRedirect(redirect));
+        router.push(postLoginPath);
     };
 
     const startRecovery = (channel: "whatsapp" | "email") => {

@@ -35,6 +35,12 @@ export default function ProtectedLayout({
             try {
                 const me = await refresh();
                 if (me) {
+                    if (me.role === "partner" && me.partner?.status === "active") {
+                        router.replace("/partner/dashboard");
+                        setIsLoading(false);
+                        setLoading(false);
+                        return;
+                    }
                     if (me.needsPolicyAcceptance && !window.location.pathname.startsWith("/aceptar-politicas")) {
                         router.replace("/aceptar-politicas");
                         setIsLoading(false);
@@ -281,12 +287,10 @@ function SidebarLinks({ isMobile = false, isAdmin = false, isPartner = false, on
                     <Settings className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Configuración</span>
                 </Link>
-                {isPartner && (
-                    <Link href="/partners" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-amber-500/20 transition-colors text-amber-600 border-l-2 border-amber-500/50 mt-2")}>
-                        <Handshake className="w-5 h-5" />
-                        <span className="text-sm font-medium">Partner</span>
-                    </Link>
-                )}
+                <Link href="/partners" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-amber-500/20 transition-colors text-amber-600 border-l-2 border-amber-500/50 mt-2")}>
+                    <Handshake className="w-5 h-5" />
+                    <span className="text-sm font-medium">Ser Partner</span>
+                </Link>
                 <AdminNavLink isAdmin={isAdmin} />
             </div>
 
