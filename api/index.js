@@ -1332,13 +1332,13 @@ app.post('/api/auth/login', async (req, res) => {
         const user = await User.findOne({ email });
         if (!user) {
             log.warn('Login fallido: usuario no encontrado');
-            return res.status(404).json({ message: 'Usuario no encontrado' });
+            return res.status(401).json({ message: 'Credenciales inválidas' });
         }
 
         const passwordIsValid = await bcrypt.compare(password, user.password);
         if (!passwordIsValid) {
             log.warn('Login fallido: contraseña inválida');
-            return res.status(401).json({ message: 'Contraseña inválida' });
+            return res.status(401).json({ message: 'Credenciales inválidas' });
         }
         if (user.blocked) {
             log.warn('Login fallido: cuenta bloqueada');

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,22 @@ function getPostLoginPath(me: { role?: string; partner?: { status?: string } | n
     return getSafeRedirect(redirect);
 }
 
+/** Mensaje seguro según tipo de error (sin exponer datos sensibles). */
+function getLoginErrorMessage(err: { status?: number; message?: string; code?: string } | null): string {
+    if (!err) return "Error al iniciar sesión. Intenta de nuevo.";
+    const status = err.status;
+    const msg = (err.message || "").toLowerCase();
+
+    if (status === 404 || status === 405) return "El servicio de inicio de sesión no está disponible. Contacte al administrador o a soporte.";
+    if (status === 401 || msg.includes("credencial") || msg.includes("invalid") || msg.includes("unauthorized") || msg.includes("contraseña")) return "Correo o contraseña incorrectos. Verifica e intenta de nuevo.";
+    if (status === 403 || err.code === "ACCOUNT_BLOCKED") return "Cuenta bloqueada. Contacte a soporte.";
+    if (status != null && (status === 500 || (status >= 500 && status < 600))) return "Error temporal del servidor. Intenta en unos minutos o contacta a soporte.";
+    if (msg.includes("timeout") || msg.includes("tardando") || msg.includes("abort")) return "El servidor tarda demasiado. Verifica tu conexión e intenta de nuevo.";
+    if (msg.includes("conexión") || msg.includes("no responde") || msg.includes("failed to fetch") || msg.includes("network")) return "No se pudo conectar. Verifica tu conexión a internet e intenta de nuevo.";
+
+    return err.message && err.message.length < 120 ? err.message : "Error al iniciar sesión. Intenta de nuevo o contacta a soporte.";
+}
+
 function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -46,7 +62,22 @@ function LoginForm() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
+    const [apiUnavailable, setApiUnavailable] = useState(false);
     const [postLoginPath, setPostLoginPath] = useState<string>("/dashboard");
+
+    // Comprobar disponibilidad del API al cargar (evita intentar login si el proxy no está configurado)
+    useEffect(() => {
+        let cancelled = false;
+        fetch("/api/health", { method: "GET", credentials: "include" })
+            .then((res) => {
+                if (cancelled) return;
+                if (res.status === 404 || res.status === 405) setApiUnavailable(true);
+            })
+            .catch(() => {
+                if (!cancelled) setApiUnavailable(true);
+            });
+        return () => { cancelled = true; };
+    }, []);
 
     // Recovery States
     const [showRecovery, setShowRecovery] = useState(false);
@@ -73,15 +104,7 @@ function LoginForm() {
             setShowBiometric(true);
 
         } catch (err: any) {
-            const msg = err.message || "";
-            const is405 = String(err?.status) === "405" || msg.includes("405");
-            setError(
-                is405
-                    ? "El servidor no aceptó la solicitud. Comprueba tu conexión, actualiza la página e intenta de nuevo. Si persiste, contacta a soporte."
-                    : msg.toLowerCase().includes("credencial") || msg.toLowerCase().includes("invalid") || msg.toLowerCase().includes("unauthorized")
-                        ? "Correo o contraseña incorrectos. Verifica e intenta de nuevo."
-                        : msg || "Error al iniciar sesión"
-            );
+            setError(getLoginErrorMessage(err));
         } finally {
             setIsLoading(false);
         }
@@ -143,6 +166,14 @@ function LoginForm() {
                     <CardDescription className="text-slate-500 font-medium">Oficina Fiscal Inteligente</CardDescription>
                 </CardHeader>
                 <CardContent className="px-8 pb-8">
+                    {apiUnavailable && (
+                        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                            <p className="text-sm text-amber-800 dark:text-amber-200">
+                                El servicio de inicio de sesión no está disponible. Contacte al administrador o a soporte.
+                            </p>
+                        </div>
+                    )}
                     <form onSubmit={handleLogin} className="space-y-5">
                         <div className="space-y-2">
                             <label htmlFor="login-email" className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Credenciales de Acceso</label>
