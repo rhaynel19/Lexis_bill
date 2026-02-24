@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,7 +40,7 @@ function getLoginErrorMessage(err: { status?: number; message?: string; code?: s
     const status = err.status;
     const msg = (err.message || "").toLowerCase();
 
-    if (status === 404 || status === 405) return "El servicio de inicio de sesión no está disponible. Contacte al administrador o a soporte.";
+    if (status === 404 || status === 405 || status === 503) return "El servicio de inicio de sesión no está disponible. Contacte al administrador o a soporte.";
     if (status === 401 || msg.includes("credencial") || msg.includes("invalid") || msg.includes("unauthorized") || msg.includes("contraseña")) return "Correo o contraseña incorrectos. Verifica e intenta de nuevo.";
     if (status === 403 || err.code === "ACCOUNT_BLOCKED") return "Cuenta bloqueada. Contacte a soporte.";
     if (status != null && (status === 500 || (status >= 500 && status < 600))) return "Error temporal del servidor. Intenta en unos minutos o contacta a soporte.";
@@ -52,6 +52,7 @@ function getLoginErrorMessage(err: { status?: number; message?: string; code?: s
 
 function LoginForm() {
     const router = useRouter();
+    const pathname = usePathname();
     const searchParams = useSearchParams();
     const { setUser } = useAuth();
     const [email, setEmail] = useState(() => {
@@ -65,13 +66,22 @@ function LoginForm() {
     const [apiUnavailable, setApiUnavailable] = useState(false);
     const [postLoginPath, setPostLoginPath] = useState<string>("/dashboard");
 
+    // Redirigir /logir → /login en cliente (fallback si el middleware no aplicó, p. ej. caché)
+    useEffect(() => {
+        if (typeof window !== "undefined" && (pathname === "/logir" || pathname === "/logir/")) {
+            const search = window.location.search || "";
+            router.replace("/login" + search);
+            return;
+        }
+    }, [pathname, router]);
+
     // Comprobar disponibilidad del API al cargar (evita intentar login si el proxy no está configurado)
     useEffect(() => {
         let cancelled = false;
         fetch("/api/health", { method: "GET", credentials: "include" })
             .then((res) => {
                 if (cancelled) return;
-                if (res.status === 404 || res.status === 405) setApiUnavailable(true);
+                if (res.status === 404 || res.status === 405 || res.status === 503) setApiUnavailable(true);
             })
             .catch(() => {
                 if (!cancelled) setApiUnavailable(true);

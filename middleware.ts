@@ -27,11 +27,12 @@ const PROTECTED_PATHS = [
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    // Redirect typo /logir → /login (mantiene query string)
-    if (pathname === "/logir") {
+    // Redirect typo /logir → /login (mantiene query string); acepta con o sin barra final
+    const pathNorm = pathname.replace(/\/$/, "") || "/";
+    if (pathNorm === "/logir") {
         const loginUrl = new URL("/login", request.url);
         request.nextUrl.searchParams.forEach((v, k) => loginUrl.searchParams.set(k, v));
-        return NextResponse.redirect(loginUrl);
+        return NextResponse.redirect(loginUrl, 302);
     }
 
     const isProtected = PROTECTED_PATHS.some(p => pathname === p || pathname.startsWith(p + "/"));
@@ -50,6 +51,7 @@ export function middleware(request: NextRequest) {
 export const config = {
     matcher: [
         "/logir",
+        "/logir/",
         "/onboarding/:path*",
         "/dashboard/:path*",
         "/nueva-factura/:path*",
