@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Fingerprint, Lock, Mail, MessageCircle, AlertCircle, ArrowRight } from "lucide-react";
+import { CheckCircle2, Fingerprint, Lock, Mail, MessageCircle, AlertCircle, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { LexisWord } from "@/components/LexisWord";
 import { useAuth } from "@/components/providers/AuthContext";
@@ -43,6 +43,7 @@ function LoginForm() {
         return localStorage.getItem(LAST_EMAIL_KEY) || "";
     });
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
     const [postLoginPath, setPostLoginPath] = useState<string>("/dashboard");
@@ -73,10 +74,13 @@ function LoginForm() {
 
         } catch (err: any) {
             const msg = err.message || "";
+            const is405 = String(err?.status) === "405" || msg.includes("405");
             setError(
-                msg.toLowerCase().includes("credencial") || msg.toLowerCase().includes("invalid") || msg.toLowerCase().includes("unauthorized")
-                    ? "Correo o contraseña incorrectos. Verifica e intenta de nuevo."
-                    : msg || "Error al iniciar sesión"
+                is405
+                    ? "El servidor no aceptó la solicitud. Comprueba tu conexión, actualiza la página e intenta de nuevo. Si persiste, contacta a soporte."
+                    : msg.toLowerCase().includes("credencial") || msg.toLowerCase().includes("invalid") || msg.toLowerCase().includes("unauthorized")
+                        ? "Correo o contraseña incorrectos. Verifica e intenta de nuevo."
+                        : msg || "Error al iniciar sesión"
             );
         } finally {
             setIsLoading(false);
@@ -152,15 +156,26 @@ function LoginForm() {
                                 required
                                 aria-describedby={error ? "login-error" : undefined}
                             />
-                            <Input
-                                id="login-password"
-                                type="password"
-                                placeholder="Contraseña"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="bg-slate-50 border-slate-200 h-12 focus:ring-lexis-gold"
-                                aria-describedby={error ? "login-error" : undefined}
-                            />
+                            <div className="relative">
+                                <Input
+                                    id="login-password"
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="Contraseña"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="bg-slate-50 border-slate-200 h-12 focus:ring-lexis-gold pr-11"
+                                    aria-describedby={error ? "login-error" : undefined}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((v) => !v)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-500 hover:text-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-lexis-gold/50"
+                                    aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                                    tabIndex={0}
+                                >
+                                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                </button>
+                            </div>
                         </div>
 
                         {error && (

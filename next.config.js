@@ -71,11 +71,15 @@ const nextConfig = {
         ];
     },
 
-    // Proxy /api al backend en dev (cookies same-origin)
+    // Proxy /api al backend (dev y producción). En producción NEXT_PUBLIC_API_URL debe apuntar al API real.
     async rewrites() {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        if (apiUrl) {
+            const base = apiUrl.replace(/\/api\/?$/, "");
+            return [{ source: "/api/:path*", destination: `${base}/api/:path*` }];
+        }
         if (process.env.NODE_ENV === "development") {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
-            return [{ source: "/api/:path*", destination: `${apiUrl.replace(/\/api$/, "")}/api/:path*` }];
+            return [{ source: "/api/:path*", destination: "http://localhost:3001/api/:path*" }];
         }
         return [];
     },
