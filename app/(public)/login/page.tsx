@@ -41,6 +41,7 @@ function getLoginErrorMessage(err: { status?: number; message?: string; code?: s
     const msg = (err.message || "").toLowerCase();
 
     if (status === 404 || status === 405 || status === 503) return "El servicio de inicio de sesión no está disponible. Contacte al administrador o a soporte.";
+    if (status === 502) return "El servidor de inicio de sesión no responde. Verifica que el API esté en línea o intenta en unos minutos.";
     if (status === 401 || msg.includes("credencial") || msg.includes("invalid") || msg.includes("unauthorized") || msg.includes("contraseña")) return "Correo o contraseña incorrectos. Verifica e intenta de nuevo.";
     if (status === 403 || err.code === "ACCOUNT_BLOCKED") return "Cuenta bloqueada. Contacte a soporte.";
     if (status != null && (status === 500 || (status >= 500 && status < 600))) return "Error temporal del servidor. Intenta en unos minutos o contacta a soporte.";
@@ -125,9 +126,18 @@ function LoginForm() {
             console.log("[LOGIN ERROR] REQUEST PAYLOAD:", payload);
 
             const statusText = status != null ? `HTTP ${status}` : "Error";
-            const serverMsg = typeof data?.message === "string" ? data.message : (data?.error ?? message);
+            let serverMsg = typeof data?.message === "string" ? data.message : (data?.error ?? message);
+            if (typeof serverMsg === "object" && serverMsg !== null) {
+                serverMsg = typeof (serverMsg as any).message === "string" ? (serverMsg as any).message : JSON.stringify(serverMsg);
+            } else if (typeof serverMsg !== "string") {
+                serverMsg = "";
+            }
+            // Mensaje claro para 502 (backend no responde o proxy falla)
+            if (status === 502) {
+                serverMsg = "El servidor de inicio de sesión no responde. Verifica que el API esté en línea o intenta en unos minutos.";
+            }
             const displayMsg = serverMsg ? `${statusText}: ${serverMsg}` : statusText;
-            const extra = data && typeof data === "object" && Object.keys(data).length > 1
+            const extra = data && typeof data === "object" && Object.keys(data).length > 1 && status !== 502
                 ? ` | Respuesta: ${JSON.stringify(data)}`
                 : "";
             setError(displayMsg + extra);

@@ -65,7 +65,15 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
             // Manejo de Errores HTTP (objeto con status, message y data para que el caller pueda mostrar el error real)
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                const errorMessage = errorData.message || errorData.error || `Server Error: ${response.status}`;
+                let errorMessage = errorData.message ?? errorData.error ?? `Server Error: ${response.status}`;
+                if (typeof errorMessage !== "string") {
+                    errorMessage = response.status === 502
+                        ? "El servidor no responde. Intenta en unos minutos."
+                        : `Server Error: ${response.status}`;
+                }
+                if (response.status === 502) {
+                    errorMessage = "El servidor no responde. Intenta en unos minutos.";
+                }
                 const errPayload = { status: response.status, message: errorMessage, data: errorData };
 
                 // Sesión expirada o no autorizado: redirigir a login
