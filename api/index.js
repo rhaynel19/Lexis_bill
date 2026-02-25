@@ -1349,14 +1349,19 @@ app.post('/api/auth/login', async (req, res) => {
 
         await User.findByIdAndUpdate(user._id, { lastLoginAt: new Date() });
 
-        // Cookie HttpOnly para que el middleware permita acceso a rutas protegidas
-        res.cookie('lexis_auth', token, {
+        // Cookie HttpOnly para rutas protegidas. Si la petición llega por proxy (ej. Vercel → api), usar
+        // el host del frontend (X-Forwarded-Host o COOKIE_DOMAIN) para que el navegador envíe la cookie al frontend.
+        const forwardedHost = (req.get('x-forwarded-host') || '').split(',')[0].trim();
+        const cookieDomain = process.env.COOKIE_DOMAIN || (forwardedHost || null);
+        const cookieOpts = {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', // strict en prod previene CSRF
-            maxAge: 86400 * 1000, // 24h en ms
+            sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+            maxAge: 86400 * 1000,
             path: '/'
-        });
+        };
+        if (cookieDomain) cookieOpts.domain = cookieDomain;
+        res.cookie('lexis_auth', token, cookieOpts);
 
         const sub = getUserSubscription(user);
         log.info({ action: 'login', success: true }, 'Login exitoso');

@@ -44,6 +44,13 @@ Por tanto, el 405 no es por método o ruta incorrectos en el código; es por **c
 
 ---
 
+## Cookie cuando el front está en otro dominio (proxy)
+
+Si el frontend está en `www.lexisbill.com.do` y el API en `api.lexisbill.com.do`, la cookie que pone el backend debe quedar asociada al dominio del **frontend** para que el navegador la envíe en las peticiones a `/api/*` (que van por mismo origen al ir por el proxy).
+
+- El backend usa **`X-Forwarded-Host`** (cuando la petición llega por proxy) para fijar el `domain` de la cookie al host del frontend.
+- Opcional: en el **servidor del API** puedes definir **`COOKIE_DOMAIN`** (ej. `www.lexisbill.com.do` o `.lexisbill.com.do` para www y raíz) para forzar el dominio de la cookie si el proxy no envía `X-Forwarded-Host`.
+
 ## Qué hacer para que el login funcione en producción
 
 1. **En el proyecto donde se despliega el frontend** (p. ej. Vercel): definir la variable de entorno **`NEXT_PUBLIC_API_URL`** con la URL base del API (ej. `https://api.tudominio.com/api` o la URL real donde corre Express).
