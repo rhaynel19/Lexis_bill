@@ -1,3 +1,15 @@
+# Login en Vercel: cómo dejarlo como antes
+
+Para que el login funcione **como cuando estaba bien** (sin 405/503):
+
+1. **En el proyecto de Vercel (frontend):** define **NEXT_PUBLIC_API_URL** con la URL base de tu API, terminando en `/api` (ej. `https://api.lexisbill.com.do/api`).
+2. **Asegúrate de que el API esté en línea** en esa URL (el servidor donde corre `api/index.js`).
+3. **Redeploy** del frontend después de guardar la variable.
+
+No hay Route Handler que intercepte el login: la petición se reenvía al backend por `next.config.js` (beforeFiles) cuando `NEXT_PUBLIC_API_URL` está definida.
+
+---
+
 # Un solo proyecto en Vercel (frontend + API)
 
 Si **todo** está desplegado en **un único proyecto** de Vercel (frontend Next.js + API Express en la misma cuenta/proyecto), sigue esto para que el login funcione y no aparezca 502.
@@ -42,6 +54,4 @@ Después de quitar **NEXT_PUBLIC_API_URL** y guardar:
 | **Dominio** | Solo hace falta el del front (ej. www.lexisbill.com.do). No hace falta api.lexisbill.com.do. |
 | **Quién atiende /api/\*** | vercel.json → api/index.js (Express) |
 
-- **Importante:** Se eliminó el Route Handler `app/api/auth/login/route.ts` que devolvía 503 al no tener NEXT_PUBLIC_API_URL. Así la petición no la intercepta Next.js y puede ser atendida por `vercel.json` → `api/index.js`.
-
-Si tras esto sigues teniendo **502**, revisa en Vercel la pestaña **Functions** o los **logs** del deployment para ver si la función `api/index.js` arranca bien (por ejemplo que no falle por MONGODB_URI, JWT_SECRET o CRON_SECRET). Si ves **404** en el login, puede que la petición llegue a Next.js antes que a la función; en ese caso comprueba en Vercel que la carpeta `api/` esté incluida en el despliegue.
+- Si tras quitar NEXT_PUBLIC_API_URL ves **405** o **503**, la petición está llegando a Next.js y no a `api/index.js` (en muchos proyectos Next.js, la carpeta `api/` de la raíz no se despliega). En ese caso **tienes que definir NEXT_PUBLIC_API_URL** con la URL de un API que sí esté en línea: por ejemplo un **segundo proyecto en Vercel** que despliegue solo el API (mismo repo, otro proyecto con raíz o build configurado para la carpeta `api`), o un API en Railway/Render/etc.

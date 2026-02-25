@@ -71,9 +71,8 @@ const nextConfig = {
         ];
     },
 
-    // Proxy /api al backend (dev y producción).
-    // beforeFiles hace que el rewrite se aplique ANTES del filesystem; si no, el Route Handler app/api/auth/login/route.ts se ejecutaría primero y devolvería 503.
-    // En producción definir NEXT_PUBLIC_API_URL (ej. https://api.lexisbill.com.do/api).
+    // Proxy /api al backend (dev y producción). beforeFiles = el rewrite se aplica antes de rutas de la app.
+    // En producción hay que definir NEXT_PUBLIC_API_URL (ej. https://api.lexisbill.com.do/api) para que el login funcione.
     async rewrites() {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         const destination = apiUrl
