@@ -51,7 +51,7 @@
 
 ### 1.8 Código duplicado
 - Lógica de “validar RNC” y “obtener nombre fiscal” repetida en onboarding y nueva-factura; se podría extraer a un hook o utilidad compartida (mejora menor).
-- Constantes de env (p. ej. `NEXT_PUBLIC_APP_URL`) repetidas en API; considerar objeto de config centralizado.
+- La base URL para enlaces (reset, partners, invites) se obtiene con `getBaseUrl(req)` en el API (sin variables de entorno de dominio).
 
 ### 1.9 Promesas sin await
 - Uso de `.then()/.catch()` en varios sitios (reportes, registro, nueva-cotizacion, SubscriptionAlert, etc.). No hay promesas “flotantes” que provoquen errores no manejados; el patrón es intencional (fire-and-forget en guardado de borrador, recordatorios). Recomendación: en flujos críticos preferir async/await para claridad.

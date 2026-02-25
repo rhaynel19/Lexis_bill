@@ -14,8 +14,7 @@ Despliegue del frontend (Next.js) en **Vercel** y del API (Express) en un servid
 2. **Build Command:** `npm run build`
 3. **Output:** Next.js (detectado automáticamente).
 4. **Variables de entorno** (solo las que usa el frontend en build/runtime):
-   - `NEXT_PUBLIC_API_URL`: URL pública del API (ej. `https://api.lexisbill.com/api`).
-   - `NEXT_PUBLIC_APP_URL`: URL de la app (ej. `https://app.lexisbill.com`).
+   - No definir `NEXT_PUBLIC_API_URL` ni `NEXT_PUBLIC_APP_URL`: el front llama al mismo dominio con rutas relativas (`/api/...`); la base para enlaces (emails, partners) se obtiene del request en el API.
    - Opcional: `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_SUPPORT_WHATSAPP`, etc.
 5. No pongas en Vercel: `JWT_SECRET`, `MONGODB_URI` (son solo del API).
 
@@ -50,7 +49,8 @@ El API está en `api/index.js`. Debe correr en un servidor que acepte peticiones
 | `PORT` | No | Puerto (default 3001) |
 | `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` | No | Para recuperación de contraseña y notificaciones |
 | `DGII_RNC_API_URL` | No | URL de consulta RNC (proveedor externo) |
-| `NEXT_PUBLIC_APP_URL` | Recomendado | URL de la app (enlaces en emails) |
+
+La base URL para enlaces (reset contraseña, invitaciones partner, etc.) se obtiene del request (`Host` / `X-Forwarded-Host`). No configurar `NEXT_PUBLIC_APP_URL`.
 
 Ver `env_example` en la raíz para el listado completo.
 

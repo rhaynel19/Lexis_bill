@@ -25,7 +25,7 @@ Por defecto el backend **no envía** el correo; solo genera el token y, si está
 
 1. **Variables de entorno** (en `.env` o en el servidor):
    - `SEND_PASSWORD_RESET_EMAIL=true`  
-   - `NEXT_PUBLIC_APP_URL=https://tu-dominio.com` (base de la app para armar el enlace)
+   - La base URL del enlace se obtiene del request (Host / X-Forwarded-*); no hace falta configurar `NEXT_PUBLIC_APP_URL`.
 
 2. **Módulo de correo** (`api/mailer.js`):
    - Debe existir y exportar `sendPasswordReset(email, resetUrl)`.

@@ -38,7 +38,7 @@ Asegúrate de tener en el **mismo proyecto** (para que las use la función `api/
 - **JWT_SECRET** (mínimo 32 caracteres)
 - **CRON_SECRET** (para el cron)
 - **NEXT_PUBLIC_SENTRY_DSN** (si usas Sentry)
-- **NEXT_PUBLIC_BASE_URL** (ej. `https://www.lexisbill.com.do`)
+- No configurar base URL del proyecto: la app usa rutas relativas y el API obtiene la base desde el request (Host / X-Forwarded-*).
 
 ### 3. Redeploy
 

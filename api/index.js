@@ -93,6 +93,13 @@ const sanitizeItems = (items) => {
     })).filter(item => item.description && item.quantity > 0);
 };
 
+/** Base URL del sitio desde el request (Vercel/proxy). Sin usar variables de entorno de dominio. */
+function getBaseUrl(req) {
+    const proto = req.get('x-forwarded-proto') || (req.secure ? 'https' : 'http');
+    const host = req.get('x-forwarded-host') || req.get('host') || '';
+    return host ? `${proto}://${host}` : 'https://lexisbill.com.do';
+}
+
 const app = express();
 app.use(cookieParser());
 
@@ -1398,7 +1405,7 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
         await PasswordReset.deleteMany({ userId: user._id });
         await PasswordReset.create({ userId: user._id, token, expiresAt });
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lexisbill.com.do';
+        const baseUrl = getBaseUrl(req);
         const resetUrl = `${baseUrl}/restablecer-contrasena?token=${token}`;
         try {
             if (process.env.SEND_PASSWORD_RESET_EMAIL === 'true') {
@@ -1752,7 +1759,7 @@ app.get('/api/partners/me', verifyToken, verifyPartner, async (req, res) => {
             p.commissionRate = tier.rate;
             await p.save();
         }
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lexisbill.com.do';
+        const baseUrl = getBaseUrl(req);
         res.json({
             referralCode: p.referralCode,
             referralUrl: `${baseUrl}/registro?ref=${p.referralCode}`,
@@ -1780,7 +1787,7 @@ app.get('/api/partners/dashboard', verifyToken, verifyPartner, async (req, res) 
         const commissions = await PartnerCommission.find({ partnerId: p._id })
             .sort({ year: -1, month: -1 }).limit(12).lean();
 
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lexisbill.com.do';
+        const baseUrl = getBaseUrl(req);
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const showWelcome = p.approvedAt && new Date(p.approvedAt) >= sevenDaysAgo;
         res.json({
@@ -2727,7 +2734,7 @@ app.post('/api/admin/partners/invites', verifyToken, verifyAdmin, async (req, re
         });
         await invite.save();
 
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lexisbill.com.do';
+        const baseUrl = getBaseUrl(req);
         const inviteUrl = `${baseUrl}/unirse-como-partner?invite=${token}`;
 
         res.status(201).json({
@@ -2823,7 +2830,7 @@ app.post('/api/admin/partners/:id/approve', verifyToken, verifyAdmin, async (req
         p.updatedAt = new Date();
         await p.save();
         // Notificación por email al partner (placeholder: integrar Resend/SendGrid)
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lexisbill.com.do';
+        const baseUrl = getBaseUrl(req);
         const referralUrl = `${baseUrl}/registro?ref=${p.referralCode}`;
         log.info({ partnerId: p._id, email: p.email, referralCode: p.referralCode, referralUrl }, 'Partner aprobado (email no enviado; configurar SEND_PARTNER_APPROVED_EMAIL y mailer)');
         try {

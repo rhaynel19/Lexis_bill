@@ -47,7 +47,7 @@ PAYPAL_MODE=sandbox
 # Recuperación de contraseña (email real)
 # true = enviar enlace por correo (requiere api/mailer.js + SMTP o nodemailer). false = solo loguear URL en logs.
 SEND_PASSWORD_RESET_EMAIL=false
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+# La base URL para enlaces (reset, partners, invites) se obtiene del request (Host / X-Forwarded-*). No configurar NEXT_PUBLIC_APP_URL.
 # SMTP para enviar emails (recuperar contraseña, notificaciones). Ver docs/RECUPERACION_CONTRASENA.md
 # SMTP_HOST=smtp.ejemplo.com
 # SMTP_PORT=587
