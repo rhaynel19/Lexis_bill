@@ -42,4 +42,6 @@ Después de quitar **NEXT_PUBLIC_API_URL** y guardar:
 | **Dominio** | Solo hace falta el del front (ej. www.lexisbill.com.do). No hace falta api.lexisbill.com.do. |
 | **Quién atiende /api/\*** | vercel.json → api/index.js (Express) |
 
-Si tras esto sigues teniendo 502, revisa en Vercel la pestaña **Functions** o los **logs** del deployment para ver si la función `api/index.js` arranca bien (por ejemplo que no falle por MONGODB_URI, JWT_SECRET o CRON_SECRET).
+- **Importante:** Se eliminó el Route Handler `app/api/auth/login/route.ts` que devolvía 503 al no tener NEXT_PUBLIC_API_URL. Así la petición no la intercepta Next.js y puede ser atendida por `vercel.json` → `api/index.js`.
+
+Si tras esto sigues teniendo **502**, revisa en Vercel la pestaña **Functions** o los **logs** del deployment para ver si la función `api/index.js` arranca bien (por ejemplo que no falle por MONGODB_URI, JWT_SECRET o CRON_SECRET). Si ves **404** en el login, puede que la petición llegue a Next.js antes que a la función; en ese caso comprueba en Vercel que la carpeta `api/` esté incluida en el despliegue.
