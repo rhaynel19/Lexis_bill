@@ -72,18 +72,19 @@ const nextConfig = {
     },
 
     // Proxy /api al backend (dev y producción).
-    // IMPORTANTE: En producción hay que definir NEXT_PUBLIC_API_URL (ej. https://api.tudominio.com/api).
-    // Si no está definida, las rewrites quedan vacías y POST /api/auth/login lo atiende el host del frontend → 405 Method Not Allowed.
+    // beforeFiles hace que el rewrite se aplique ANTES del filesystem; si no, el Route Handler app/api/auth/login/route.ts se ejecutaría primero y devolvería 503.
+    // En producción definir NEXT_PUBLIC_API_URL (ej. https://api.lexisbill.com.do/api).
     async rewrites() {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-        if (apiUrl) {
-            const base = apiUrl.replace(/\/api\/?$/, "");
-            return [{ source: "/api/:path*", destination: `${base}/api/:path*` }];
+        const destination = apiUrl
+            ? `${apiUrl.replace(/\/api\/?$/, "")}/api/:path*`
+            : process.env.NODE_ENV === "development"
+                ? "http://localhost:3001/api/:path*"
+                : null;
+        if (destination) {
+            return { beforeFiles: [{ source: "/api/:path*", destination }] };
         }
-        if (process.env.NODE_ENV === "development") {
-            return [{ source: "/api/:path*", destination: "http://localhost:3001/api/:path*" }];
-        }
-        return [];
+        return { beforeFiles: [] };
     },
 }
 
