@@ -8,8 +8,7 @@ JWT_SECRET=tu_secreto_super_seguro_minimo_32_caracteres
 # Producción: origen(es) permitidos para CORS. Múltiples: https://a.com,https://b.com
 CORS_ORIGIN=http://localhost:3000
 
-# Dev: URL del API para proxy (rewrites next.config)
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
+# Mismo dominio: no se usa NEXT_PUBLIC_API_URL. En dev next.config reescribe /api/* a localhost:3001.
 
 # Membresías manuales (Transferencia / PayPal)
 LEXISBILL_BANK_NAME=Banco Popular Dominicano

@@ -71,17 +71,10 @@ const nextConfig = {
         ];
     },
 
-    // Proxy /api al backend (dev y producción). beforeFiles = el rewrite se aplica antes de rutas de la app.
-    // En producción hay que definir NEXT_PUBLIC_API_URL (ej. https://api.lexisbill.com.do/api) para que el login funcione.
+    // Mismo dominio: en dev proxy a Express local; en producción vercel.json envía /api/* a api/index.js.
     async rewrites() {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-        const destination = apiUrl
-            ? `${apiUrl.replace(/\/api\/?$/, "")}/api/:path*`
-            : process.env.NODE_ENV === "development"
-                ? "http://localhost:3001/api/:path*"
-                : null;
-        if (destination) {
-            return { beforeFiles: [{ source: "/api/:path*", destination }] };
+        if (process.env.NODE_ENV === "development") {
+            return { beforeFiles: [{ source: "/api/:path*", destination: "http://localhost:3001/api/:path*" }] };
         }
         return { beforeFiles: [] };
     },

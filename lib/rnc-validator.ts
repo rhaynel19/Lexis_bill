@@ -30,10 +30,7 @@ export async function validateRNC(rnc: string): Promise<Taxpayer | null> {
 
     if (typeof window !== "undefined") {
         try {
-            const base = (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL)
-                ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "")
-                : "";
-            const url = base ? `${base}/api/rnc/${encodeURIComponent(cleanCurrent)}` : `/api/rnc/${encodeURIComponent(cleanCurrent)}`;
+            const url = `/api/rnc/${encodeURIComponent(cleanCurrent)}`;
             const res = await fetch(url, { credentials: "include" });
             if (res.ok) {
                 const data = await res.json();

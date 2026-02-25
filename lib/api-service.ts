@@ -24,7 +24,7 @@ export interface AdminUser {
 export const api = {
     // Auth - credenciales via cookie HttpOnly
     async login(email: string, password: string) {
-        return secureFetch<any>(`${API_URL}/auth/login`, {
+        return secureFetch<any>("/api/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
