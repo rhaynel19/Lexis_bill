@@ -5741,8 +5741,9 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: safeErrorMessage(err) });
 });
 
-// Final export for Vercel
+// Export para Vercel: CommonJS (module.exports) + compatibilidad ESM (.default)
 module.exports = app;
+module.exports.default = app;
 
 // Local startup for 'node api/index.js'
 if (require.main === module) {
