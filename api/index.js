@@ -29,6 +29,7 @@ if (isProd && (!CRON_SECRET || CRON_SECRET === 'change-me-in-production')) {
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -93,6 +94,30 @@ const sanitizeItems = (items) => {
     })).filter(item => item.description && item.quantity > 0);
 };
 
+/** ITBIS República Dominicana 18%. Recalcula subtotal, itbis y total desde items (nunca confiar en frontend). */
+function computeAmountsFromItems(items) {
+    if (!Array.isArray(items) || items.length === 0) return { subtotal: 0, itbis: 0, total: 0 };
+    let subtotal = 0;
+    let itbis = 0;
+    const ITBIS_RATE = 0.18;
+    for (const item of items) {
+        const q = Math.max(0, Number(item.quantity) || 0);
+        const p = Math.max(0, Number(item.price) || 0);
+        const lineTotal = Math.round(q * p * 100) / 100;
+        subtotal += lineTotal;
+        if (!item.isExempt) itbis += Math.round(lineTotal * ITBIS_RATE * 100) / 100;
+    }
+    subtotal = Math.round(subtotal * 100) / 100;
+    itbis = Math.round(itbis * 100) / 100;
+    const total = Math.round((subtotal + itbis) * 100) / 100;
+    return { subtotal, itbis, total };
+}
+
+/** En producción no exponer mensajes internos ni stack al cliente. */
+function safeErrorMessage(err) {
+    return isProd ? 'Error interno del servidor' : (err && err.message ? err.message : 'Error interno del servidor');
+}
+
 /** Base URL del sitio desde el request (Vercel/proxy). Sin usar variables de entorno de dominio. */
 function getBaseUrl(req) {
     const proto = req.get('x-forwarded-proto') || (req.secure ? 'https' : 'http');
@@ -101,6 +126,7 @@ function getBaseUrl(req) {
 }
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(cookieParser());
 
 // Webhook PayPal: debe recibir body raw para verificación de firma (registrar ANTES de express.json)
@@ -116,6 +142,8 @@ app.post('/api/webhooks/paypal', express.raw({ type: 'application/json', limit: 
 
 app.use(express.json({ limit: '50mb' }));
 
+app.use(helmet({ contentSecurityPolicy: false }));
+
 // CORS: en producción usar origen explícito; en dev permitir credenciales
 const corsOrigin = process.env.CORS_ORIGIN;
 app.use(cors({
@@ -125,11 +153,18 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Rate limiting - Zero Risk Deploy
+// Rate limiting - Zero Risk Deploy (IP desde X-Forwarded-For con trust proxy)
 const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
+    windowMs: 10 * 60 * 1000,
     max: 5,
-    message: { message: 'Demasiados intentos. Intenta en 15 minutos.' },
+    message: { message: 'Demasiados intentos. Intenta en 10 minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+const resetPasswordLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 3,
+    message: { message: 'Demasiados intentos de restablecimiento. Intenta en 1 hora.' },
     standardHeaders: true,
     legacyHeaders: false
 });
@@ -156,7 +191,7 @@ const uploadLimiter = rateLimit({
 });
 const rncLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 60,
+    max: 30,
     message: { message: 'Demasiadas consultas de RNC. Espera un momento.' },
     standardHeaders: true,
     legacyHeaders: false
@@ -164,6 +199,8 @@ const rncLimiter = rateLimit({
 
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/forgot-password', resetPasswordLimiter);
+app.use('/api/auth/reset-password', resetPasswordLimiter);
 app.use('/api/invoices', invoiceLimiter);
 app.use('/api/reports/606', reportLimiter);
 app.use('/api/reports/607', reportLimiter);
@@ -1221,7 +1258,7 @@ app.post('/api/tickets', verifyToken, verifyClient, async (req, res) => {
         await newTicket.save();
         res.status(201).json({ message: 'Ticket creado exitosamente' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -1352,7 +1389,7 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(403).json({ message: 'Cuenta bloqueada. Contacte a soporte.', code: 'ACCOUNT_BLOCKED' });
         }
 
-        const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: 86400 });
+        const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: 3600 });
 
         await User.findByIdAndUpdate(user._id, { lastLoginAt: new Date() });
 
@@ -1364,7 +1401,7 @@ app.post('/api/auth/login', async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-            maxAge: 86400 * 1000,
+            maxAge: 3600 * 1000,
             path: '/'
         };
         if (cookieDomain) cookieOpts.domain = cookieDomain;
@@ -1387,12 +1424,12 @@ app.post('/api/auth/login', async (req, res) => {
         });
     } catch (error) {
         log.error({ err: error.message }, 'Error en login');
-        res.status(500).json({ message: 'Error interno en el servidor', error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
 // Recuperar contraseña: solicitar token por email
-app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
+app.post('/api/auth/forgot-password', async (req, res) => {
     try {
         const email = sanitizeEmail(req.body.email);
         if (!email) return res.status(400).json({ message: 'Correo no válido.' });
@@ -1447,7 +1484,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
         res.status(200).json({ message: 'Contraseña actualizada. Ya puedes iniciar sesión.' });
     } catch (e) {
         log.error({ err: e.message }, 'Error reset-password');
-        res.status(500).json({ message: 'Error al restablecer la contraseña.' });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -1530,7 +1567,7 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
             policiesToAccept: policiesToAccept.length ? policiesToAccept : undefined
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -1544,7 +1581,7 @@ app.get('/api/policies/current', async (req, res) => {
         });
         res.json({ policies: list, requiredSlugs: REQUIRED_POLICY_SLUGS });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -1555,7 +1592,7 @@ app.get('/api/policies/:slug', async (req, res) => {
         if (!policy) return res.status(404).json({ message: 'Política no encontrada' });
         res.json(policy);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -1581,7 +1618,7 @@ app.post('/api/policies/accept', verifyToken, async (req, res) => {
         }
         res.json({ success: true, message: 'Aceptación registrada' });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -1620,7 +1657,7 @@ app.post('/api/auth/confirm-fiscal-name', verifyToken, async (req, res) => {
 
         res.json({ success: true, confirmedName });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -1769,7 +1806,7 @@ app.get('/api/partners/me', verifyToken, verifyPartner, async (req, res) => {
             trialClients: trialCount
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -1811,7 +1848,7 @@ app.get('/api/partners/dashboard', verifyToken, verifyPartner, async (req, res) 
             }))
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -1841,7 +1878,7 @@ app.post('/api/auth/profile', verifyToken, async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -1993,7 +2030,7 @@ app.post('/api/membership/prepare-transfer', verifyToken, verifyClient, async (r
         const reference = await generateUniquePaymentReference();
         res.json({ reference });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2120,7 +2157,7 @@ app.post('/api/membership/request-payment', verifyToken, verifyClient, async (re
         if (e.code === 11000) {
             return res.status(400).json({ message: 'Ya tienes una solicitud de pago pendiente. Espera a que la validemos.' });
         }
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2144,7 +2181,7 @@ app.get('/api/payments/history', verifyToken, verifyClient, async (req, res) => 
         });
         res.json(items);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2173,7 +2210,7 @@ app.get('/api/admin/pending-payments', verifyToken, verifyAdmin, async (req, res
             status: p.status // ✅ Incluir status en respuesta
         })));
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2262,7 +2299,7 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
             }
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2302,7 +2339,7 @@ app.post('/api/admin/reject-payment/:id', verifyToken, verifyAdmin, async (req, 
         });
         res.json({ message: 'Solicitud rechazada.' });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2342,7 +2379,7 @@ app.get('/api/admin/payments-history', verifyToken, verifyAdmin, async (req, res
         });
         res.json({ list: items, total, page, limit });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2447,7 +2484,7 @@ app.get('/api/admin/users', verifyToken, verifyAdmin, async (req, res) => {
 
         res.json({ list, total, page, limit });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2475,7 +2512,7 @@ app.post('/api/admin/users/:id/activate', verifyToken, verifyAdmin, async (req, 
         await logAdminAction(req.userId, 'user_activate', 'user', user._id.toString(), { email: user.email });
         res.json({ message: 'Membresía activada. 30 días desde hoy.' });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2496,7 +2533,7 @@ app.post('/api/admin/users/:id/deactivate', verifyToken, verifyAdmin, async (req
         await logAdminAction(req.userId, 'user_deactivate', 'user', user._id.toString(), { email: user.email });
         res.json({ message: 'Membresía bloqueada. El usuario ya no tendrá acceso Pro.' });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2515,7 +2552,7 @@ app.post('/api/admin/users/:id/block', verifyToken, verifyAdmin, async (req, res
         await logAdminAction(req.userId, 'user_block', 'user', user._id.toString(), { email: user.email });
         res.json({ message: 'Cuenta bloqueada. El usuario no podrá iniciar sesión.' });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2532,7 +2569,7 @@ app.post('/api/admin/users/:id/unblock', verifyToken, verifyAdmin, async (req, r
         await logAdminAction(req.userId, 'user_unblock', 'user', user._id.toString(), { email: user.email });
         res.json({ message: 'Cuenta desbloqueada.' });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2544,7 +2581,7 @@ app.put('/api/admin/users/:id/notes', verifyToken, verifyAdmin, async (req, res)
         await User.findByIdAndUpdate(req.params.id, { adminNotes: typeof notes === 'string' ? notes.slice(0, 2000) : '' });
         res.json({ message: 'Notas actualizadas.' });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2582,7 +2619,7 @@ app.delete('/api/admin/users/:id', verifyToken, verifyAdmin, async (req, res) =>
         await logAdminAction(req.userId, 'user_delete', 'user', uid.toString(), { email: user.email });
         res.json({ message: 'Usuario eliminado correctamente.' });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2623,7 +2660,7 @@ app.get('/api/admin/users/:id', verifyToken, verifyAdmin, async (req, res) => {
             totalFacturas: rev.count
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2661,7 +2698,7 @@ app.get('/api/admin/alerts', verifyToken, verifyAdmin, async (req, res) => {
 
         res.json({ alerts });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2679,7 +2716,7 @@ app.get('/api/admin/audit', verifyToken, verifyAdmin, async (req, res) => {
 
         res.json({ list: logs, total, page, limit });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2710,7 +2747,7 @@ app.get('/api/admin/partners', verifyToken, verifyAdmin, async (req, res) => {
         }));
         res.json(withStats);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2782,7 +2819,7 @@ app.get('/api/admin/partners/stats', verifyToken, verifyAdmin, async (req, res) 
             commissionsPending: totalCommissionsPending[0]?.total || 0
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2814,7 +2851,7 @@ app.get('/api/admin/partners/:id/cartera', verifyToken, verifyAdmin, async (req,
             cartera
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -2842,7 +2879,7 @@ app.post('/api/admin/partners/:id/approve', verifyToken, verifyAdmin, async (req
         await logAdminAction(req.userId, 'partner_approve', 'partner', p._id.toString(), { referralCode: p.referralCode });
         res.json({ message: 'Partner aprobado', referralCode: p.referralCode });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -3087,7 +3124,7 @@ app.post('/api/admin/reconcile', verifyToken, verifyAdmin, async (req, res) => {
         });
     } catch (e) {
         log.error({ err: e.message }, 'Error en reconciliación manual');
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -3095,8 +3132,9 @@ app.post('/api/admin/reconcile', verifyToken, verifyAdmin, async (req, res) => {
 app.post('/api/cron/reconcile', async (req, res) => {
     try {
         const cronSecret = process.env.CRON_SECRET || 'change-me-in-production';
-        const providedSecret = req.headers['x-cron-secret'] || req.body.secret;
-        
+        const authHeader = req.headers.authorization || '';
+        const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+        const providedSecret = req.headers['x-cron-secret'] || req.body?.secret || bearer;
         if (providedSecret !== cronSecret) {
             return res.status(403).json({ error: 'Unauthorized' });
         }
@@ -3128,7 +3166,7 @@ app.post('/api/cron/reconcile', async (req, res) => {
         });
     } catch (e) {
         log.error({ err: e.message }, 'Error en auto-reconciliación');
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -3211,7 +3249,7 @@ app.post('/api/admin/repair-user-billing/:userId', verifyToken, verifyAdmin, asy
         });
     } catch (e) {
         log.error({ err: e.message, userId: req.params.userId }, 'Error reparando billing de usuario');
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -3285,7 +3323,7 @@ app.get('/api/admin/billing-alerts', verifyToken, verifyAdmin, async (req, res) 
         const alerts = await getBillingAlerts();
         res.json({ success: true, alerts });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -3332,7 +3370,7 @@ app.get('/api/admin/billing-health', verifyToken, verifyAdmin, async (req, res) 
                 : 'Investigar inconsistencias. Health score bajo 98%'
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -3347,7 +3385,7 @@ app.post('/api/admin/partners/:id/suspend', verifyToken, verifyAdmin, async (req
         await logAdminAction(req.userId, 'partner_suspend', 'partner', p._id.toString(), { referralCode: p.referralCode });
         res.json({ message: 'Partner suspendido' });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -3419,7 +3457,7 @@ app.get('/api/admin/stats', verifyToken, verifyAdmin, async (req, res) => {
             }
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -3462,7 +3500,7 @@ app.get('/api/admin/chart-data', verifyToken, verifyAdmin, async (req, res) => {
         planCounts.forEach(p => { usersByPlan[p._id] = p.count; });
         res.json({ monthly, usersByPlan });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -3522,7 +3560,7 @@ app.get('/api/admin/metrics', verifyToken, verifyAdmin, async (req, res) => {
             totalUsers
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -3919,7 +3957,7 @@ app.get('/api/business-copilot', verifyToken, verifyClient, async (req, res) => 
             error: e.message,
             stack: e.stack
         }, 'Copilot: error');
-        res.status(500).json({ error: e.message || 'Error interno del servidor' });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -3976,7 +4014,7 @@ app.get('/api/client-payment-risk', verifyToken, verifyClient, async (req, res) 
 
         res.json({ riskScore, level, message, avgDaysToPay: avgDaysToPay || undefined, pendingAmount: totalPending || undefined });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4009,7 +4047,7 @@ app.get('/api/alerts', verifyToken, verifyClient, async (req, res) => {
 
         res.json({ alerts });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4064,7 +4102,7 @@ app.get('/api/ncf-settings', verifyToken, verifyClient, async (req, res) => {
         const settings = await NCFSettings.find({ userId: req.userId }).sort({ type: 1 });
         res.json(settings);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -4096,7 +4134,7 @@ app.post('/api/ncf-settings', verifyToken, verifyClient, async (req, res) => {
         await newSetting.save();
         res.status(201).json(newSetting);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -4115,7 +4153,7 @@ app.put('/api/ncf-settings/:id', verifyToken, verifyClient, async (req, res) => 
         await setting.save();
         res.json(setting);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -4216,7 +4254,7 @@ app.get('/api/autofill/suggestions', verifyToken, verifyClient, async (req, res)
 
         res.json(result);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4231,7 +4269,7 @@ app.delete('/api/ncf-settings/:id', verifyToken, verifyClient, async (req, res) 
         await NCFSettings.deleteOne({ _id: req.params.id, userId: req.userId });
         res.status(204).send();
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -4244,7 +4282,7 @@ app.get('/api/customers', verifyToken, verifyClient, async (req, res) => {
             .lean();
         res.json(customers);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -4264,7 +4302,7 @@ app.get('/api/customers/:rnc/history', verifyToken, verifyClient, async (req, re
             .lean();
         res.json(invoices);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -4357,7 +4395,7 @@ app.post('/api/customers', verifyToken, verifyClient, async (req, res) => {
         );
         res.json(customer);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -4375,7 +4413,7 @@ app.delete('/api/customers/:id', verifyToken, verifyClient, async (req, res) => 
         if (!deleted) return res.status(404).json({ message: 'Cliente no encontrado' });
         res.json({ success: true, message: 'Cliente eliminado' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -4385,7 +4423,7 @@ app.get('/api/invoice-draft', verifyToken, verifyClient, async (req, res) => {
         const draft = await InvoiceDraft.findOne({ userId: req.userId });
         res.json(draft || null);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4409,7 +4447,7 @@ app.put('/api/invoice-draft', verifyToken, verifyClient, async (req, res) => {
         );
         res.json(draft);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4418,7 +4456,7 @@ app.delete('/api/invoice-draft', verifyToken, verifyClient, async (req, res) => 
         await InvoiceDraft.deleteOne({ userId: req.userId });
         res.json({ success: true });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4428,7 +4466,7 @@ app.get('/api/services', verifyToken, verifyClient, async (req, res) => {
         const doc = await UserServices.findOne({ userId: req.userId });
         res.json(doc?.services || []);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4447,7 +4485,7 @@ app.put('/api/services', verifyToken, verifyClient, async (req, res) => {
         );
         res.json({ services });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4456,7 +4494,7 @@ app.get('/api/invoice-templates', verifyToken, verifyClient, async (req, res) =>
         const templates = await InvoiceTemplate.find({ userId: req.userId }).sort({ createdAt: -1 });
         res.json(templates);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4475,7 +4513,7 @@ app.post('/api/invoice-templates', verifyToken, verifyClient, async (req, res) =
         await template.save();
         res.status(201).json(template);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4493,7 +4531,7 @@ app.get('/api/documents', verifyToken, verifyClient, async (req, res) => {
             mimeType: d.mimeType
         })));
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4515,7 +4553,7 @@ app.post('/api/documents', verifyToken, verifyClient, async (req, res) => {
         await doc.save();
         res.status(201).json({ id: doc._id.toString(), name: doc.name, type: doc.type, date: doc.createdAt });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4528,7 +4566,7 @@ app.get('/api/documents/:id', verifyToken, verifyClient, async (req, res) => {
         if (!doc) return res.status(404).json({ message: 'Documento no encontrado' });
         res.json({ id: doc._id.toString(), name: doc.name, type: doc.type, date: doc.createdAt, data: doc.data, mimeType: doc.mimeType });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4541,7 +4579,7 @@ app.delete('/api/documents/:id', verifyToken, verifyClient, async (req, res) => 
         if (!r) return res.status(404).json({ message: 'Documento no encontrado' });
         res.json({ success: true });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4623,7 +4661,7 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
         });
     } catch (e) {
         log.error({ err: e.message, userId: req.userId }, 'Dashboard stats error');
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
 });
 
@@ -4638,7 +4676,7 @@ app.get('/api/invoices', verifyToken, verifyClient, async (req, res) => {
         ]);
         res.json({ data: invoices, total, page, limit, pages: Math.ceil(total / limit) });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -4696,9 +4734,7 @@ app.post('/api/invoices', verifyToken, verifyClient, async (req, res) => {
         const clientRnc = (sanitizeString(req.body.clientRnc || req.body.rnc, 20)).replace(/[^0-9]/g, '');
         const ncfType = sanitizeString(req.body.ncfType || req.body.type, 10);
         const items = sanitizeItems(req.body.items);
-        const subtotal = Math.max(0, Math.min(Number(req.body.subtotal) || 0, 999999999));
-        const itbis = Math.max(0, Math.min(Number(req.body.itbis) || 0, 999999999));
-        const total = Math.max(0, Math.min(Number(req.body.total) || 0, 999999999));
+        const { subtotal, itbis, total } = computeAmountsFromItems(items);
         
         const isPlaceholderName = !clientName || (String(clientName).toUpperCase().trim() === 'CONTRIBUYENTE REGISTRADO');
         if (isPlaceholderName || !clientRnc || items.length === 0) {
@@ -4764,7 +4800,8 @@ app.post('/api/invoices', verifyToken, verifyClient, async (req, res) => {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        res.status(500).json({ error: error.message });
+        log.error({ err: error.message, userId: req.userId }, 'Create invoice error');
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -4804,20 +4841,22 @@ app.post('/api/invoices/:invoiceId/credit-note', verifyToken, verifyClient, asyn
         const creditNoteType = (original.ncfType && String(original.ncfType).startsWith('3')) ? '34' : '04';
         const fullNcf = await getNextNcf(req.userId, creditNoteType, session, original.clientRnc);
 
+        const cnItems = original.items || [];
+        const cnAmounts = computeAmountsFromItems(cnItems);
         const creditNote = new Invoice({
             userId: req.userId,
             clientName: original.clientName,
             clientRnc: original.clientRnc,
             ncfType: creditNoteType,
             ncfSequence: fullNcf,
-            items: original.items || [],
-            subtotal: original.subtotal,
-            itbis: original.itbis,
-            total: original.total,
+            items: cnItems,
+            subtotal: cnAmounts.subtotal,
+            itbis: cnAmounts.itbis,
+            total: cnAmounts.total,
             date: new Date(),
             status: 'paid',
             tipoPago: 'efectivo',
-            montoPagado: original.total,
+            montoPagado: cnAmounts.total,
             balancePendiente: 0,
             estadoPago: 'pagado',
             fechaPago: new Date(),
@@ -4956,7 +4995,7 @@ app.get('/api/reports/summary', verifyToken, verifyClient, async (req, res) => {
             confirmedName: req.user.confirmedFiscalName
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -5004,7 +5043,7 @@ app.get('/api/reports/tax-health', verifyToken, verifyClient, async (req, res) =
             status: liability > (collectedItbis * 0.5) ? 'warning' : 'healthy'
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -5124,7 +5163,7 @@ app.get('/api/reports/607', verifyToken, verifyClient, async (req, res) => {
         res.setHeader('Content-Disposition', `attachment; filename=607_${rncEmisor}_${periodo}.txt`);
         res.send(report);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -5140,7 +5179,7 @@ app.get('/api/expenses', verifyToken, verifyClient, async (req, res) => {
         ]);
         res.json({ data, total, page, limit, pages: Math.ceil(total / limit) });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -5178,7 +5217,7 @@ app.post('/api/expenses', verifyToken, verifyClient, async (req, res) => {
         res.status(201).json(newExpense);
     } catch (error) {
         log.error({ err: error.message, userId: req.userId }, 'Error creando gasto');
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -5217,7 +5256,7 @@ app.patch('/api/expenses/:id', verifyToken, verifyClient, async (req, res) => {
         res.json(updated);
     } catch (error) {
         log.error({ err: error.message, expenseId: req.params.id }, 'Error actualizando gasto');
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -5229,7 +5268,7 @@ app.delete('/api/expenses/:id', verifyToken, verifyClient, async (req, res) => {
         await Expense.findOneAndDelete({ _id: req.params.id, userId: req.userId });
         res.json({ message: 'Gasto eliminado' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -5393,7 +5432,7 @@ app.get('/api/reports/606', verifyToken, verifyClient, async (req, res) => {
         res.setHeader('Content-Disposition', `attachment; filename=606_${rncEmisor}_${periodo}.txt`);
         res.send(report);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -5447,7 +5486,7 @@ app.get('/api/quotes', verifyToken, verifyClient, async (req, res) => {
         ]);
         res.json({ data: quotes.map(mapQuote), total, page, limit, pages: Math.ceil(total / limit) });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -5482,7 +5521,7 @@ app.post('/api/quotes', verifyToken, verifyClient, async (req, res) => {
         await quote.save();
         res.status(201).json({ ...quote.toObject(), id: quote._id.toString() });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -5511,7 +5550,7 @@ app.put('/api/quotes/:id', verifyToken, verifyClient, async (req, res) => {
         await quote.save();
         res.json({ ...quote.toObject(), id: quote._id.toString() });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -5528,7 +5567,7 @@ app.delete('/api/quotes/:id', verifyToken, verifyClient, async (req, res) => {
         await Quote.deleteOne({ _id: req.params.id, userId: req.userId });
         res.json({ message: 'Cotización eliminada' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -5554,16 +5593,18 @@ app.post('/api/quotes/:id/convert', verifyToken, verifyClient, async (req, res) 
         try {
             const ncfType = quote.clientRnc?.replace(/[^\d]/g, '').length === 9 ? '31' : '32';
             const fullNcf = await getNextNcf(req.userId, ncfType, session, quote.clientRnc);
+            const qItems = Array.isArray(quote.items) ? quote.items : [];
+            const qAmounts = computeAmountsFromItems(qItems);
             const newInvoice = new Invoice({
                 userId: req.userId,
                 clientName: quote.clientName,
                 clientRnc: quote.clientRnc,
                 ncfType,
                 ncfSequence: fullNcf,
-                items: quote.items,
-                subtotal: quote.subtotal,
-                itbis: quote.itbis,
-                total: quote.total
+                items: qItems,
+                subtotal: qAmounts.subtotal,
+                itbis: qAmounts.itbis,
+                total: qAmounts.total
             });
             await newInvoice.save({ session });
             quote.status = 'converted';
@@ -5584,7 +5625,7 @@ app.post('/api/quotes/:id/convert', verifyToken, verifyClient, async (req, res) 
             throw err;
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -5680,8 +5721,14 @@ app.get('/api/subscription/status', verifyToken, verifyClient, async (req, res) 
         });
     } catch (e) {
         log.error({ err: e.message, userId: req.userId }, 'Error obteniendo estado de suscripción');
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
     }
+});
+
+// Manejador de errores global: en producción no exponer mensajes internos
+app.use((err, req, res, next) => {
+    log.error({ err: err.message, stack: err.stack }, 'Unhandled error');
+    res.status(500).json({ message: safeErrorMessage(err) });
 });
 
 // Final export for Vercel

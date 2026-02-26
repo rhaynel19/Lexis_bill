@@ -14,11 +14,13 @@ export async function POST(request: Request) {
                 : "";
         const url = origin ? `${origin}/api/auth/login` : "/api/auth/login";
 
+        const forwardedFor = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "";
         const res = await fetch(url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "X-Forwarded-Host": host
+                "X-Forwarded-Host": host,
+                ...(forwardedFor ? { "X-Forwarded-For": forwardedFor } : {})
             },
             body: body || undefined
         });

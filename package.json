@@ -39,6 +39,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^7.5.1",
     "framer-motion": "^12.26.2",
+    "helmet": "^7.2.0",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
