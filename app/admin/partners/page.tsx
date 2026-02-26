@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, DollarSign, Loader2, CheckCircle, Ban, Handshake, TrendingUp, Link2, Copy, Wallet, Download } from "lucide-react";
+import { Users, DollarSign, Loader2, CheckCircle, Ban, Handshake, TrendingUp, Link2, Copy, Wallet, Download, ShieldCheck } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,6 +31,8 @@ export default function AdminPartnersPage() {
     const [carteraPartner, setCarteraPartner] = useState<{ partner: { name: string; referralCode: string }; cartera: any[] } | null>(null);
     const [loadingCartera, setLoadingCartera] = useState(false);
     const [calculatingCommissions, setCalculatingCommissions] = useState(false);
+    const [statusFilter, setStatusFilter] = useState<"" | "active" | "suspended" | "pending">("");
+    const [confirmAction, setConfirmAction] = useState<{ action: "suspend" | "activate"; id: string; name: string } | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -67,15 +69,32 @@ export default function AdminPartnersPage() {
     };
 
     const handleSuspend = async (id: string) => {
+        setConfirmAction(null);
         setActioning(id);
         try {
             const { api } = await import("@/lib/api-service");
             const res = await api.suspendPartner(id);
-            toast.success(res?.message || "Partner suspendido");
-            setPartners(prev => prev.map(p => p._id === id ? { ...p, status: 'suspended' } : p));
+            toast.success(res?.message || "Partner suspendido correctamente");
+            setPartners(prev => prev.map(p => p._id === id ? { ...p, status: "suspended", suspendedAt: new Date().toISOString() } : p));
             if (stats) setStats({ ...stats, totalPartners: Math.max(0, (stats.totalPartners || 0) - 1) });
         } catch (e: any) {
             toast.error(e?.message || "Error al suspender");
+        } finally {
+            setActioning(null);
+        }
+    };
+
+    const handleActivate = async (id: string) => {
+        setConfirmAction(null);
+        setActioning(id);
+        try {
+            const { api } = await import("@/lib/api-service");
+            const res = await api.activatePartner(id);
+            toast.success(res?.message || "Partner activado correctamente");
+            setPartners(prev => prev.map(p => p._id === id ? { ...p, status: "active", suspendedAt: undefined } : p));
+            if (stats) setStats({ ...stats, totalPartners: (stats.totalPartners || 0) + 1 });
+        } catch (e: any) {
+            toast.error(e?.message || "Error al activar");
         } finally {
             setActioning(null);
         }
@@ -170,13 +189,17 @@ export default function AdminPartnersPage() {
 
     const getStatusBadge = (status: string) => {
         const map: Record<string, { label: string; className: string }> = {
-            active: { label: "Activo", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
-            pending: { label: "Pendiente", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
-            suspended: { label: "Suspendido", className: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400" }
+            active: { label: "Activo", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-medium" },
+            pending: { label: "Pendiente", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-medium" },
+            suspended: { label: "Suspendido", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-medium" }
         };
         const s = map[status] || map.pending;
         return <span className={`text-xs px-2 py-1 rounded-full ${s.className}`}>{s.label}</span>;
     };
+
+    const filteredPartners = statusFilter
+        ? partners.filter((p) => p.status === statusFilter)
+        : partners;
 
     if (isLoading) {
         return (
@@ -360,15 +383,28 @@ export default function AdminPartnersPage() {
 
             {/* Lista de Partners */}
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 flex-wrap gap-4">
                     <div>
                         <CardTitle className="text-lg font-bold">Lista de Partners</CardTitle>
-                        <CardDescription>Gestiona aprobaciones y suspensiones</CardDescription>
+                        <CardDescription>Gestiona aprobaciones, activaciones y suspensiones</CardDescription>
                     </div>
-                    <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={partners.length === 0}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Exportar CSV
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter((e.target.value || "") as "" | "active" | "suspended" | "pending")}
+                            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                            aria-label="Filtrar por estado"
+                        >
+                            <option value="">Todos los estados</option>
+                            <option value="active">Activo</option>
+                            <option value="suspended">Suspendido</option>
+                            <option value="pending">Pendiente</option>
+                        </select>
+                        <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={partners.length === 0}>
+                            <Download className="w-4 h-4 mr-2" />
+                            Exportar CSV
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {partners.length > 0 ? (
@@ -384,11 +420,19 @@ export default function AdminPartnersPage() {
                                     <TableHead className="text-right">Ganado</TableHead>
                                     <TableHead className="text-right">Pendiente</TableHead>
                                     <TableHead>Estado</TableHead>
+                                    <TableHead className="whitespace-nowrap">Fecha activación</TableHead>
+                                    <TableHead className="whitespace-nowrap">Fecha suspensión</TableHead>
                                     <TableHead className="text-right">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {partners.map((p) => (
+                                {filteredPartners.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                                            No hay partners que coincidan con el filtro.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : filteredPartners.map((p) => (
                                     <TableRow key={p._id}>
                                         <TableCell>
                                             <div>
@@ -432,31 +476,68 @@ export default function AdminPartnersPage() {
                                         <TableCell className="text-right font-medium">{formatCurrency(p.totalEarned ?? 0)}</TableCell>
                                         <TableCell className="text-right text-muted-foreground">{formatCurrency(p.pendingPayout ?? 0)}</TableCell>
                                         <TableCell>{getStatusBadge(p.status)}</TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">
+                                            {p.approvedAt ? new Date(p.approvedAt).toLocaleDateString("es-DO") : "—"}
+                                        </TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">
+                                            {p.suspendedAt ? new Date(p.suspendedAt).toLocaleDateString("es-DO") : "—"}
+                                        </TableCell>
                                         <TableCell className="text-right flex gap-1 justify-end">
-                                            <Button variant="ghost" size="sm" onClick={() => handleVerCartera(p._id)} title="Ver cartera">
-                                                <Wallet className="w-4 h-4" />
-                                            </Button>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="ghost" size="sm" onClick={() => handleVerCartera(p._id)} aria-label="Ver cartera">
+                                                        <Wallet className="w-4 h-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>Ver cartera de referidos</TooltipContent>
+                                            </Tooltip>
                                             {p.status === "pending" && (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="text-green-600 border-green-200 hover:bg-green-50"
-                                                    onClick={() => handleApprove(p._id)}
-                                                    disabled={actioning === p._id}
-                                                >
-                                                    {actioning === p._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                                                </Button>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-900/30"
+                                                            onClick={() => handleApprove(p._id)}
+                                                            disabled={actioning === p._id}
+                                                        >
+                                                            {actioning === p._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>Aprobar partner</TooltipContent>
+                                                </Tooltip>
                                             )}
                                             {p.status === "active" && (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="text-red-600 border-red-200 hover:bg-red-50"
-                                                    onClick={() => handleSuspend(p._id)}
-                                                    disabled={actioning === p._id}
-                                                >
-                                                    {actioning === p._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
-                                                </Button>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/30"
+                                                            onClick={() => setConfirmAction({ action: "suspend", id: p._id, name: p.name })}
+                                                            disabled={actioning === p._id}
+                                                        >
+                                                            {actioning === p._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>Suspender partner</TooltipContent>
+                                                </Tooltip>
+                                            )}
+                                            {p.status === "suspended" && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-900/30"
+                                                            onClick={() => setConfirmAction({ action: "activate", id: p._id, name: p.name })}
+                                                            disabled={actioning === p._id}
+                                                        >
+                                                            {actioning === p._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>Activar partner</TooltipContent>
+                                                </Tooltip>
                                             )}
                                         </TableCell>
                                     </TableRow>
@@ -469,6 +550,40 @@ export default function AdminPartnersPage() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Modal confirmación Activar / Suspender */}
+            <Dialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Confirmar acción</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-muted-foreground">
+                        {confirmAction?.action === "suspend"
+                            ? "El partner no podrá generar comisiones ni referidos hasta que lo reactives."
+                            : "El partner volverá a generar comisiones normalmente."}
+                    </p>
+                    {confirmAction && (
+                        <p className="text-sm font-medium text-foreground">
+                            Partner: <span className="font-semibold">{confirmAction.name}</span>
+                        </p>
+                    )}
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setConfirmAction(null)}>
+                            Cancelar
+                        </Button>
+                        <Button
+                            variant={confirmAction?.action === "suspend" ? "destructive" : "default"}
+                            className={confirmAction?.action === "activate" ? "bg-green-600 hover:bg-green-700" : ""}
+                            onClick={() => {
+                                if (confirmAction?.action === "suspend") handleSuspend(confirmAction.id);
+                                else if (confirmAction?.action === "activate") handleActivate(confirmAction.id);
+                            }}
+                        >
+                            Confirmar
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* Modal Cartera */}
             <Dialog open={!!carteraModal} onOpenChange={(open) => !open && closeCarteraModal()}>

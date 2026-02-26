@@ -556,6 +556,7 @@ const partnerSchema = new mongoose.Schema({
     status: { type: String, enum: ['pending', 'active', 'suspended'], default: 'pending' },
     approvedAt: { type: Date },
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    suspendedAt: { type: Date },
     invitedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerInvite' },
     termsAcceptedAt: { type: Date, required: true },
     createdAt: { type: Date, default: Date.now },
@@ -3433,11 +3434,30 @@ app.post('/api/admin/partners/:id/suspend', verifyToken, verifyAdmin, async (req
         if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID inválido' });
         const p = await Partner.findById(req.params.id);
         if (!p) return res.status(404).json({ message: 'Partner no encontrado' });
+        if (p.status === 'suspended') return res.status(400).json({ message: 'El partner ya está suspendido' });
         p.status = 'suspended';
+        p.suspendedAt = new Date();
         p.updatedAt = new Date();
         await p.save();
         await logAdminAction(req.userId, 'partner_suspend', 'partner', p._id.toString(), { referralCode: p.referralCode });
         res.json({ message: 'Partner suspendido' });
+    } catch (e) {
+        res.status(500).json({ message: safeErrorMessage(e) });
+    }
+});
+
+app.post('/api/admin/partners/:id/activate', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID inválido' });
+        const p = await Partner.findById(req.params.id);
+        if (!p) return res.status(404).json({ message: 'Partner no encontrado' });
+        if (p.status === 'active') return res.status(400).json({ message: 'El partner ya está activo' });
+        p.status = 'active';
+        p.suspendedAt = undefined;
+        p.updatedAt = new Date();
+        await p.save();
+        await logAdminAction(req.userId, 'partner_activate', 'partner', p._id.toString(), { referralCode: p.referralCode });
+        res.json({ message: 'Partner activado correctamente' });
     } catch (e) {
         res.status(500).json({ message: safeErrorMessage(e) });
     }

@@ -700,6 +700,10 @@ export const api = {
         return secureFetch<any>(`${API_URL}/admin/partners/${id}/suspend`, { method: "POST" });
     },
 
+    async activatePartner(id: string) {
+        return secureFetch<any>(`${API_URL}/admin/partners/${id}/activate`, { method: "POST" });
+    },
+
     async getPartnerCartera(partnerId: string) {
         return secureFetch<{ partner: { name: string; referralCode: string }; cartera: any[] }>(`${API_URL}/admin/partners/${partnerId}/cartera`);
     },
