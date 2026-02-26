@@ -1093,6 +1093,14 @@ const verifyAdmin = (req, res, next) => {
     next();
 };
 
+/** Solo cuentas cliente (user/admin). Rechaza partners en endpoints de facturación/NCF/reportes. */
+const verifyClient = (req, res, next) => {
+    if (req.user && req.user.role === 'partner') {
+        return res.status(403).json({ message: 'Acceso denegado. Esta función es solo para cuentas de cliente.' });
+    }
+    next();
+};
+
 // --- 4. HELPERS ---
 // DGII NCF: Tipos soportados - B01/E31 Empresas, B02/E32 Consumidor, B14 Educación, B15/E15 Gobierno
 const NCF_TYPES_BUSINESS = ['01', '31'];
@@ -1784,14 +1792,6 @@ const verifyPartner = async (req, res, next) => {
     const p = await Partner.findOne({ userId: req.userId, status: 'active' });
     if (!p) return res.status(403).json({ message: 'Acceso denegado. No eres partner activo.' });
     req.partner = p;
-    next();
-};
-
-/** Solo cuentas cliente (user/admin). Rechaza partners en endpoints de facturación/NCF/reportes. */
-const verifyClient = (req, res, next) => {
-    if (req.user && req.user.role === 'partner') {
-        return res.status(403).json({ message: 'Acceso denegado. Esta función es solo para cuentas de cliente.' });
-    }
     next();
 };
 
