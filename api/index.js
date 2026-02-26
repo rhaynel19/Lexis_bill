@@ -786,28 +786,33 @@ const billingEventEmitter = {
     }
 };
 
-// === FUNCIONES DE GESTIÓN DE SUSCRIPCIÓN (Fuente de Verdad) ===
+// Partners son colaboradores: no tienen trial que venza (acceso sin vencimiento)
+const PARTNER_EXPIRY_DAYS = 3650; // ~10 años
+
 async function getOrCreateSubscription(userId) {
     let sub = await Subscription.findOne({ userId });
     if (!sub) {
         const now = new Date();
-        const trialEnd = new Date(now);
-        trialEnd.setDate(trialEnd.getDate() + 15); // 15 días de trial
-        
+        const user = await User.findById(userId);
+        const isPartner = user?.role === 'partner';
+        const periodEnd = new Date(now);
+        periodEnd.setDate(periodEnd.getDate() + (isPartner ? PARTNER_EXPIRY_DAYS : 15));
+        const status = isPartner ? 'ACTIVE' : 'TRIAL';
+
         sub = await Subscription.create({
             userId,
             plan: 'free',
-            status: 'TRIAL',
+            status,
             currentPeriodStart: now,
-            currentPeriodEnd: trialEnd
+            currentPeriodEnd: periodEnd
         });
-        
+
         await billingEventEmitter.emit('subscription_created', {
             userId,
             subscriptionId: sub._id,
             plan: 'free',
-            status: 'TRIAL',
-            periodEnd: trialEnd
+            status,
+            periodEnd
         });
     }
     return sub;
@@ -1316,15 +1321,16 @@ app.post('/api/auth/register', async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
-        const expiryDays = plan === 'pro' ? 30 : 15;
-        const status = plan === 'pro' ? 'Activo' : 'Trial';
+        const isPartnerRegistration = !!(req.body.isPartnerRegistration || req.body.inviteToken);
+        const expiryDays = isPartnerRegistration ? PARTNER_EXPIRY_DAYS : (plan === 'pro' ? 30 : 15);
+        const status = isPartnerRegistration ? 'Activo' : (plan === 'pro' ? 'Activo' : 'Trial');
 
         const newUser = new User({
             email, password: hashedPassword, name, rnc, profession,
             subscriptionStatus: status,
             expiryDate: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
             subscription: {
-                plan: plan === 'pro' ? 'pro' : 'free',
+                plan: isPartnerRegistration ? 'free' : (plan === 'pro' ? 'pro' : 'free'),
                 status: 'active',
                 startDate: new Date(),
                 endDate: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000)
@@ -1377,7 +1383,7 @@ app.post('/api/auth/register', async (req, res) => {
             }
         }
 
-        log.info({ action: 'register', success: true }, 'Usuario creado');
+        log.info({ action: 'register', success: true, isPartnerRegistration: !!isPartnerRegistration }, 'Usuario creado');
         res.status(201).json({ message: 'Usuario registrado exitosamente', plan: status });
     } catch (error) {
         log.error({ err: error.message }, 'Error en registro');
@@ -2898,6 +2904,22 @@ app.post('/api/admin/partners/:id/approve', verifyToken, verifyAdmin, async (req
         p.approvedBy = req.userId;
         p.updatedAt = new Date();
         await p.save();
+
+        const partnerUserId = p.userId;
+        const periodEnd = new Date();
+        periodEnd.setDate(periodEnd.getDate() + PARTNER_EXPIRY_DAYS);
+        await User.findByIdAndUpdate(partnerUserId, {
+            subscriptionStatus: 'Activo',
+            expiryDate: periodEnd,
+            'subscription.status': 'active',
+            'subscription.endDate': periodEnd
+        });
+        await Subscription.findOneAndUpdate(
+            { userId: partnerUserId },
+            { $set: { status: 'ACTIVE', currentPeriodEnd: periodEnd, updatedAt: new Date() } },
+            { upsert: false }
+        );
+
         // Notificación por email al partner (placeholder: integrar Resend/SendGrid)
         const baseUrl = getBaseUrl(req);
         const referralUrl = `${baseUrl}/registro?ref=${p.referralCode}`;
@@ -4103,7 +4125,8 @@ app.get('/api/rnc/:number', rncLimiter, async (req, res) => {
     const external = await fetchRncFromExternalApi(cleanNumber);
     if (external) return res.json(external);
 
-    const name = RNC_MOCK_DB[cleanNumber] || 'CONTRIBUYENTE REGISTRADO';
+    let name = RNC_MOCK_DB[cleanNumber] || '';
+    if (String(name).toUpperCase().trim() === 'CONTRIBUYENTE REGISTRADO') name = '';
     res.json({ valid: true, rnc: cleanNumber, name, type: cleanNumber.length === 9 ? 'JURIDICA' : 'FISICA' });
 });
 
@@ -4118,7 +4141,8 @@ app.post('/api/validate-rnc', rncLimiter, async (req, res) => {
         const external = await fetchRncFromExternalApi(cleanRnc);
         if (external) return res.json({ valid: true, name: external.name });
 
-        const name = RNC_MOCK_DB[cleanRnc] || 'CONTRIBUYENTE REGISTRADO';
+        let name = RNC_MOCK_DB[cleanRnc] || '';
+        if (String(name).toUpperCase().trim() === 'CONTRIBUYENTE REGISTRADO') name = '';
         if (process.env.NODE_ENV !== 'production') {
             await new Promise(resolve => setTimeout(resolve, 300));
         }

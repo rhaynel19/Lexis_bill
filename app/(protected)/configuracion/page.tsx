@@ -45,13 +45,32 @@ export default function Configuration() {
                     if (data.seal) setSealPreview(data.seal);
                 }
             } catch {
-                // localStorage corrupto o formato antiguo: ignorar y usar estado por defecto
+                // localStorage corrupto o formato antiguo: ignorar
             }
         }
         if (profession) {
             setConfig(prev => ({ ...prev, profession }));
         }
     }, [profession]);
+
+    useEffect(() => {
+        const loadMe = async () => {
+            try {
+                const { api } = await import("@/lib/api-service");
+                const me = await api.getMe();
+                if (me?.name || me?.email) {
+                    setConfig(prev => ({
+                        ...prev,
+                        companyName: me.name ?? prev.companyName,
+                        email: me.email ?? prev.email,
+                    }));
+                }
+            } catch {
+                // Sin sesión o error: no sobrescribir
+            }
+        };
+        loadMe();
+    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (configLocked) return;

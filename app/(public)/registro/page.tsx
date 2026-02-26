@@ -142,7 +142,15 @@ function RegisterForm() {
             ? { terms: policyVersions.terms, privacy: policyVersions.privacy }
             : undefined;
         try {
-            await api.register({ ...form, plan, suggestedName: rncStatus.name, referralCode: ref || undefined, acceptedPolicyVersions });
+            await api.register({
+                ...form,
+                plan,
+                suggestedName: rncStatus.name,
+                referralCode: ref || undefined,
+                acceptedPolicyVersions,
+                isPartnerRegistration: isPartnerFlow,
+                inviteToken: invite || undefined
+            });
 
             // Auto login (cookie HttpOnly); usuario desde API, no localStorage
             await api.login(form.email, form.password);

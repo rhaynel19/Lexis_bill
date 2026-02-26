@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, TrendingUp, Link2, Loader2, CheckCircle } from "lucide-react";
+import { Copy, TrendingUp, Link2, Loader2, CheckCircle, Handshake, Users, DollarSign, Wallet } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -110,8 +110,7 @@ export default function PartnerDashboardPage() {
     const lastCommissions = (data.commissions ?? []).slice(0, 6).reverse();
 
     return (
-        <div className="container mx-auto max-w-4xl px-4 py-8">
-            {/* Mensaje de bienvenida recién aprobado */}
+        <div className="container mx-auto max-w-5xl px-4 py-8">
             {data.showWelcomeMessage && (
                 <div className="mb-6 flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-800 dark:bg-green-950/30 dark:text-green-200">
                     <CheckCircle className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
@@ -119,89 +118,81 @@ export default function PartnerDashboardPage() {
                 </div>
             )}
 
-            {/* Título */}
             <div className="mb-8">
-                <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                    Panel Partner
+                <h1 className="text-2xl font-bold flex items-center gap-2 text-foreground">
+                    <Handshake className="w-7 h-7 text-amber-500" />
+                    Programa Partner
                 </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                    Comisión {commissionRatePct}% por cliente activo
+                <p className="text-muted-foreground text-sm mt-1">
+                    Estadísticas y gestión de tus referidos Lexis Bill · Comisión {commissionRatePct}% por cliente activo
                 </p>
             </div>
 
-            {/* Bloque principal: link de referido */}
-            <Card className="mb-8 border-amber-500/20 bg-amber-50/30 dark:bg-amber-950/10">
-                <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <Link2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                        Tu link de referido
-                    </CardTitle>
-                    <CardDescription>
-                        Comparte este enlace; cuando se registren con plan de pago, ganarás comisión.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <Input
-                        readOnly
-                        value={data.referralUrl ?? ""}
-                        className="flex-1 font-mono text-sm"
-                    />
-                    <Button
-                        onClick={copyReferralUrl}
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 shrink-0 border-amber-500/30 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
-                    >
-                        <Copy className="h-4 w-4" />
-                        Copiar
-                    </Button>
-                </CardContent>
-                <CardContent className="pt-0">
-                    <p className="text-xs text-muted-foreground">
-                        Código: <span className="font-mono font-medium text-foreground">{data.referralCode}</span>
-                    </p>
-                </CardContent>
-            </Card>
-
-            {/* Métricas */}
-            <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                 <Card>
-                    <CardContent className="pt-5">
-                        <p className="text-xs font-medium text-muted-foreground">Clientes activos</p>
-                        <p className="mt-1 text-2xl font-semibold text-amber-600 dark:text-amber-400">
-                            {data.activeClients ?? 0}
-                        </p>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                            <Users className="w-4 h-4" /> Clientes activos
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <span className="text-2xl font-bold text-amber-600 dark:text-amber-400">{data.activeClients ?? 0}</span>
                     </CardContent>
                 </Card>
                 <Card>
-                    <CardContent className="pt-5">
-                        <p className="text-xs font-medium text-muted-foreground">En prueba</p>
-                        <p className="mt-1 text-2xl font-semibold text-foreground">{data.trialClients ?? 0}</p>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xs font-medium text-muted-foreground">En prueba</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <span className="text-2xl font-bold">{data.trialClients ?? 0}</span>
                     </CardContent>
                 </Card>
                 <Card>
-                    <CardContent className="pt-5">
-                        <p className="text-xs font-medium text-muted-foreground">Revenue generado</p>
-                        <p className="mt-1 text-2xl font-semibold text-foreground">{formatCurrency(data.totalRevenue ?? 0)}</p>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                            <Wallet className="w-4 h-4" /> Revenue generado
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <span className="text-2xl font-bold">{formatCurrency(data.totalRevenue ?? 0)}</span>
+                        <p className="text-xs text-muted-foreground mt-1">Cartera activa × RD$950</p>
                     </CardContent>
                 </Card>
                 <Card>
-                    <CardContent className="pt-5">
-                        <p className="text-xs font-medium text-muted-foreground">Comisión este mes</p>
-                        <p className="mt-1 text-2xl font-semibold text-green-600 dark:text-green-500">
-                            {formatCurrency(data.commissionThisMonth ?? 0)}
-                        </p>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                            <DollarSign className="w-4 h-4" /> Comisión este mes
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <span className="text-2xl font-bold text-green-600 dark:text-green-500">{formatCurrency(data.commissionThisMonth ?? 0)}</span>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Gráfica simple: últimos 6 meses */}
+            <Card className="mb-8 border-amber-500/20 bg-card">
+                <CardHeader>
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                        <Link2 className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        Tu link de referido
+                    </CardTitle>
+                    <CardDescription>
+                        Genera referidos compartiendo este enlace. Cuando se registren con plan de pago, ganarás comisión. Código: <span className="font-mono font-medium text-foreground">{data.referralCode}</span>
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <Input readOnly value={data.referralUrl ?? ""} className="flex-1 font-mono text-sm bg-muted/50" />
+                    <Button onClick={copyReferralUrl} variant="outline" size="sm" className="gap-2 shrink-0 border-amber-500/30 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300">
+                        <Copy className="h-4 w-4" /> Copiar
+                    </Button>
+                </CardContent>
+            </Card>
+
             {lastCommissions.length > 0 && (
                 <Card className="mb-8">
                     <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                            <TrendingUp className="h-4 w-4 text-amber-500" />
-                            Clientes activos — últimos meses
+                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4 text-amber-500" /> Evolución — Clientes activos por mes
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -227,12 +218,11 @@ export default function PartnerDashboardPage() {
                 </Card>
             )}
 
-            {/* Historial de comisiones */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-base font-semibold">Historial de comisiones</CardTitle>
+                    <CardTitle className="text-base font-semibold">Comisiones mensuales</CardTitle>
                     <CardDescription>
-                        Pago 30 días después del cierre del mes.
+                        Historial de comisiones. El pago se realiza 30 días después del cierre del mes.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

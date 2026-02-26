@@ -33,12 +33,14 @@ export default function OnboardingPage() {
             try {
                 const me = await api.getMe();
                 setUser(me || null);
+                const confirmed = me?.fiscalStatus?.confirmed?.trim() || "";
+                const noUsarComoFiscal = !confirmed || confirmed.toUpperCase() === "CONTRIBUYENTE REGISTRADO";
                 setForm((f) => ({
                     ...f,
-                    name: me?.name || f.name,
-                    rnc: me?.rnc || f.rnc,
-                    email: me?.email || f.email,
-                    confirmedFiscalName: me?.fiscalStatus?.confirmed || me?.name || f.confirmedFiscalName,
+                    name: me?.name ?? f.name,
+                    rnc: me?.rnc ?? f.rnc,
+                    email: me?.email ?? f.email,
+                    confirmedFiscalName: noUsarComoFiscal ? "" : confirmed,
                 }));
             } catch {
                 router.push("/login");
@@ -56,8 +58,10 @@ export default function OnboardingPage() {
         try {
             const res = await api.validateRncPost(clean);
             setRncValid(res?.valid ?? false);
-            if (res?.valid && res?.name) {
-                setForm((f) => ({ ...f, confirmedFiscalName: res.name || f.confirmedFiscalName }));
+            const nombreDesdeRnc = (res?.name || "").trim();
+            const esPlaceholder = nombreDesdeRnc.toUpperCase() === "CONTRIBUYENTE REGISTRADO";
+            if (res?.valid && nombreDesdeRnc && !esPlaceholder) {
+                setForm((f) => ({ ...f, confirmedFiscalName: nombreDesdeRnc || f.confirmedFiscalName }));
             }
             return res?.valid ?? false;
         } catch {
