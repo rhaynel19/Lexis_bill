@@ -1428,6 +1428,13 @@ async function handleLogin(req, res) {
 }
 
 // En Vercel todo /api/* va a Express: el cliente llama POST /api/login, debe estar aquí
+app.options('/api/login', (req, res) => {
+    res.set('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    res.set('Access-Control-Max-Age', '86400');
+    res.status(204).end();
+});
 app.post('/api/login', authLimiter, handleLogin);
 app.post('/api/auth/login', authLimiter, handleLogin);
 
