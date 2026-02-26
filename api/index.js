@@ -1368,7 +1368,8 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+// Manejador de login compartido: /api/login (cliente) y /api/auth/login (proxy interno)
+async function handleLogin(req, res) {
     try {
         const { email, password } = req.body;
         log.info({ action: 'login' }, 'Intento de login');
@@ -1393,8 +1394,6 @@ app.post('/api/auth/login', async (req, res) => {
 
         await User.findByIdAndUpdate(user._id, { lastLoginAt: new Date() });
 
-        // Cookie HttpOnly para rutas protegidas. Si la petición llega por proxy (ej. Vercel → api), usar
-        // el host del frontend (X-Forwarded-Host o COOKIE_DOMAIN) para que el navegador envíe la cookie al frontend.
         const forwardedHost = (req.get('x-forwarded-host') || '').split(',')[0].trim();
         const cookieDomain = process.env.COOKIE_DOMAIN || (forwardedHost || null);
         const cookieOpts = {
@@ -1426,7 +1425,11 @@ app.post('/api/auth/login', async (req, res) => {
         log.error({ err: error.message }, 'Error en login');
         res.status(500).json({ message: safeErrorMessage(error) });
     }
-});
+}
+
+// En Vercel todo /api/* va a Express: el cliente llama POST /api/login, debe estar aquí
+app.post('/api/login', authLimiter, handleLogin);
+app.post('/api/auth/login', authLimiter, handleLogin);
 
 // Recuperar contraseña: solicitar token por email
 app.post('/api/auth/forgot-password', async (req, res) => {
