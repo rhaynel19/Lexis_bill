@@ -24,9 +24,10 @@ function getSafeRedirect(redirect: string | null): string {
     return allowed ? path : "/dashboard";
 }
 
-/** Redirect post-login según rol: partner activo → /partner/dashboard; resto → dashboard o redirect permitido. */
+/** Redirect post-login: partner activo → /partner/dashboard; resto → dashboard o redirect permitido. */
 function getPostLoginPath(me: { role?: string; partner?: { status?: string } | null } | null, redirect: string | null): string {
-    if (me?.role === "partner" && me?.partner?.status === "active") {
+    const isActivePartner = me?.partner?.status === "active" || (me?.role === "partner" && me?.partner?.status === "active");
+    if (isActivePartner) {
         const path = redirect?.trim().split("?")[0] ?? "";
         if (path.startsWith("/partner")) return getSafeRedirect(redirect);
         return "/partner/dashboard";
@@ -108,11 +109,11 @@ function LoginForm() {
         const payload = { email, password: "[REDACTED]" };
         try {
             const { api } = await import("@/lib/api-service");
-            await api.login(email, password);
+            const loginRes = await api.login(email, password);
             localStorage.setItem(LAST_EMAIL_KEY, email);
             const me = await api.getMe();
             setUser(me || null);
-            setPostLoginPath(getPostLoginPath(me, searchParams.get("redirect")));
+            setPostLoginPath(getPostLoginPath(loginRes ?? me, searchParams.get("redirect")));
             setShowBiometric(true);
 
         } catch (err: any) {

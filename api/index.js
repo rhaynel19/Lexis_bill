@@ -1415,6 +1415,9 @@ async function handleLogin(req, res) {
         res.cookie('lexis_auth', token, cookieOpts);
 
         const sub = getUserSubscription(user);
+        let partner = null;
+        const p = await Partner.findOne({ userId: user._id }).lean();
+        if (p) partner = { referralCode: p.referralCode, status: p.status, tier: p.tier };
         log.info({ action: 'login', success: true }, 'Login exitoso');
         res.status(200).json({
             id: user._id,
@@ -1427,7 +1430,8 @@ async function handleLogin(req, res) {
             fiscalStatus: {
                 suggested: user.suggestedFiscalName,
                 confirmed: user.confirmedFiscalName
-            }
+            },
+            partner
         });
     } catch (error) {
         log.error({ err: error.message }, 'Error en login');

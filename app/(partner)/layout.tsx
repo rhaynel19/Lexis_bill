@@ -29,7 +29,7 @@ export default function PartnerLayout({
                     router.push("/login?redirect=" + encodeURIComponent("/partner/dashboard"));
                     return;
                 }
-                if (me.role !== "partner" || me.partner?.status !== "active") {
+                if (me.partner?.status !== "active") {
                     router.replace("/dashboard");
                     return;
                 }

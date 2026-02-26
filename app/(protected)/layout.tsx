@@ -35,7 +35,7 @@ export default function ProtectedLayout({
             try {
                 const me = await refresh();
                 if (me) {
-                    if (me.role === "partner" && me.partner?.status === "active") {
+                    if (me.partner?.status === "active") {
                         router.replace("/partner/dashboard");
                         setIsLoading(false);
                         setLoading(false);
