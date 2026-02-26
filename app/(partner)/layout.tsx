@@ -26,7 +26,7 @@ export default function PartnerLayout({
             try {
                 const me = await refresh();
                 if (!me) {
-                    router.push("/login?redirect=" + encodeURIComponent("/partner/dashboard"));
+                    router.replace("/");
                     return;
                 }
                 if (me.partner?.status !== "active") {
@@ -35,7 +35,7 @@ export default function PartnerLayout({
                 }
             } catch {
                 setUser(null);
-                router.push("/login?redirect=" + encodeURIComponent("/partner/dashboard"));
+                router.replace("/");
                 return;
             } finally {
                 setIsLoading(false);
@@ -48,7 +48,7 @@ export default function PartnerLayout({
     const handleLogout = async () => {
         await logout();
         toast.success("Sesión cerrada correctamente");
-        router.push("/login");
+        router.replace("/");
     };
 
     if (isLoading) {

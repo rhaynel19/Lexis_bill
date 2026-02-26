@@ -1547,9 +1547,12 @@ app.post('/api/auth/verify-email', async (req, res) => {
     }
 });
 
-// Logout: limpiar cookie HttpOnly
+// Logout: limpiar cookie con las mismas opciones que al setear (para que el navegador la borre bien)
 app.post('/api/auth/logout', (req, res) => {
-    res.clearCookie('lexis_auth', { path: '/', httpOnly: true });
+    const opts = { path: '/', httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax' };
+    const cookieDomain = process.env.COOKIE_DOMAIN || (req.get('x-forwarded-host') || '').split(',')[0].trim() || undefined;
+    if (cookieDomain) opts.domain = cookieDomain;
+    res.clearCookie('lexis_auth', opts);
     res.json({ success: true });
 });
 

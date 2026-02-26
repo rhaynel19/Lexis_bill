@@ -35,7 +35,7 @@ export default function ProtectedLayout({
             try {
                 const me = await refresh();
                 if (me) {
-                    if (me.partner?.status === "active") {
+                    if (me.partner?.status === "active" && me.role !== "admin") {
                         router.replace("/partner/dashboard");
                         setIsLoading(false);
                         setLoading(false);
@@ -52,12 +52,12 @@ export default function ProtectedLayout({
                         return;
                     }
                 } else {
-                    router.push("/login");
+                    router.replace("/");
                     return;
                 }
             } catch {
                 setUser(null);
-                router.push("/login");
+                router.replace("/");
                 return;
             } finally {
                 setIsLoading(false);
@@ -70,7 +70,7 @@ export default function ProtectedLayout({
     const handleLogout = async () => {
         await logout();
         toast.success("Sesión cerrada correctamente");
-        router.push("/login");
+        router.replace("/");
     };
 
     if (isLoading) {

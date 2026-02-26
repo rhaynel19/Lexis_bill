@@ -76,10 +76,14 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
                 }
                 const errPayload = { status: response.status, message: errorMessage, data: errorData };
 
-                // Sesión expirada o no autorizado: redirigir a login
+                // Sesión expirada o no autorizado: redirigir a login solo si estamos en una ruta protegida (evitar redirigir desde landing tras logout)
                 if (response.status === 401 && typeof window !== 'undefined') {
-                    toast.error("Tu sesión expiró o no es válida. Inicia sesión de nuevo.");
-                    window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+                    const path = window.location.pathname || '';
+                    const isPublic = ['/', '/login', '/registro', '/landing', '/recuperar-contrasena', '/restablecer-contrasena', '/unirse-como-partner', '/programa-partners'].some(p => path === p || path.startsWith(p + '?'));
+                    if (!isPublic) {
+                        toast.error("Tu sesión expiró o no es válida. Inicia sesión de nuevo.");
+                        window.location.href = `/login?redirect=${encodeURIComponent(path)}`;
+                    }
                     throw errPayload;
                 }
 

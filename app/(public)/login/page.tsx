@@ -24,8 +24,9 @@ function getSafeRedirect(redirect: string | null): string {
     return allowed ? path : "/dashboard";
 }
 
-/** Redirect post-login: partner activo → /partner/dashboard; resto → dashboard o redirect permitido. */
+/** Redirect post-login: admin → dashboard (acceso admin desde sidebar); partner activo (y no admin) → /partner/dashboard; resto → dashboard o redirect. */
 function getPostLoginPath(me: { role?: string; partner?: { status?: string } | null } | null, redirect: string | null): string {
+    if (me?.role === "admin") return getSafeRedirect(redirect) || "/dashboard";
     const isActivePartner = me?.partner?.status === "active" || (me?.role === "partner" && me?.partner?.status === "active");
     if (isActivePartner) {
         const path = redirect?.trim().split("?")[0] ?? "";

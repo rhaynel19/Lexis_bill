@@ -59,8 +59,9 @@ export default function PartnerDashboardPage() {
             const d = await api.getPartnerDashboard();
             setData(d);
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : "";
-            if (msg.includes("403") || msg.includes("Acceso denegado")) {
+            const err = e as { status?: number; message?: string } | undefined;
+            if (err?.status === 403) {
+                toast.error("No tienes acceso al panel partner. Redirigiendo al dashboard.");
                 router.replace("/dashboard");
                 return;
             }
