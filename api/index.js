@@ -1093,10 +1093,13 @@ const verifyAdmin = (req, res, next) => {
     next();
 };
 
-/** Solo cuentas cliente (user/admin). Rechaza partners en endpoints de facturación/NCF/reportes. */
+/** Solo cuentas cliente (user/admin). No se puede ser partner y user con el mismo correo: partners no acceden a facturación. */
 const verifyClient = (req, res, next) => {
     if (req.user && req.user.role === 'partner') {
-        return res.status(403).json({ message: 'Acceso denegado. Esta función es solo para cuentas de cliente.' });
+        return res.status(403).json({
+            message: 'No puedes usar la facturación con esta cuenta. Es una cuenta partner; inicia sesión para acceder al panel de partners.',
+            code: 'ACCOUNT_IS_PARTNER'
+        });
     }
     next();
 };
@@ -1297,10 +1300,19 @@ app.post('/api/auth/register', async (req, res) => {
             return res.status(400).json({ message: passwordValidation.error });
         }
 
-        // Verificar si el usuario ya existe antes de intentar guardar (más limpio que el catch de mongo)
+        // Un correo = una sola cuenta. No se puede ser partner y user (facturación) con el mismo correo.
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ message: 'Este correo ya está registrado.' });
+            if (existingUser.role === 'partner') {
+                return res.status(400).json({
+                    message: 'Este correo pertenece a una cuenta partner. No se puede usar el mismo correo para facturación. Inicia sesión para acceder al panel de partners.',
+                    code: 'EMAIL_IS_PARTNER'
+                });
+            }
+            return res.status(400).json({
+                message: 'Este correo ya está registrado. Inicia sesión o usa "¿Olvidó su contraseña?" si no recuerdas tu acceso.',
+                code: 'EMAIL_ALREADY_REGISTERED'
+            });
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
@@ -1370,7 +1382,10 @@ app.post('/api/auth/register', async (req, res) => {
     } catch (error) {
         log.error({ err: error.message }, 'Error en registro');
         if (error.code === 11000) {
-            return res.status(400).json({ message: 'El correo o el RNC ya están registrados.' });
+            return res.status(400).json({
+                message: 'Este correo ya está registrado. Inicia sesión o usa "¿Olvidó su contraseña?" si no recuerdas tu acceso.',
+                code: 'EMAIL_ALREADY_REGISTERED'
+            });
         }
         res.status(500).json({ message: 'Error interno al crear el usuario', error: error.message });
     }

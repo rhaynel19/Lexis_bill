@@ -1,7 +1,8 @@
+/* Bar height is set via inline --bar-height for dynamic values */
 .bar {
-  width: 100%;
-  height: var(--bar-height, 4%);
+  height: var(--bar-height, 6%);
   min-height: 4px;
+  width: 100%;
   border-radius: 4px 4px 0 0;
   background-color: rgb(245 158 11 / 0.8);
   transition: height 0.2s;

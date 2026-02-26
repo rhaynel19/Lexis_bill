@@ -2,24 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import dashboardStyles from "./partner-dashboard.module.css";
-import { Copy, Users, DollarSign, TrendingUp, Link2, Loader2, Crown, Zap, Star, CheckCircle } from "lucide-react";
+import { Copy, TrendingUp, Link2, Loader2, CheckCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
-function BarChartBar({ heightPercent, title }: { heightPercent: number; title: string }) {
-    const ref = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-        if (ref.current) {
-            ref.current.style.setProperty("--bar-height", `${Math.max(heightPercent, 4)}%`);
-        }
-    }, [heightPercent]);
-    return <div ref={ref} className={dashboardStyles.bar} title={title} />;
-}
+import styles from "./partner-dashboard.module.css";
 
 interface PartnerCommission {
     month?: string;
@@ -42,11 +31,19 @@ interface PartnerDashboard {
     commissions?: PartnerCommission[];
 }
 
-const TIER_LABELS: Record<string, { label: string; icon: typeof Star; color: string }> = {
-    starter: { label: "Starter", icon: Star, color: "text-slate-600" },
-    growth: { label: "Growth", icon: Zap, color: "text-amber-600" },
-    elite: { label: "Elite", icon: Crown, color: "text-amber-500" },
-};
+const MONTH_NAMES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+function Bar({ heightPercent, title }: { heightPercent: number; title: string }) {
+    const ref = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (ref.current) ref.current.style.setProperty("--bar-height", `${Math.max(heightPercent, 6)}%`);
+    }, [heightPercent]);
+    return <div ref={ref} className={styles.bar} title={title} />;
+}
+
+function formatCurrency(n: number) {
+    return new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 0 }).format(n || 0);
+}
 
 export default function PartnerDashboardPage() {
     const router = useRouter();
@@ -67,7 +64,7 @@ export default function PartnerDashboardPage() {
                 router.replace("/dashboard");
                 return;
             }
-            setLoadError("No se pudo cargar el dashboard. Revisa tu conexión e intenta de nuevo.");
+            setLoadError("No se pudo cargar el panel. Revisa tu conexión e intenta de nuevo.");
         } finally {
             setIsLoading(false);
         }
@@ -80,31 +77,25 @@ export default function PartnerDashboardPage() {
     const copyReferralUrl = () => {
         if (data?.referralUrl) {
             navigator.clipboard.writeText(data.referralUrl);
-            toast.success("Link copiado al portapapeles");
+            toast.success("Link copiado");
         }
     };
 
-    const formatCurrency = (n: number) =>
-        new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 0 }).format(n || 0);
-
-    const MONTH_NAMES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-
     if (isLoading) {
         return (
-            <div className="container mx-auto px-4 py-8 max-w-5xl flex justify-center min-h-[400px] items-center">
-                <Loader2 className="w-10 h-10 animate-spin text-amber-500" />
+            <div className="flex min-h-[50vh] items-center justify-center">
+                <Loader2 className="h-10 w-10 animate-spin text-amber-500" />
             </div>
         );
     }
 
     if (loadError) {
         return (
-            <div className="container mx-auto px-4 py-8 max-w-5xl">
-                <Breadcrumbs items={[{ label: "Partner", href: "/partner/dashboard" }, { label: "Dashboard" }]} className="mb-4" />
-                <div className="flex flex-col items-center justify-center min-h-[300px] gap-4 p-8 rounded-xl bg-destructive/5 border border-destructive/20">
-                    <p className="text-destructive font-medium text-center">{loadError}</p>
+            <div className="container mx-auto max-w-4xl px-4 py-8">
+                <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-border bg-card p-8">
+                    <p className="text-center font-medium text-destructive">{loadError}</p>
                     <Button onClick={fetchData} variant="outline" className="gap-2">
-                        <Loader2 className="w-4 h-4" />
+                        <Loader2 className="h-4 w-4" />
                         Reintentar
                     </Button>
                 </div>
@@ -114,87 +105,118 @@ export default function PartnerDashboardPage() {
 
     if (!data) return null;
 
-    const tierInfo = TIER_LABELS[data.tier ?? "starter"] ?? TIER_LABELS.starter;
-    const TierIcon = tierInfo.icon;
+    const commissionRatePct = ((data.commissionRate ?? 0) * 100).toFixed(0);
+    const lastCommissions = (data.commissions ?? []).slice(0, 6).reverse();
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-5xl">
-            <Breadcrumbs items={[{ label: "Partner", href: "/partner/dashboard" }, { label: "Dashboard" }]} className="mb-4" />
+        <div className="container mx-auto max-w-4xl px-4 py-8">
+            {/* Mensaje de bienvenida recién aprobado */}
             {data.showWelcomeMessage && (
-                <div className="mb-6 p-4 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 shrink-0 text-green-600 dark:text-green-400" />
-                    <p className="text-sm font-medium">
-                        Tu solicitud fue aprobada. Ya puedes compartir tu link de referido y empezar a ganar comisiones.
-                    </p>
+                <div className="mb-6 flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-800 dark:bg-green-950/30 dark:text-green-200">
+                    <CheckCircle className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
+                    Tu solicitud fue aprobada. Comparte tu link para empezar a ganar comisiones.
                 </div>
             )}
-            <div className="flex justify-between items-start mb-8">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-foreground font-serif lowercase tracking-tighter">
-                        Panel Partner
-                    </h1>
-                    <p className="text-slate-500 dark:text-muted-foreground font-medium">
-                        Métricas, referidos y comisiones
+
+            {/* Título */}
+            <div className="mb-8">
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                    Panel Partner
+                </h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                    Comisión {commissionRatePct}% por cliente activo
+                </p>
+            </div>
+
+            {/* Bloque principal: link de referido */}
+            <Card className="mb-8 border-amber-500/20 bg-amber-50/30 dark:bg-amber-950/10">
+                <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <Link2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        Tu link de referido
+                    </CardTitle>
+                    <CardDescription>
+                        Comparte este enlace; cuando se registren con plan de pago, ganarás comisión.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <Input
+                        readOnly
+                        value={data.referralUrl ?? ""}
+                        className="flex-1 font-mono text-sm"
+                    />
+                    <Button
+                        onClick={copyReferralUrl}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 shrink-0 border-amber-500/30 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
+                    >
+                        <Copy className="h-4 w-4" />
+                        Copiar
+                    </Button>
+                </CardContent>
+                <CardContent className="pt-0">
+                    <p className="text-xs text-muted-foreground">
+                        Código: <span className="font-mono font-medium text-foreground">{data.referralCode}</span>
                     </p>
-                </div>
-            </div>
+                </CardContent>
+            </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                <Card className="border-amber-200/50 dark:border-amber-900/30 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/20 dark:to-background">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                            <TierIcon className={`w-4 h-4 ${tierInfo.color}`} />
-                            Nivel {tierInfo.label}
-                        </CardTitle>
-                        <CardDescription>Comisión {((data.commissionRate ?? 0) * 100).toFixed(0)}% por cliente activo</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-2xl font-bold text-foreground">{data.referralCode}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Tu código de referido</p>
+            {/* Métricas */}
+            <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <Card>
+                    <CardContent className="pt-5">
+                        <p className="text-xs font-medium text-muted-foreground">Clientes activos</p>
+                        <p className="mt-1 text-2xl font-semibold text-amber-600 dark:text-amber-400">
+                            {data.activeClients ?? 0}
+                        </p>
                     </CardContent>
                 </Card>
-                <Card className="border-slate-200 dark:border-border">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                            <Link2 className="w-4 h-4" />
-                            Tu link de referido
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex gap-2 items-center">
-                        <Input
-                            readOnly
-                            value={data.referralUrl || ""}
-                            className="flex-1 text-sm bg-muted/50 font-mono truncate"
-                        />
-                        <Button onClick={copyReferralUrl} variant="outline" size="icon" title="Copiar link" className="shrink-0">
-                            <Copy className="w-4 h-4" />
-                        </Button>
+                <Card>
+                    <CardContent className="pt-5">
+                        <p className="text-xs font-medium text-muted-foreground">En prueba</p>
+                        <p className="mt-1 text-2xl font-semibold text-foreground">{data.trialClients ?? 0}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="pt-5">
+                        <p className="text-xs font-medium text-muted-foreground">Revenue generado</p>
+                        <p className="mt-1 text-2xl font-semibold text-foreground">{formatCurrency(data.totalRevenue ?? 0)}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="pt-5">
+                        <p className="text-xs font-medium text-muted-foreground">Comisión este mes</p>
+                        <p className="mt-1 text-2xl font-semibold text-green-600 dark:text-green-500">
+                            {formatCurrency(data.commissionThisMonth ?? 0)}
+                        </p>
                     </CardContent>
                 </Card>
             </div>
 
-            {data.commissions && data.commissions.length > 0 && (
+            {/* Gráfica simple: últimos 6 meses */}
+            {lastCommissions.length > 0 && (
                 <Card className="mb-8">
-                    <CardHeader>
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-amber-500" />
-                            Evolución — Clientes activos por mes
+                    <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                            <TrendingUp className="h-4 w-4 text-amber-500" />
+                            Clientes activos — últimos meses
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex items-end gap-2 h-32">
-                            {[...(data.commissions || [])].reverse().slice(0, 12).map((c, i) => {
-                                const commissions = data.commissions || [];
-                                const max = Math.max(...commissions.map((x) => x.activeClients || 0), 1);
-                                const h = max ? ((c.activeClients || 0) / max) * 100 : 0;
+                        <div className="flex items-end gap-2 h-24">
+                            {lastCommissions.map((c, i) => {
+                                const max = Math.max(...lastCommissions.map((x) => x.activeClients ?? 0), 1);
+                                const h = max ? ((c.activeClients ?? 0) / max) * 100 : 0;
+                                const monthNum = parseInt((c.month ?? "01").split("-")[1] || "1", 10) - 1;
                                 return (
-                                    <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
-                                        <BarChartBar
+                                    <div key={i} className="flex flex-1 flex-col items-center gap-1 min-w-0">
+                                        <Bar
                                             heightPercent={h}
-                                            title={`${c.activeClients} clientes — ${MONTH_NAMES[parseInt((c.month || "01").split("-")[1] || "1") - 1]} ${c.year}`}
+                                            title={`${c.activeClients ?? 0} — ${MONTH_NAMES[monthNum]} ${c.year}`}
                                         />
-                                        <span className="text-[10px] text-muted-foreground truncate w-full text-center">
-                                            {MONTH_NAMES[parseInt((c.month || "01").split("-")[1] || "1") - 1]}
+                                        <span className="text-[10px] text-muted-foreground">
+                                            {MONTH_NAMES[monthNum]}
                                         </span>
                                     </div>
                                 );
@@ -204,51 +226,13 @@ export default function PartnerDashboardPage() {
                 </Card>
             )}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                            <Users className="w-3.5 h-3.5" /> Clientes activos
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <span className="text-2xl font-bold text-amber-600 dark:text-amber-500">{data.activeClients ?? 0}</span>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground">En prueba</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <span className="text-2xl font-bold text-slate-600 dark:text-muted-foreground">{data.trialClients ?? 0}</span>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                            <TrendingUp className="w-3.5 h-3.5" /> Revenue generado
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <span className="text-2xl font-bold">{formatCurrency(data.totalRevenue ?? 0)}</span>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                            <DollarSign className="w-3.5 h-3.5" /> Comisión este mes
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <span className="text-2xl font-bold text-green-600 dark:text-green-500">{formatCurrency(data.commissionThisMonth ?? 0)}</span>
-                    </CardContent>
-                </Card>
-            </div>
-
+            {/* Historial de comisiones */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg font-bold">Historial de comisiones</CardTitle>
-                    <CardDescription>Comisiones calculadas mensualmente. Pago 30 días después del cobro.</CardDescription>
+                    <CardTitle className="text-base font-semibold">Historial de comisiones</CardTitle>
+                    <CardDescription>
+                        Pago 30 días después del cierre del mes.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     {(data.commissions?.length ?? 0) > 0 ? (
@@ -262,20 +246,24 @@ export default function PartnerDashboardPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {(data.commissions || []).map((c, i) => (
+                                {(data.commissions ?? []).map((c, i) => (
                                     <TableRow key={i}>
                                         <TableCell className="font-medium">
-                                            {MONTH_NAMES[parseInt((c.month || "01").split("-")[1] || "1") - 1]} {c.year}
+                                            {MONTH_NAMES[parseInt((c.month ?? "01").split("-")[1] || "1", 10) - 1]} {c.year}
                                         </TableCell>
-                                        <TableCell className="text-center">{c.activeClients}</TableCell>
-                                        <TableCell className="text-right font-semibold">{formatCurrency(c.amount ?? 0)}</TableCell>
+                                        <TableCell className="text-center">{c.activeClients ?? 0}</TableCell>
+                                        <TableCell className="text-right font-medium">{formatCurrency(c.amount ?? 0)}</TableCell>
                                         <TableCell className="text-right">
-                                            <span className={`text-xs px-2 py-1 rounded-full ${
-                                                c.status === "paid" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                                                c.status === "pending" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
-                                                "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                                            }`}>
-                                                {c.status === "paid" ? "Pagado" : c.status === "pending" ? "Pendiente" : c.status}
+                                            <span
+                                                className={`rounded-full px-2 py-0.5 text-xs ${
+                                                    c.status === "paid"
+                                                        ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                                                        : c.status === "pending"
+                                                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                                                        : "bg-muted text-muted-foreground"
+                                                }`}
+                                            >
+                                                {c.status === "paid" ? "Pagado" : c.status === "pending" ? "Pendiente" : (c.status ?? "—")}
                                             </span>
                                         </TableCell>
                                     </TableRow>
@@ -283,7 +271,9 @@ export default function PartnerDashboardPage() {
                             </TableBody>
                         </Table>
                     ) : (
-                        <p className="text-center text-muted-foreground py-8">Aún no hay comisiones registradas. Refiere clientes para empezar a ganar.</p>
+                        <p className="py-8 text-center text-sm text-muted-foreground">
+                            Aún no hay comisiones. Refiere clientes para empezar.
+                        </p>
                     )}
                 </CardContent>
             </Card>
