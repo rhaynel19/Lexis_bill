@@ -33,6 +33,28 @@ function getTransporter() {
 }
 
 /**
+ * Envía email con enlace para verificar la dirección de correo (evitar correos falsos).
+ * @param {string} email - Correo del usuario
+ * @param {string} verifyUrl - URL completa: https://dominio.com/verificar-correo?token=XXX
+ */
+async function sendVerificationEmail(email, verifyUrl) {
+    const transport = getTransporter();
+    const appName = process.env.APP_NAME || 'Lexis Bill';
+    if (transport) {
+        await transport.sendMail({
+            from: process.env.SMTP_FROM || process.env.SMTP_USER,
+            to: email,
+            subject: `Verifica tu correo - ${appName}`,
+            text: `Hola,\n\nPara activar tu cuenta y poder iniciar sesión, verifica tu correo abriendo este enlace (válido 24 horas):\n\n${verifyUrl}\n\nSi no creaste una cuenta en ${appName}, ignora este correo.\n\n— ${appName}`,
+            html: `<p>Hola,</p><p>Para activar tu cuenta y poder iniciar sesión, <a href="${verifyUrl}">verifica tu correo haciendo clic aquí</a> (el enlace es válido 24 horas).</p><p>Si no creaste una cuenta en ${appName}, ignora este correo.</p><p>— ${appName}</p>`
+        });
+        log.info({ email }, 'Email verificación enviado');
+        return;
+    }
+    log.info({ email, verifyUrl }, 'Verificación de correo (sin SMTP): usar esta URL en dev');
+}
+
+/**
  * Envía email con enlace para restablecer contraseña.
  * @param {string} email - Correo del usuario
  * @param {string} resetUrl - URL completa: https://dominio.com/restablecer-contrasena?token=XXX
@@ -115,4 +137,4 @@ async function send606607Reminder(email, period) {
     log.info({ email, period }, 'Recordatorio 606/607 (sin SMTP)');
 }
 
-module.exports = { sendPasswordReset, sendPaymentApproved, sendInvoiceCreated, send606607Reminder, getTransporter };
+module.exports = { sendVerificationEmail, sendPasswordReset, sendPaymentApproved, sendInvoiceCreated, send606607Reminder, getTransporter };

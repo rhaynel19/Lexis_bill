@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserCircle, Search, Download, Filter, Check, Loader2, Trash2, ArrowUp, ArrowDown, Eye, Lock, Unlock } from "lucide-react";
+import { UserCircle, Search, Download, Filter, Check, Loader2, Trash2, ArrowUp, ArrowDown, Eye, Lock, Unlock, Users, Clock, Ban, Handshake } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -18,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import Link from "next/link";
 import type { AdminUser } from "@/lib/api-service";
 import { cn } from "@/lib/utils";
 
@@ -230,7 +232,6 @@ export default function AdminUsuariosPage() {
     const handleExportCsv = () => {
         const headers = ["Nombre", "Email", "RNC", "Rol", "Plan", "Estado suscripción", "Días hasta bloqueo", "Onboarding", "Partner", "Fecha registro", "Último acceso"];
         const rows = list.map((u) => {
-            const days = getDaysUntilBlock(u);
             return [
                 displayName(u),
                 u.email ?? "",
@@ -238,7 +239,7 @@ export default function AdminUsuariosPage() {
                 roleLabel[u.role] ?? u.role,
                 planLabel[u.plan] ?? u.plan,
                 u.subscriptionStatus ?? "",
-                days !== null ? `${days} días` : "—",
+                getDaysUntilBlockLabel(u),
                 u.onboardingCompleted ? "Sí" : "No",
                 u.partner ? `${u.partner.referralCode} (${u.partner.status})` : "",
                 formatDate(u.createdAt),
@@ -257,6 +258,41 @@ export default function AdminUsuariosPage() {
     };
 
     const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    /** Para columna "Días hasta bloqueo": texto cuando no hay días (bloqueado/vencido/—) */
+    const getDaysUntilBlockLabel = (u: AdminUser): string => {
+        if (u.blocked) return "Bloqueado";
+        const status = (u.subscriptionStatus || "").toLowerCase();
+        if (status === "bloqueado" || status === "expired") return "Vencido";
+        const days = getDaysUntilBlock(u);
+        if (days === null) return "—";
+        return `${days} ${days === 1 ? "día" : "días"}`;
+    };
+
+    /** Ordenar lista actual por días hasta bloqueo (client-side, para opción en selector) */
+    const [clientSortDays, setClientSortDays] = useState<boolean>(false);
+    const displayList = clientSortDays
+        ? [...list].sort((a, b) => {
+            const da = getDaysUntilBlock(a);
+            const db = getDaysUntilBlock(b);
+            if (da === null && db === null) return 0;
+            if (da === null) return 1;
+            if (db === null) return -1;
+            return da - db;
+        })
+        : list;
+
+    /** KPIs de la página actual (resumen visual) */
+    const pageStats = {
+        activos: list.filter((u) => !u.blocked && (u.subscriptionStatus === "Activo" || u.subscriptionStatus === "active")).length,
+        trial: list.filter((u) => !u.blocked && (u.subscriptionStatus || "").toLowerCase() === "trial").length,
+        porVencer: list.filter((u) => {
+            const d = getDaysUntilBlock(u);
+            return d !== null && d <= 7;
+        }).length,
+        bloqueados: list.filter((u) => u.blocked).length,
+        partners: list.filter((u) => u.partner).length,
+    };
 
     if (isLoading && list.length === 0) {
         return (
@@ -280,6 +316,47 @@ export default function AdminUsuariosPage() {
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">Listado de personas registradas en Lexis Bill. Busca por nombre, email o RNC.</p>
             </div>
+
+            {/* KPIs resumen (página actual) */}
+            {list.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                    <Card className="p-3">
+                        <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-green-600" />
+                            <span className="text-xs font-medium text-muted-foreground">Activos (pág.)</span>
+                        </div>
+                        <p className="text-xl font-bold mt-1">{pageStats.activos}</p>
+                    </Card>
+                    <Card className="p-3">
+                        <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-amber-600" />
+                            <span className="text-xs font-medium text-muted-foreground">Trial (pág.)</span>
+                        </div>
+                        <p className="text-xl font-bold mt-1">{pageStats.trial}</p>
+                    </Card>
+                    <Card className="p-3">
+                        <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-orange-600" />
+                            <span className="text-xs font-medium text-muted-foreground">Por vencer ≤7 días</span>
+                        </div>
+                        <p className="text-xl font-bold mt-1">{pageStats.porVencer}</p>
+                    </Card>
+                    <Card className="p-3">
+                        <div className="flex items-center gap-2">
+                            <Ban className="w-4 h-4 text-red-600" />
+                            <span className="text-xs font-medium text-muted-foreground">Bloqueados (pág.)</span>
+                        </div>
+                        <p className="text-xl font-bold mt-1">{pageStats.bloqueados}</p>
+                    </Card>
+                    <Card className="p-3">
+                        <div className="flex items-center gap-2">
+                            <Handshake className="w-4 h-4 text-blue-600" />
+                            <span className="text-xs font-medium text-muted-foreground">Partners (pág.)</span>
+                        </div>
+                        <p className="text-xl font-bold mt-1">{pageStats.partners}</p>
+                    </Card>
+                </div>
+            )}
 
             <Card>
                 <CardHeader className="flex flex-col gap-4">
@@ -346,13 +423,18 @@ export default function AdminUsuariosPage() {
                                 <SelectItem value="inactive_30">Inactivos (30+ días)</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Select value={`${sortBy}_${sortOrder}`} onValueChange={(v) => {
-                            const [s, o] = v.split("_");
-                            setSortBy(s);
-                            setSortOrder(o || "desc");
+                        <Select value={clientSortDays ? "daysUntilBlock_asc" : `${sortBy}_${sortOrder}`} onValueChange={(v) => {
+                            if (v === "daysUntilBlock_asc") {
+                                setClientSortDays(true);
+                            } else {
+                                setClientSortDays(false);
+                                const [s, o] = v.split("_");
+                                setSortBy(s);
+                                setSortOrder(o || "desc");
+                            }
                             setPage(1);
                         }}>
-                            <SelectTrigger className="w-[180px]">
+                            <SelectTrigger className="w-[200px]">
                                 <SelectValue placeholder="Ordenar por" />
                             </SelectTrigger>
                             <SelectContent>
@@ -374,6 +456,11 @@ export default function AdminUsuariosPage() {
                                 <SelectItem value="createdAt_asc">
                                     <span className="flex items-center gap-2">
                                         <ArrowUp className="w-3.5 h-3.5" /> Registro (antiguo)
+                                    </span>
+                                </SelectItem>
+                                <SelectItem value="daysUntilBlock_asc">
+                                    <span className="flex items-center gap-2">
+                                        <Clock className="w-3.5 h-3.5" /> Días hasta bloqueo (vencer primero)
                                     </span>
                                 </SelectItem>
                             </SelectContent>
@@ -402,7 +489,18 @@ export default function AdminUsuariosPage() {
                                             <TableHead>Rol</TableHead>
                                             <TableHead>Plan</TableHead>
                                             <TableHead>Estado</TableHead>
-                                            <TableHead>Días hasta bloqueo</TableHead>
+                                            <TableHead>
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span className="cursor-help border-b border-dashed border-muted-foreground">Días hasta bloqueo</span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top" className="max-w-xs">
+                                                            Días hasta vencimiento (trial) o días de gracia restantes. Si ya está bloqueado o vencido se muestra así.
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </TableHead>
                                             <TableHead>Onboarding</TableHead>
                                             <TableHead>Partner</TableHead>
                                             <TableHead>Registro</TableHead>
@@ -411,7 +509,7 @@ export default function AdminUsuariosPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {list.map((u) => (
+                                        {displayList.map((u) => (
                                             <TableRow
                                                 key={u.id}
                                                 className="cursor-pointer hover:bg-muted/50"
@@ -438,10 +536,13 @@ export default function AdminUsuariosPage() {
                                                 <TableCell className="text-xs">
                                                     {(() => {
                                                         const days = getDaysUntilBlock(u);
-                                                        if (days === null) return "—";
+                                                        const label = getDaysUntilBlockLabel(u);
+                                                        if (label === "Bloqueado") return <span className="text-red-600 dark:text-red-400 font-medium">Bloqueado</span>;
+                                                        if (label === "Vencido") return <span className="text-muted-foreground">Vencido</span>;
+                                                        if (label === "—") return "—";
                                                         return (
-                                                            <span className={days <= 7 ? "text-amber-600 dark:text-amber-400 font-medium" : "text-muted-foreground"}>
-                                                                {days} {days === 1 ? "día" : "días"}
+                                                            <span className={days !== null && days <= 7 ? "text-amber-600 dark:text-amber-400 font-medium" : "text-muted-foreground"}>
+                                                                {label}
                                                             </span>
                                                         );
                                                     })()}
@@ -449,9 +550,20 @@ export default function AdminUsuariosPage() {
                                                 <TableCell>{u.onboardingCompleted ? "Sí" : "No"}</TableCell>
                                                 <TableCell>
                                                     {u.partner ? (
-                                                        <span className="text-xs text-amber-600 dark:text-amber-400" title={u.partner.status}>
-                                                            {u.partner.referralCode}
-                                                        </span>
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <Link href="/admin/partners" className="text-xs font-medium text-amber-600 dark:text-amber-400 hover:underline" onClick={(e) => e.stopPropagation()}>
+                                                                {u.partner.referralCode}
+                                                            </Link>
+                                                            <span className={cn(
+                                                                "text-[10px] px-1.5 py-0.5 rounded",
+                                                                (u.partner.status || "").toLowerCase() === "active" && "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+                                                                (u.partner.status || "").toLowerCase() === "pending" && "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+                                                                (u.partner.status || "").toLowerCase() === "rejected" && "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
+                                                                (u.partner.status || "").toLowerCase() === "suspended" && "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+                                                            )}>
+                                                                {(u.partner.status || "—") === "active" ? "Activo" : (u.partner.status || "—") === "pending" ? "Pend." : (u.partner.status || "—") === "rejected" ? "Rech." : (u.partner.status || "—") === "suspended" ? "Susp." : u.partner.status || "—"}
+                                                            </span>
+                                                        </div>
                                                     ) : "—"}
                                                 </TableCell>
                                                 <TableCell className="text-muted-foreground text-xs whitespace-nowrap">{formatDate(u.createdAt)}</TableCell>
@@ -492,9 +604,18 @@ export default function AdminUsuariosPage() {
                                                                         <Unlock className="w-3.5 h-3.5 mr-1" /> Desbloquear
                                                                     </Button>
                                                                 ) : (
-                                                                    <Button variant="outline" size="sm" className="text-amber-600 hover:bg-amber-500/10 border-amber-500/50" onClick={() => handleBlock(u.id)} title="Bloquear acceso (no podrá iniciar sesión)">
-                                                                        <Lock className="w-3.5 h-3.5 mr-1" /> Bloquear acceso
-                                                                    </Button>
+                                                                    <TooltipProvider>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <Button variant="outline" size="sm" className="text-amber-600 hover:bg-amber-500/10 border-amber-500/50" onClick={() => handleBlock(u.id)}>
+                                                                                    <Lock className="w-3.5 h-3.5 mr-1" /> Bloquear acceso
+                                                                                </Button>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent side="left" className="max-w-xs">
+                                                                                Bloquear acceso: el usuario no podrá iniciar sesión. Para gestionar su estado como partner (aprobar/suspender/rechazar), usa Programa Partners.
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    </TooltipProvider>
                                                                 )}
                                                                 {!u.blocked && !isUserActive(u) && (
                                                                     <Button variant="outline" size="sm" className="text-green-600 hover:bg-green-500/10 border-green-500/50" onClick={() => handleActivate(u.id)}>
@@ -605,6 +726,11 @@ export default function AdminUsuariosPage() {
                                 <div>
                                     <p className="text-sm font-medium text-muted-foreground">Partner</p>
                                     <p className="text-amber-600 dark:text-amber-400">{detailData.partner.referralCode} ({detailData.partner.status})</p>
+                                    <Button asChild variant="outline" size="sm" className="mt-2 gap-2">
+                                        <Link href="/admin/partners">
+                                            <Handshake className="w-4 h-4" /> Ver en Programa Partners
+                                        </Link>
+                                    </Button>
                                 </div>
                             )}
                             <div>

@@ -980,6 +980,18 @@ passwordResetSchema.index({ token: 1 });
 passwordResetSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 const PasswordReset = mongoose.models.PasswordReset || mongoose.model('PasswordReset', passwordResetSchema);
 
+// Verificación de correo (evitar cuentas con correos falsos o no existentes)
+const emailVerifySchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    token: { type: String, required: true, unique: true },
+    expiresAt: { type: Date, required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+emailVerifySchema.index({ token: 1 });
+emailVerifySchema.index({ userId: 1 });
+emailVerifySchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+const EmailVerify = mongoose.models.EmailVerify || mongoose.model('EmailVerify', emailVerifySchema);
+
 function generateResetToken() {
     return require('crypto').randomBytes(32).toString('hex');
 }
@@ -1299,10 +1311,17 @@ app.post('/api/auth/register', async (req, res) => {
         if (!email) {
             return res.status(400).json({ message: 'El correo electrónico no es válido.' });
         }
+        if (process.env.BLOCK_DISPOSABLE_EMAILS !== 'false') {
+            const disposableDomains = ['mailinator.com', 'guerrillamail.com', '10minutemail.com', 'tempmail.com', 'throwaway.email', 'fakeinbox.com', 'trashmail.com', 'yopmail.com', 'getnada.com', 'mailnesia.com', 'temp-mail.org', 'maildrop.cc', 'sharklasers.com', 'guerrillamail.info', 'grr.la', 'discard.email', 'dispostable.com', 'mailinator2.com', 'inboxkitten.com', 'minuteinbox.com'];
+            const domain = (email.split('@')[1] || '').toLowerCase();
+            if (disposableDomains.some(d => domain === d || domain.endsWith('.' + d))) {
+                return res.status(400).json({ message: 'No se permiten correos temporales o desechables. Usa un correo profesional o personal real.' });
+            }
+        }
         if (!name || name.length < 2) {
             return res.status(400).json({ message: 'El nombre es requerido (mínimo 2 caracteres).' });
         }
-        
+
         // Validar fortaleza de contraseña
         const passwordValidation = validatePassword(password);
         if (!passwordValidation.valid) {
@@ -1387,8 +1406,31 @@ app.post('/api/auth/register', async (req, res) => {
             }
         }
 
+        // === Verificación de correo: evita cuentas con correos falsos o inexistentes ===
+        const verificationToken = generateResetToken();
+        const verifyExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 h
+        try {
+            await EmailVerify.deleteMany({ userId: newUser._id });
+            await EmailVerify.create({ userId: newUser._id, token: verificationToken, expiresAt: verifyExpiresAt });
+            const baseUrl = getBaseUrl(req);
+            const verifyUrl = `${baseUrl}/verificar-correo?token=${verificationToken}`;
+            if (process.env.SEND_VERIFICATION_EMAIL !== 'false') {
+                const mailer = require('./mailer');
+                if (typeof mailer.sendVerificationEmail === 'function') await mailer.sendVerificationEmail(newUser.email, verifyUrl);
+                else log.info({ email: newUser.email, verifyUrl }, 'Verificación (mailer.sendVerificationEmail no definido)');
+            } else {
+                log.info({ email: newUser.email, verifyUrl }, 'Verificación (SEND_VERIFICATION_EMAIL=false, URL en log para dev)');
+            }
+        } catch (verifyErr) {
+            log.warn({ err: verifyErr && verifyErr.message }, 'No se pudo enviar email de verificación; usuario creado.');
+        }
+
         log.info({ action: 'register', success: true, isPartnerRegistration: !!isPartnerRegistration }, 'Usuario creado');
-        res.status(201).json({ message: 'Usuario registrado exitosamente', plan: status });
+        res.status(201).json({
+            message: 'Usuario registrado. Revisa tu correo para verificar tu cuenta y poder iniciar sesión. Si no lo recibes, revisa spam o usa "Reenviar verificación" en la pantalla de login.',
+            plan: status,
+            requiresEmailVerification: true
+        });
     } catch (error) {
         log.error({ err: error.message }, 'Error en registro');
         if (error.code === 11000) {
@@ -1421,6 +1463,17 @@ async function handleLogin(req, res) {
         if (user.blocked) {
             log.warn('Login fallido: cuenta bloqueada');
             return res.status(403).json({ message: 'Cuenta bloqueada. Contacte a soporte.', code: 'ACCOUNT_BLOCKED' });
+        }
+
+        // Requerir correo verificado para usuarios creados después de la fecha (evitar correos falsos)
+        const verificationCutoff = process.env.VERIFICATION_REQUIRED_AFTER ? new Date(process.env.VERIFICATION_REQUIRED_AFTER) : new Date('2026-02-27T00:00:00Z');
+        const createdAt = user.createdAt ? new Date(user.createdAt) : new Date(0);
+        if (createdAt >= verificationCutoff && !user.emailVerified) {
+            log.warn({ userId: user._id }, 'Login fallido: correo no verificado');
+            return res.status(403).json({
+                message: 'Debes verificar tu correo antes de iniciar sesión. Revisa tu bandeja (o spam) y haz clic en el enlace que te enviamos. Si no lo recibiste, usa "Reenviar verificación" en esta pantalla.',
+                code: 'EMAIL_NOT_VERIFIED'
+            });
         }
 
         const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: 3600 });
@@ -1554,6 +1607,36 @@ app.post('/api/auth/verify-email', async (req, res) => {
     } catch (e) {
         log.error({ err: e.message }, 'Error verify-email');
         res.status(500).json({ message: 'Error al verificar el correo.' });
+    }
+});
+
+// Reenviar email de verificación (para quien no lo recibió o expiró)
+app.post('/api/auth/resend-verify-email', authLimiter, async (req, res) => {
+    try {
+        const email = sanitizeEmail(req.body.email);
+        if (!email) return res.status(400).json({ message: 'Correo no válido.' });
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(200).json({ message: 'Si el correo está registrado y sin verificar, recibirás un nuevo enlace.' });
+        }
+        if (user.emailVerified) {
+            return res.status(200).json({ message: 'Este correo ya está verificado. Puedes iniciar sesión.' });
+        }
+        const verificationToken = generateResetToken();
+        const verifyExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        await EmailVerify.deleteMany({ userId: user._id });
+        await EmailVerify.create({ userId: user._id, token: verificationToken, expiresAt: verifyExpiresAt });
+        const baseUrl = getBaseUrl(req);
+        const verifyUrl = `${baseUrl}/verificar-correo?token=${verificationToken}`;
+        try {
+            if (process.env.SEND_VERIFICATION_EMAIL !== 'false') {
+                const mailer = require('./mailer');
+                if (typeof mailer.sendVerificationEmail === 'function') await mailer.sendVerificationEmail(user.email, verifyUrl);
+            }
+        } catch (e) { log.warn({ err: e && e.message }, 'Reenviar verificación: email no enviado'); }
+        res.status(200).json({ message: 'Si el correo está registrado y sin verificar, recibirás un nuevo enlace. Revisa también spam.' });
+    } catch (e) {
+        res.status(500).json({ message: 'Error al procesar la solicitud.' });
     }
 });
 

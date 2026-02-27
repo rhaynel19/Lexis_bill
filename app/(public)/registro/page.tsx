@@ -142,7 +142,7 @@ function RegisterForm() {
             ? { terms: policyVersions.terms, privacy: policyVersions.privacy }
             : undefined;
         try {
-            await api.register({
+            const registerRes = await api.register({
                 ...form,
                 plan,
                 suggestedName: rncStatus.name,
@@ -151,6 +151,12 @@ function RegisterForm() {
                 isPartnerRegistration: isPartnerFlow,
                 inviteToken: invite || undefined
             });
+
+            if (registerRes?.requiresEmailVerification) {
+                toast.success(registerRes?.message || "Revisa tu correo para verificar tu cuenta y poder iniciar sesión.");
+                router.push("/login");
+                return;
+            }
 
             // Auto login (cookie HttpOnly); usuario desde API, no localStorage
             await api.login(form.email, form.password);

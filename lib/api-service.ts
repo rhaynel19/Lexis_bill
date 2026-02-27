@@ -54,6 +54,22 @@ export const api = {
         });
     },
 
+    async verifyEmail(token: string) {
+        return secureFetch<{ message: string }>(`${API_URL}/auth/verify-email`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token }),
+        });
+    },
+
+    async resendVerifyEmail(email: string) {
+        return secureFetch<{ message: string }>(`${API_URL}/auth/resend-verify-email`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+        });
+    },
+
     async register(data: { [key: string]: unknown }) {
         return secureFetch<any>(`${API_URL}/auth/register`, {
             method: "POST",

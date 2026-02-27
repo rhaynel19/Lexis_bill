@@ -6,10 +6,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Fingerprint, Lock, Mail, MessageCircle, AlertCircle, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { CheckCircle2, Fingerprint, Lock, Mail, MessageCircle, AlertCircle, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { LexisWord } from "@/components/LexisWord";
 import { useAuth } from "@/components/providers/AuthContext";
+import { toast } from "sonner";
 
 const LAST_EMAIL_KEY = "lexis_last_email";
 
@@ -68,6 +69,8 @@ function LoginForm() {
     const [error, setError] = useState("");
     const [apiUnavailable, setApiUnavailable] = useState(false);
     const [postLoginPath, setPostLoginPath] = useState<string>("/dashboard");
+    const [emailNotVerified, setEmailNotVerified] = useState(false);
+    const [resendingVerify, setResendingVerify] = useState(false);
 
     // Redirigir /logir → /login en cliente (fallback si el middleware no aplicó, p. ej. caché)
     useEffect(() => {
@@ -102,9 +105,25 @@ function LoginForm() {
     // Biometric State
     const [showBiometric, setShowBiometric] = useState(false);
 
+    const handleResendVerify = async () => {
+        if (!email.trim()) return;
+        setResendingVerify(true);
+        setError("");
+        try {
+            const { api } = await import("@/lib/api-service");
+            await api.resendVerifyEmail(email.trim());
+            toast.success("Si el correo está registrado y sin verificar, recibirás un nuevo enlace. Revisa también spam.");
+        } catch (e: unknown) {
+            toast.error(e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "Error al reenviar.");
+        } finally {
+            setResendingVerify(false);
+        }
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
+        setEmailNotVerified(false);
         setIsLoading(true);
 
         const payload = { email, password: "[REDACTED]" };
@@ -138,11 +157,15 @@ function LoginForm() {
             if (status === 502) {
                 serverMsg = "El servidor de inicio de sesión no responde. Verifica que el API esté en línea o intenta en unos minutos.";
             }
-            const displayMsg = serverMsg ? `${statusText}: ${serverMsg}` : statusText;
-            const extra = data && typeof data === "object" && Object.keys(data).length > 1 && status !== 502
+            const isEmailNotVerified = data && typeof data === "object" && (data as { code?: string }).code === "EMAIL_NOT_VERIFIED";
+            const displayMsg = isEmailNotVerified
+                ? (typeof data?.message === "string" ? data.message : "Debes verificar tu correo antes de iniciar sesión.")
+                : (serverMsg ? `${statusText}: ${serverMsg}` : statusText);
+            const extra = !isEmailNotVerified && data && typeof data === "object" && Object.keys(data).length > 1 && status !== 502
                 ? ` | Respuesta: ${JSON.stringify(data)}`
                 : "";
             setError(displayMsg + extra);
+            setEmailNotVerified(!!isEmailNotVerified);
         } finally {
             setIsLoading(false);
         }
@@ -253,9 +276,17 @@ function LoginForm() {
                         </div>
 
                         {error && (
-                            <div id="login-error" className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-start gap-2 animate-in fade-in slide-in-from-top-1" role="alert">
-                                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                                <p>{error}</p>
+                            <div id="login-error" className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-sm rounded-lg flex flex-col gap-2 animate-in fade-in slide-in-from-top-1" role="alert">
+                                <div className="flex items-start gap-2">
+                                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                                    <p>{error}</p>
+                                </div>
+                                {emailNotVerified && (
+                                    <Button type="button" variant="outline" size="sm" className="w-full border-amber-500 text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-950/30" onClick={handleResendVerify} disabled={resendingVerify}>
+                                        {resendingVerify ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
+                                        Reenviar verificación al correo
+                                    </Button>
+                                )}
                             </div>
                         )}
 

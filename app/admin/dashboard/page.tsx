@@ -1,13 +1,14 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, FileText, DollarSign, BarChart3, CreditCard, Loader2, Handshake, TrendingUp, Download } from "lucide-react";
+import { Users, FileText, DollarSign, BarChart3, CreditCard, Loader2, Handshake, TrendingUp, Download, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type PeriodFilter = "current" | "last";
 
@@ -19,6 +20,7 @@ export default function AdminCEODashboard() {
     const [metrics, setMetrics] = useState<any>(null);
     const [partnerStats, setPartnerStats] = useState<any>(null);
     const [chartData, setChartData] = useState<{ monthly: Array<{ month: string; revenue: number; invoices: number }>; usersByPlan: { free: number; pro: number; premium: number } } | null>(null);
+    const [alerts, setAlerts] = useState<Array<{ type: string; count?: number; severity: string; message: string }>>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [period, setPeriod] = useState<PeriodFilter>("current");
 
@@ -27,16 +29,18 @@ export default function AdminCEODashboard() {
             try {
                 const { api } = await import("@/lib/api-service");
                 const params = period === "last" ? "?period=last_month" : "";
-                const [statsData, metricsData, partnerStatsData, chartDataRes] = await Promise.all([
+                const [statsData, metricsData, partnerStatsData, chartDataRes, alertsRes] = await Promise.all([
                     api.getAdminStats(params),
                     api.getAdminMetrics(params).catch(() => null),
                     api.getAdminPartnersStats().catch(() => null),
-                    api.getAdminChartData(12).catch(() => null)
+                    api.getAdminChartData(12).catch(() => null),
+                    api.getAdminAlerts().catch(() => ({ alerts: [] }))
                 ]);
                 setStats(statsData);
                 setMetrics(metricsData);
                 setPartnerStats(partnerStatsData);
                 setChartData(chartDataRes || null);
+                setAlerts(alertsRes?.alerts ?? []);
             } catch (e) {
                 toast.error("Error al cargar estadísticas.");
             } finally {
@@ -117,62 +121,131 @@ export default function AdminCEODashboard() {
                 </div>
             </div>
 
+            {/* Alertas */}
+            {alerts.length > 0 && (
+                <Card className="border-amber-200 dark:border-amber-900/50 bg-amber-50/30 dark:bg-amber-950/20">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-amber-600" />
+                            {alerts.length} alerta{alerts.length !== 1 ? "s" : ""} en el panel
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                        <ul className="space-y-1.5 text-sm">
+                            {alerts.slice(0, 5).map((a, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                    <span className={a.severity === "critical" ? "text-red-600" : a.severity === "warning" ? "text-amber-600" : "text-muted-foreground"}>•</span>
+                                    <span>{a.message}</span>
+                                </li>
+                            ))}
+                        </ul>
+                        <Link href="/admin" className="inline-block mt-3 text-sm font-medium text-primary hover:underline">
+                            Ver panel de pagos y alertas →
+                        </Link>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Métricas SaaS (MRR, Churn, ARPU, etc.) */}
             {metrics && (
                 <div>
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                         <BarChart3 className="w-5 h-5" /> Métricas SaaS
                     </h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-xs font-medium text-muted-foreground">MRR</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <span className="text-xl font-bold">{formatCurrency(metrics.mrr ?? 0)}</span>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-xs font-medium text-muted-foreground">Revenue Total</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <span className="text-xl font-bold">{formatCurrency(metrics.revenueTotal ?? 0)}</span>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-xs font-medium text-muted-foreground">ARPU</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <span className="text-xl font-bold">{formatCurrency(metrics.arpu ?? 0)}</span>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-xs font-medium text-muted-foreground">Churn %</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <span className="text-xl font-bold">{(metrics.churn ?? 0)}%</span>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-xs font-medium text-muted-foreground">Growth %</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <span className="text-xl font-bold">{(metrics.growthRate ?? 0)}%</span>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-xs font-medium text-muted-foreground">Activos Pro</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <span className="text-xl font-bold">{metrics.activeUsers ?? 0}</span>
-                            </CardContent>
-                        </Card>
-                    </div>
+                    <TooltipProvider>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+                            <UITooltip>
+                                <TooltipTrigger asChild>
+                                    <Card className="cursor-help">
+                                        <CardHeader className="pb-2">
+                                            <CardTitle className="text-xs font-medium text-muted-foreground">MRR</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <span className="text-xl font-bold">{formatCurrency(metrics.mrr ?? 0)}</span>
+                                        </CardContent>
+                                    </Card>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="max-w-xs">
+                                    <p>Ingresos recurrentes mensuales (suscripciones activas). Si es 0, no hay usuarios de pago generando MRR aún.</p>
+                                </TooltipContent>
+                            </UITooltip>
+                            <UITooltip>
+                                <TooltipTrigger asChild>
+                                    <Card className="cursor-help">
+                                        <CardHeader className="pb-2">
+                                            <CardTitle className="text-xs font-medium text-muted-foreground">Revenue Total</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <span className="text-xl font-bold">{formatCurrency(metrics.revenueTotal ?? 0)}</span>
+                                        </CardContent>
+                                    </Card>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="max-w-xs">
+                                    <p>Suma de ingresos por pagos/suscripciones en el periodo seleccionado (este mes o mes pasado).</p>
+                                </TooltipContent>
+                            </UITooltip>
+                            <UITooltip>
+                                <TooltipTrigger asChild>
+                                    <Card className="cursor-help">
+                                        <CardHeader className="pb-2">
+                                            <CardTitle className="text-xs font-medium text-muted-foreground">ARPU</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <span className="text-xl font-bold">{formatCurrency(metrics.arpu ?? 0)}</span>
+                                        </CardContent>
+                                    </Card>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="max-w-xs">
+                                    <p>Ingreso promedio por usuario de pago (Pro/Premium). Si no hay activos de pago, ARPU es 0.</p>
+                                </TooltipContent>
+                            </UITooltip>
+                            <UITooltip>
+                                <TooltipTrigger asChild>
+                                    <Card className="cursor-help">
+                                        <CardHeader className="pb-2">
+                                            <CardTitle className="text-xs font-medium text-muted-foreground">Churn %</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <span className="text-xl font-bold">{(metrics.churn ?? 0)}%</span>
+                                        </CardContent>
+                                    </Card>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="max-w-xs">
+                                    <p>Porcentaje de usuarios que dejaron de pagar o cancelaron en el periodo.</p>
+                                </TooltipContent>
+                            </UITooltip>
+                            <UITooltip>
+                                <TooltipTrigger asChild>
+                                    <Card className="cursor-help">
+                                        <CardHeader className="pb-2">
+                                            <CardTitle className="text-xs font-medium text-muted-foreground">Growth %</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <span className="text-xl font-bold">{(metrics.growthRate ?? 0)}%</span>
+                                        </CardContent>
+                                    </Card>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="max-w-xs">
+                                    <p>Crecimiento de ingresos o usuarios respecto al periodo anterior.</p>
+                                </TooltipContent>
+                            </UITooltip>
+                            <UITooltip>
+                                <TooltipTrigger asChild>
+                                    <Card className="cursor-help">
+                                        <CardHeader className="pb-2">
+                                            <CardTitle className="text-xs font-medium text-muted-foreground">Activos Pro</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <span className="text-xl font-bold">{metrics.activeUsers ?? 0}</span>
+                                        </CardContent>
+                                    </Card>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="max-w-xs">
+                                    <p>Usuarios con plan Pro (o superior) y suscripción activa en el periodo.</p>
+                                </TooltipContent>
+                            </UITooltip>
+                        </div>
+                    </TooltipProvider>
                 </div>
             )}
 
@@ -408,10 +481,24 @@ export default function AdminCEODashboard() {
                         </Card>
                         <Card className="border-amber-200/50 dark:border-amber-900/30">
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-xs font-medium text-muted-foreground">Comisiones pendientes</CardTitle>
+                                <CardTitle className="text-xs font-medium text-muted-foreground">Comisiones este mes</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <span className="text-2xl font-bold">{formatCurrency(partnerStats.commissionsThisMonth ?? 0)}</span>
+                                <p className="text-xs text-muted-foreground mt-1">Generadas en el mes actual</p>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-amber-200/50 dark:border-amber-900/30 border-2 border-amber-400/50">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs font-medium text-muted-foreground">Total a pagar (pendiente)</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <span className="text-2xl font-bold text-amber-600">{formatCurrency(partnerStats.commissionsPending ?? 0)}</span>
+                                {(partnerStats.commissionsPending ?? 0) > 0 && (
+                                    <Link href="/admin/partners" className="block text-xs text-primary mt-1 hover:underline font-medium">
+                                        Ver resumen por partner →
+                                    </Link>
+                                )}
                             </CardContent>
                         </Card>
                         <Card className="border-amber-200/50 dark:border-amber-900/30">

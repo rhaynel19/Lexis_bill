@@ -52,6 +52,7 @@ export default function AdminPartnersPage() {
     const [editingRatePartnerId, setEditingRatePartnerId] = useState<string | null>(null);
     const [editRateValue, setEditRateValue] = useState<string>("");
     const [savingRate, setSavingRate] = useState(false);
+    const [earningsFilter, setEarningsFilter] = useState<"all" | "conPendiente">("conPendiente");
 
     useEffect(() => {
         const fetchData = async () => {
@@ -327,6 +328,11 @@ export default function AdminPartnersPage() {
         ? partners.filter((p) => p.status === statusFilter)
         : partners;
 
+    const earningsPartners = earningsFilter === "conPendiente"
+        ? filteredPartners.filter((p) => (p.pendingPayout ?? 0) > 0)
+        : filteredPartners;
+    const totalPendientePago = earningsPartners.reduce((sum, p) => sum + (p.pendingPayout ?? 0), 0);
+
     if (isLoading) {
         return (
             <div className="space-y-8">
@@ -469,6 +475,94 @@ export default function AdminPartnersPage() {
                     </CardContent>
                 </Card>
             )}
+
+            {/* Resumen de ganancia por partner — Próximo pago */}
+            <Card className="border-emerald-200/50 dark:border-emerald-900/30 bg-gradient-to-br from-emerald-50/20 to-transparent dark:from-emerald-950/10">
+                <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <CardTitle className="text-lg font-bold flex items-center gap-2">
+                            <DollarSign className="w-5 h-5 text-emerald-600" />
+                            Resumen de ganancia por partner
+                        </CardTitle>
+                        <CardDescription>
+                            Cuánto has ganado por partner y cuánto debes pagar en el próximo pago (según comisiones pendientes y clientes activos).
+                        </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <select
+                            value={earningsFilter}
+                            onChange={(e) => setEarningsFilter(e.target.value as "all" | "conPendiente")}
+                            className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                            aria-label="Filtrar resumen"
+                        >
+                            <option value="all">Todos los partners</option>
+                            <option value="conPendiente">Solo con pendiente de pago</option>
+                        </select>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="overflow-x-auto rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead>Partner</TableHead>
+                                    <TableHead>Estado</TableHead>
+                                    <TableHead className="text-center">Clientes activos</TableHead>
+                                    <TableHead className="text-right">Ganado (total)</TableHead>
+                                    <TableHead className="text-right">Pendiente de pago</TableHead>
+                                    <TableHead className="w-[80px]" />
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {earningsPartners.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                                            {earningsFilter === "conPendiente"
+                                                ? "No hay partners con comisión pendiente de pago."
+                                                : "No hay partners que coincidan con el filtro de estado."}
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    [...earningsPartners]
+                                        .sort((a, b) => (b.pendingPayout ?? 0) - (a.pendingPayout ?? 0))
+                                        .map((p) => (
+                                            <TableRow
+                                                key={p._id}
+                                                className="cursor-pointer hover:bg-muted/50"
+                                                onClick={() => openPartnerDetail(p._id)}
+                                            >
+                                                <TableCell>
+                                                    <div>
+                                                        <p className="font-semibold">{p.name}</p>
+                                                        <p className="text-xs text-muted-foreground font-mono">{p.referralCode}</p>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>{getStatusBadge(p.status)}</TableCell>
+                                                <TableCell className="text-center">
+                                                    <span className="font-semibold text-emerald-600">{p.activeClients ?? 0}</span>
+                                                    <p className="text-[10px] text-muted-foreground">activos</p>
+                                                </TableCell>
+                                                <TableCell className="text-right font-medium">{formatCurrency(p.totalEarned ?? 0)}</TableCell>
+                                                <TableCell className="text-right font-semibold text-amber-600">{formatCurrency(p.pendingPayout ?? 0)}</TableCell>
+                                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                                    <Button variant="ghost" size="sm" onClick={() => openPartnerDetail(p._id)}>
+                                                        Ver perfil
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    {earningsPartners.length > 0 && totalPendientePago > 0 && (
+                        <div className="mt-4 pt-4 border-t flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-muted-foreground">Total a pagar (pendiente):</p>
+                            <p className="text-xl font-bold text-amber-600">{formatCurrency(totalPendientePago)}</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Calcular comisiones mensuales */}
             <Card className="border-slate-200 dark:border-slate-700 mb-6">
