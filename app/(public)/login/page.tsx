@@ -212,12 +212,14 @@ function LoginForm() {
                             </p>
                         </div>
                     )}
-                    <form onSubmit={handleLogin} className="space-y-5">
+                    <form onSubmit={handleLogin} className="space-y-5" autoComplete="on">
                         <div className="space-y-2">
-                            <label htmlFor="login-email" className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Credenciales de Acceso</label>
+                            <label htmlFor="login-email" className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Correo electrónico</label>
                             <Input
                                 id="login-email"
+                                name="email"
                                 type="email"
+                                autoComplete="email"
                                 placeholder="ejemplo@correo.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -225,10 +227,13 @@ function LoginForm() {
                                 required
                                 aria-describedby={error ? "login-error" : undefined}
                             />
+                            <label htmlFor="login-password" className="text-xs font-semibold text-slate-600 uppercase tracking-wider sr-only">Contraseña</label>
                             <div className="relative">
                                 <Input
                                     id="login-password"
+                                    name="password"
                                     type={showPassword ? "text" : "password"}
+                                    autoComplete="current-password"
                                     placeholder="Contraseña"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}

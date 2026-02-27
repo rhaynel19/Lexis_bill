@@ -708,6 +708,46 @@ export const api = {
         return secureFetch<{ partner: { name: string; referralCode: string }; cartera: any[] }>(`${API_URL}/admin/partners/${partnerId}/cartera`);
     },
 
+    async getPartnerDetail(partnerId: string) {
+        return secureFetch<{
+            partner: Record<string, unknown> & {
+                referralUrl: string;
+                activeClients: number;
+                trialClients: number;
+                churnedClients: number;
+                totalReferidos: number;
+                facturacionGenerada: number;
+                totalEarned: number;
+                pendingPayout: number;
+            };
+            commissions: Array<{ id: string; month: string; year: number; commissionAmount: number; status: string; paidAt?: string; paymentRef?: string }>;
+        }>(`${API_URL}/admin/partners/${partnerId}`);
+    },
+
+    async rejectPartner(id: string) {
+        return secureFetch<{ message: string }>(`${API_URL}/admin/partners/${id}/reject`, { method: "POST" });
+    },
+
+    async getPartnerActivity(partnerId: string) {
+        return secureFetch<{ activity: Array<{ action: string; adminEmail?: string; metadata?: Record<string, unknown>; createdAt: string }> }>(`${API_URL}/admin/partners/${partnerId}/activity`);
+    },
+
+    async updatePartnerCommissionRate(id: string, commissionRate: number) {
+        return secureFetch<{ message: string; commissionRate: number }>(`${API_URL}/admin/partners/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ commissionRate }),
+        });
+    },
+
+    async markCommissionPaid(commissionId: string, data: { paidAt?: string; paymentRef?: string }) {
+        return secureFetch<{ message: string; commission: { id: string; paidAt: string; paymentRef?: string } }>(`${API_URL}/admin/partners/commissions/${commissionId}/mark-paid`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+    },
+
     async createPartnerInvite(data?: { expiresDays?: number; maxUses?: number }) {
         return secureFetch<{ inviteUrl: string; token: string; expiresAt: string; maxUses: number }>(`${API_URL}/admin/partners/invites`, {
             method: "POST",

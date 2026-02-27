@@ -14,11 +14,19 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+} from "@/components/ui/sheet";
+import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function AdminPartnersPage() {
     const [partners, setPartners] = useState<any[]>([]);
@@ -31,8 +39,19 @@ export default function AdminPartnersPage() {
     const [carteraPartner, setCarteraPartner] = useState<{ partner: { name: string; referralCode: string }; cartera: any[] } | null>(null);
     const [loadingCartera, setLoadingCartera] = useState(false);
     const [calculatingCommissions, setCalculatingCommissions] = useState(false);
-    const [statusFilter, setStatusFilter] = useState<"" | "active" | "suspended" | "pending">("");
-    const [confirmAction, setConfirmAction] = useState<{ action: "suspend" | "activate"; id: string; name: string } | null>(null);
+    const [statusFilter, setStatusFilter] = useState<"" | "active" | "suspended" | "pending" | "rejected">("");
+    const [confirmAction, setConfirmAction] = useState<{ action: "suspend" | "activate" | "reject"; id: string; name: string } | null>(null);
+    const [detailPartnerId, setDetailPartnerId] = useState<string | null>(null);
+    const [detailData, setDetailData] = useState<{ partner: any; commissions: any[] } | null>(null);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [activityData, setActivityData] = useState<any[]>([]);
+    const [activityLoading, setActivityLoading] = useState(false);
+    const [markPaidCommissionId, setMarkPaidCommissionId] = useState<string | null>(null);
+    const [markPaidPayload, setMarkPaidPayload] = useState({ paidAt: new Date().toISOString().slice(0, 10), paymentRef: "" });
+    const [savingMarkPaid, setSavingMarkPaid] = useState(false);
+    const [editingRatePartnerId, setEditingRatePartnerId] = useState<string | null>(null);
+    const [editRateValue, setEditRateValue] = useState<string>("");
+    const [savingRate, setSavingRate] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -190,11 +209,118 @@ export default function AdminPartnersPage() {
     const getStatusBadge = (status: string) => {
         const map: Record<string, { label: string; className: string }> = {
             active: { label: "Activo", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-medium" },
-            pending: { label: "Pendiente", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-medium" },
-            suspended: { label: "Suspendido", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-medium" }
+            pending: { label: "Pendiente aprobación", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-medium" },
+            suspended: { label: "Suspendido", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-medium" },
+            rejected: { label: "Rechazado", className: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 font-medium" }
         };
-        const s = map[status] || map.pending;
+        const s = map[status] || { label: status, className: "bg-muted text-muted-foreground" };
         return <span className={`text-xs px-2 py-1 rounded-full ${s.className}`}>{s.label}</span>;
+    };
+
+    const openPartnerDetail = async (partnerId: string) => {
+        setDetailPartnerId(partnerId);
+        setDetailData(null);
+        setActivityData([]);
+        setDetailLoading(true);
+        try {
+            const { api } = await import("@/lib/api-service");
+            const data = await api.getPartnerDetail(partnerId);
+            setDetailData({ partner: data.partner, commissions: data.commissions || [] });
+        } catch (e: any) {
+            toast.error(e?.message || "Error al cargar detalle");
+            setDetailPartnerId(null);
+        } finally {
+            setDetailLoading(false);
+        }
+    };
+
+    const loadPartnerActivity = async () => {
+        if (!detailPartnerId) return;
+        setActivityLoading(true);
+        try {
+            const { api } = await import("@/lib/api-service");
+            const res = await api.getPartnerActivity(detailPartnerId);
+            setActivityData(res?.activity || []);
+        } catch (e: any) {
+            toast.error(e?.message || "Error al cargar actividad");
+        } finally {
+            setActivityLoading(false);
+        }
+    };
+
+    const handleReject = async (id: string) => {
+        setConfirmAction(null);
+        setActioning(id);
+        try {
+            const { api } = await import("@/lib/api-service");
+            const res = await api.rejectPartner(id);
+            toast.success(res?.message || "Partner rechazado");
+            setPartners(prev => prev.map(p => p._id === id ? { ...p, status: "rejected" } : p));
+            if (stats) setStats({ ...stats, pendingApprovals: Math.max(0, (stats.pendingApprovals || 1) - 1) });
+            if (detailPartnerId === id) setDetailPartnerId(null);
+        } catch (e: any) {
+            toast.error(e?.message || "Error al rechazar");
+        } finally {
+            setActioning(null);
+        }
+    };
+
+    const handleMarkPaidSubmit = async () => {
+        if (!markPaidCommissionId) return;
+        setSavingMarkPaid(true);
+        try {
+            const { api } = await import("@/lib/api-service");
+            await api.markCommissionPaid(markPaidCommissionId, {
+                paidAt: markPaidPayload.paidAt || undefined,
+                paymentRef: markPaidPayload.paymentRef || undefined,
+            });
+            toast.success("Comisión marcada como pagada");
+            setMarkPaidCommissionId(null);
+            setMarkPaidPayload({ paidAt: new Date().toISOString().slice(0, 10), paymentRef: "" });
+            if (detailPartnerId) {
+                const data = await api.getPartnerDetail(detailPartnerId);
+                setDetailData({ partner: data.partner, commissions: data.commissions || [] });
+            }
+            const [partnersData, statsData] = await Promise.all([api.getAdminPartners(), api.getAdminPartnersStats()]);
+            setPartners(partnersData || []);
+            setStats(statsData || {});
+        } catch (e: any) {
+            toast.error(e?.message || "Error al marcar como pagada");
+        } finally {
+            setSavingMarkPaid(false);
+        }
+    };
+
+    const handleUpdateCommissionRate = async () => {
+        const id = editingRatePartnerId;
+        if (!id) return;
+        const rate = Number(editRateValue);
+        if (Number.isNaN(rate) || rate < 0 || rate > 100) {
+            toast.error("Porcentaje debe ser entre 0 y 100");
+            return;
+        }
+        setSavingRate(true);
+        try {
+            const { api } = await import("@/lib/api-service");
+            await api.updatePartnerCommissionRate(id, rate / 100);
+            toast.success("Porcentaje de comisión actualizado");
+            setEditingRatePartnerId(null);
+            setEditRateValue("");
+            if (detailPartnerId === id && detailData) {
+                setDetailData({ ...detailData, partner: { ...detailData.partner, commissionRate: rate / 100 } });
+            }
+            const partnersData = await api.getAdminPartners();
+            setPartners(partnersData || []);
+        } catch (e: any) {
+            toast.error(e?.message || "Error al actualizar");
+        } finally {
+            setSavingRate(false);
+        }
+    };
+
+    const copyReferralUrl = (url: string) => {
+        navigator.clipboard.writeText(url);
+        toast.success("Link copiado al portapapeles");
     };
 
     const filteredPartners = statusFilter
@@ -223,11 +349,13 @@ export default function AdminPartnersPage() {
                     <Handshake className="w-7 h-7 text-amber-500" />
                     Programa Partners
                 </h1>
-                <p className="text-muted-foreground text-sm">Estadísticas y gestión de partners Lexis Bill</p>
+                <p className="text-muted-foreground text-sm">Panel de crecimiento · Afiliados y expansión comercial</p>
             </div>
 
-            {/* Estadísticas y Cartera */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {/* Panel de crecimiento — KPIs */}
+            <div className="space-y-2">
+                <h2 className="text-sm font-semibold text-muted-foreground">Panel de crecimiento</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
@@ -271,12 +399,23 @@ export default function AdminPartnersPage() {
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                            <DollarSign className="w-4 h-4" /> Comisiones pagadas
+                            <DollarSign className="w-4 h-4" /> Comisiones este mes
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <span className="text-2xl font-bold text-green-600">{formatCurrency(stats?.commissionsPaid ?? 0)}</span>
-                        <p className="text-xs text-muted-foreground mt-1">Pendiente: {formatCurrency(stats?.commissionsPending ?? 0)}</p>
+                        <span className="text-2xl font-bold text-amber-600">{formatCurrency(stats?.commissionsThisMonth ?? 0)}</span>
+                        <p className="text-xs text-muted-foreground mt-1">Generadas en el mes actual</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                            <Wallet className="w-4 h-4" /> Comisiones pendientes
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <span className="text-2xl font-bold">{formatCurrency(stats?.commissionsPending ?? 0)}</span>
+                        <p className="text-xs text-muted-foreground mt-1">Pagadas: {formatCurrency(stats?.commissionsPaid ?? 0)}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -293,6 +432,7 @@ export default function AdminPartnersPage() {
                         </p>
                     </CardContent>
                 </Card>
+                </div>
             </div>
 
             {/* Top Partners (ranking) */}
@@ -391,14 +531,15 @@ export default function AdminPartnersPage() {
                     <div className="flex flex-wrap items-center gap-2">
                         <select
                             value={statusFilter}
-                            onChange={(e) => setStatusFilter((e.target.value || "") as "" | "active" | "suspended" | "pending")}
+                            onChange={(e) => setStatusFilter((e.target.value || "") as "" | "active" | "suspended" | "pending" | "rejected")}
                             className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
                             aria-label="Filtrar por estado"
                         >
                             <option value="">Todos los estados</option>
                             <option value="active">Activo</option>
                             <option value="suspended">Suspendido</option>
-                            <option value="pending">Pendiente</option>
+                            <option value="pending">Pendiente aprobación</option>
+                            <option value="rejected">Rechazado</option>
                         </select>
                         <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={partners.length === 0}>
                             <Download className="w-4 h-4 mr-2" />
@@ -433,7 +574,11 @@ export default function AdminPartnersPage() {
                                         </TableCell>
                                     </TableRow>
                                 ) : filteredPartners.map((p) => (
-                                    <TableRow key={p._id}>
+                                    <TableRow
+                                        key={p._id}
+                                        className="cursor-pointer hover:bg-muted/50"
+                                        onClick={() => openPartnerDetail(p._id)}
+                                    >
                                         <TableCell>
                                             <div>
                                                 <p className="font-semibold">{p.name}</p>
@@ -485,27 +630,43 @@ export default function AdminPartnersPage() {
                                         <TableCell className="text-right flex gap-1 justify-end">
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="sm" onClick={() => handleVerCartera(p._id)} aria-label="Ver cartera">
+                                                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleVerCartera(p._id); }} aria-label="Ver cartera">
                                                         <Wallet className="w-4 h-4" />
                                                     </Button>
                                                 </TooltipTrigger>
                                                 <TooltipContent>Ver cartera de referidos</TooltipContent>
                                             </Tooltip>
                                             {p.status === "pending" && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            className="text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-900/30"
-                                                            onClick={() => handleApprove(p._id)}
-                                                            disabled={actioning === p._id}
-                                                        >
-                                                            {actioning === p._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>Aprobar partner</TooltipContent>
-                                                </Tooltip>
+                                                <>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-900/30"
+                                                                onClick={(e) => { e.stopPropagation(); handleApprove(p._id); }}
+                                                                disabled={actioning === p._id}
+                                                            >
+                                                                {actioning === p._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>Aprobar partner</TooltipContent>
+                                                    </Tooltip>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="text-slate-600 border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900/30"
+                                                                onClick={(e) => { e.stopPropagation(); setConfirmAction({ action: "reject", id: p._id, name: p.name }); }}
+                                                                disabled={actioning === p._id}
+                                                            >
+                                                                <Ban className="w-4 h-4" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>Rechazar partner</TooltipContent>
+                                                    </Tooltip>
+                                                </>
                                             )}
                                             {p.status === "active" && (
                                                 <Tooltip>
@@ -514,7 +675,7 @@ export default function AdminPartnersPage() {
                                                             size="sm"
                                                             variant="outline"
                                                             className="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/30"
-                                                            onClick={() => setConfirmAction({ action: "suspend", id: p._id, name: p.name })}
+                                                            onClick={(e) => { e.stopPropagation(); setConfirmAction({ action: "suspend", id: p._id, name: p.name }); }}
                                                             disabled={actioning === p._id}
                                                         >
                                                             {actioning === p._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
@@ -530,7 +691,7 @@ export default function AdminPartnersPage() {
                                                             size="sm"
                                                             variant="outline"
                                                             className="text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-900/30"
-                                                            onClick={() => setConfirmAction({ action: "activate", id: p._id, name: p.name })}
+                                                            onClick={(e) => { e.stopPropagation(); setConfirmAction({ action: "activate", id: p._id, name: p.name }); }}
                                                             disabled={actioning === p._id}
                                                         >
                                                             {actioning === p._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
@@ -560,6 +721,8 @@ export default function AdminPartnersPage() {
                     <p className="text-sm text-muted-foreground">
                         {confirmAction?.action === "suspend"
                             ? "El partner no podrá generar comisiones ni referidos hasta que lo reactives."
+                            : confirmAction?.action === "reject"
+                            ? "El partner quedará en estado Rechazado y no podrá acceder al programa."
                             : "El partner volverá a generar comisiones normalmente."}
                     </p>
                     {confirmAction && (
@@ -573,13 +736,201 @@ export default function AdminPartnersPage() {
                         </Button>
                         <Button
                             variant={confirmAction?.action === "suspend" ? "destructive" : "default"}
-                            className={confirmAction?.action === "activate" ? "bg-green-600 hover:bg-green-700" : ""}
+                            className={confirmAction?.action === "activate" ? "bg-green-600 hover:bg-green-700" : confirmAction?.action === "reject" ? "bg-slate-600 hover:bg-slate-700" : ""}
                             onClick={() => {
                                 if (confirmAction?.action === "suspend") handleSuspend(confirmAction.id);
                                 else if (confirmAction?.action === "activate") handleActivate(confirmAction.id);
+                                else if (confirmAction?.action === "reject") handleReject(confirmAction.id);
                             }}
                         >
                             Confirmar
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Sheet Perfil Partner */}
+            <Sheet open={!!detailPartnerId} onOpenChange={(open) => !open && setDetailPartnerId(null)}>
+                <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+                    <SheetHeader>
+                        <SheetTitle>Perfil del partner</SheetTitle>
+                    </SheetHeader>
+                    {detailLoading && (
+                        <div className="flex justify-center py-12">
+                            <Loader2 className="w-10 h-10 animate-spin text-amber-500" />
+                        </div>
+                    )}
+                    {detailData && !detailLoading && (
+                        <div className="space-y-6 pt-4">
+                            <div>
+                                <p className="font-semibold text-lg">{detailData.partner.name}</p>
+                                <p className="text-sm text-muted-foreground">{detailData.partner.email}</p>
+                                <div className="mt-2">{getStatusBadge(detailData.partner.status)}</div>
+                            </div>
+                            <div>
+                                <Label className="text-xs text-muted-foreground">Link de referido</Label>
+                                <div className="flex gap-2 mt-1">
+                                    <input
+                                        readOnly
+                                        aria-label="Link de referido del partner"
+                                        value={detailData.partner.referralUrl ?? ""}
+                                        className="flex-1 text-sm bg-muted/50 px-3 py-2 rounded-md font-mono truncate border"
+                                    />
+                                    <Button variant="outline" size="icon" onClick={() => copyReferralUrl(detailData.partner.referralUrl)} title="Copiar">
+                                        <Copy className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {detailData.partner.totalReferidos ?? 0} registros con este link
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <Card className="p-3">
+                                    <p className="text-xs text-muted-foreground">Activos / Prueba / Churned</p>
+                                    <p className="font-semibold">{detailData.partner.activeClients ?? 0} / {detailData.partner.trialClients ?? 0} / {detailData.partner.churnedClients ?? 0}</p>
+                                </Card>
+                                <Card className="p-3">
+                                    <p className="text-xs text-muted-foreground">Facturación generada</p>
+                                    <p className="font-semibold">{formatCurrency(detailData.partner.facturacionGenerada ?? 0)}</p>
+                                </Card>
+                                <Card className="p-3">
+                                    <p className="text-xs text-muted-foreground">Comisión acumulada</p>
+                                    <p className="font-semibold">{formatCurrency(detailData.partner.totalEarned ?? 0)}</p>
+                                </Card>
+                                <Card className="p-3">
+                                    <p className="text-xs text-muted-foreground">Pendiente de pago</p>
+                                    <p className="font-semibold text-amber-600">{formatCurrency(detailData.partner.pendingPayout ?? 0)}</p>
+                                </Card>
+                            </div>
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <Label className="text-sm font-medium">Comisión (%)</Label>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                            setEditingRatePartnerId(detailPartnerId);
+                                            setEditRateValue(String(Math.round((detailData.partner.commissionRate ?? 0) * 100)));
+                                        }}
+                                    >
+                                        Editar %
+                                    </Button>
+                                </div>
+                                <p className="text-sm text-muted-foreground">{Math.round((detailData.partner.commissionRate ?? 0) * 100)}%</p>
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-semibold mb-2">Comisiones por mes</h4>
+                                {detailData.commissions.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground">Sin comisiones registradas</p>
+                                ) : (
+                                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                                        {detailData.commissions.map((c: any) => (
+                                            <div key={c.id} className="flex items-center justify-between py-2 border-b text-sm">
+                                                <span>{c.year}-{c.month}</span>
+                                                <span>{formatCurrency(c.commissionAmount ?? 0)}</span>
+                                                <span className={c.status === "paid" ? "text-green-600" : "text-amber-600"}>{c.status === "paid" ? "Pagada" : c.status === "pending" ? "Pendiente" : c.status}</span>
+                                                {c.status !== "paid" && (
+                                                    <Button size="sm" variant="outline" onClick={() => setMarkPaidCommissionId(c.id)}>
+                                                        Marcar pagada
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-sm font-semibold">Actividad</h4>
+                                    <Button variant="outline" size="sm" onClick={loadPartnerActivity} disabled={activityLoading}>
+                                        {activityLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Ver actividad"}
+                                    </Button>
+                                </div>
+                                {activityData.length > 0 ? (
+                                    <div className="space-y-1 max-h-40 overflow-y-auto text-xs">
+                                        {activityData.map((log: any, i: number) => (
+                                            <div key={i} className="py-1.5 border-b border-dashed">
+                                                <span className="font-medium">{log.action}</span>
+                                                {log.metadata && Object.keys(log.metadata).length > 0 && (
+                                                    <span className="text-muted-foreground ml-1">{JSON.stringify(log.metadata)}</span>
+                                                )}
+                                                <p className="text-muted-foreground">{log.createdAt ? new Date(log.createdAt).toLocaleString("es-DO") : ""}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">Carga la actividad para ver el historial.</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </SheetContent>
+            </Sheet>
+
+            {/* Modal Marcar comisión como pagada */}
+            <Dialog open={!!markPaidCommissionId} onOpenChange={(open) => !open && setMarkPaidCommissionId(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Marcar comisión como pagada</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-2">
+                        <div>
+                            <Label htmlFor="paidAt">Fecha de pago</Label>
+                            <Input
+                                id="paidAt"
+                                type="date"
+                                value={markPaidPayload.paidAt}
+                                onChange={(e) => setMarkPaidPayload((prev) => ({ ...prev, paidAt: e.target.value }))}
+                                className="mt-1"
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="paymentRef">Referencia de pago</Label>
+                            <Input
+                                id="paymentRef"
+                                placeholder="Ej. transferencia, cheque..."
+                                value={markPaidPayload.paymentRef}
+                                onChange={(e) => setMarkPaidPayload((prev) => ({ ...prev, paymentRef: e.target.value }))}
+                                className="mt-1"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setMarkPaidCommissionId(null)}>Cancelar</Button>
+                        <Button onClick={handleMarkPaidSubmit} disabled={savingMarkPaid}>
+                            {savingMarkPaid ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            Confirmar
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal Editar % comisión */}
+            <Dialog open={!!editingRatePartnerId} onOpenChange={(open) => !open && (setEditingRatePartnerId(null), setEditRateValue(""))}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Editar porcentaje de comisión</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-2">
+                        <div>
+                            <Label htmlFor="editRate">Porcentaje (0-100)</Label>
+                            <Input
+                                id="editRate"
+                                type="number"
+                                min={0}
+                                max={100}
+                                step={0.5}
+                                value={editRateValue}
+                                onChange={(e) => setEditRateValue(e.target.value)}
+                                className="mt-1"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button variant="outline" onClick={() => { setEditingRatePartnerId(null); setEditRateValue(""); }}>Cancelar</Button>
+                        <Button onClick={handleUpdateCommissionRate} disabled={savingRate}>
+                            {savingRate ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            Guardar
                         </Button>
                     </div>
                 </DialogContent>

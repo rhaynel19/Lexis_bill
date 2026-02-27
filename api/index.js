@@ -553,10 +553,11 @@ const partnerSchema = new mongoose.Schema({
     bankName: { type: String },
     bankAccount: { type: String },
     bankAccountType: { type: String, enum: ['ahorro', 'corriente'] },
-    status: { type: String, enum: ['pending', 'active', 'suspended'], default: 'pending' },
+    status: { type: String, enum: ['pending', 'active', 'suspended', 'rejected'], default: 'pending' },
     approvedAt: { type: Date },
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     suspendedAt: { type: Date },
+    rejectedAt: { type: Date },
     invitedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerInvite' },
     termsAcceptedAt: { type: Date, required: true },
     createdAt: { type: Date, default: Date.now },
@@ -584,7 +585,7 @@ const partnerCommissionSchema = new mongoose.Schema({
     totalRevenue: { type: Number, default: 0 },
     commissionRate: { type: Number },
     commissionAmount: { type: Number, default: 0 },
-    status: { type: String, enum: ['pending', 'paid', 'cancelled'], default: 'pending' },
+    status: { type: String, enum: ['pending', 'approved', 'paid', 'cancelled'], default: 'pending' },
     paidAt: { type: Date },
     paymentRef: { type: String },
     createdAt: { type: Date, default: Date.now }
@@ -623,6 +624,8 @@ const adminAuditLogSchema = new mongoose.Schema({
 });
 adminAuditLogSchema.index({ createdAt: -1 });
 adminAuditLogSchema.index({ adminId: 1, createdAt: -1 });
+adminAuditLogSchema.index({ targetType: 1, targetId: 1, createdAt: -1 });
+adminAuditLogSchema.index({ targetType: 1, targetId: 1, createdAt: -1 });
 const AdminAuditLog = mongoose.models.AdminAuditLog || mongoose.model('AdminAuditLog', adminAuditLogSchema);
 
 // === SCHEMAS DE AUDITORÍA PARA PAGOS Y SUSCRIPCIONES ===
@@ -2831,6 +2834,7 @@ app.get('/api/admin/partners/stats', verifyToken, verifyAdmin, async (req, res) 
         const total = await Partner.countDocuments({ status: 'active' });
         const pending = await Partner.countDocuments({ status: 'pending' });
         const suspended = await Partner.countDocuments({ status: 'suspended' });
+        const rejected = await Partner.countDocuments({ status: 'rejected' });
         const totalReferrals = await PartnerReferral.countDocuments();
         const activeReferrals = await PartnerReferral.countDocuments({ status: 'active' });
         const trialReferrals = await PartnerReferral.countDocuments({ status: 'trial' });
@@ -2845,17 +2849,99 @@ app.get('/api/admin/partners/stats', verifyToken, verifyAdmin, async (req, res) 
             { $match: { status: 'pending' } },
             { $group: { _id: null, total: { $sum: '$commissionAmount' } } }
         ]);
+        const now = new Date();
+        const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const commissionsThisMonth = await PartnerCommission.aggregate([
+            { $match: { month: currentMonthStr } },
+            { $group: { _id: null, total: { $sum: '$commissionAmount' } } }
+        ]);
         res.json({
             totalPartners: total,
             pendingApprovals: pending,
             suspendedPartners: suspended,
+            rejectedPartners: rejected,
             totalReferrals,
             activeReferrals,
             trialReferrals,
             churnedReferrals,
             revenueFromPartners,
             commissionsPaid: totalCommissionsPaid[0]?.total || 0,
-            commissionsPending: totalCommissionsPending[0]?.total || 0
+            commissionsPending: totalCommissionsPending[0]?.total || 0,
+            commissionsThisMonth: commissionsThisMonth[0]?.total || 0
+        });
+    } catch (e) {
+        res.status(500).json({ message: safeErrorMessage(e) });
+    }
+});
+
+// Marcar comisión como pagada (admin) — ruta antes de /partners/:id para no capturar "commissions"
+app.post('/api/admin/partners/commissions/:commissionId/mark-paid', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.commissionId)) return res.status(400).json({ message: 'ID de comisión inválido' });
+        const { paidAt, paymentRef } = req.body || {};
+        const doc = await PartnerCommission.findById(req.params.commissionId);
+        if (!doc) return res.status(404).json({ message: 'Comisión no encontrada' });
+        if (doc.status === 'paid') return res.status(400).json({ message: 'La comisión ya está marcada como pagada' });
+        doc.status = 'paid';
+        doc.paidAt = paidAt ? new Date(paidAt) : new Date();
+        if (paymentRef != null) doc.paymentRef = String(paymentRef);
+        await doc.save();
+        await logAdminAction(req.userId, 'partner_commission_paid', 'partner_commission', doc._id.toString(), {
+            partnerId: doc.partnerId.toString(),
+            month: doc.month,
+            amount: doc.commissionAmount,
+            paymentRef: doc.paymentRef
+        });
+        res.json({ message: 'Comisión marcada como pagada', commission: { id: doc._id, paidAt: doc.paidAt, paymentRef: doc.paymentRef } });
+    } catch (e) {
+        res.status(500).json({ message: safeErrorMessage(e) });
+    }
+});
+
+// Detalle de un partner (admin): datos, link, referidos, comisiones
+app.get('/api/admin/partners/:id', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID inválido' });
+        const p = await Partner.findById(req.params.id).populate('userId', 'name email').lean();
+        if (!p) return res.status(404).json({ message: 'Partner no encontrado' });
+
+        const [active, trial, churned, totalEarnedAgg, pendingAgg, commissionsList] = await Promise.all([
+            PartnerReferral.countDocuments({ partnerId: p._id, status: 'active' }),
+            PartnerReferral.countDocuments({ partnerId: p._id, status: 'trial' }),
+            PartnerReferral.countDocuments({ partnerId: p._id, status: 'churned' }),
+            PartnerCommission.aggregate([{ $match: { partnerId: p._id, status: 'paid' } }, { $group: { _id: null, total: { $sum: '$commissionAmount' } } }]),
+            PartnerCommission.aggregate([{ $match: { partnerId: p._id, status: 'pending' } }, { $group: { _id: null, total: { $sum: '$commissionAmount' } } }]),
+            PartnerCommission.find({ partnerId: p._id }).sort({ year: -1, month: -1 }).limit(24).lean()
+        ]);
+
+        const baseUrl = getBaseUrl(req);
+        const referralUrl = `${baseUrl}/registro?ref=${p.referralCode}`;
+        const totalReferidos = active + trial + churned;
+        const pricePerClient = 950;
+        const facturacionGenerada = active * pricePerClient;
+
+        res.json({
+            partner: {
+                ...p,
+                referralUrl,
+                activeClients: active,
+                trialClients: trial,
+                churnedClients: churned,
+                totalReferidos,
+                facturacionGenerada,
+                totalEarned: totalEarnedAgg[0]?.total || 0,
+                pendingPayout: pendingAgg[0]?.total || 0
+            },
+            commissions: commissionsList.map(c => ({
+                id: c._id,
+                month: c.month,
+                year: c.year,
+                activeClientsCount: c.activeClientsCount,
+                commissionAmount: c.commissionAmount,
+                status: c.status,
+                paidAt: c.paidAt,
+                paymentRef: c.paymentRef
+            }))
         });
     } catch (e) {
         res.status(500).json({ message: safeErrorMessage(e) });
@@ -2933,6 +3019,57 @@ app.post('/api/admin/partners/:id/approve', verifyToken, verifyAdmin, async (req
         } catch (mailErr) { log.warn({ err: (mailErr && mailErr.message) || 'mailer no disponible' }, 'Email partner aprobado no enviado'); }
         await logAdminAction(req.userId, 'partner_approve', 'partner', p._id.toString(), { referralCode: p.referralCode });
         res.json({ message: 'Partner aprobado', referralCode: p.referralCode });
+    } catch (e) {
+        res.status(500).json({ message: safeErrorMessage(e) });
+    }
+});
+
+app.post('/api/admin/partners/:id/reject', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID inválido' });
+        const p = await Partner.findById(req.params.id);
+        if (!p) return res.status(404).json({ message: 'Partner no encontrado' });
+        if (p.status !== 'pending') return res.status(400).json({ message: 'Solo se puede rechazar un partner en estado Pendiente' });
+        p.status = 'rejected';
+        p.rejectedAt = new Date();
+        p.updatedAt = new Date();
+        await p.save();
+        await logAdminAction(req.userId, 'partner_reject', 'partner', p._id.toString(), { referralCode: p.referralCode });
+        res.json({ message: 'Partner rechazado' });
+    } catch (e) {
+        res.status(500).json({ message: safeErrorMessage(e) });
+    }
+});
+
+// Actividad/auditoría de un partner (admin)
+app.get('/api/admin/partners/:id/activity', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID inválido' });
+        const partnerId = req.params.id;
+        const logs = await AdminAuditLog.find({ targetType: 'partner', targetId: partnerId })
+            .sort({ createdAt: -1 })
+            .limit(100)
+            .lean();
+        res.json({ activity: logs });
+    } catch (e) {
+        res.status(500).json({ message: safeErrorMessage(e) });
+    }
+});
+
+// Actualizar porcentaje de comisión del partner (admin)
+app.patch('/api/admin/partners/:id', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID inválido' });
+        const rate = Number(req.body.commissionRate);
+        if (Number.isNaN(rate) || rate < 0 || rate > 1) return res.status(400).json({ message: 'commissionRate debe ser un número entre 0 y 1' });
+        const p = await Partner.findById(req.params.id);
+        if (!p) return res.status(404).json({ message: 'Partner no encontrado' });
+        const previousRate = p.commissionRate;
+        p.commissionRate = rate;
+        p.updatedAt = new Date();
+        await p.save();
+        await logAdminAction(req.userId, 'partner_commission_rate', 'partner', p._id.toString(), { previousRate, newRate: rate });
+        res.json({ message: 'Porcentaje de comisión actualizado', commissionRate: rate });
     } catch (e) {
         res.status(500).json({ message: safeErrorMessage(e) });
     }
