@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, DollarSign, Loader2, CheckCircle, Ban, Handshake, TrendingUp, Link2, Copy, Wallet, Download, ShieldCheck } from "lucide-react";
+import { Users, DollarSign, Loader2, CheckCircle, Ban, Handshake, TrendingUp, Link2, Copy, Wallet, Download, ShieldCheck, MessageCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { openWhatsApp } from "@/lib/whatsapp-utils";
 
 export default function AdminPartnersPage() {
     const [partners, setPartners] = useState<any[]>([]);
@@ -205,6 +206,12 @@ export default function AdminPartnersPage() {
             navigator.clipboard.writeText(inviteUrl);
             toast.success("Link copiado al portapapeles");
         }
+    };
+
+    const shareInviteByWhatsApp = () => {
+        if (!inviteUrl) return;
+        const message = `Hola! Te invito a ser Partner de Lexis Bill. Regístrate con este enlace y obtén prioridad en aprobación:\n\n${inviteUrl}`;
+        openWhatsApp(undefined, message);
     };
 
     const getStatusBadge = (status: string) => {
@@ -609,6 +616,9 @@ export default function AdminPartnersPage() {
                             />
                             <Button variant="outline" size="icon" onClick={copyInviteUrl} title="Copiar link">
                                 <Copy className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="icon" onClick={shareInviteByWhatsApp} title="Enviar por WhatsApp" className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/30">
+                                <MessageCircle className="w-4 h-4" />
                             </Button>
                         </div>
                     )}

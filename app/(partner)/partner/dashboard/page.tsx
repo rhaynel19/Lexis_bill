@@ -2,12 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, TrendingUp, Link2, Loader2, CheckCircle, Handshake, Users, DollarSign, Wallet } from "lucide-react";
+import { Copy, TrendingUp, Link2, Loader2, CheckCircle, Handshake, Users, DollarSign, Wallet, MessageCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { openWhatsApp } from "@/lib/whatsapp-utils";
 import styles from "./partner-dashboard.module.css";
 
 interface PartnerCommission {
@@ -80,6 +81,12 @@ export default function PartnerDashboardPage() {
             navigator.clipboard.writeText(data.referralUrl);
             toast.success("Link copiado");
         }
+    };
+
+    const shareReferralByWhatsApp = () => {
+        if (!data?.referralUrl) return;
+        const message = `Hola! Te recomiendo Lexis Bill para facturación y reportes fiscales en República Dominicana. Prueba gratis 15 días con mi enlace:\n\n${data.referralUrl}`;
+        openWhatsApp(undefined, message);
     };
 
     if (isLoading) {
@@ -182,9 +189,14 @@ export default function PartnerDashboardPage() {
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
                     <Input readOnly value={data.referralUrl ?? ""} className="flex-1 font-mono text-sm bg-muted/50" />
-                    <Button onClick={copyReferralUrl} variant="outline" size="sm" className="gap-2 shrink-0 border-amber-500/30 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300">
-                        <Copy className="h-4 w-4" /> Copiar
-                    </Button>
+                    <div className="flex gap-2 shrink-0">
+                        <Button onClick={copyReferralUrl} variant="outline" size="sm" className="gap-2 border-amber-500/30 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300">
+                            <Copy className="h-4 w-4" /> Copiar
+                        </Button>
+                        <Button onClick={shareReferralByWhatsApp} variant="outline" size="sm" className="gap-2 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/30 border-green-500/30">
+                            <MessageCircle className="h-4 w-4" /> WhatsApp
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 
