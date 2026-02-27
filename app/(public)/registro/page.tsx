@@ -407,8 +407,8 @@ function RegisterForm() {
                             <Button
                                 type="submit"
                                 className={isPartnerFlow
-                                    ? "w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-7 text-lg shadow-xl shadow-amber-500/20 transition-all active:scale-[0.98] rounded-xl"
-                                    : "w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-7 text-lg shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98] rounded-xl"}
+                                    ? "w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-7 px-4 text-base sm:text-lg shadow-xl shadow-amber-500/20 transition-all active:scale-[0.98] rounded-xl whitespace-normal text-center leading-snug"
+                                    : "w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-7 px-4 text-base sm:text-lg shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98] rounded-xl whitespace-normal text-center leading-snug"}
                                 disabled={isLoading || !acceptedTerms}
                                 aria-busy={isLoading}
                             >
