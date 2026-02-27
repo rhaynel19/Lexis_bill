@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, User, Lock, Mail, Building2, Briefcase, ShieldCheck, ArrowLeft, Handshake, Loader2 } from "lucide-react";
+import { CheckCircle2, User, Lock, Mail, Building2, Briefcase, ShieldCheck, ArrowLeft, Handshake, Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api-service";
 import { Suspense } from "react";
@@ -49,6 +49,7 @@ function RegisterForm() {
     const [inviteValid, setInviteValid] = useState<boolean | null>(null);
     const [checkingAuth, setCheckingAuth] = useState(true);
     const [policyVersions, setPolicyVersions] = useState<Record<string, number>>({});
+    const [showPassword, setShowPassword] = useState(false);
 
     // Si ya está logueado, redirigir (evitar duplicidad de cuenta)
     useEffect(() => {
@@ -321,14 +322,20 @@ function RegisterForm() {
                                         </div>
                                     )}
                                     {rncStatus.valid === false && !rncStatus.loading && (
-                                        <div className="mt-1 text-[10px] text-amber-600 font-medium pl-1 animate-in fade-in">
-                                            {rncStatus.error || "No pudimos validar este RNC. Revísalo con calma."}
+                                        <div className="mt-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 flex items-start gap-2 animate-in fade-in slide-in-from-top-1" role="alert">
+                                            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                                            <div>
+                                                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{rncStatus.error || "No pudimos validar este RNC. Revísalo con calma."}</p>
+                                                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">Lexis Bill valida RNCs usando fuentes públicas de la República Dominicana.</p>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
-                                <p className="text-[9px] text-slate-400 pt-1 pl-1 italic">
-                                    "Lexis Bill valida RNCs usando fuentes públicas de la República Dominicana."
-                                </p>
+                                {!(rncStatus.valid === false && !rncStatus.loading) && (
+                                    <p className="text-[9px] text-slate-400 pt-1 pl-1 italic">
+                                        Lexis Bill valida RNCs usando fuentes públicas de la República Dominicana.
+                                    </p>
+                                )}
                             </div>
 
                             <div className="space-y-1.5">
@@ -356,15 +363,23 @@ function RegisterForm() {
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-blue-900 uppercase tracking-widest pl-1">Crea una Contraseña</label>
                                 <div className="relative">
-                                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
                                     <Input
-                                        type="password"
+                                        type={showPassword ? "text" : "password"}
                                         placeholder="Tu clave segura"
-                                        className="pl-11 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors text-base"
+                                        className="pl-11 pr-12 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors text-base"
                                         value={form.password}
                                         onChange={(e) => setForm({ ...form, password: e.target.value })}
                                         required
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword((v) => !v)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                        aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                                    >
+                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                    </button>
                                 </div>
                             </div>
 
@@ -381,8 +396,11 @@ function RegisterForm() {
                             />
 
                             {error && (
-                                <div className="p-3 bg-red-50 text-red-600 text-xs rounded-xl border border-red-100 flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
-                                    <p className="font-medium">{error}</p>
+                                <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 flex items-start gap-3 animate-in fade-in slide-in-from-top-1 shadow-sm" role="alert">
+                                    <div className="rounded-full bg-red-100 dark:bg-red-900/40 p-2 shrink-0">
+                                        <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                    </div>
+                                    <p className="text-sm font-medium text-red-800 dark:text-red-200 leading-snug">{error}</p>
                                 </div>
                             )}
 

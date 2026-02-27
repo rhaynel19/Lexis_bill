@@ -160,11 +160,8 @@ function LoginForm() {
             const isEmailNotVerified = data && typeof data === "object" && (data as { code?: string }).code === "EMAIL_NOT_VERIFIED";
             const displayMsg = isEmailNotVerified
                 ? (typeof data?.message === "string" ? data.message : "Debes verificar tu correo antes de iniciar sesión.")
-                : (serverMsg ? `${statusText}: ${serverMsg}` : statusText);
-            const extra = !isEmailNotVerified && data && typeof data === "object" && Object.keys(data).length > 1 && status !== 502
-                ? ` | Respuesta: ${JSON.stringify(data)}`
-                : "";
-            setError(displayMsg + extra);
+                : getLoginErrorMessage({ status, message: serverMsg, code: data?.code });
+            setError(displayMsg);
             setEmailNotVerified(!!isEmailNotVerified);
         } finally {
             setIsLoading(false);
@@ -276,13 +273,15 @@ function LoginForm() {
                         </div>
 
                         {error && (
-                            <div id="login-error" className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-sm rounded-lg flex flex-col gap-2 animate-in fade-in slide-in-from-top-1" role="alert">
-                                <div className="flex items-start gap-2">
-                                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                                    <p>{error}</p>
+                            <div id="login-error" className="p-4 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 flex flex-col gap-3 animate-in fade-in slide-in-from-top-1 shadow-sm" role="alert">
+                                <div className="flex items-start gap-3">
+                                    <div className="rounded-full bg-red-100 dark:bg-red-900/40 p-2 shrink-0">
+                                        <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                    </div>
+                                    <p className="text-sm font-medium text-red-800 dark:text-red-200 leading-snug">{error}</p>
                                 </div>
                                 {emailNotVerified && (
-                                    <Button type="button" variant="outline" size="sm" className="w-full border-amber-500 text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-950/30" onClick={handleResendVerify} disabled={resendingVerify}>
+                                    <Button type="button" variant="outline" size="sm" className="w-full border-amber-500 text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-950/30 rounded-lg" onClick={handleResendVerify} disabled={resendingVerify}>
                                         {resendingVerify ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
                                         Reenviar verificación al correo
                                     </Button>
