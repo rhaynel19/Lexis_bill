@@ -26,6 +26,7 @@ export default function Configuration() {
         bankName: "",
         bankAccount: "",
         hasElectronicBilling: false,
+        isTaxExemptCompany: false,
     });
 
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -63,6 +64,7 @@ export default function Configuration() {
                         ...prev,
                         companyName: me.name ?? prev.companyName,
                         email: me.email ?? prev.email,
+                        isTaxExemptCompany: me?.taxSettings?.isTaxExemptCompany ?? prev.isTaxExemptCompany,
                     }));
                 }
             } catch {
@@ -115,7 +117,8 @@ export default function Configuration() {
                 exequatur: config.exequatur,
                 hasElectronicBilling: config.hasElectronicBilling,
                 logo: logoPreview,
-                digitalSeal: sealPreview
+                digitalSeal: sealPreview,
+                taxSettings: { isTaxExemptCompany: config.isTaxExemptCompany, defaultTaxRate: 0.18 }
             });
             toast.success("✅ Configuración guardada exitosamente en la nube y localmente.");
             setConfigLocked(true);
@@ -282,6 +285,24 @@ export default function Configuration() {
                         <div className="space-y-2 md:col-span-2">
                             <Label htmlFor="address">Dirección Física</Label>
                             <Input id="address" value={config.address} onChange={handleChange} placeholder="Ej: Av. Winston Churchill esq. 27 de Febrero..." className="bg-white" disabled={configLocked} />
+                        </div>
+
+                        {/* Configuración fiscal: empresa exenta ITBIS */}
+                        <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 md:col-span-2">
+                            <input
+                                type="checkbox"
+                                id="isTaxExemptCompany"
+                                checked={config.isTaxExemptCompany}
+                                onChange={(e) => !configLocked && setConfig({ ...config, isTaxExemptCompany: e.target.checked })}
+                                className="mt-1 h-4 w-4 rounded border-amber-500 text-amber-600 focus:ring-amber-500"
+                                disabled={configLocked}
+                                aria-label="Empresa exenta de ITBIS"
+                                title="Empresa exenta de ITBIS (régimen especial)"
+                            />
+                            <div>
+                                <Label htmlFor="isTaxExemptCompany" className="font-medium text-amber-900 dark:text-amber-100 cursor-pointer">Empresa exenta de ITBIS (régimen especial)</Label>
+                                <p className="text-xs text-amber-800 dark:text-amber-200 mt-0.5">Si su empresa está bajo régimen exento en República Dominicana, active esta opción. Las facturas no calcularán ITBIS.</p>
+                            </div>
                         </div>
 
                         {/* Bank Info */}

@@ -198,9 +198,14 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
                                         <span className="text-foreground font-medium">{formatCurrency(data.subtotal)}</span>
                                     </div>
                                     <div className="flex justify-between text-success">
-                                        <span>ITBIS (18%)</span>
+                                        <span>{data.itbis === 0 ? "ITBIS" : "ITBIS (18%)"}</span>
                                         <span className="font-medium">{formatCurrency(data.itbis)}</span>
                                     </div>
+                                    {data.itbis === 0 && (
+                                        <p className="text-[10px] text-muted-foreground italic mt-2">
+                                            Operación exenta de ITBIS conforme régimen fiscal aplicable en República Dominicana.
+                                        </p>
+                                    )}
                                     <Separator className="my-2" />
                                 </div>
                             )}

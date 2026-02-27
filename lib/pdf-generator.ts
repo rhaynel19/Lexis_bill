@@ -277,10 +277,21 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     doc.text(formatCurrency(invoiceData.subtotal), summaryX, yPosition, { align: "right" });
     yPosition += 6;
 
-    // ITBIS
-    doc.text("ITBIS (18%):", summaryLabelX - 5, yPosition);
+    // ITBIS (etiqueta según si es 0 = exento)
+    const itbisLabel = invoiceData.itbis === 0 ? "ITBIS:" : "ITBIS (18%):";
+    doc.text(itbisLabel, summaryLabelX - 5, yPosition);
     doc.text(formatCurrency(invoiceData.itbis), summaryX, yPosition, { align: "right" });
     yPosition += 6;
+    if (invoiceData.itbis === 0) {
+        doc.setFontSize(APP_CONFIG.pdf.fontSize.small);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(APP_CONFIG.pdf.colors.secondary[0], APP_CONFIG.pdf.colors.secondary[1], APP_CONFIG.pdf.colors.secondary[2]);
+        doc.text("Operación exenta de ITBIS conforme régimen fiscal aplicable en República Dominicana.", margin.left, yPosition, { maxWidth: pageWidth - margin.left - margin.right });
+        doc.setTextColor(APP_CONFIG.pdf.colors.text[0], APP_CONFIG.pdf.colors.text[1], APP_CONFIG.pdf.colors.text[2]);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(APP_CONFIG.pdf.fontSize.normal);
+        yPosition += 8;
+    }
 
     // Retención ISR (si aplica)
     if (invoiceData.isrRetention > 0) {

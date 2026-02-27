@@ -35,6 +35,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const log = require('./logger');
+const financialService = require('./services/financial');
 
 // === UTILIDADES DE SEGURIDAD ===
 
@@ -69,6 +70,14 @@ const isValidObjectId = (id) => {
 };
 
 /**
+ * Escapa caracteres especiales de RegExp para evitar ReDoS (búsqueda admin)
+ */
+const escapeRegex = (str) => {
+    if (typeof str !== 'string') return '';
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+/**
  * Valida fortaleza de contraseña
  * Mínimo 8 caracteres, al menos 1 mayúscula, 1 minúscula, 1 número
  */
@@ -82,35 +91,29 @@ const validatePassword = (password) => {
 };
 
 /**
- * Sanitiza un objeto de items de factura/cotización
+ * Sanitiza un objeto de items de factura/cotización.
+ * Acepta price o unitPrice; taxCategory/taxRate o isExempt. Normaliza para almacenar.
  */
-const sanitizeItems = (items) => {
+const sanitizeItems = (items, isTaxExemptCompany = false) => {
     if (!Array.isArray(items)) return [];
-    return items.slice(0, 100).map(item => ({
-        description: sanitizeString(item?.description || '', 500),
-        quantity: Math.max(0, Math.min(Number(item?.quantity) || 0, 999999)),
-        price: Math.max(0, Math.min(Number(item?.price) || 0, 999999999)),
-        isExempt: Boolean(item?.isExempt)
-    })).filter(item => item.description && item.quantity > 0);
+    return items.slice(0, 100).map(item => {
+        const taxCategory = item?.taxCategory === 'exempt' || item?.isExempt ? 'exempt' : 'taxable';
+        const taxRate = taxCategory === 'exempt' ? 0 : Math.min(0.18, Math.max(0, Number(item?.taxRate) ?? 0.18));
+        const finalRate = isTaxExemptCompany ? 0 : taxRate;
+        return {
+            description: sanitizeString(item?.description || '', 500),
+            quantity: Math.max(0, Math.min(Number(item?.quantity) || 0, 999999)),
+            price: Math.max(0, Math.min(Number(item?.price ?? item?.unitPrice) || 0, 999999999)),
+            isExempt: taxCategory === 'exempt',
+            taxCategory: taxCategory,
+            taxRate: finalRate
+        };
+    }).filter(item => item.description && item.quantity > 0);
 };
 
-/** ITBIS República Dominicana 18%. Recalcula subtotal, itbis y total desde items (nunca confiar en frontend). */
-function computeAmountsFromItems(items) {
-    if (!Array.isArray(items) || items.length === 0) return { subtotal: 0, itbis: 0, total: 0 };
-    let subtotal = 0;
-    let itbis = 0;
-    const ITBIS_RATE = 0.18;
-    for (const item of items) {
-        const q = Math.max(0, Number(item.quantity) || 0);
-        const p = Math.max(0, Number(item.price) || 0);
-        const lineTotal = Math.round(q * p * 100) / 100;
-        subtotal += lineTotal;
-        if (!item.isExempt) itbis += Math.round(lineTotal * ITBIS_RATE * 100) / 100;
-    }
-    subtotal = Math.round(subtotal * 100) / 100;
-    itbis = Math.round(itbis * 100) / 100;
-    const total = Math.round((subtotal + itbis) * 100) / 100;
-    return { subtotal, itbis, total };
+/** Recalcula subtotal, itbis y total desde ítems (nunca confiar en frontend). Usa taxSettings del usuario. */
+function computeAmountsFromItems(items, companyTaxSettings) {
+    return financialService.computeAmountsFromItems(items, companyTaxSettings || {});
 }
 
 /** En producción no exponer mensajes internos ni stack al cliente. */
@@ -312,6 +315,11 @@ const userSchema = new mongoose.Schema({
 
     // Preferencias de Facturación
     hasElectronicBilling: { type: Boolean, default: false },
+    // Configuración fiscal: empresa exenta y tasa por defecto (facturas mixtas / ítems exentos)
+    taxSettings: {
+        isTaxExemptCompany: { type: Boolean, default: false },
+        defaultTaxRate: { type: Number, default: 0.18 }
+    },
 
     // Recordatorio 606/607: último periodo por el que se envió (YYYYMM)
     lastReportReminderPeriod: { type: String },
@@ -374,7 +382,9 @@ const invoiceSchema = new mongoose.Schema({
         description: String,
         quantity: Number,
         price: Number,
-        isExempt: Boolean
+        isExempt: Boolean,
+        taxCategory: { type: String, enum: ['taxable', 'exempt'], default: 'taxable' },
+        taxRate: { type: Number, default: 0.18 }
     }],
     subtotal: Number,
     itbis: Number,
@@ -501,7 +511,9 @@ const quoteSchema = new mongoose.Schema({
         description: String,
         quantity: Number,
         price: Number,
-        isExempt: Boolean
+        isExempt: Boolean,
+        taxCategory: { type: String, enum: ['taxable', 'exempt'], default: 'taxable' },
+        taxRate: { type: Number, default: 0.18 }
     }],
     subtotal: { type: Number, required: true },
     itbis: { type: Number, required: true },
@@ -1685,6 +1697,9 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
             }
         }
 
+        const taxSettings = user.taxSettings && typeof user.taxSettings === 'object'
+            ? { isTaxExemptCompany: !!user.taxSettings.isTaxExemptCompany, defaultTaxRate: Math.min(0.18, Math.max(0, Number(user.taxSettings.defaultTaxRate) ?? 0.18)) }
+            : { isTaxExemptCompany: false, defaultTaxRate: 0.18 };
         res.json({
             id: user._id,
             email: user.email,
@@ -1694,6 +1709,7 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
             role: user.role || 'user',
             subscription: sub,
             fiscalStatus: { suggested: user.suggestedFiscalName, confirmed: user.confirmedFiscalName },
+            taxSettings,
             partner,
             onboardingCompleted,
             needsPolicyAcceptance: needsPolicyAcceptance || undefined,
@@ -1993,13 +2009,22 @@ app.post('/api/auth/profile', verifyToken, async (req, res) => {
                 user[field] = updates[field];
             }
         });
+        if (updates.taxSettings && typeof updates.taxSettings === 'object') {
+            if (!user.taxSettings) user.taxSettings = {};
+            if (updates.taxSettings.isTaxExemptCompany !== undefined) user.taxSettings.isTaxExemptCompany = Boolean(updates.taxSettings.isTaxExemptCompany);
+            if (updates.taxSettings.defaultTaxRate !== undefined) user.taxSettings.defaultTaxRate = Math.min(0.18, Math.max(0, Number(updates.taxSettings.defaultTaxRate) || 0.18));
+        }
 
         await user.save();
+        const taxSettings = user.taxSettings && typeof user.taxSettings === 'object'
+            ? { isTaxExemptCompany: !!user.taxSettings.isTaxExemptCompany, defaultTaxRate: user.taxSettings.defaultTaxRate ?? 0.18 }
+            : { isTaxExemptCompany: false, defaultTaxRate: 0.18 };
         res.json({
             success: true, user: {
                 name: user.name,
                 email: user.email,
-                hasElectronicBilling: user.hasElectronicBilling
+                hasElectronicBilling: user.hasElectronicBilling,
+                taxSettings
             }
         });
     } catch (error) {
@@ -2511,7 +2536,7 @@ app.get('/api/admin/payments-history', verifyToken, verifyAdmin, async (req, res
 // --- ADMIN: Listado de usuarios registrados ---
 app.get('/api/admin/users', verifyToken, verifyAdmin, async (req, res) => {
     try {
-        const q = (req.query.q || '').trim();
+        const qRaw = (req.query.q || '').trim().slice(0, 100);
         const role = (req.query.role || '').trim().toLowerCase();
         const plan = (req.query.plan || '').trim().toLowerCase();
         const statusFilter = (req.query.status || '').trim().toLowerCase(); // active | trial | expired
@@ -2523,12 +2548,13 @@ app.get('/api/admin/users', verifyToken, verifyAdmin, async (req, res) => {
         const skip = (page - 1) * limit;
 
         const conditions = [];
-        if (q) {
+        if (qRaw) {
+            const qSafe = escapeRegex(qRaw);
             conditions.push({
                 $or: [
-                    { name: new RegExp(q, 'i') },
-                    { email: new RegExp(q, 'i') },
-                    { rnc: new RegExp(q, 'i') }
+                    { name: new RegExp(qSafe, 'i') },
+                    { email: new RegExp(qSafe, 'i') },
+                    { rnc: new RegExp(qSafe, 'i') }
                 ]
             });
         }
@@ -5029,8 +5055,9 @@ app.post('/api/invoices', verifyToken, verifyClient, async (req, res) => {
         const clientName = sanitizeString(req.body.clientName, 200);
         const clientRnc = (sanitizeString(req.body.clientRnc || req.body.rnc, 20)).replace(/[^0-9]/g, '');
         const ncfType = sanitizeString(req.body.ncfType || req.body.type, 10);
-        const items = sanitizeItems(req.body.items);
-        const { subtotal, itbis, total } = computeAmountsFromItems(items);
+        const taxSettings = req.user?.taxSettings || {};
+        const items = sanitizeItems(req.body.items, taxSettings.isTaxExemptCompany);
+        const { subtotal, itbis, total } = computeAmountsFromItems(items, taxSettings);
         
         const isPlaceholderName = !clientName || (String(clientName).toUpperCase().trim() === 'CONTRIBUYENTE REGISTRADO');
         if (isPlaceholderName || !clientRnc || items.length === 0) {
@@ -5138,7 +5165,8 @@ app.post('/api/invoices/:invoiceId/credit-note', verifyToken, verifyClient, asyn
         const fullNcf = await getNextNcf(req.userId, creditNoteType, session, original.clientRnc);
 
         const cnItems = original.items || [];
-        const cnAmounts = computeAmountsFromItems(cnItems);
+        const taxSettings = req.user?.taxSettings || {};
+        const cnAmounts = computeAmountsFromItems(cnItems, taxSettings);
         const creditNote = new Invoice({
             userId: req.userId,
             clientName: original.clientName,
@@ -5219,11 +5247,13 @@ app.post('/api/invoices/:id/duplicate', verifyToken, verifyClient, async (req, r
             return res.status(400).json({ message: 'El cliente de esta factura ya no está disponible.' });
         }
 
-        const items = (original.items || []).map(({ description, quantity, price, isExempt }) => ({
-            description: description || '',
-            quantity: quantity ?? 1,
-            price: price ?? 0,
-            isExempt: !!isExempt
+        const items = (original.items || []).map((it) => ({
+            description: (it && it.description) || '',
+            quantity: it && (it.quantity != null) ? it.quantity : 1,
+            price: it && (it.price != null) ? it.price : 0,
+            isExempt: !!(it && it.isExempt),
+            taxCategory: (it && it.taxCategory) === 'exempt' ? 'exempt' : 'taxable',
+            taxRate: (it && it.taxRate != null) ? Math.min(0.18, Math.max(0, Number(it.taxRate))) : 0.18
         }));
         const tipoPago = ['efectivo', 'transferencia', 'tarjeta', 'credito', 'mixto', 'otro'].includes(original.tipoPago) ? original.tipoPago : 'efectivo';
         const pagoMixto = Array.isArray(original.pagoMixto) && original.pagoMixto.length > 0
@@ -5792,10 +5822,20 @@ app.post('/api/quotes', verifyToken, verifyClient, async (req, res) => {
         const clientName = sanitizeString(req.body.clientName, 200);
         const clientRnc = sanitizeString(req.body.clientRnc, 20).replace(/[^0-9]/g, '');
         const clientPhone = sanitizeString(req.body.clientPhone, 20).replace(/[^0-9+\-\s]/g, '');
-        const items = sanitizeItems(req.body.items);
-        const subtotal = Math.max(0, Math.min(Number(req.body.subtotal) || 0, 999999999));
-        const itbis = Math.max(0, Math.min(Number(req.body.itbis) || 0, 999999999));
-        const total = Math.max(0, Math.min(Number(req.body.total) || 0, 999999999));
+        const taxSettings = req.user?.taxSettings || {};
+        const items = sanitizeItems(req.body.items, taxSettings.isTaxExemptCompany);
+        // Recalcular totales desde ítems (nunca confiar en frontend) — integridad fiscal
+        let subtotal, itbis, total;
+        if (items.length > 0) {
+            const amounts = computeAmountsFromItems(items, taxSettings);
+            subtotal = amounts.subtotal;
+            itbis = amounts.itbis;
+            total = amounts.total;
+        } else {
+            subtotal = Math.max(0, Math.min(Number(req.body.subtotal) || 0, 999999999));
+            itbis = Math.max(0, Math.min(Number(req.body.itbis) || 0, 999999999));
+            total = Math.max(0, Math.min(Number(req.body.total) || 0, 999999999));
+        }
         const validUntil = req.body.validUntil;
         
         if (!clientName) {
@@ -5836,10 +5876,22 @@ app.put('/api/quotes/:id', verifyToken, verifyClient, async (req, res) => {
         if (req.body.clientName !== undefined) quote.clientName = sanitizeString(req.body.clientName, 200);
         if (req.body.clientRnc !== undefined) quote.clientRnc = sanitizeString(req.body.clientRnc, 20).replace(/[^0-9]/g, '');
         if (req.body.clientPhone !== undefined) quote.clientPhone = sanitizeString(req.body.clientPhone, 20).replace(/[^0-9+\-\s]/g, '');
-        if (req.body.items !== undefined) quote.items = sanitizeItems(req.body.items);
-        if (req.body.subtotal !== undefined) quote.subtotal = Math.max(0, Math.min(Number(req.body.subtotal) || 0, 999999999));
-        if (req.body.itbis !== undefined) quote.itbis = Math.max(0, Math.min(Number(req.body.itbis) || 0, 999999999));
-        if (req.body.total !== undefined) quote.total = Math.max(0, Math.min(Number(req.body.total) || 0, 999999999));
+        if (req.body.items !== undefined) {
+            const taxSettings = req.user?.taxSettings || {};
+            quote.items = sanitizeItems(req.body.items, taxSettings.isTaxExemptCompany);
+            // Recalcular totales desde ítems (nunca confiar en frontend) — integridad fiscal
+            if (quote.items.length > 0) {
+                const amounts = computeAmountsFromItems(quote.items, taxSettings);
+                quote.subtotal = amounts.subtotal;
+                quote.itbis = amounts.itbis;
+                quote.total = amounts.total;
+            }
+        }
+        if (req.body.items === undefined) {
+            if (req.body.subtotal !== undefined) quote.subtotal = Math.max(0, Math.min(Number(req.body.subtotal) || 0, 999999999));
+            if (req.body.itbis !== undefined) quote.itbis = Math.max(0, Math.min(Number(req.body.itbis) || 0, 999999999));
+            if (req.body.total !== undefined) quote.total = Math.max(0, Math.min(Number(req.body.total) || 0, 999999999));
+        }
         if (req.body.validUntil !== undefined) quote.validUntil = new Date(req.body.validUntil);
         if (req.body.status !== undefined && ['draft', 'sent'].includes(req.body.status)) quote.status = req.body.status;
         quote.lastSavedAt = new Date();
@@ -5890,7 +5942,8 @@ app.post('/api/quotes/:id/convert', verifyToken, verifyClient, async (req, res) 
             const ncfType = quote.clientRnc?.replace(/[^\d]/g, '').length === 9 ? '31' : '32';
             const fullNcf = await getNextNcf(req.userId, ncfType, session, quote.clientRnc);
             const qItems = Array.isArray(quote.items) ? quote.items : [];
-            const qAmounts = computeAmountsFromItems(qItems);
+            const taxSettings = req.user?.taxSettings || {};
+            const qAmounts = computeAmountsFromItems(qItems, taxSettings);
             const newInvoice = new Invoice({
                 userId: req.userId,
                 clientName: quote.clientName,

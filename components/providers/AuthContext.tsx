@@ -11,6 +11,7 @@ export interface AuthUser {
     role: string;
     subscription?: { plan: string; status: string; [key: string]: unknown };
     fiscalStatus?: { suggested?: string; confirmed?: string };
+    taxSettings?: { isTaxExemptCompany?: boolean; defaultTaxRate?: number };
     partner?: { referralCode: string; status: string; tier?: string } | null;
     onboardingCompleted?: boolean;
     needsPolicyAcceptance?: boolean;
