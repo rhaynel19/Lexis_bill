@@ -1,0 +1,22 @@
+{
+  "status": 405,
+  "headers": {
+    "cache-control": "public, max-age=0, must-revalidate",
+    "content-disposition": "inline; filename=\"500\"",
+    "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://*.vercel.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.vercel.app https://api.dgii.gov.do https://*.sentry.io wss:; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests",
+    "content-type": "text/html; charset=utf-8",
+    "date": "Thu, 26 Feb 2026 01:29:24 GMT",
+    "permissions-policy": "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "server": "Vercel",
+    "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+    "transfer-encoding": "chunked",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-matched-path": "/500",
+    "x-next-error-status": "500",
+    "x-vercel-cache": "BYPASS",
+    "x-vercel-id": "iad1::hkdh5-1772069363974-0efb32f74779",
+    "x-xss-protection": "1; mode=block"
+  }
+}

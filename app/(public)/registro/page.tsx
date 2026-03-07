@@ -36,7 +36,8 @@ function RegisterForm() {
         name: "",
         rnc: "",
         profession: "general",
-        hasRnc: "yes" // Question filter
+        hasRnc: "yes", // Question filter
+        confirmPassword: ""
     });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
@@ -50,6 +51,7 @@ function RegisterForm() {
     const [checkingAuth, setCheckingAuth] = useState(true);
     const [policyVersions, setPolicyVersions] = useState<Record<string, number>>({});
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // Si ya está logueado, redirigir (evitar duplicidad de cuenta)
     useEffect(() => {
@@ -77,7 +79,7 @@ function RegisterForm() {
                 res.policies.forEach((p: { slug: string; version: number }) => { versions[p.slug] = p.version; });
                 setPolicyVersions(versions);
             }
-        }).catch(() => {});
+        }).catch(() => { });
         return () => { cancelled = true; };
     }, []);
 
@@ -139,12 +141,21 @@ function RegisterForm() {
 
         setIsLoading(true);
 
+        if (form.password !== form.confirmPassword) {
+            setError("Las contraseñas no coinciden. Por favor, verifica e intenta de nuevo.");
+            setIsLoading(false);
+            return;
+        }
+
         const acceptedPolicyVersions = (policyVersions.terms != null && policyVersions.privacy != null)
             ? { terms: policyVersions.terms, privacy: policyVersions.privacy }
             : undefined;
         try {
+            // No enviamos confirmPassword a la API
+            const { confirmPassword, ...apiForm } = form;
+
             const registerRes = await api.register({
-                ...form,
+                ...apiForm,
                 plan,
                 suggestedName: rncStatus.name,
                 referralCode: ref || undefined,
@@ -379,6 +390,29 @@ function RegisterForm() {
                                         aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
                                     >
                                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-blue-900 uppercase tracking-widest pl-1">Confirmar Contraseña</label>
+                                <div className="relative">
+                                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
+                                    <Input
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        placeholder="Repite tu clave segura"
+                                        className="pl-11 pr-12 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors text-base"
+                                        value={form.confirmPassword}
+                                        onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword((v) => !v)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                        aria-label={showConfirmPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                                    >
+                                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                     </button>
                                 </div>
                             </div>

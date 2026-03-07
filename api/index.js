@@ -672,11 +672,11 @@ const SubscriptionAuditLog = mongoose.models.SubscriptionAuditLog || mongoose.mo
 const subscriptionSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     plan: { type: String, enum: ['free', 'pro', 'premium'], required: true, default: 'free' },
-    status: { 
-        type: String, 
-        enum: ['TRIAL', 'ACTIVE', 'GRACE_PERIOD', 'PAST_DUE', 'PENDING_PAYMENT', 'UNDER_REVIEW', 'SUSPENDED', 'CANCELLED'], 
-        required: true, 
-        default: 'TRIAL' 
+    status: {
+        type: String,
+        enum: ['TRIAL', 'ACTIVE', 'GRACE_PERIOD', 'PAST_DUE', 'PENDING_PAYMENT', 'UNDER_REVIEW', 'SUSPENDED', 'CANCELLED'],
+        required: true,
+        default: 'TRIAL'
     },
     currentPeriodStart: { type: Date, required: true, default: Date.now },
     currentPeriodEnd: { type: Date, required: true },
@@ -691,8 +691,8 @@ subscriptionSchema.index({ graceUntil: 1 });
 
 // === SCHEMA: BILLING_EVENTS (Auditoría Completa) ===
 const billingEventSchema = new mongoose.Schema({
-    type: { 
-        type: String, 
+    type: {
+        type: String,
         required: true,
         enum: [
             'subscription_created',
@@ -789,7 +789,7 @@ const billingEventEmitter = {
         } catch (e) {
             log.error({ err: e.message, eventType }, 'Error guardando BillingEvent');
         }
-        
+
         // Ejecutar listeners de forma asíncrona (no bloqueante)
         const handlers = this.listeners[eventType] || [];
         for (const handler of handlers) {
@@ -837,11 +837,11 @@ async function getOrCreateSubscription(userId) {
 async function updateSubscriptionStatus(userId, newStatus, metadata = {}) {
     const sub = await getOrCreateSubscription(userId);
     const statusBefore = sub.status;
-    
+
     if (statusBefore === newStatus) return sub; // Sin cambios
-    
+
     const updates = { status: newStatus, updatedAt: new Date() };
-    
+
     // Lógica específica por estado
     const now = new Date();
     if (newStatus === 'GRACE_PERIOD') {
@@ -851,20 +851,20 @@ async function updateSubscriptionStatus(userId, newStatus, metadata = {}) {
     } else if (newStatus === 'ACTIVE') {
         updates.graceUntil = null;
     }
-    
+
     Object.assign(sub, updates);
     await sub.save();
-    
+
     // Logs y eventos
     await logSubscriptionStatusChange(userId, statusBefore, newStatus, metadata.paymentId, metadata.changedBy, metadata);
-    
+
     const eventType = {
         'ACTIVE': 'subscription_activated',
         'GRACE_PERIOD': 'subscription_grace_started',
         'SUSPENDED': 'subscription_suspended',
         'CANCELLED': 'subscription_cancelled'
     }[newStatus];
-    
+
     if (eventType) {
         await billingEventEmitter.emit(eventType, {
             userId,
@@ -874,7 +874,7 @@ async function updateSubscriptionStatus(userId, newStatus, metadata = {}) {
             ...metadata
         });
     }
-    
+
     return sub;
 }
 
@@ -883,10 +883,10 @@ async function activateSubscriptionFromPayment(userId, paymentId, plan, billingC
     const daysToAdd = billingCycle === 'annual' ? 365 : 30;
     const periodEnd = new Date(now);
     periodEnd.setDate(periodEnd.getDate() + daysToAdd);
-    
+
     const sub = await getOrCreateSubscription(userId);
     const statusBefore = sub.status;
-    
+
     // ✅ Actualizar Subscription (fuente de verdad)
     const updatedSub = await Subscription.findOneAndUpdate(
         { userId },
@@ -900,14 +900,14 @@ async function activateSubscriptionFromPayment(userId, paymentId, plan, billingC
         },
         { upsert: true, new: true }
     );
-    
+
     // ✅ Log de auditoría: cambio de estado de suscripción
     await logSubscriptionStatusChange(userId, statusBefore, 'ACTIVE', paymentId, null, {
         plan,
         billingCycle,
         reason: 'Payment approved - automatic activation'
     });
-    
+
     // Sincronizar con User (legacy, para compatibilidad)
     const user = await User.findById(userId);
     if (user) {
@@ -920,11 +920,11 @@ async function activateSubscriptionFromPayment(userId, paymentId, plan, billingC
         user.subscriptionStatus = 'Activo';
         user.membershipLevel = plan;
         await user.save();
-        
+
         // ✅ Log de auditoría: actualización de User legacy
         log.info({ userId, paymentId, plan }, 'User legacy subscription updated after payment approval');
     }
-    
+
     // ✅ Emitir evento de activación
     await billingEventEmitter.emit('subscription_activated', {
         userId,
@@ -934,9 +934,9 @@ async function activateSubscriptionFromPayment(userId, paymentId, plan, billingC
         periodStart: now,
         periodEnd
     });
-    
+
     log.info({ userId, paymentId, plan, statusBefore, statusAfter: 'ACTIVE' }, 'Subscription activated from payment');
-    
+
     return updatedSub;
 }
 
@@ -1310,13 +1310,13 @@ app.post('/api/tickets', verifyToken, verifyClient, async (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { password, plan } = req.body;
-        
+
         // === SANITIZACIÓN DE INPUTS ===
         const email = sanitizeEmail(req.body.email);
         const name = sanitizeString(req.body.name, 100);
         const rnc = sanitizeString(req.body.rnc, 20).replace(/[^0-9]/g, '');
         const profession = sanitizeString(req.body.profession, 100);
-        
+
         log.info({ action: 'register' }, 'Registrando usuario');
 
         // === VALIDACIONES ===
@@ -1437,11 +1437,14 @@ app.post('/api/auth/register', async (req, res) => {
             log.warn({ err: verifyErr && verifyErr.message }, 'No se pudo enviar email de verificación; usuario creado.');
         }
 
+        const requiresVerification = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
         log.info({ action: 'register', success: true, isPartnerRegistration: !!isPartnerRegistration }, 'Usuario creado');
         res.status(201).json({
-            message: 'Usuario registrado. Revisa tu correo para verificar tu cuenta y poder iniciar sesión. Si no lo recibes, revisa spam o usa "Reenviar verificación" en la pantalla de login.',
+            message: requiresVerification
+                ? 'Usuario registrado. Revisa tu correo para verificar tu cuenta y poder iniciar sesión. Si no lo recibes, revisa spam o usa "Reenviar verificación" en la pantalla de login.'
+                : 'Usuario registrado exitosamente.',
             plan: status,
-            requiresEmailVerification: true
+            requiresEmailVerification: requiresVerification
         });
     } catch (error) {
         log.error({ err: error.message }, 'Error en registro');
@@ -1478,9 +1481,10 @@ async function handleLogin(req, res) {
         }
 
         // Requerir correo verificado para usuarios creados después de la fecha (evitar correos falsos)
-        const verificationCutoff = process.env.VERIFICATION_REQUIRED_AFTER ? new Date(process.env.VERIFICATION_REQUIRED_AFTER) : new Date('2026-02-27T00:00:00Z');
+        // NOTA: Desactivado por defecto. Solo se requerirá si REQUIRE_EMAIL_VERIFICATION='true'
+        const verificationCutoff = process.env.VERIFICATION_REQUIRED_AFTER ? new Date(process.env.VERIFICATION_REQUIRED_AFTER) : new Date('2030-01-01T00:00:00Z');
         const createdAt = user.createdAt ? new Date(user.createdAt) : new Date(0);
-        if (createdAt >= verificationCutoff && !user.emailVerified) {
+        if (process.env.REQUIRE_EMAIL_VERIFICATION === 'true' && createdAt >= verificationCutoff && !user.emailVerified) {
             log.warn({ userId: user._id }, 'Login fallido: correo no verificado');
             return res.status(403).json({
                 message: 'Debes verificar tu correo antes de iniciar sesión. Revisa tu bandeja (o spam) y haz clic en el enlace que te enviamos. Si no lo recibiste, usa "Reenviar verificación" en esta pantalla.',
@@ -2213,14 +2217,14 @@ app.post('/api/membership/request-payment', verifyToken, verifyClient, async (re
         }
 
         // ✅ Verificar pagos pendientes o en revisión (no solo pending)
-        const existing = await PaymentRequest.findOne({ 
-            userId: req.userId, 
+        const existing = await PaymentRequest.findOne({
+            userId: req.userId,
             status: { $in: ['pending', 'under_review'] },
             // ✅ Solo considerar pagos recientes (últimos 90 días)
             requestedAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) }
         });
         if (existing) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Ya tienes una solicitud de pago pendiente o en revisión. Espera a que la validemos.',
                 existingPaymentId: existing._id,
                 existingStatus: existing.status
@@ -2234,7 +2238,7 @@ app.post('/api/membership/request-payment', verifyToken, verifyClient, async (re
         let pr = null;
         for (let saveAttempt = 0; saveAttempt < 2; saveAttempt++) {
             try {
-                        pr = new PaymentRequest({
+                pr = new PaymentRequest({
                     userId: req.userId,
                     plan,
                     billingCycle: cycle,
@@ -2283,7 +2287,7 @@ app.post('/api/membership/request-payment', verifyToken, verifyClient, async (re
 
         // ✅ Retornar estado actualizado de suscripción
         const updatedStatus = await Subscription.findOne({ userId: req.userId });
-        
+
         res.status(201).json({
             success: true,
             message: paymentMethod === 'paypal'
@@ -2386,20 +2390,20 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
         pr.processedAt = now;
         pr.processedBy = req.userId;
         await pr.save();
-        
+
         // ✅ Logs de auditoría mejorados
-        await logAdminAction(req.userId, 'payment_approve', 'payment', pr._id.toString(), { 
+        await logAdminAction(req.userId, 'payment_approve', 'payment', pr._id.toString(), {
             userId: pr.userId?.toString(),
             plan: pr.plan,
             billingCycle: pr.billingCycle,
             statusBefore
         });
-        await logPaymentStatusChange(pr._id, pr.userId, statusBefore, 'approved', req.userId, { 
-            plan: pr.plan, 
+        await logPaymentStatusChange(pr._id, pr.userId, statusBefore, 'approved', req.userId, {
+            plan: pr.plan,
             billingCycle: pr.billingCycle,
             processedAt: now
         });
-        
+
         // 🔥 USAR SISTEMA DE EVENTOS (Desacoplado) - El listener activará la suscripción
         await billingEventEmitter.emit('payment_approved', {
             userId: pr.userId,
@@ -2409,7 +2413,7 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
             billingCycle: pr.billingCycle,
             changedBy: req.userId
         });
-        
+
         // ✅ Verificar que la suscripción se activó correctamente
         const updatedSub = await Subscription.findOne({ userId: pr.userId });
         if (!updatedSub || updatedSub.status !== 'ACTIVE') {
@@ -2417,7 +2421,7 @@ app.post('/api/admin/approve-payment/:id', verifyToken, verifyAdmin, async (req,
             // Intentar activación manual como fallback
             await activateSubscriptionFromPayment(pr.userId, pr._id, pr.plan, pr.billingCycle || 'monthly');
         }
-        
+
         // Marcar referido como activo si es partner referral (antes de enviar respuesta)
         await PartnerReferral.findOneAndUpdate(
             { userId: pr.userId },
@@ -2475,11 +2479,11 @@ app.post('/api/admin/reject-payment/:id', verifyToken, verifyAdmin, async (req, 
         pr.processedAt = new Date();
         pr.processedBy = req.userId;
         await pr.save();
-        
+
         // Logs de auditoría
         await logAdminAction(req.userId, 'payment_reject', 'payment', pr._id.toString(), { userId: pr.userId?.toString() });
         await logPaymentStatusChange(pr._id, pr.userId, statusBefore, 'rejected', req.userId, { reason: 'Admin rejection' });
-        
+
         // Evento de billing
         await billingEventEmitter.emit('payment_rejected', {
             userId: pr.userId,
@@ -3252,7 +3256,7 @@ async function graceManagerJob() {
             currentPeriodEnd: { $lt: now },
             graceUntil: null
         });
-        
+
         let movedToGrace = 0;
         for (const sub of subscriptions) {
             await updateSubscriptionStatus(sub.userId, 'GRACE_PERIOD', {
@@ -3261,7 +3265,7 @@ async function graceManagerJob() {
             });
             movedToGrace++;
         }
-        
+
         log.info({ movedToGrace, total: subscriptions.length }, 'Grace Manager ejecutado');
         return { movedToGrace, total: subscriptions.length };
     } catch (e) {
@@ -3278,7 +3282,7 @@ async function suspensionGuardJob() {
             status: 'GRACE_PERIOD',
             graceUntil: { $lt: now }
         });
-        
+
         let suspended = 0;
         for (const sub of subscriptions) {
             await updateSubscriptionStatus(sub.userId, 'SUSPENDED', {
@@ -3287,7 +3291,7 @@ async function suspensionGuardJob() {
             });
             suspended++;
         }
-        
+
         log.info({ suspended, total: subscriptions.length }, 'Suspension Guard ejecutado');
         return { suspended, total: subscriptions.length };
     } catch (e) {
@@ -3302,16 +3306,16 @@ async function paymentReconcilerJob() {
         const approvedPayments = await PaymentRequest.find({ status: 'approved' })
             .populate('userId')
             .sort({ processedAt: -1 });
-        
+
         let repaired = 0;
         const issues = [];
-        
+
         for (const payment of approvedPayments) {
             const user = payment.userId;
             if (!user) continue;
-            
+
             const sub = await Subscription.findOne({ userId: user._id });
-            
+
             // Si el pago está aprobado pero la suscripción no está ACTIVE, reparar
             if (!sub || sub.status !== 'ACTIVE') {
                 await activateSubscriptionFromPayment(
@@ -3320,7 +3324,7 @@ async function paymentReconcilerJob() {
                     payment.plan,
                     payment.billingCycle || 'monthly'
                 );
-                
+
                 issues.push({
                     userId: user._id,
                     paymentId: payment._id,
@@ -3330,14 +3334,14 @@ async function paymentReconcilerJob() {
                 repaired++;
             }
         }
-        
+
         await billingEventEmitter.emit('reconciliation_performed', {
             userId: null,
             repaired,
             total: approvedPayments.length,
             issues
         });
-        
+
         log.info({ repaired, total: approvedPayments.length }, 'Payment Reconciler ejecutado');
         return { repaired, total: approvedPayments.length, issues };
     } catch (e) {
@@ -3357,7 +3361,7 @@ async function repairSubscriptions() {
         const subscriptions = await Subscription.find({
             status: { $in: ['PENDING_PAYMENT', 'UNDER_REVIEW', 'PAST_DUE'] }
         });
-        
+
         let repaired = 0;
         for (const sub of subscriptions) {
             // Buscar pago aprobado reciente
@@ -3365,7 +3369,7 @@ async function repairSubscriptions() {
                 userId: sub.userId,
                 status: 'approved'
             }).sort({ processedAt: -1 });
-            
+
             if (approvedPayment) {
                 await activateSubscriptionFromPayment(
                     sub.userId,
@@ -3404,14 +3408,14 @@ app.post('/api/admin/reconcile', verifyToken, verifyAdmin, async (req, res) => {
             suspensionGuardJob(),
             refreshCounters()
         ]);
-        
+
         await logAdminAction(req.userId, 'reconcile_system', 'system', 'all', {
             paymentsRepaired: paymentsResult.repaired,
             subscriptionsRepaired: subscriptionsResult.repaired,
             movedToGrace: graceResult.movedToGrace,
             suspended: suspensionResult.suspended
         });
-        
+
         res.json({
             success: true,
             message: 'Reconciliación completada',
@@ -3439,7 +3443,7 @@ app.post('/api/cron/reconcile', async (req, res) => {
         if (providedSecret !== cronSecret) {
             return res.status(403).json({ error: 'Unauthorized' });
         }
-        
+
         // Ejecutar todos los jobs automáticos
         const [paymentsResult, subscriptionsResult, graceResult, suspensionResult] = await Promise.all([
             paymentReconcilerJob(),
@@ -3447,14 +3451,14 @@ app.post('/api/cron/reconcile', async (req, res) => {
             graceManagerJob(),
             suspensionGuardJob()
         ]);
-        
-        log.info({ 
-            paymentsRepaired: paymentsResult.repaired, 
+
+        log.info({
+            paymentsRepaired: paymentsResult.repaired,
             subscriptionsRepaired: subscriptionsResult.repaired,
             movedToGrace: graceResult.movedToGrace,
             suspended: suspensionResult.suspended
         }, 'Auto-reconciliation ejecutada');
-        
+
         res.json({
             success: true,
             timestamp: new Date().toISOString(),
@@ -3478,26 +3482,26 @@ app.post('/api/admin/repair-user-billing/:userId', verifyToken, verifyAdmin, asy
         if (!isValidObjectId(userId)) {
             return res.status(400).json({ error: 'ID de usuario inválido' });
         }
-        
+
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
-        
+
         // 1. Recalcular suscripción desde la fuente de verdad
         let sub = await Subscription.findOne({ userId });
         if (!sub) {
             sub = await getOrCreateSubscription(userId);
         }
-        
+
         // 2. Buscar pagos aprobados
         const approvedPayment = await PaymentRequest.findOne({
             userId,
             status: 'approved'
         }).sort({ processedAt: -1 });
-        
+
         const repairs = [];
-        
+
         // 3. Reparar estado si hay pago aprobado pero suscripción no activa
         if (approvedPayment && sub.status !== 'ACTIVE') {
             await activateSubscriptionFromPayment(
@@ -3508,7 +3512,7 @@ app.post('/api/admin/repair-user-billing/:userId', verifyToken, verifyAdmin, asy
             );
             repairs.push('Subscription activated from approved payment');
         }
-        
+
         // 4. Verificar inconsistencias entre User y Subscription
         if (user.subscriptionStatus === 'Activo' && sub.status !== 'ACTIVE') {
             // User dice activo pero Subscription no, usar Subscription como fuente de verdad
@@ -3523,18 +3527,18 @@ app.post('/api/admin/repair-user-billing/:userId', verifyToken, verifyAdmin, asy
             await user.save();
             repairs.push('User.subscriptionStatus synced with Subscription');
         }
-        
+
         // 5. Limpiar cache (si existe)
         // En este caso, simplemente retornamos datos frescos
-        
+
         // 6. Regenerar permisos (el middleware lo hará en la próxima request)
-        
+
         await logAdminAction(req.userId, 'repair_user_billing', 'user', userId, {
             repairs,
             subscriptionStatus: sub.status,
             hasApprovedPayment: !!approvedPayment
         });
-        
+
         res.json({
             success: true,
             message: 'Billing reparado para usuario',
@@ -3557,7 +3561,7 @@ app.post('/api/admin/repair-user-billing/:userId', verifyToken, verifyAdmin, asy
 // === SISTEMA DE ALERTAS AUTOMÁTICAS ===
 async function getBillingAlerts() {
     const alerts = [];
-    
+
     try {
         // Alerta 1: Pago aprobado sin activar suscripción
         const approvedPayments = await PaymentRequest.find({ status: 'approved' }).populate('userId');
@@ -3574,7 +3578,7 @@ async function getBillingAlerts() {
                 });
             }
         }
-        
+
         // Alerta 2: Usuario suspendido con pago reciente
         const suspendedSubs = await Subscription.find({ status: 'SUSPENDED' });
         for (const sub of suspendedSubs) {
@@ -3593,10 +3597,10 @@ async function getBillingAlerts() {
                 });
             }
         }
-        
+
         // Alerta 3: Contador vs query real (ya implementado en /api/admin/alerts)
         // Se maneja en el endpoint existente
-        
+
         // Alerta 4: Suscripciones en GRACE_PERIOD por más de 5 días
         const longGraceSubs = await Subscription.find({
             status: 'GRACE_PERIOD',
@@ -3610,11 +3614,11 @@ async function getBillingAlerts() {
                 count: longGraceSubs.length
             });
         }
-        
+
     } catch (e) {
         log.error({ err: e.message }, 'Error generando alertas de billing');
     }
-    
+
     return alerts;
 }
 
@@ -3635,7 +3639,7 @@ app.get('/api/admin/billing-health', verifyToken, verifyAdmin, async (req, res) 
         const correctPayments = await PaymentRequest.countDocuments({
             status: 'approved'
         });
-        
+
         // Verificar consistencia: pagos aprobados con suscripciones activas
         const approvedPayments = await PaymentRequest.find({ status: 'approved' }).select('userId').lean();
         let consistentPayments = 0;
@@ -3646,15 +3650,15 @@ app.get('/api/admin/billing-health', verifyToken, verifyAdmin, async (req, res) 
                 consistentPayments++;
             }
         }
-        
-        const healthScore = totalPayments > 0 
+
+        const healthScore = totalPayments > 0
             ? ((consistentPayments / approvedPayments.length) * 100).toFixed(2)
             : 100;
-        
+
         const isHealthy = parseFloat(healthScore) >= 98;
-        
+
         const alerts = await getBillingAlerts();
-        
+
         res.json({
             success: true,
             healthScore: parseFloat(healthScore),
@@ -3666,7 +3670,7 @@ app.get('/api/admin/billing-health', verifyToken, verifyAdmin, async (req, res) 
                 inconsistentPayments: approvedPayments.length - consistentPayments
             },
             alerts: alerts.length,
-            recommendation: isHealthy 
+            recommendation: isHealthy
                 ? 'Sistema saludable'
                 : 'Investigar inconsistencias. Health score bajo 98%'
         });
@@ -3904,41 +3908,49 @@ app.get('/api/business-copilot', verifyToken, verifyClient, async (req, res) => 
         const [clientStatsRaw, monthlyRevenue, topServices, ncfSettings, customers, allInvoices] = await Promise.all([
             Invoice.aggregate([
                 { $match: { ...matchBase, clientRnc: { $exists: true, $nin: [null, ''] } } },
-                { $group: {
-                    _id: '$clientRnc',
-                    clientName: { $first: '$clientName' },
-                    lastInvoiceDate: { $max: '$date' },
-                    totalRevenue: { $sum: '$total' },
-                    invoiceCount: { $sum: 1 }
-                }},
-                { $project: {
-                    rnc: '$_id',
-                    clientName: 1,
-                    lastInvoiceDate: 1,
-                    totalRevenue: 1,
-                    invoiceCount: 1,
-                    daysSinceLastInvoice: { $floor: { $divide: [{ $subtract: [now, '$lastInvoiceDate'] }, 86400000] } }
-                }},
+                {
+                    $group: {
+                        _id: '$clientRnc',
+                        clientName: { $first: '$clientName' },
+                        lastInvoiceDate: { $max: '$date' },
+                        totalRevenue: { $sum: '$total' },
+                        invoiceCount: { $sum: 1 }
+                    }
+                },
+                {
+                    $project: {
+                        rnc: '$_id',
+                        clientName: 1,
+                        lastInvoiceDate: 1,
+                        totalRevenue: 1,
+                        invoiceCount: 1,
+                        daysSinceLastInvoice: { $floor: { $divide: [{ $subtract: [now, '$lastInvoiceDate'] }, 86400000] } }
+                    }
+                },
                 { $sort: { totalRevenue: -1 } },
                 { $limit: 100 }
             ]),
             Invoice.aggregate([
                 { $match: matchBase },
-                { $group: {
-                    _id: { year: { $year: '$date' }, month: { $month: '$date' } },
-                    total: { $sum: '$total' },
-                    count: { $sum: 1 }
-                }}
+                {
+                    $group: {
+                        _id: { year: { $year: '$date' }, month: { $month: '$date' } },
+                        total: { $sum: '$total' },
+                        count: { $sum: 1 }
+                    }
+                }
             ]),
             Invoice.aggregate([
                 { $match: matchBase },
                 { $unwind: '$items' },
                 { $match: { 'items.description': { $exists: true, $nin: [null, ''] } } },
-                { $group: {
-                    _id: '$items.description',
-                    totalQuantity: { $sum: { $ifNull: ['$items.quantity', 1] } },
-                    totalRevenue: { $sum: { $multiply: [{ $ifNull: ['$items.quantity', 1] }, { $ifNull: ['$items.price', 0] }] } }
-                }},
+                {
+                    $group: {
+                        _id: '$items.description',
+                        totalQuantity: { $sum: { $ifNull: ['$items.quantity', 1] } },
+                        totalRevenue: { $sum: { $multiply: [{ $ifNull: ['$items.quantity', 1] }, { $ifNull: ['$items.price', 0] }] } }
+                    }
+                },
                 { $sort: { totalRevenue: -1 } },
                 { $limit: 5 },
                 { $project: { description: '$_id', totalQuantity: 1, totalRevenue: 1, _id: 0 } }
@@ -3968,16 +3980,20 @@ app.get('/api/business-copilot', verifyToken, verifyClient, async (req, res) => 
         const [paymentStats, lastMonthClients, thisMonthClients] = await Promise.all([
             Invoice.aggregate([
                 { $match: matchBase },
-                { $addFields: {
-                    tipoPago: { $ifNull: ['$tipoPago', 'efectivo'] },
-                    balance: { $cond: [{ $gt: [{ $ifNull: ['$balancePendiente', 0] }, 0] }, '$balancePendiente', { $cond: [{ $eq: ['$status', 'pending'] }, '$total', 0] }] }
-                }},
-                { $group: {
-                    _id: '$tipoPago',
-                    count: { $sum: 1 },
-                    totalRevenue: { $sum: '$total' },
-                    totalBalance: { $sum: '$balance' }
-                }}
+                {
+                    $addFields: {
+                        tipoPago: { $ifNull: ['$tipoPago', 'efectivo'] },
+                        balance: { $cond: [{ $gt: [{ $ifNull: ['$balancePendiente', 0] }, 0] }, '$balancePendiente', { $cond: [{ $eq: ['$status', 'pending'] }, '$total', 0] }] }
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$tipoPago',
+                        count: { $sum: 1 },
+                        totalRevenue: { $sum: '$total' },
+                        totalBalance: { $sum: '$balance' }
+                    }
+                }
             ]),
             Invoice.aggregate([
                 { $match: { ...matchBase, date: { $gte: startOfLastMonth, $lte: endOfLastMonth } } },
@@ -4228,7 +4244,7 @@ app.get('/api/business-copilot', verifyToken, verifyClient, async (req, res) => 
         // 🔥 BILLING BRAIN: Generar insights proactivos
         const brain = new BillingBrain(userId, allInvoices, customers, ncfSettings);
         const brainInsights = await brain.analyze();
-        
+
         // Limitar insights a máximo 2 por sesión (evitar saturación)
         const topInsights = brainInsights.slice(0, 2);
 
@@ -4493,14 +4509,16 @@ app.get('/api/autofill/suggestions', verifyToken, verifyClient, async (req, res)
             { $match: { userId: new mongoose.Types.ObjectId(userId), status: { $nin: ['cancelled'] }, clientRnc: { $nin: [null, ''] } } },
             { $addFields: { tipoPago: { $ifNull: ['$tipoPago', 'efectivo'] } } },
             { $sort: { date: -1 } },
-            { $group: {
-                _id: '$clientRnc',
-                clientName: { $first: '$clientName' },
-                count: { $sum: 1 },
-                lastTotal: { $first: '$total' },
-                lastDate: { $first: '$date' },
-                lastTipoPago: { $first: '$tipoPago' }
-            }},
+            {
+                $group: {
+                    _id: '$clientRnc',
+                    clientName: { $first: '$clientName' },
+                    count: { $sum: 1 },
+                    lastTotal: { $first: '$total' },
+                    lastDate: { $first: '$date' },
+                    lastTipoPago: { $first: '$tipoPago' }
+                }
+            },
             { $sort: { count: -1, lastDate: -1 } },
             { $limit: 50 }
         ]);
@@ -4530,20 +4548,24 @@ app.get('/api/autofill/suggestions', verifyToken, verifyClient, async (req, res)
             { $match: { userId: new mongoose.Types.ObjectId(userId), status: { $nin: ['cancelled'] } } },
             { $unwind: '$items' },
             { $match: { 'items.description': { $exists: true, $nin: [null, ''] } } },
-            { $group: {
-                _id: '$items.description',
-                description: { $first: '$items.description' },
-                avgPrice: { $avg: '$items.price' },
-                lastPrice: { $last: '$items.price' },
-                isExemptCount: { $sum: { $cond: ['$items.isExempt', 1, 0] } },
-                count: { $sum: 1 }
-            }},
-            { $project: {
-                description: '$_id',
-                price: { $round: [{ $ifNull: ['$lastPrice', '$avgPrice'] }, 0] },
-                isExempt: { $gte: ['$isExemptCount', { $multiply: ['$count', 0.5] }] },
-                count: 1
-            }},
+            {
+                $group: {
+                    _id: '$items.description',
+                    description: { $first: '$items.description' },
+                    avgPrice: { $avg: '$items.price' },
+                    lastPrice: { $last: '$items.price' },
+                    isExemptCount: { $sum: { $cond: ['$items.isExempt', 1, 0] } },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $project: {
+                    description: '$_id',
+                    price: { $round: [{ $ifNull: ['$lastPrice', '$avgPrice'] }, 0] },
+                    isExempt: { $gte: ['$isExemptCount', { $multiply: ['$count', 0.5] }] },
+                    count: 1
+                }
+            },
             { $sort: { count: -1 } },
             { $limit: 30 }
         ]);
@@ -4705,11 +4727,11 @@ app.post('/api/customers', verifyToken, verifyClient, async (req, res) => {
             address: sanitizeString(req.body.address, 300),
             userId: req.userId
         };
-        
+
         if (!sanitizedData.name || !sanitizedData.rnc) {
             return res.status(400).json({ message: 'Nombre y RNC son requeridos' });
         }
-        
+
         const customer = await Customer.findOneAndUpdate(
             { userId: req.userId, rnc: sanitizedData.rnc },
             sanitizedData,
@@ -4727,7 +4749,7 @@ app.delete('/api/customers/:id', verifyToken, verifyClient, async (req, res) => 
         if (!isValidObjectId(req.params.id)) {
             return res.status(400).json({ message: 'ID de cliente inválido' });
         }
-        
+
         const deleted = await Customer.findOneAndDelete({
             _id: req.params.id,
             userId: req.userId
@@ -4926,13 +4948,17 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
             ]),
             // Cuentas por cobrar: venta a crédito (tipoPago credito) no cobrada + cualquier factura con saldo pendiente (ej. pagos parciales: mitad transferencia, mitad por cobrar)
             Invoice.aggregate([
-                { $match: { userId, status: { $ne: 'cancelled' }, $or: [
-                    { estadoPago: { $in: ['pendiente', 'parcial'] } },
-                    { balancePendiente: { $gt: 0 } },
-                    { status: 'pending' },
-                    { tipoPago: 'credito', balancePendiente: { $gt: 0 } },
-                    { tipoPago: 'credito', estadoPago: { $in: ['pendiente', 'parcial'] } }
-                ] } },
+                {
+                    $match: {
+                        userId, status: { $ne: 'cancelled' }, $or: [
+                            { estadoPago: { $in: ['pendiente', 'parcial'] } },
+                            { balancePendiente: { $gt: 0 } },
+                            { status: 'pending' },
+                            { tipoPago: 'credito', balancePendiente: { $gt: 0 } },
+                            { tipoPago: 'credito', estadoPago: { $in: ['pendiente', 'parcial'] } }
+                        ]
+                    }
+                },
                 { $group: { _id: null, count: { $sum: 1 }, totalPorCobrar: { $sum: { $cond: [{ $gt: [{ $ifNull: ['$balancePendiente', 0] }, 0] }, '$balancePendiente', '$total'] } } } }
             ]),
             Invoice.aggregate([
@@ -5058,14 +5084,14 @@ app.post('/api/invoices', verifyToken, verifyClient, async (req, res) => {
         const taxSettings = req.user?.taxSettings || {};
         const items = sanitizeItems(req.body.items, taxSettings.isTaxExemptCompany);
         const { subtotal, itbis, total } = computeAmountsFromItems(items, taxSettings);
-        
+
         const isPlaceholderName = !clientName || (String(clientName).toUpperCase().trim() === 'CONTRIBUYENTE REGISTRADO');
         if (isPlaceholderName || !clientRnc || items.length === 0) {
             await session.abortTransaction();
             session.endSession();
             return res.status(400).json({ message: isPlaceholderName ? 'Indica el nombre real del cliente (no el placeholder).' : 'Cliente, RNC e items son requeridos' });
         }
-        
+
         const fullNcf = await getNextNcf(req.userId, ncfType, session, clientRnc);
         if (!fullNcf) throw new Error("No hay secuencias NCF disponibles.");
         let invoiceDate = new Date();
@@ -5837,11 +5863,11 @@ app.post('/api/quotes', verifyToken, verifyClient, async (req, res) => {
             total = Math.max(0, Math.min(Number(req.body.total) || 0, 999999999));
         }
         const validUntil = req.body.validUntil;
-        
+
         if (!clientName) {
             return res.status(400).json({ message: 'El nombre del cliente es requerido' });
         }
-        
+
         const quote = new Quote({
             userId: req.userId,
             clientName,
@@ -5867,7 +5893,7 @@ app.put('/api/quotes/:id', verifyToken, verifyClient, async (req, res) => {
         if (!isValidObjectId(req.params.id)) {
             return res.status(400).json({ message: 'ID de cotización inválido' });
         }
-        
+
         const quote = await Quote.findOne({ _id: req.params.id, userId: req.userId });
         if (!quote) return res.status(404).json({ message: 'Cotización no encontrada' });
         if (quote.status === 'converted') return res.status(400).json({ message: 'No se puede editar una cotización ya facturada.' });
@@ -5925,7 +5951,7 @@ app.post('/api/quotes/:id/convert', verifyToken, verifyClient, async (req, res) 
     if (!isValidObjectId(req.params.id)) {
         return res.status(400).json({ message: 'ID de cotización inválido' });
     }
-    
+
     if (!req.user.confirmedFiscalName) {
         return res.status(403).json({ message: 'Confirma tu nombre fiscal para facturar.' });
     }
@@ -5982,30 +6008,30 @@ app.post('/api/quotes/:id/convert', verifyToken, verifyClient, async (req, res) 
 app.get('/api/subscription/status', verifyToken, verifyClient, async (req, res) => {
     try {
         const user = req.user;
-        
+
         // Obtener suscripción desde la fuente de verdad
         let sub = await Subscription.findOne({ userId: user._id });
         if (!sub) {
             // Crear suscripción si no existe (migración automática)
             sub = await getOrCreateSubscription(user._id);
         }
-        
+
         const now = new Date();
         const endDate = sub.currentPeriodEnd;
         const diffDays = endDate ? Math.ceil((endDate - now) / (1000 * 60 * 60 * 24)) : 999;
         const daysRemaining = Math.max(-999, diffDays);
-        
+
         // ✅ Verificar si hay pago pendiente (PENDING o UNDER_REVIEW)
-        const pendingPayment = await PaymentRequest.findOne({ 
-            userId: user._id, 
+        const pendingPayment = await PaymentRequest.findOne({
+            userId: user._id,
             status: { $in: ['pending', 'under_review'] },
             // ✅ Solo considerar pagos recientes (últimos 90 días)
             requestedAt: { $gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) }
         });
-        
+
         // Usar el estado de Subscription como fuente de verdad
         let internalStatus = sub.status;
-        
+
         // ✅ Override si usuario está bloqueado (prioridad máxima)
         if (user.blocked) {
             internalStatus = 'SUSPENDED';
@@ -6023,7 +6049,7 @@ app.get('/api/subscription/status', verifyToken, verifyClient, async (req, res) 
                 internalStatus = 'PAST_DUE';
             }
         }
-        
+
         let displayStatus = {
             'TRIAL': 'Trial',
             'ACTIVE': 'Activo',
@@ -6034,7 +6060,7 @@ app.get('/api/subscription/status', verifyToken, verifyClient, async (req, res) 
             'SUSPENDED': 'Suspendido',
             'CANCELLED': 'Cancelado'
         }[internalStatus] || 'Trial';
-        
+
         // Calcular días de gracia restantes
         let graceDaysRemaining = null;
         if (sub.graceUntil) {
@@ -6048,11 +6074,11 @@ app.get('/api/subscription/status', verifyToken, verifyClient, async (req, res) 
                 graceDaysRemaining = Math.max(0, graceDiff);
             }
         }
-        
+
         // ✅ Determinar si debe redirigir (solo PAST_DUE o SUSPENDED)
         const shouldRedirect = internalStatus === 'PAST_DUE' || internalStatus === 'SUSPENDED';
         const allowPartialAccess = internalStatus === 'GRACE_PERIOD' || internalStatus === 'PENDING_PAYMENT' || internalStatus === 'UNDER_REVIEW';
-        
+
         res.json({
             plan: sub.plan,
             status: displayStatus,

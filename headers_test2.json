@@ -1,0 +1,15 @@
+{
+  "status": 401,
+  "headers": {
+    "cache-control": "no-store, max-age=0",
+    "content-length": "14564",
+    "content-type": "text/html; charset=utf-8",
+    "date": "Thu, 26 Feb 2026 01:29:57 GMT",
+    "server": "Vercel",
+    "set-cookie": "_vercel_sso_nonce=vVYm7SvNfsaDl1lKoI7uRujD; Max-Age=3600; Path=/; Secure; HttpOnly; SameSite=Lax",
+    "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+    "x-frame-options": "DENY",
+    "x-robots-tag": "noindex",
+    "x-vercel-id": "iad1::pnc7z-1772069397930-5705a11489ef"
+  }
+}
