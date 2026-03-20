@@ -5126,12 +5126,14 @@ app.post('/api/invoices', verifyToken, verifyClient, async (req, res) => {
             userId: req.userId, clientName, clientRnc, ncfType, ncfSequence: fullNcf, items, subtotal, itbis, total, date: invoiceDate,
             tipoPago, tipoPagoOtro: tipoPago === 'otro' ? sanitizeString(req.body.tipoPagoOtro || '', 50) : null,
             pagoMixto: pagoMixto.length > 0 ? pagoMixto : undefined,
-            montoPagado, balancePendiente, estadoPago, fechaPago
+            montoPagado, balancePendiente, estadoPago, fechaPago,
+            isrRetention: req.body.isrRetention || 0,
+            itbisRetention: req.body.itbisRetention || 0
         });
         await newInvoice.save({ session });
         await Customer.findOneAndUpdate(
             { userId: req.userId, rnc: clientRnc },
-            { lastInvoiceDate: new Date(), $set: { name: clientName } },
+            { $set: { lastInvoiceDate: new Date(), name: clientName } },
             { upsert: true, session }
         );
         await session.commitTransaction();
