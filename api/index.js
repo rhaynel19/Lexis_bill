@@ -1146,15 +1146,20 @@ const NCF_TYPES_GOVERNMENT = ['15', '45'];
 const NCF_TYPES_CREDIT_NOTE = ['04', '34']; // B04 / E34 Nota de Crédito
 
 function validateNcfForClient(ncfType, clientRnc) {
-    if (!clientRnc) return { valid: true };
-    if (NCF_TYPES_CREDIT_NOTE.includes(ncfType)) return { valid: true }; // NC se emite al mismo cliente que la factura original
-    const cleanRnc = (clientRnc || '').replace(/[^\d]/g, '');
-    const isBusiness = cleanRnc.length === 9;
-    const isGov = cleanRnc.startsWith('4') || cleanRnc.length === 11; // simplificado: cédula o gubernamental
+    if (!clientRnc) {
+        if (NCF_TYPES_BUSINESS.includes(ncfType)) return { valid: false, reason: 'Crédito fiscal requiere RNC o Cédula' };
+        if (NCF_TYPES_GOVERNMENT.includes(ncfType)) return { valid: false, reason: 'Gubernamental requiere RNC o Cédula' };
+        return { valid: true };
+    }
+    if (NCF_TYPES_CREDIT_NOTE.includes(ncfType)) return { valid: true };
 
-    if (NCF_TYPES_BUSINESS.includes(ncfType) && !isBusiness) return { valid: false, reason: 'NCF B01/E31 solo para empresas (RNC 9 dígitos)' };
-    if (NCF_TYPES_CONSUMER.includes(ncfType) && isBusiness) return { valid: false, reason: 'NCF B02/E32 para consumidor final, no empresas' };
-    if (NCF_TYPES_GOVERNMENT.includes(ncfType) && !isGov) return { valid: false, reason: 'NCF B15/E15 solo para facturación gubernamental' };
+    const cleanRnc = clientRnc.replace(/[^\d]/g, '');
+
+    // Crédito Fiscal requiere un identificador válido en DGII (9 u 11 dígitos)
+    if (NCF_TYPES_BUSINESS.includes(ncfType) && cleanRnc.length !== 9 && cleanRnc.length !== 11) {
+        return { valid: false, reason: 'Crédito Fiscal requiere un RNC o Cédula válido (9 u 11 dígitos)' };
+    }
+
     return { valid: true };
 }
 
