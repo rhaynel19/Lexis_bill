@@ -118,7 +118,7 @@ function computeAmountsFromItems(items, companyTaxSettings) {
 
 /** En producción no exponer mensajes internos ni stack al cliente. */
 function safeErrorMessage(err) {
-    return isProd ? 'Error interno del servidor' : (err && err.message ? err.message : 'Error interno del servidor');
+    return (err && err.message ? err.message : 'Error interno del servidor');
 }
 
 /** Base URL del sitio desde el request (Vercel/proxy). Sin usar variables de entorno de dominio. */
@@ -5990,7 +5990,7 @@ app.post('/api/quotes/:id/convert', verifyToken, verifyClient, async (req, res) 
             await quote.save({ session });
             await Customer.findOneAndUpdate(
                 { userId: req.userId, rnc: quote.clientRnc },
-                { lastInvoiceDate: new Date(), $set: { name: quote.clientName } },
+                { $set: { lastInvoiceDate: new Date(), name: quote.clientName } },
                 { upsert: true, session }
             );
             await session.commitTransaction();
