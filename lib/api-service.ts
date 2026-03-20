@@ -324,8 +324,12 @@ export const api = {
         return res;
     },
 
-    async convertQuoteToInvoice(quoteId: string) {
-        return secureFetch<any>(`${API_URL}/quotes/${quoteId}/convert`, { method: "POST" });
+    async convertQuoteToInvoice(quoteId: string, data?: { ncfType?: string; isrRetention?: number; itbisRetention?: number; tipoPago?: string }) {
+        return secureFetch<any>(`${API_URL}/quotes/${quoteId}/convert`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: data ? JSON.stringify(data) : undefined,
+        });
     },
 
     async deleteQuote(id: string) {
@@ -364,12 +368,12 @@ export const api = {
     async getSubscriptionStatus(forceRefresh = false) {
         const cacheKey = forceRefresh ? undefined : "subscription_status";
         const headers = forceRefresh ? { 'Cache-Control': 'no-cache' } : undefined;
-        return secureFetch<any>(`${API_URL}/subscription/status`, { 
+        return secureFetch<any>(`${API_URL}/subscription/status`, {
             cacheKey,
             headers
         });
     },
-    
+
     // ✅ Función para invalidar cache de suscripción
     invalidateSubscriptionCache() {
         if (typeof window !== 'undefined') {

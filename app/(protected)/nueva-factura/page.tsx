@@ -148,6 +148,9 @@ export default function NewInvoice() {
         }
 
         if (suggested !== invoiceType) {
+            if ((invoiceType === "01" || invoiceType === "31") && (suggested === "02" || suggested === "32") && cleanRnc.length === 11) {
+                return; // Una Persona Física (11 dígitos) puede requerir Crédito Fiscal, se respeta la selección manual.
+            }
             setInvoiceType(suggested);
             toast.info(`Por el tipo de cliente, te recomiendo ${getInvoiceTypeName(suggested)}`, {
                 description: `Detectado como ${clientType === "business" ? "Empresa" : clientType === "government" ? "Gobierno" : "Consumidor"}. ¿Lo aplico?`,
@@ -341,7 +344,7 @@ export default function NewInvoice() {
             localStorage.setItem("invoiceDraft", JSON.stringify(draft));
             const timer = setTimeout(() => {
                 import("@/lib/api-service").then(({ api }) =>
-                    api.saveInvoiceDraft(draft).catch(() => {})
+                    api.saveInvoiceDraft(draft).catch(() => { })
                 );
             }, 500);
             return () => clearTimeout(timer);
@@ -965,7 +968,7 @@ export default function NewInvoice() {
                 toast.success("Factura creada en tiempo récord.", { description: `Menos de ${Math.round(elapsedSec)} segundos. ¡Increíble!` });
             }
             localStorage.removeItem("invoiceDraft");
-            api.deleteInvoiceDraft().catch(() => {});
+            api.deleteInvoiceDraft().catch(() => { });
 
         } catch (error: any) {
             console.error(error);

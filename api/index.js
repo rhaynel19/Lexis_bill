@@ -5967,11 +5967,22 @@ app.post('/api/quotes/:id/convert', verifyToken, verifyClient, async (req, res) 
         const session = await mongoose.startSession();
         session.startTransaction();
         try {
-            const ncfType = quote.clientRnc?.replace(/[^\d]/g, '').length === 9 ? '31' : '32';
+            const ncfType = req.body.ncfType || (quote.clientRnc?.replace(/[^\d]/g, '').length === 9 ? '31' : '32');
             const fullNcf = await getNextNcf(req.userId, ncfType, session, quote.clientRnc);
             const qItems = Array.isArray(quote.items) ? quote.items : [];
             const taxSettings = req.user?.taxSettings || {};
             const qAmounts = computeAmountsFromItems(qItems, taxSettings);
+
+            // Retenciones provenientes del frontend
+            const isrRetention = req.body.isrRetention ? Number(req.body.isrRetention) : 0;
+            const itbisRetention = req.body.itbisRetention ? Number(req.body.itbisRetention) : 0;
+            const tipoPago = req.body.tipoPago || 'efectivo';
+
+            // El `balancePendiente` asume que no se ha pagado a menos que sea efectivo por defecto, pero se apega a lógica base de invoices.
+            const montoPagado = tipoPago === 'credito' ? 0 : qAmounts.total;
+            const balancePendiente = tipoPago === 'credito' ? qAmounts.total : 0;
+            const estadoPago = tipoPago === 'credito' ? 'pendiente' : 'pagado';
+
             const newInvoice = new Invoice({
                 userId: req.userId,
                 clientName: quote.clientName,
@@ -5981,7 +5992,14 @@ app.post('/api/quotes/:id/convert', verifyToken, verifyClient, async (req, res) 
                 items: qItems,
                 subtotal: qAmounts.subtotal,
                 itbis: qAmounts.itbis,
-                total: qAmounts.total
+                total: qAmounts.total,
+                tipoPago,
+                isrRetention,
+                itbisRetention,
+                montoPagado,
+                balancePendiente,
+                estadoPago,
+                fechaPago: tipoPago === 'credito' ? null : new Date()
             });
             await newInvoice.save({ session });
             quote.status = 'converted';
