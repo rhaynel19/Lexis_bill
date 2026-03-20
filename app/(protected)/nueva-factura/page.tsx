@@ -954,6 +954,7 @@ export default function NewInvoice() {
                 itbisRetention,
                 total: invoiceTotal,
                 modifiedNcf: (invoiceType === "04" || invoiceType === "34") ? modifiedNcf : undefined,
+                paymentMethod: tipoPago === "otro" ? tipoPagoOtro : tipoPago,
             };
 
             const companyOverride = authUser ? { companyName: authUser.fiscalStatus?.confirmed, rnc: authUser.rnc } : undefined;
@@ -2047,7 +2048,9 @@ export default function NewInvoice() {
                         itbis,
                         total,
                         date: new Date(),
-                        ncf: lastInvoiceNCF
+                        ncf: lastInvoiceNCF,
+                        modifiedNcf: (invoiceType === "04" || invoiceType === "34") ? modifiedNcf : undefined,
+                        paymentMethod: tipoPago === "otro" ? tipoPagoOtro : tipoPago
                     }} />
                 </div>
             </div>

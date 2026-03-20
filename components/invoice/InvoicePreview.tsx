@@ -27,6 +27,8 @@ interface InvoicePreviewProps {
         total: number;
         date: Date;
         ncf?: string; // Optional if not yet generated
+        modifiedNcf?: string;
+        paymentMethod?: string;
     };
     clientType?: string; // B2B or B2C
 }
@@ -134,6 +136,16 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
                             <p className="text-xs text-muted-foreground mt-1">
                                 {data.date.toLocaleDateString("es-DO", { year: 'numeric', month: 'long', day: 'numeric' })}
                             </p>
+                            {data.modifiedNcf && (
+                                <p className="text-[10px] text-red-500 font-bold mt-1 animate-pulse">
+                                    AFECTA A NCF: {data.modifiedNcf}
+                                </p>
+                            )}
+                            {data.paymentMethod && (
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    Pago: {data.paymentMethod.toUpperCase()}
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>

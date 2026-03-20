@@ -29,6 +29,7 @@ export interface InvoiceData {
     itbisRetention?: number;
     total: number; // Monto comprobante (Subtotal + ITBIS)
     modifiedNcf?: string;
+    paymentMethod?: string;
 }
 
 /**
