@@ -21,12 +21,14 @@ export interface InvoiceData {
         description: string;
         quantity: number;
         price: number;
+        isExempt?: boolean;
     }>;
     subtotal: number;
     itbis: number;
     isrRetention: number;
     itbisRetention?: number;
     total: number; // Monto comprobante (Subtotal + ITBIS)
+    modifiedNcf?: string;
 }
 
 /**
@@ -205,13 +207,21 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
         doc.text(isProforma ? "NCF: BORRADOR" : `NCF: ${invoiceData.sequenceNumber}`, titleX, margin.top + 20, { align: "right" });
     }
 
+    const formattedDate = formatDateDominican(new Date(invoiceData.date));
+    let topY = margin.top + 26;
+    if (invoiceData.modifiedNcf && invoiceData.type !== "quote") {
+        doc.setFontSize(10);
+        doc.setTextColor(200, 50, 50); // Red hue for modified note
+        doc.text(`Afecta a NCF: ${invoiceData.modifiedNcf}`, titleX, topY, { align: "right" });
+        topY += 6;
+    }
+
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
-    const formattedDate = formatDateDominican(new Date(invoiceData.date));
-    doc.text(`Fecha Emisión: ${formattedDate}`, titleX, margin.top + 26, { align: "right" });
+    doc.text(`Fecha Emisión: ${formattedDate}`, titleX, topY, { align: "right" });
     if ((invoiceData as any).validUntil) { // For quotes
         const validDate = formatDateDominican(new Date((invoiceData as any).validUntil));
-        doc.text(`Válida hasta: ${validDate}`, titleX, margin.top + 32, { align: "right" });
+        doc.text(`Válida hasta: ${validDate}`, titleX, topY + 6, { align: "right" });
     }
 
     // ===== INFORMACIÓN DEL CLIENTE (Izquierda, debajo de header) =====
@@ -230,12 +240,16 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     yPosition += 15;
 
     // ===== TABLA DE ÍTEMS =====
-    const tableData = invoiceData.items.map((item) => [
-        item.description,
-        item.quantity.toString(),
-        formatCurrency(item.price),
-        formatCurrency(item.quantity * item.price),
-    ]);
+    let hasExemptItems = false;
+    const tableData = invoiceData.items.map((item) => {
+        if (item.isExempt) hasExemptItems = true;
+        return [
+            item.isExempt ? `${item.description} (E)` : item.description,
+            item.quantity.toString(),
+            formatCurrency(item.price),
+            formatCurrency(item.quantity * item.price),
+        ];
+    });
 
     autoTable(doc, {
         startY: yPosition,
@@ -287,6 +301,15 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
         doc.setFont("helvetica", "italic");
         doc.setTextColor(APP_CONFIG.pdf.colors.secondary[0], APP_CONFIG.pdf.colors.secondary[1], APP_CONFIG.pdf.colors.secondary[2]);
         doc.text("Operación exenta de ITBIS conforme régimen fiscal aplicable en República Dominicana.", margin.left, yPosition, { maxWidth: pageWidth - margin.left - margin.right });
+        doc.setTextColor(APP_CONFIG.pdf.colors.text[0], APP_CONFIG.pdf.colors.text[1], APP_CONFIG.pdf.colors.text[2]);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(APP_CONFIG.pdf.fontSize.normal);
+        yPosition += 8;
+    } else if (hasExemptItems) {
+        doc.setFontSize(APP_CONFIG.pdf.fontSize.small);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(APP_CONFIG.pdf.colors.secondary[0], APP_CONFIG.pdf.colors.secondary[1], APP_CONFIG.pdf.colors.secondary[2]);
+        doc.text("Los ítems marcados con (E) están exentos de ITBIS.", margin.left, yPosition, { maxWidth: pageWidth - margin.left - margin.right });
         doc.setTextColor(APP_CONFIG.pdf.colors.text[0], APP_CONFIG.pdf.colors.text[1], APP_CONFIG.pdf.colors.text[2]);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(APP_CONFIG.pdf.fontSize.normal);

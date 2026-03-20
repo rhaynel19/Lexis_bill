@@ -62,6 +62,7 @@ export default function NewInvoice() {
     const [showPasteItemsDialog, setShowPasteItemsDialog] = useState(false);
     const [pasteItemsText, setPasteItemsText] = useState("");
     const [focusItemId, setFocusItemId] = useState<string | null>(null);
+    const [modifiedNcf, setModifiedNcf] = useState("");
 
     // Smart RNC States
     const [isClientLocked, setIsClientLocked] = useState(false);
@@ -922,6 +923,7 @@ export default function NewInvoice() {
                 total,
                 isrRetention,
                 tipoPago,
+                modifiedNcf: (invoiceType === "04" || invoiceType === "34") ? modifiedNcf : undefined,
             };
             if (tipoPago === "otro" && tipoPagoOtro?.trim()) invoiceData.tipoPagoOtro = tipoPagoOtro.trim();
             if (tipoPago === "mixto" && pagoMixto.length > 0) {
@@ -944,12 +946,14 @@ export default function NewInvoice() {
                     description: item.description,
                     quantity: Number(item.quantity),
                     price: Number(item.price),
+                    isExempt: item.isExempt,
                 })),
                 subtotal,
                 itbis,
                 isrRetention,
                 itbisRetention,
                 total: invoiceTotal,
+                modifiedNcf: (invoiceType === "04" || invoiceType === "34") ? modifiedNcf : undefined,
             };
 
             const companyOverride = authUser ? { companyName: authUser.fiscalStatus?.confirmed, rnc: authUser.rnc } : undefined;
@@ -1164,6 +1168,22 @@ export default function NewInvoice() {
                                         <p className="text-xs text-muted-foreground">
                                             {useSerieE ? "💡 Tipo 31 incluye retención de ISR del 10%. Cambia a Serie B en Configuración si facturas sin e-CF." : "💡 Sin código QR. Activa Facturación Electrónica en Configuración para Serie E."}
                                         </p>
+                                        {(invoiceType === "04" || invoiceType === "34") && (
+                                            <div className="mt-4 p-4 border rounded-md bg-accent/5 border-accent/20 space-y-2 animate-in fade-in slide-in-from-top-2">
+                                                <Label htmlFor="modifiedNcf" className="text-accent flex items-center gap-2">
+                                                    Afecta a NCF (NCF Modificado) <span className="text-red-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="modifiedNcf"
+                                                    value={modifiedNcf}
+                                                    onChange={(e) => setModifiedNcf(e.target.value.toUpperCase())}
+                                                    placeholder="Ej: B0100000002 o E310000000002"
+                                                    className="uppercase font-mono tracking-wider"
+                                                    required
+                                                />
+                                                <p className="text-xs text-muted-foreground">Obligatorio por la DGII. Indica qué comprobante anterior se está modificando o anulando con esta Nota de Crédito.</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -1487,10 +1507,11 @@ export default function NewInvoice() {
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead className="w-[40%]">Descripción</TableHead>
-                                                    <TableHead className="w-[15%]">Cantidad</TableHead>
-                                                    <TableHead className="w-[20%]">Precio Unit.</TableHead>
-                                                    <TableHead className="w-[20%]">Subtotal</TableHead>
+                                                    <TableHead className="w-[35%]">Descripción</TableHead>
+                                                    <TableHead className="w-[12%]">Cantidad</TableHead>
+                                                    <TableHead className="w-[15%]">Precio Unit.</TableHead>
+                                                    <TableHead className="w-[15%]">Exento ITBIS</TableHead>
+                                                    <TableHead className="w-[18%]">Subtotal</TableHead>
                                                     <TableHead className="w-[5%]"></TableHead>
                                                 </TableRow>
                                             </TableHeader>
@@ -1587,6 +1608,19 @@ export default function NewInvoice() {
                                                                         updateItem(item.id, "price", e.target.value)
                                                                     }
                                                                 />
+                                                            </TableCell>
+
+                                                            {/* Checkbox Exento ITBIS */}
+                                                            <TableCell>
+                                                                <div className="flex items-center justify-center h-full">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="w-4 h-4 rounded border-slate-300 text-accent focus:ring-accent accent-accent cursor-pointer"
+                                                                        checked={item.isExempt || false}
+                                                                        onChange={(e) => updateItem(item.id, "isExempt", e.target.checked)}
+                                                                        title="Marcar si este producto/servicio no lleva ITBIS"
+                                                                    />
+                                                                </div>
                                                             </TableCell>
 
                                                             {/* Subtotal del ítem */}

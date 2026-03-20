@@ -28,6 +28,7 @@ export default function Quotes() {
     const [isViewerOpen, setIsViewerOpen] = useState(false);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [useSerieE, setUseSerieE] = useState(false);
     const [convertingId, setConvertingId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
@@ -48,7 +49,12 @@ export default function Quotes() {
         }
         setConvertingQuote(quote);
         const rncLen = quote.rnc?.replace(/[^\d]/g, '').length || 0;
-        const ncf = rncLen === 9 ? '31' : '32';
+        let ncf = "02";
+        if (useSerieE) {
+            ncf = rncLen === 9 ? '31' : '32';
+        } else {
+            ncf = rncLen === 9 ? '01' : '02';
+        }
         setConvertForm({ ncfType: ncf, isrRetention: 0, itbisRetention: 0, tipoPago: "efectivo" });
         setShowConvertModal(true);
     };
@@ -73,6 +79,11 @@ export default function Quotes() {
 
     useEffect(() => {
         loadQuotes();
+        const storedConfig = localStorage.getItem("appConfig");
+        if (storedConfig) {
+            const config = JSON.parse(storedConfig);
+            setUseSerieE(config.hasElectronicInvoice || false);
+        }
     }, []);
 
     const loadQuotes = async () => {
