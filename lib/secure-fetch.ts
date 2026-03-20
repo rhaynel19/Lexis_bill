@@ -98,7 +98,7 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
                 throw errPayload;
             }
 
-            const data = await response.json();
+            const data = response.status === 204 ? null : await response.json();
 
             // 3. Guardar en Caché (Si es exitoso y tiene key)
             if (cacheKey && typeof window !== 'undefined') {
