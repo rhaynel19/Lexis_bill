@@ -98,7 +98,8 @@ const sanitizeItems = (items, isTaxExemptCompany = false) => {
     if (!Array.isArray(items)) return [];
     return items.slice(0, 100).map(item => {
         const taxCategory = item?.taxCategory === 'exempt' || item?.isExempt ? 'exempt' : 'taxable';
-        const taxRate = taxCategory === 'exempt' ? 0 : Math.min(0.18, Math.max(0, Number(item?.taxRate) ?? 0.18));
+        const parsedTax = Number(item?.taxRate);
+        const taxRate = taxCategory === 'exempt' ? 0 : Math.min(0.18, Math.max(0, isNaN(parsedTax) ? 0.18 : parsedTax));
         const finalRate = isTaxExemptCompany ? 0 : taxRate;
         return {
             description: sanitizeString(item?.description || '', 500),
@@ -5133,7 +5134,8 @@ app.post('/api/invoices', verifyToken, verifyClient, async (req, res) => {
             pagoMixto: pagoMixto.length > 0 ? pagoMixto : undefined,
             montoPagado, balancePendiente, estadoPago, fechaPago,
             isrRetention: req.body.isrRetention || 0,
-            itbisRetention: req.body.itbisRetention || 0
+            itbisRetention: req.body.itbisRetention || 0,
+            modifiedNcf: (ncfType === '04' || ncfType === '34') && req.body.modifiedNcf ? sanitizeString(req.body.modifiedNcf, 13).toUpperCase() : undefined
         });
         await newInvoice.save({ session });
         await Customer.findOneAndUpdate(
