@@ -68,7 +68,6 @@ function LoginForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
     const [apiUnavailable, setApiUnavailable] = useState(false);
-    const [postLoginPath, setPostLoginPath] = useState<string>("/dashboard");
     const [emailNotVerified, setEmailNotVerified] = useState(false);
     const [resendingVerify, setResendingVerify] = useState(false);
 
@@ -102,9 +101,6 @@ function LoginForm() {
     const [otp, setOtp] = useState("");
     const [generatedOtp, setGeneratedOtp] = useState("");
 
-    // Biometric State
-    const [showBiometric, setShowBiometric] = useState(false);
-
     const handleResendVerify = async () => {
         if (!email.trim()) return;
         setResendingVerify(true);
@@ -133,8 +129,7 @@ function LoginForm() {
             localStorage.setItem(LAST_EMAIL_KEY, email);
             const me = await api.getMe();
             setUser(me || null);
-            setPostLoginPath(getPostLoginPath(loginRes ?? me, searchParams.get("redirect")));
-            setShowBiometric(true);
+            router.push(getPostLoginPath(loginRes ?? me, searchParams.get("redirect")));
 
         } catch (err: any) {
             const status = err?.status ?? err?.response?.status;
@@ -166,11 +161,6 @@ function LoginForm() {
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const handleBiometricDecision = (_decision: boolean) => {
-        setShowBiometric(false);
-        router.push(postLoginPath);
     };
 
     const startRecovery = (channel: "whatsapp" | "email") => {
@@ -357,29 +347,6 @@ function LoginForm() {
                             <button className="text-xs text-slate-500 w-full text-center hover:underline" onClick={() => setRecoveryStep(1)}>Volver a elegir método</button>
                         </div>
                     )}
-                </DialogContent>
-            </Dialog>
-
-            {/* Biometric Prompt Mock (Post-Login) */}
-            <Dialog open={showBiometric} onOpenChange={() => { }}>
-                <DialogContent className="sm:max-w-sm text-center">
-                    <div className="mx-auto w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
-                        <Fingerprint className="w-8 h-8 text-blue-600" />
-                    </div>
-                    <DialogHeader>
-                        <DialogTitle className="text-center">Acceso Rápido</DialogTitle>
-                        <DialogDescription className="text-center">
-                            ¿Desea entrar con Huella o FaceID la próxima vez?
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex flex-col gap-2 mt-4">
-                        <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleBiometricDecision(true)}>
-                            Sí, activar biometría
-                        </Button>
-                        <Button variant="ghost" className="w-full" onClick={() => handleBiometricDecision(false)}>
-                            Ahora no
-                        </Button>
-                    </div>
                 </DialogContent>
             </Dialog>
 
