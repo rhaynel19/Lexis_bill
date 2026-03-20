@@ -211,15 +211,24 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     const formattedDate = formatDateDominican(new Date(invoiceData.date));
     let topY = margin.top + 26;
     if (invoiceData.modifiedNcf && invoiceData.type !== "quote") {
-        doc.setFontSize(10);
-        doc.setTextColor(200, 50, 50); // Red hue for modified note
-        doc.text(`Afecta a NCF: ${invoiceData.modifiedNcf}`, titleX, topY, { align: "right" });
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(180, 0, 0); // Clearer red
+        doc.text(`AFECTA A NCF: ${invoiceData.modifiedNcf}`, titleX, topY, { align: "right" });
+        doc.setFont("helvetica", "normal");
         topY += 6;
     }
 
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
     doc.text(`Fecha Emisión: ${formattedDate}`, titleX, topY, { align: "right" });
+
+    if (invoiceData.paymentMethod && invoiceData.type !== "quote") {
+        topY += 6;
+        const methodLabel = invoiceData.paymentMethod.toUpperCase();
+        doc.text(`Tipo de Pago: ${methodLabel}`, titleX, topY, { align: "right" });
+    }
+
     if ((invoiceData as any).validUntil) { // For quotes
         const validDate = formatDateDominican(new Date((invoiceData as any).validUntil));
         doc.text(`Válida hasta: ${validDate}`, titleX, topY + 6, { align: "right" });
