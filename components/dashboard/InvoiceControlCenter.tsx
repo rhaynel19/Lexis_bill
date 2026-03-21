@@ -163,18 +163,27 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
             const isPrevMonth = invDate.getMonth() === prevMonth && invDate.getFullYear() === prevYear;
 
             if (isThisMonth) {
-                s.facturadoMes += (inv.total || 0);
+                const amount = (inv.total || 0);
+                const isCreditNote = inv.ncfType === '04' || inv.ncfType === '34';
+                s.facturadoMes += isCreditNote ? -amount : amount;
                 s.monthInvs.push(inv);
             }
-            if (isPrevMonth) prevFacturado += (inv.total || 0);
+            if (isPrevMonth) {
+                const amount = (inv.total || 0);
+                const isCreditNote = inv.ncfType === '04' || inv.ncfType === '34';
+                prevFacturado += isCreditNote ? -amount : amount;
+            }
 
             const status = getInvoiceStatus(inv);
             const bal = inv.balancePendiente ?? (inv.estadoPago === "pendiente" || inv.estadoPago === "parcial" || inv.status === "pending" ? inv.total : 0);
             const valBal = (isNaN(bal) || bal === null) ? 0 : bal;
 
-            if (status === "pagada") {
-                s.cobrado += (inv.total || 0);
-            } else {
+            // Cobrado debe ser la suma de lo pagado, no solo de las facturas 'pagadas' totalmente
+            const paid = inv.montoPagado || 0;
+            const isCreditNote = inv.ncfType === '04' || inv.ncfType === '34';
+            s.cobrado += isCreditNote ? -paid : paid;
+
+            if (status !== "pagada") {
                 s.pendiente += valBal;
                 if (status === "vencida") {
                     s.vencido += valBal;

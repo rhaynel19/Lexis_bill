@@ -5034,21 +5034,22 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
                                 ] 
                             } 
                         },
-                        collectedBase: {
+                        collected: {
                             $sum: {
                                 $cond: [
-                                    { $gt: [{ $convert: { input: { $ifNull: ['$montoPagado', 0] }, to: 'double', onError: 0 } }, 0] },
-                                    { $convert: { input: { $ifNull: ['$montoPagado', 0] }, to: 'double', onError: 0 } },
+                                    { $in: ['$ncfType', ['04', '34']] },
+                                    { $multiply: [{ $convert: { input: { $ifNull: ['$montoPagado', 0] }, to: 'double', onError: 0 } }, -1] },
                                     {
                                         $cond: [
+                                            { $gt: [{ $convert: { input: { $ifNull: ['$montoPagado', 0] }, to: 'double', onError: 0 } }, 0] },
+                                            { $convert: { input: { $ifNull: ['$montoPagado', 0] }, to: 'double', onError: 0 } },
                                             {
-                                                $or: [
-                                                    { $eq: ['$tipoPago', 'credito'] },
-                                                    { $eq: ['$estadoPago', 'pendiente'] }
+                                                $cond: [
+                                                    { $or: [ { $eq: ['$tipoPago', 'credito'] }, { $eq: ['$estadoPago', 'pendiente'] } ] },
+                                                    0,
+                                                    { $convert: { input: { $ifNull: ['$total', 0] }, to: 'double', onError: 0 } }
                                                 ]
-                                            },
-                                            0,
-                                            { $convert: { input: { $ifNull: ['$total', 0] }, to: 'double', onError: 0 } }
+                                            }
                                         ]
                                     }
                                 ]
@@ -5064,11 +5065,6 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
                             } 
                         },
                         count: { $sum: 1 }
-                    }
-                },
-                {
-                    $addFields: {
-                        collected: { $cond: [{ $in: ['$ncfType', ['04', '34']] }, { $multiply: [{ $ifNull: ['$collectedBase', 0] }, -1] }, { $ifNull: ['$collectedBase', 0] }] }
                     }
                 }
             ]),
