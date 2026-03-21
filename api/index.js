@@ -426,7 +426,7 @@ const invoiceSchema = new mongoose.Schema({
 });
 invoiceSchema.index({ userId: 1, date: -1 });
 invoiceSchema.index({ userId: 1, ncf: 1 }, { unique: true }); // Unique index for NCF per user
-invoiceSchema.index({ userId: 1, ncfSequence: 1 }, { unique: true }); // Unique index for ncfSequence per user
+invoiceSchema.index({ userId: 1, ncfSequence: 1 }); // Index for ncfSequence per user (no unique to avoid conflicts)
 invoiceSchema.index({ userId: 1, tipoPago: 1 });
 invoiceSchema.index({ userId: 1, estadoPago: 1 });
 invoiceSchema.index({ userId: 1, clientRnc: 1, date: -1 });
