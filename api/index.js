@@ -5055,7 +5055,6 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
                         collected: { $cond: [{ $in: ['$ncfType', ['04', '34']] }, { $multiply: ['$collectedBase', -1] }, '$collectedBase'] }
                     }
                 }
-                }
             ]),
             Invoice.aggregate([
                 { $match: { userId: userId, date: { $gte: startOfPrevMonth, $lte: endOfPrevMonth }, status: { $ne: 'cancelled' } } },
