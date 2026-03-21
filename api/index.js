@@ -1962,12 +1962,12 @@ app.post('/api/partners/apply', verifyToken, partnerApplyLimiter, async (req, re
     }
 });
 
-const verifyPartner = async (req, res, next) => {
+async function verifyPartner(req, res, next) {
     const p = await Partner.findOne({ userId: req.userId, status: 'active' });
     if (!p) return res.status(403).json({ message: 'Acceso denegado. No eres partner activo.' });
     req.partner = p;
     next();
-};
+}
 
 app.get('/api/partners/me', verifyToken, verifyPartner, async (req, res) => {
     try {
@@ -5012,7 +5012,7 @@ app.delete('/api/documents/:id', verifyToken, verifyClient, async (req, res) => 
 // Stats del dashboard por agregación (evita cargar 200 facturas en memoria)
 app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
     try {
-        const userId = mongoose.Types.ObjectId(req.userId);
+        const userId = new mongoose.Types.ObjectId(req.userId);
         const now = new Date();
         const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
@@ -5628,7 +5628,7 @@ app.post('/api/invoices/:id/duplicate', verifyToken, verifyClient, async (req, r
 app.get('/api/reports/summary', verifyToken, verifyClient, async (req, res) => {
     try {
         const { month, year } = req.query;
-        const userId = mongoose.Types.ObjectId(req.userId);
+        const userId = new mongoose.Types.ObjectId(req.userId);
         const startDate = new Date(year, month - 1, 1);
         const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
@@ -5699,7 +5699,7 @@ app.get('/api/reports/tax-health', verifyToken, verifyClient, async (req, res) =
         const startDate = new Date(y, m - 1, 1);
         const endDate = new Date(y, m, 0, 23, 59, 59);
 
-        const userId = mongoose.Types.ObjectId(req.userId);
+        const userId = new mongoose.Types.ObjectId(req.userId);
         const [invoiceAgg, expenses] = await Promise.all([
             Invoice.aggregate([
                 { $match: { userId: userId, date: { $gte: startDate, $lte: endDate }, status: { $ne: 'cancelled' } } },

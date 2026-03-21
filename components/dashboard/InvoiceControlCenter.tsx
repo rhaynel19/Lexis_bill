@@ -403,50 +403,7 @@ export function InvoiceControlCenter({
     return (
         <>
             <div className="relative mt-6 space-y-6">
-                {/* Tarjetas Resumen Financiero */}
-                {!isEmpty && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <Card className="border-border/20 shadow-sm overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setQuickFilter("mes")}>
-                            <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">💰 Facturado este mes</p>
-                                        <p className="text-xl font-bold text-foreground mt-1">{formatCurrency(stats.facturadoMes)}</p>
-                                    </div>
-                                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                        <DollarSign className="w-5 h-5 text-primary" />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card className="border-border/20 shadow-sm overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setQuickFilter("pendientes")}>
-                            <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">⏳ Pendiente</p>
-                                        <p className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">{formatCurrency(stats.pendiente)}</p>
-                                    </div>
-                                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                                        <Clock className="w-5 h-5 text-amber-600" />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card className="border-border/20 shadow-sm overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setQuickFilter("vencidas")}>
-                            <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">⚠️ Vencido</p>
-                                        <p className="text-xl font-bold text-rose-600 dark:text-rose-400 mt-1">{formatCurrency(stats.vencido)}</p>
-                                    </div>
-                                    <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center">
-                                        <AlertTriangle className="w-5 h-5 text-rose-600" />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                )}
+                {/* Tarjetas Resumen Financiero removidas por redundancia con Copilot */}
 
                 {/* Alertas Inteligentes */}
                 {alerts.length > 0 && (
