@@ -88,9 +88,16 @@ interface NcfSequenceSummary {
 const SimpleLineChart = ({ data }: { data: number[] }) => {
   const height = 100;
   const width = 300;
-  const max = Math.max(...data, 1);
-  const points = data.map((val, i) => {
-    const x = (i / (data.length - 1)) * width;
+
+  // Defensive check for empty or invalid data
+  if (!data || data.length === 0) return null;
+
+  const validData = data.map(v => (isNaN(v) || v === null) ? 0 : v);
+  const max = Math.max(...validData, 1);
+  const denominator = validData.length > 1 ? validData.length - 1 : 1;
+
+  const points = validData.map((val, i) => {
+    const x = (i / denominator) * width;
     const y = height - (val / max) * height;
     return `${x},${y}`;
   }).join(" ");
@@ -370,11 +377,12 @@ export default function Dashboard() {
   };
 
   // Función para formatear números como moneda dominicana
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | null | undefined) => {
+    const val = (amount === null || amount === undefined || isNaN(amount)) ? 0 : amount;
     return new Intl.NumberFormat("es-DO", {
       style: "currency",
       currency: "DOP",
-    }).format(amount);
+    }).format(val);
   };
 
   // Función para exportar a CSV

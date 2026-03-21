@@ -80,15 +80,18 @@ const TIPO_PAGO_LABELS: Record<string, string> = {
     otro: "Otro",
 };
 
-const formatCurrency = (n: number) =>
-    new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 0 }).format(n);
+const formatCurrency = (n: number | null | undefined) => {
+    const val = (n === null || n === undefined || isNaN(n)) ? 0 : n;
+    return new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 0 }).format(val);
+};
 
 function getInvoiceStatus(inv: Invoice): "pagada" | "pendiente" | "vencida" | "acreditada" | "parcialmente_acreditada" {
+    if (!inv) return "pendiente";
     if (inv.status === "fully_credited") return "acreditada";
     if (inv.status === "partially_credited") return "parcialmente_acreditada";
     
     const bal = inv.balancePendiente ?? (inv.estadoPago === "pendiente" || inv.estadoPago === "parcial" || inv.status === "pending" ? inv.total : 0);
-    const isPaid = bal <= 0 && inv.status !== "cancelled";
+    const isPaid = (bal || 0) <= 0 && inv.status !== "cancelled";
     if (isPaid) return "pagada";
     const daysSince = (Date.now() - new Date(inv.date).getTime()) / (1000 * 60 * 60 * 24);
     if (daysSince > 30) return "vencida";
@@ -130,35 +133,48 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
     const [amountMax, setAmountMax] = useState("");
     const [filterTipoPago, setFilterTipoPago] = useState<string>("");
 
-    const now = new Date();
+    const now = useMemo(() => new Date(), []);
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-
     const stats = useMemo(() => {
-        const monthInvs = invoices.filter((i) => {
-            const d = new Date(i.date);
-            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-        });
-        const facturadoMes = monthInvs.reduce((s, i) => s + (i.total || 0), 0);
-        const cobrado = invoices.filter((i) => getInvoiceStatus(i) === "pagada").reduce((s, i) => s + (i.total || 0), 0);
-        const pendiente = invoices.reduce((s, i) => {
-            const bal = i.balancePendiente ?? (getInvoiceStatus(i) !== "pagada" ? i.total : 0);
-            return s + (bal > 0 ? bal : 0);
-        }, 0);
-        const vencidas = invoices.filter((i) => getInvoiceStatus(i) === "vencida");
-        const vencido = vencidas.reduce((s, i) => s + (i.balancePendiente ?? i.total), 0);
+        const s = { facturadoMes: 0, cobrado: 0, pendiente: 0, vencido: 0, vencidasCount: 0, pctChange: 0, monthInvs: [] as Invoice[] };
+        if (!invoices || !Array.isArray(invoices)) return s;
 
-        const prevMonthInvs = invoices.filter((i) => {
-            const d = new Date(i.date);
-            return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
-        });
-        const prevFacturado = prevMonthInvs.reduce((s, i) => s + (i.total || 0), 0);
-        const pctChange = prevFacturado > 0 ? ((facturadoMes - prevFacturado) / prevFacturado) * 100 : 0;
+        const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
-        return { facturadoMes, cobrado, pendiente, vencido, vencidasCount: vencidas.length, pctChange, monthInvs };
-    }, [invoices, currentMonth, currentYear, prevMonth, prevYear]);
+        let prevFacturado = 0;
+
+        invoices.forEach(inv => {
+            if (!inv) return;
+            const invDate = new Date(inv.date);
+            const isThisMonth = invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear;
+            const isPrevMonth = invDate.getMonth() === prevMonth && invDate.getFullYear() === prevYear;
+
+            if (isThisMonth) {
+                s.facturadoMes += (inv.total || 0);
+                s.monthInvs.push(inv);
+            }
+            if (isPrevMonth) prevFacturado += (inv.total || 0);
+
+            const status = getInvoiceStatus(inv);
+            const bal = inv.balancePendiente ?? (inv.estadoPago === "pendiente" || inv.estadoPago === "parcial" || inv.status === "pending" ? inv.total : 0);
+            const valBal = (isNaN(bal) || bal === null) ? 0 : bal;
+
+            if (status === "pagada") {
+                s.cobrado += (inv.total || 0);
+            } else {
+                s.pendiente += valBal;
+                if (status === "vencida") {
+                    s.vencido += valBal;
+                    s.vencidasCount++;
+                }
+            }
+        });
+
+        s.pctChange = prevFacturado > 0 ? ((s.facturadoMes - prevFacturado) / prevFacturado) * 100 : 0;
+        return s;
+    }, [invoices, currentMonth, currentYear]);
 
     const filteredInvoices = useMemo(() => {
         let list = invoices;
@@ -549,6 +565,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                                         </TableHeader>
                                         <TableBody>
                                             {paginatedInvoices.map((inv) => {
+                                                if (!inv || !inv.id) return null; // Defensive check for invoice and its ID
                                                 const status = getInvoiceStatus(inv);
                                                 const bal = inv.balancePendiente ?? (status !== "pagada" ? inv.total : 0);
                                                 const isHovered = hoveredRow === inv.id;
@@ -619,9 +636,10 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
 
                                 {/* Mobile */}
                                 <div className="md:hidden divide-y divide-border/10">
-                                    {paginatedInvoices.map((inv) => {
-                                        const status = getInvoiceStatus(inv);
-                                        const bal = inv.balancePendiente ?? (status !== "pagada" ? inv.total : 0);
+                                   {paginatedInvoices.map((inv) => {
+                            if (!inv || !inv.id) return null; // Defensive check for invoice and its ID
+                            const status = getInvoiceStatus(inv);
+                            const bal = inv.balancePendiente ?? (inv.estadoPago === "pendiente" || inv.estadoPago === "parcial" || inv.status === "pending" ? inv.total : 0);
                                         return (
                                             <div
                                                 key={inv.id}
