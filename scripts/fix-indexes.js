@@ -1,5 +1,5 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
-require('dotenv').config({ path: require('path').resolve(__dirname, '../.env.local') });
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env.local'), override: true });
 
 const mongoose = require('mongoose');
 
@@ -30,10 +30,18 @@ async function fixIndexes() {
             console.log('Índice global no existía o error:', e.message);
         }
 
-        // Crear índice compuesto si no existe
+        // Crear índice compuesto si no existe (sin unique para permitir ncfSequence: null)
         try {
-            await collection.createIndex({ userId: 1, ncfSequence: 1 }, { unique: true });
-            console.log('Índice compuesto userId_ncfSequence creado');
+            // Primero intentar borrarlo si existe (por si acaso se creó con unique: true antes)
+            try {
+                await collection.dropIndex('userId_1_ncfSequence_1');
+                console.log('Índice anterior userId_1_ncfSequence_1 eliminado');
+            } catch (e) {
+                // ignorar si no existe
+            }
+            
+            await collection.createIndex({ userId: 1, ncfSequence: 1 });
+            console.log('Índice compuesto userId_ncfSequence creado (sin unique)');
         } catch (e) {
             console.log('Error creando índice compuesto:', e.message);
         }
