@@ -85,7 +85,7 @@ const TIPO_PAGO_LABELS: Record<string, string> = {
 
 const formatCurrency = (n: number | null | undefined) => {
     const val = (n === null || n === undefined || isNaN(n)) ? 0 : n;
-    return new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 0 }).format(val);
+    return new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
 };
 
 function getInvoiceStatus(inv: Invoice): "pagada" | "pendiente" | "vencida" | "acreditada" | "parcialmente_acreditada" {
@@ -364,7 +364,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                 {/* Tarjetas Resumen Financiero */}
                 {!isEmpty && (
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <Card className="border-border/20 shadow-sm overflow-hidden">
+                        <Card className="border-border/20 shadow-sm overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setQuickFilter("mes")}>
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
@@ -377,7 +377,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                                 </div>
                             </CardContent>
                         </Card>
-                        <Card className="border-border/20 shadow-sm overflow-hidden">
+                        <Card className="border-border/20 shadow-sm overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setQuickFilter("pagadas")}>
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
@@ -390,7 +390,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                                 </div>
                             </CardContent>
                         </Card>
-                        <Card className="border-border/20 shadow-sm overflow-hidden">
+                        <Card className="border-border/20 shadow-sm overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setQuickFilter("pendientes")}>
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
@@ -403,7 +403,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                                 </div>
                             </CardContent>
                         </Card>
-                        <Card className="border-border/20 shadow-sm overflow-hidden">
+                        <Card className="border-border/20 shadow-sm overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setQuickFilter("vencidas")}>
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div>

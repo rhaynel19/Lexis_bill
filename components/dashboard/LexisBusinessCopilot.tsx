@@ -77,8 +77,8 @@ export interface BusinessCopilotData {
 }
 
 const formatCurrency = (n: number | null | undefined) => {
-    if (n === null || n === undefined || isNaN(n)) return "RD$0";
-    return new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 0 }).format(n);
+    if (n === null || n === undefined || isNaN(n)) return "RD$0.00";
+    return new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 };
 
 function AlertIcon({ severity }: { severity: string }) {
