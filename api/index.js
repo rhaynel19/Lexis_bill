@@ -426,6 +426,7 @@ const invoiceSchema = new mongoose.Schema({
 });
 invoiceSchema.index({ userId: 1, date: -1 });
 invoiceSchema.index({ userId: 1, ncf: 1 }, { unique: true }); // Unique index for NCF per user
+invoiceSchema.index({ userId: 1, ncfSequence: 1 }, { unique: true }); // Unique index for ncfSequence per user
 invoiceSchema.index({ userId: 1, tipoPago: 1 });
 invoiceSchema.index({ userId: 1, estadoPago: 1 });
 invoiceSchema.index({ userId: 1, clientRnc: 1, date: -1 });
@@ -1211,7 +1212,7 @@ async function getNextNcf(userId, type, session, clientRnc) {
     const fullNcf = `${activeBatch.series}${type}${paddedSeq}`;
 
     // DGII: Validar unicidad (doble verificación - índice unique en Invoice protege)
-    const exists = await Invoice.findOne({ ncfSequence: fullNcf }).session(session);
+    const exists = await Invoice.findOne({ userId, ncfSequence: fullNcf }).session(session);
     if (exists) throw new Error('NCF duplicado detectado. Contacte soporte.');
 
     return fullNcf;
