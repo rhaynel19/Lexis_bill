@@ -5266,7 +5266,7 @@ app.post('/api/invoices', verifyToken, verifyClient, async (req, res) => {
             balancePendiente = total;
             estadoPago = 'pendiente';
         } else if (tipoPago === 'mixto' && pagoMixto.length > 0) {
-            montoPagado = pagoMixto.reduce((s, p) => s + (p.monto || 0), 0);
+            montoPagado = pagoMixto.reduce((s, p) => (p.tipo === 'credito' || p.tipo === 'pendiente') ? s : s + (p.monto || 0), 0);
             balancePendiente = Math.max(0, total - montoPagado);
             estadoPago = balancePendiente <= 0 ? 'pagado' : 'parcial';
             if (estadoPago === 'pagado') fechaPago = new Date();

@@ -570,7 +570,21 @@ export default function Dashboard() {
                   {mode === 'simple' ? "Cobrado este mes" : "Ingresos del Mes"}
                 </CardDescription>
                 <CardTitle className="text-3xl md:text-4xl font-bold tracking-tight">
-                  {formatCurrency(mode === 'simple' ? collectedThisMonth : totalRevenue)}
+                  {formatCurrency(mode === 'simple' ? (() => {
+                      const currentMonth = new Date().getMonth();
+                      const currentYear = new Date().getFullYear();
+                      return recentInvoices.reduce((sum, inv) => {
+                          const getInvoiceStatus = (inv: Invoice) => {
+                              if (!inv) return "pendiente";
+                              if (inv.status === "cancelled") return "anulada";
+                              const bal = inv.balancePendiente ?? (inv.estadoPago === "pendiente" || inv.estadoPago === "parcial" || inv.status === "pending" ? inv.total : 0);
+                              return (bal || 0) <= 0 ? "pagada" : "pendiente";
+                          };
+                          const invDate = new Date(inv.date);
+                          const isThisMonth = invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear;
+                          return (isThisMonth && getInvoiceStatus(inv) === "pagada") ? sum + (inv.total || 0) : sum;
+                      }, 0);
+                  })() : totalRevenue)}
                 </CardTitle>
               </CardHeader>
               <CardContent>

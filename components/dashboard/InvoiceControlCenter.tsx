@@ -48,6 +48,7 @@ export interface Invoice {
     rnc?: string;
     clientRnc?: string;
     ncfSequence?: string;
+    ncf?: string;
     ncfType?: string;
     type: string;
     total: number;
@@ -64,6 +65,7 @@ export interface Invoice {
     estadoPago?: string;
     tipoPago?: string;
     montoPagado?: number;
+    paymentDetails?: Array<{ method: string; amount: number }>;
     items?: Array<{ description: string; quantity: number; price: number; isExempt?: boolean }>;
 }
 
@@ -257,7 +259,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
         try {
             const data: InvoiceData = {
                 id: invoice._id || invoice.id,
-                sequenceNumber: invoice.ncfSequence || invoice._id || invoice.id,
+                sequenceNumber: invoice.ncf || invoice.ncfSequence || invoice._id || invoice.id,
                 type: invoice.ncfType || invoice.type || "32",
                 clientName: invoice.clientName,
                 rnc: invoice.rnc || invoice.clientRnc || "",
@@ -269,6 +271,8 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                 itbisRetention: invoice.itbisRetention || 0,
                 total: invoice.total,
                 paymentMethod: invoice.tipoPago,
+                paymentDetails: invoice.paymentDetails,
+                balancePendiente: invoice.balancePendiente,
             };
             await downloadInvoicePDF(data);
             toast.success("✅ Comprobante descargado");
@@ -626,7 +630,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                                                         onMouseLeave={() => setHoveredRow(null)}
                                                     >
                                                         <TableCell className="font-mono text-sm">
-                                                            {(inv.ncfSequence || invId).slice(-11)}
+                                                            {(inv.ncf || inv.ncfSequence) ? (inv.ncf || inv.ncfSequence) : invId.slice(-11)}
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className="font-medium">{inv.clientName}</div>
@@ -695,7 +699,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                                             >
                                                 <div className="flex justify-between items-start">
                                                     <div>
-                                                        <span className="text-xs font-mono text-muted-foreground">{(inv.ncfSequence || invId).slice(-11)}</span>
+                                                        <span className="text-xs font-mono text-muted-foreground">{(inv.ncf || inv.ncfSequence) ? (inv.ncf || inv.ncfSequence) : invId.slice(-11)}</span>
                                                         <h3 className="font-semibold">{inv.clientName}</h3>
                                                         <StatusDot status={status} />
                                                     </div>
