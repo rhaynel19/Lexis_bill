@@ -55,6 +55,7 @@ export interface Invoice {
     isrRetention?: number;
     itbisRetention?: number;
     status?: string;
+    tipoPago?: string;
 }
 
 interface DocumentViewerProps {
@@ -320,6 +321,14 @@ export function DocumentViewer({
                                         <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Fecha de Emisión</h4>
                                         <p className="text-foreground font-medium">{formatDate(documentDate)}</p>
                                     </div>
+                                    {(document as Invoice).tipoPago && type === "invoice" && (
+                                        <div className="pt-2">
+                                            <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Tipo de Pago</h4>
+                                            <p className="text-foreground font-medium capitalize">
+                                                {(document as Invoice).tipoPago}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="space-y-4 bg-secondary p-6 rounded-2xl border border-border/50 min-w-0 overflow-hidden">
                                     <div className="min-w-0">

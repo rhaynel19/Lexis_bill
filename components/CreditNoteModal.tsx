@@ -39,11 +39,16 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
     }, [isOpen, invoice]);
 
     const handleConfirm = async () => {
+        const actualMax = (invoice.balancePendiente != null && invoice.balancePendiente > 0) 
+            ? invoice.balancePendiente 
+            : invoice.total;
+
         if (amount <= 0) {
             toast.error("El monto a acreditar debe ser mayor a cero.");
             return;
         }
-        if (amount > (invoice.balancePendiente ?? invoice.total)) {
+        // Agregamos una tolerancia de 0.01 para evitar errores de redondeo float
+        if (amount > (actualMax + 0.01)) {
             toast.error("El monto no puede exceder el balance pendiente de la factura.");
             return;
         }

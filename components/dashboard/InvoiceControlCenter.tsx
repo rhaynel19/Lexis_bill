@@ -259,6 +259,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                 isrRetention: invoice.isrRetention || 0,
                 itbisRetention: invoice.itbisRetention || 0,
                 total: invoice.total,
+                paymentMethod: invoice.tipoPago,
             };
             await downloadInvoicePDF(data);
             toast.success("✅ Comprobante descargado");
