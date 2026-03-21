@@ -5493,7 +5493,9 @@ app.get('/api/reports/607/validate', verifyToken, verifyClient, async (req, res)
         const periodo = `${y}${m.toString().padStart(2, '0')}`;
         const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
         let report = `607|${rncEmisor}|${periodo}|${invoices.length}\n`;
-        // 607 DGII: RNC|TipoId|NCF|NCFModificado|TipoIngreso(01-06)|FechaComp|FechaRetencion|MontoFacturado|ITBISFacturado|RentaRetenida|ITBISRetenido|Selectivo|Propina|Otros|MontoTotal|...
+        // 607 DGII (19 columnas): RNC|TipoId|NCF|NCFModificado|TipoIngreso|FechaComp|FechaRetencion|
+        //   MontoFacturado|ITBISFacturado|ITBISRetenido|ITBISPercibido|RetencionRenta|ISR|ISC|OtrosImpuestos|MontoTotal|
+        //   ITBIS3ros|Percepciones|Intereses
         invoices.forEach(inv => {
             const fechaComp = new Date(inv.date).toISOString().slice(0, 10).replace(/-/g, '');
             const rncCliente = (inv.clientRnc || '').replace(/[^\d]/g, '');
@@ -5503,7 +5505,8 @@ app.get('/api/reports/607/validate', verifyToken, verifyClient, async (req, res)
             const montoTotal = (inv.total || 0).toFixed(2);
             const isrRet = (inv.isrRetention || 0).toFixed(2);
             const itbisRet = (inv.itbisRetention || 0).toFixed(2);
-            report += `${rncCliente}|${tipoId}|${inv.ncfSequence}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|${isrRet}|${itbisRet}|0.00|0.00|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00\n`;
+            // 19 columnas exactas: col1..col16=MontoTotal|col17|col18|col19
+            report += `${rncCliente}|${tipoId}|${inv.ncfSequence}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|${itbisRet}|0.00|${isrRet}|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00\n`;
         });
 
         const validation = validate607Format(report);
@@ -5543,7 +5546,9 @@ app.get('/api/reports/607', verifyToken, verifyClient, async (req, res) => {
         const periodo = `${y}${m.toString().padStart(2, '0')}`;
         const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
         let report = `607|${rncEmisor}|${periodo}|${invoices.length}\n`;
-        // 607 DGII: misma estructura con retenciones ISR/ITBIS
+        // 607 DGII (19 columnas): RNC|TipoId|NCF|NCFModificado|TipoIngreso|FechaComp|FechaRetencion|
+        //   MontoFacturado|ITBISFacturado|ITBISRetenido|ITBISPercibido|RetencionRenta|ISR|ISC|OtrosImpuestos|MontoTotal|
+        //   ITBIS3ros|Percepciones|Intereses
         invoices.forEach(inv => {
             const fechaComp = new Date(inv.date).toISOString().slice(0, 10).replace(/-/g, '');
             const rncCliente = (inv.clientRnc || '').replace(/[^\d]/g, '');
@@ -5553,7 +5558,8 @@ app.get('/api/reports/607', verifyToken, verifyClient, async (req, res) => {
             const montoTotal = (inv.total || 0).toFixed(2);
             const isrRet = (inv.isrRetention || 0).toFixed(2);
             const itbisRet = (inv.itbisRetention || 0).toFixed(2);
-            report += `${rncCliente}|${tipoId}|${inv.ncfSequence}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|${isrRet}|${itbisRet}|0.00|0.00|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00\n`;
+            // 19 columnas exactas: col1..col16=MontoTotal|col17|col18|col19
+            report += `${rncCliente}|${tipoId}|${inv.ncfSequence}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|${itbisRet}|0.00|${isrRet}|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00\n`;
         });
 
         const validation = validate607Format(report);
