@@ -548,20 +548,16 @@ export function LexisBusinessCopilot() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <h4 className="font-semibold text-sm mb-1">{insight.title}</h4>
-                                    <p className="text-sm opacity-90 mb-3">{insight.humanMessage}</p>
-                                    {insight.action && (
+                                    <p className="text-sm opacity-90 mb-3">
+                                        {(insight.humanMessage || "").replace(/RD\$RD\$/g, "RD$")}
+                                    </p>
+                                    {insight.action && insight.action.type !== 'whatsapp_reminders' && (
                                         <Button
                                             size="sm"
-                                            variant="secondary"
-                                            className="lexis-assistant-cta rounded-[10px] font-semibold text-xs px-3 h-8 gap-1.5"
+                                            variant="outline"
+                                            className="rounded-[10px] font-semibold text-xs px-3 h-8 gap-1.5 border-primary/20 hover:bg-primary/5 hover:text-primary transition-colors"
                                             onClick={() => {
-                                                if (insight.action.type === 'whatsapp_reminders') {
-                                                    toast.info("Recordatorios detectados", {
-                                                        description: `Puedes enviar los recordatorios de WhatsApp desde el listado de facturas pendientes.`
-                                                    });
-                                                } else {
-                                                    router.push(insight.action.url);
-                                                }
+                                                router.push(insight.action.url);
                                             }}
                                         >
                                             {insight.action.label}
@@ -683,7 +679,9 @@ export function LexisBusinessCopilot() {
                                         )}
                                     >
                                         <AlertIcon severity={a.severity} />
-                                        <p className="text-sm text-slate-700 dark:text-slate-300">{a.message}</p>
+                                        <p className="text-sm text-slate-700 dark:text-slate-300">
+                                            {(a.message || "").replace(/RD\$RD\$/g, "RD$")}
+                                        </p>
                                     </div>
                                 ))}
                             </div>
@@ -703,7 +701,9 @@ export function LexisBusinessCopilot() {
                                         className="flex items-start gap-3 p-3 rounded-lg bg-amber-50/80 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40"
                                     >
                                         <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                                        <p className="text-sm text-slate-700 dark:text-slate-300">{a.message}</p>
+                                        <p className="text-sm text-slate-700 dark:text-slate-300">
+                                            {(a.message || "").replace(/RD\$RD\$/g, "RD$")}
+                                        </p>
                                     </div>
                                 ))}
                             </div>

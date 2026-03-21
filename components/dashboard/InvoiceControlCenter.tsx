@@ -248,13 +248,13 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
         try {
             const data: InvoiceData = {
                 id: invoice._id || invoice.id,
-                sequenceNumber: invoice.ncfSequence || invoice.id,
+                sequenceNumber: invoice.ncfSequence || invoice._id || invoice.id,
                 type: invoice.ncfType || invoice.type || "32",
                 clientName: invoice.clientName,
                 rnc: invoice.rnc || invoice.clientRnc || "",
                 date: invoice.date,
                 items: invoice.items || [],
-                subtotal: invoice.subtotal ?? invoice.total - (invoice.itbis || 0),
+                subtotal: invoice.subtotal ?? (invoice.total - (invoice.itbis || 0)),
                 itbis: invoice.itbis || 0,
                 isrRetention: invoice.isrRetention || 0,
                 itbisRetention: invoice.itbisRetention || 0,
@@ -565,22 +565,23 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                                         </TableHeader>
                                         <TableBody>
                                             {paginatedInvoices.map((inv) => {
-                                                if (!inv || !inv.id) return null; // Defensive check for invoice and its ID
+                                                const invId = inv._id || inv.id;
+                                                if (!inv || !invId) return null; // Defensive check for invoice and its ID
                                                 const status = getInvoiceStatus(inv);
                                                 const bal = inv.balancePendiente ?? (status !== "pagada" ? inv.total : 0);
-                                                const isHovered = hoveredRow === inv.id;
+                                                const isHovered = hoveredRow === invId;
                                                 return (
                                                     <TableRow
-                                                        key={inv.id}
+                                                        key={invId}
                                                         className={cn(
                                                             "border-border/10 transition-colors group",
                                                             isHovered && "bg-accent/5"
                                                         )}
-                                                        onMouseEnter={() => setHoveredRow(inv.id)}
+                                                        onMouseEnter={() => setHoveredRow(invId)}
                                                         onMouseLeave={() => setHoveredRow(null)}
                                                     >
                                                         <TableCell className="font-mono text-sm">
-                                                            {(inv.ncfSequence || inv.id).slice(-11)}
+                                                            {(inv.ncfSequence || invId).slice(-11)}
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className="font-medium">{inv.clientName}</div>
@@ -636,19 +637,20 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
 
                                 {/* Mobile */}
                                 <div className="md:hidden divide-y divide-border/10">
-                                   {paginatedInvoices.map((inv) => {
-                            if (!inv || !inv.id) return null; // Defensive check for invoice and its ID
-                            const status = getInvoiceStatus(inv);
-                            const bal = inv.balancePendiente ?? (inv.estadoPago === "pendiente" || inv.estadoPago === "parcial" || inv.status === "pending" ? inv.total : 0);
+                                    {paginatedInvoices.map((inv) => {
+                                        const invId = inv._id || inv.id;
+                                        if (!inv || !invId) return null; // Defensive check for invoice and its ID
+                                        const status = getInvoiceStatus(inv);
+                                        const bal = inv.balancePendiente ?? (inv.estadoPago === "pendiente" || inv.estadoPago === "parcial" || inv.status === "pending" ? inv.total : 0);
                                         return (
                                             <div
-                                                key={inv.id}
+                                                key={invId}
                                                 className="p-4 space-y-3 active:bg-muted/50"
                                                 onClick={() => handleView(inv)}
                                             >
                                                 <div className="flex justify-between items-start">
                                                     <div>
-                                                        <span className="text-xs font-mono text-muted-foreground">{(inv.ncfSequence || inv.id).slice(-11)}</span>
+                                                        <span className="text-xs font-mono text-muted-foreground">{(inv.ncfSequence || invId).slice(-11)}</span>
                                                         <h3 className="font-semibold">{inv.clientName}</h3>
                                                         <StatusDot status={status} />
                                                     </div>
