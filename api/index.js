@@ -417,8 +417,10 @@ const invoiceSchema = new mongoose.Schema({
         method: { type: String },
         amount: { type: Number }
     }],
+    montoPagado: { type: Number, default: 0 },
     balancePendiente: { type: Number, default: 0 },
     estadoPago: { type: String, enum: ['pendiente', 'parcial', 'pagado', 'credito_aplicado'], default: 'pendiente' },
+    fechaPago: { type: Date, default: null },
     status: { type: String, enum: ['active', 'credited', 'partially_credited', 'fully_credited', 'void'], default: 'active' },
     modifiedNcf: { type: String },
 });
@@ -4763,6 +4765,49 @@ app.post('/api/customers', verifyToken, verifyClient, async (req, res) => {
     }
 });
 
+app.put('/api/customers/:id', verifyToken, verifyClient, async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: 'ID de cliente inválido' });
+        }
+
+        const sanitizedData = {
+            name: sanitizeString(req.body.name, 200),
+            rnc: sanitizeString(req.body.rnc, 20).replace(/[^0-9]/g, ''),
+            phone: sanitizeString(req.body.phone, 20).replace(/[^0-9+\-\s]/g, ''),
+            email: sanitizeEmail(req.body.email),
+            address: sanitizeString(req.body.address, 300),
+        };
+
+        if (!sanitizedData.name || !sanitizedData.rnc) {
+            return res.status(400).json({ message: 'Nombre y RNC son requeridos' });
+        }
+        if (sanitizedData.rnc.length < 9 || sanitizedData.rnc.length > 11) {
+            return res.status(400).json({ message: 'RNC inválido (9 u 11 dígitos).' });
+        }
+
+        const existingByRnc = await Customer.findOne({
+            userId: req.userId,
+            rnc: sanitizedData.rnc,
+            _id: { $ne: req.params.id }
+        }).lean();
+        if (existingByRnc) {
+            return res.status(409).json({ message: 'Ya existe otro cliente con ese RNC.' });
+        }
+
+        const updated = await Customer.findOneAndUpdate(
+            { _id: req.params.id, userId: req.userId },
+            sanitizedData,
+            { new: true }
+        );
+        if (!updated) return res.status(404).json({ message: 'Cliente no encontrado' });
+
+        res.json(updated);
+    } catch (error) {
+        res.status(500).json({ message: safeErrorMessage(error) });
+    }
+});
+
 app.delete('/api/customers/:id', verifyToken, verifyClient, async (req, res) => {
     try {
         // === VALIDACIÓN DE OBJECTID ===
@@ -4966,20 +5011,53 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
                 { $match: { userId: userId, date: { $gte: startOfPrevMonth, $lte: endOfPrevMonth }, status: { $ne: 'cancelled' } } },
                 { $group: { _id: null, revenue: { $sum: '$total' }, count: { $sum: 1 } } }
             ]),
-            // Cuentas por cobrar: venta a crédito (tipoPago credito) no cobrada + cualquier factura con saldo pendiente (ej. pagos parciales: mitad transferencia, mitad por cobrar)
+            // Cuentas por cobrar robustas: soporta facturas antiguas sin balancePendiente consistente.
             Invoice.aggregate([
                 {
-                    $match: {
-                        userId, status: { $ne: 'cancelled' }, $or: [
-                            { estadoPago: { $in: ['pendiente', 'parcial'] } },
-                            { balancePendiente: { $gt: 0 } },
-                            { status: 'pending' },
-                            { tipoPago: 'credito', balancePendiente: { $gt: 0 } },
-                            { tipoPago: 'credito', estadoPago: { $in: ['pendiente', 'parcial'] } }
-                        ]
+                    $match: { userId, status: { $ne: 'cancelled' } }
+                },
+                {
+                    $addFields: {
+                        _totalSafe: { $ifNull: ['$total', 0] },
+                        _paidSafe: { $ifNull: ['$montoPagado', 0] },
+                        _balanceRaw: { $ifNull: ['$balancePendiente', null] }
                     }
                 },
-                { $group: { _id: null, count: { $sum: 1 }, totalPorCobrar: { $sum: { $cond: [{ $gt: [{ $ifNull: ['$balancePendiente', 0] }, 0] }, '$balancePendiente', '$total'] } } } }
+                {
+                    $addFields: {
+                        _fallbackBalance: {
+                            $max: [
+                                { $subtract: ['$_totalSafe', '$_paidSafe'] },
+                                0
+                            ]
+                        }
+                    }
+                },
+                {
+                    $addFields: {
+                        _effectiveBalance: {
+                            $cond: [
+                                { $gt: ['$_balanceRaw', 0] },
+                                '$_balanceRaw',
+                                {
+                                    $cond: [
+                                        {
+                                            $or: [
+                                                { $in: ['$estadoPago', ['pendiente', 'parcial']] },
+                                                { $eq: ['$status', 'pending'] },
+                                                { $eq: ['$tipoPago', 'credito'] }
+                                            ]
+                                        },
+                                        '$_fallbackBalance',
+                                        0
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                },
+                { $match: { _effectiveBalance: { $gt: 0 } } },
+                { $group: { _id: null, count: { $sum: 1 }, totalPorCobrar: { $sum: '$_effectiveBalance' } } }
             ]),
             Invoice.aggregate([
                 { $match: { userId, status: { $ne: 'cancelled' } } },
@@ -5201,6 +5279,70 @@ app.post('/api/invoices', verifyToken, verifyClient, async (req, res) => {
         session.endSession();
         log.error({ err: error.message, userId: req.userId }, 'Create invoice error');
         res.status(500).json({ message: safeErrorMessage(error) });
+    }
+});
+
+// --- Registrar cobro de factura (abono o pago total) ---
+app.post('/api/invoices/:invoiceId/payments', verifyToken, verifyClient, async (req, res) => {
+    try {
+        const invoiceId = req.params.invoiceId;
+        if (!invoiceId) return res.status(400).json({ message: 'ID de factura requerido' });
+
+        const invoice = await Invoice.findOne({ _id: invoiceId, userId: req.userId });
+        if (!invoice) return res.status(404).json({ message: 'Factura no encontrada' });
+
+        if (invoice.status === 'cancelled' || invoice.status === 'fully_credited') {
+            return res.status(400).json({ message: 'No se puede registrar pago en esta factura.' });
+        }
+
+        const amount = Number(req.body?.amount);
+        if (!Number.isFinite(amount) || amount <= 0) {
+            return res.status(400).json({ message: 'Monto de pago inválido.' });
+        }
+
+        const currentBalance = Math.max(
+            0,
+            Number(invoice.balancePendiente != null ? invoice.balancePendiente : (invoice.total || 0))
+        );
+        if (currentBalance <= 0) {
+            return res.status(400).json({ message: 'La factura ya está saldada.' });
+        }
+        if (amount > currentBalance) {
+            return res.status(400).json({ message: `El monto excede el balance pendiente (${currentBalance.toFixed(2)}).` });
+        }
+
+        const paymentMethod = ['efectivo', 'transferencia', 'tarjeta', 'otro'].includes(req.body?.paymentMethod)
+            ? req.body.paymentMethod
+            : 'transferencia';
+
+        const prevPaid = Math.max(0, Number(invoice.montoPagado || 0));
+        const newPaid = Math.min(Number(invoice.total || 0), prevPaid + amount);
+        const newBalance = Math.max(0, currentBalance - amount);
+        const newEstado = newBalance <= 0 ? 'pagado' : 'parcial';
+
+        const nextPaymentDetails = Array.isArray(invoice.paymentDetails) ? [...invoice.paymentDetails] : [];
+        nextPaymentDetails.push({ method: paymentMethod, amount });
+
+        invoice.montoPagado = newPaid;
+        invoice.balancePendiente = newBalance;
+        invoice.estadoPago = newEstado;
+        invoice.fechaPago = newEstado === 'pagado' ? new Date() : (invoice.fechaPago || null);
+        invoice.paymentDetails = nextPaymentDetails;
+        await invoice.save();
+
+        return res.json({
+            message: newEstado === 'pagado' ? 'Pago registrado. Factura saldada.' : 'Pago parcial registrado.',
+            invoice: {
+                id: String(invoice._id),
+                montoPagado: invoice.montoPagado || 0,
+                balancePendiente: invoice.balancePendiente || 0,
+                estadoPago: invoice.estadoPago,
+                fechaPago: invoice.fechaPago
+            }
+        });
+    } catch (error) {
+        log.error({ err: error.message, userId: req.userId, invoiceId: req.params?.invoiceId }, 'Register invoice payment error');
+        return res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 
@@ -5470,6 +5612,36 @@ app.get('/api/reports/tax-health', verifyToken, verifyClient, async (req, res) =
     }
 });
 
+const getDateSortValue = (value) => {
+    const d = new Date(value);
+    const time = d.getTime();
+    return Number.isFinite(time) ? time : 0;
+};
+
+const sortInvoicesFor607 = (list) => {
+    return [...list].sort((a, b) => {
+        const byDate = getDateSortValue(a.date) - getDateSortValue(b.date);
+        if (byDate !== 0) return byDate;
+        const byNcf = String(a.ncfSequence || '').localeCompare(String(b.ncfSequence || ''), 'es', { sensitivity: 'base' });
+        if (byNcf !== 0) return byNcf;
+        const byRnc = String(a.clientRnc || '').localeCompare(String(b.clientRnc || ''), 'es', { sensitivity: 'base' });
+        if (byRnc !== 0) return byRnc;
+        return String(a._id || '').localeCompare(String(b._id || ''), 'es', { sensitivity: 'base' });
+    });
+};
+
+const sortExpensesFor606 = (list) => {
+    return [...list].sort((a, b) => {
+        const byDate = getDateSortValue(a.date) - getDateSortValue(b.date);
+        if (byDate !== 0) return byDate;
+        const byNcf = String(a.ncf || '').localeCompare(String(b.ncf || ''), 'es', { sensitivity: 'base' });
+        if (byNcf !== 0) return byNcf;
+        const byRnc = String(a.supplierRnc || '').localeCompare(String(b.supplierRnc || ''), 'es', { sensitivity: 'base' });
+        if (byRnc !== 0) return byRnc;
+        return String(a._id || '').localeCompare(String(b._id || ''), 'es', { sensitivity: 'base' });
+    });
+};
+
 // --- REPORTE 607 (VENTAS) - Pre-validación + Log Fiscal ---
 app.get('/api/reports/607/validate', verifyToken, verifyClient, async (req, res) => {
     if (!req.user.confirmedFiscalName) {
@@ -5484,13 +5656,36 @@ app.get('/api/reports/607/validate', verifyToken, verifyClient, async (req, res)
         }
         const startDate = new Date(y, m - 1, 1);
         const endDate = new Date(y, m, 0, 23, 59, 59);
-        const invoices = await Invoice.find({
+        const invoicesRaw = await Invoice.find({
             userId: req.userId,
             date: { $gte: startDate, $lte: endDate },
             status: { $ne: 'cancelled' }
         }).sort({ date: 1, ncfSequence: 1 });
+        const invoices = sortInvoicesFor607(invoicesRaw);
 
         const periodo = `${y}${m.toString().padStart(2, '0')}`;
+        const preErrores = [];
+        invoices.forEach((inv, idx) => {
+            const ncf = String(inv.ncfSequence || '').trim();
+            if (!ncf || ncf.toLowerCase() === 'undefined') {
+                preErrores.push(`Factura ${idx + 1}: NCF vacío o inválido.`);
+                return;
+            }
+            const ncfRes = validateNcfStructure(ncf);
+            if (!ncfRes.valid) preErrores.push(`Factura ${idx + 1}: ${ncfRes.errors.join('; ')}`);
+        });
+        if (preErrores.length > 0) {
+            await FiscalAuditLog.create({
+                userId: req.userId,
+                tipoReporte: '607',
+                periodo,
+                resultadoValidacion: 'error',
+                errores: preErrores,
+                registros: invoices.length
+            });
+            return res.json({ valid: false, errors: preErrores });
+        }
+
         const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
         let report = `607|${rncEmisor}|${periodo}|${invoices.length}\n`;
         // 607 DGII (19 columnas): RNC|TipoId|NCF|NCFModificado|TipoIngreso|FechaComp|FechaRetencion|
@@ -5537,13 +5732,40 @@ app.get('/api/reports/607', verifyToken, verifyClient, async (req, res) => {
         }
         const startDate = new Date(y, m - 1, 1);
         const endDate = new Date(y, m, 0, 23, 59, 59);
-        const invoices = await Invoice.find({
+        const invoicesRaw = await Invoice.find({
             userId: req.userId,
             date: { $gte: startDate, $lte: endDate },
             status: { $ne: 'cancelled' }
         }).sort({ date: 1, ncfSequence: 1 });
+        const invoices = sortInvoicesFor607(invoicesRaw);
 
         const periodo = `${y}${m.toString().padStart(2, '0')}`;
+        const preErrores = [];
+        invoices.forEach((inv, idx) => {
+            const ncf = String(inv.ncfSequence || '').trim();
+            if (!ncf || ncf.toLowerCase() === 'undefined') {
+                preErrores.push(`Factura ${idx + 1}: NCF vacío o inválido.`);
+                return;
+            }
+            const ncfRes = validateNcfStructure(ncf);
+            if (!ncfRes.valid) preErrores.push(`Factura ${idx + 1}: ${ncfRes.errors.join('; ')}`);
+        });
+        if (preErrores.length > 0) {
+            await FiscalAuditLog.create({
+                userId: req.userId,
+                tipoReporte: '607',
+                periodo,
+                resultadoValidacion: 'error',
+                errores: preErrores,
+                registros: invoices.length
+            });
+            return res.status(400).json({
+                message: 'El archivo 607 tiene facturas con NCF inválido o vacío. Corrige antes de descargar.',
+                valid: false,
+                details: preErrores
+            });
+        }
+
         const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
         let report = `607|${rncEmisor}|${periodo}|${invoices.length}\n`;
         // 607 DGII (19 columnas): RNC|TipoId|NCF|NCFModificado|TipoIngreso|FechaComp|FechaRetencion|
@@ -5717,10 +5939,11 @@ app.get('/api/reports/606/validate', verifyToken, verifyClient, async (req, res)
         }
         const startDate = new Date(y, m - 1, 1);
         const endDate = new Date(y, m, 0, 23, 59, 59);
-        const expenses = await Expense.find({
+        const expensesRaw = await Expense.find({
             userId: req.userId,
             date: { $gte: startDate, $lte: endDate }
         }).sort({ date: 1 });
+        const expenses = sortExpensesFor606(expensesRaw);
 
         const preErrores = [];
         expenses.forEach((exp, idx) => {
@@ -5786,10 +6009,11 @@ app.get('/api/reports/606', verifyToken, verifyClient, async (req, res) => {
         }
         const startDate = new Date(y, m - 1, 1);
         const endDate = new Date(y, m, 0, 23, 59, 59);
-        const expenses = await Expense.find({
+        const expensesRaw = await Expense.find({
             userId: req.userId,
             date: { $gte: startDate, $lte: endDate }
         }).sort({ date: 1 });
+        const expenses = sortExpensesFor606(expensesRaw);
 
         const preErrores = [];
         expenses.forEach((exp, idx) => {

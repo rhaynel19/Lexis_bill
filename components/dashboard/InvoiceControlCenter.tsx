@@ -37,6 +37,9 @@ import { CreditNoteModal } from "@/components/CreditNoteModal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { api } from "@/lib/api-service";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 export interface Invoice {
     id: string;
@@ -123,6 +126,12 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
     const [showCreditNote, setShowCreditNote] = useState(false);
     const [creditNoteInvoice, setCreditNoteInvoice] = useState<Invoice | null>(null);
+    const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+    const [paymentInvoice, setPaymentInvoice] = useState<Invoice | null>(null);
+    const [paymentAmount, setPaymentAmount] = useState("");
+    const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "transferencia" | "tarjeta" | "otro">("transferencia");
+    const [paymentNote, setPaymentNote] = useState("");
+    const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
     const [hoveredRow, setHoveredRow] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const pageSize = 15;
@@ -283,7 +292,6 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
         if (!id || duplicatingId) return;
         setDuplicatingId(id);
         try {
-            const { api } = await import("@/lib/api-service");
             const res = await api.duplicateInvoice(id);
             router.push(`/nueva-factura?from=${encodeURIComponent(res.fromInvoiceId)}&fromNcf=${encodeURIComponent(res.fromInvoiceNcf || "")}`);
         } catch (e: any) {
@@ -307,7 +315,43 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
     };
 
     const handleRegisterPayment = (inv: Invoice) => {
-        toast.info("Registrar pago: próximamente podrás registrar cobros desde aquí.");
+        const status = getInvoiceStatus(inv);
+        const balance = Math.max(0, inv.balancePendiente ?? (status !== "pagada" ? inv.total : 0));
+        if (balance <= 0) {
+            toast.info("Esta factura ya está saldada.");
+            return;
+        }
+        setPaymentInvoice(inv);
+        setPaymentAmount(String(Math.round(balance)));
+        setPaymentMethod("transferencia");
+        setPaymentNote("");
+        setShowPaymentDialog(true);
+    };
+
+    const submitRegisterPayment = async () => {
+        if (!paymentInvoice) return;
+        const invoiceId = paymentInvoice._id || paymentInvoice.id;
+        const amount = Number(paymentAmount);
+        if (!invoiceId || !Number.isFinite(amount) || amount <= 0) {
+            toast.error("Indica un monto de pago válido.");
+            return;
+        }
+        setIsSubmittingPayment(true);
+        try {
+            const res = await api.registerInvoicePayment(invoiceId, {
+                amount,
+                paymentMethod,
+                note: paymentNote.trim() || undefined
+            });
+            toast.success(res.message || "Pago registrado correctamente.");
+            setShowPaymentDialog(false);
+            setPaymentInvoice(null);
+            onRefresh();
+        } catch (e: any) {
+            toast.error(e?.message || "No se pudo registrar el pago.");
+        } finally {
+            setIsSubmittingPayment(false);
+        }
     };
 
     const isEmpty = invoices.length === 0;
@@ -670,6 +714,11 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                                                     <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleWhatsApp(inv); }}>
                                                         <MessageCircle className="w-3.5 h-3.5 mr-1" /> WhatsApp
                                                     </Button>
+                                                    {status !== "pagada" && (
+                                                        <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleRegisterPayment(inv); }}>
+                                                            <DollarSign className="w-3.5 h-3.5 mr-1" /> Registrar pago
+                                                        </Button>
+                                                    )}
                                                     <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleDuplicate(inv); }} disabled={!!duplicatingId}>
                                                         <Repeat className="w-3.5 h-3.5 mr-1" /> Facturar de nuevo
                                                     </Button>
@@ -719,6 +768,75 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                 invoice={creditNoteInvoice}
                 onSuccess={handleCreditNoteSuccess}
             />
+
+            <Dialog
+                open={showPaymentDialog}
+                onOpenChange={(open) => {
+                    setShowPaymentDialog(open);
+                    if (!open) setPaymentInvoice(null);
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Registrar pago</DialogTitle>
+                        <DialogDescription>
+                            {paymentInvoice ? `Factura ${(paymentInvoice.ncfSequence || paymentInvoice._id || paymentInvoice.id || "").slice(-11)} - ${paymentInvoice.clientName}` : "Registra un abono o pago total."}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-sm font-medium">Monto (RD$)</label>
+                            <Input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={paymentAmount}
+                                onChange={(e) => setPaymentAmount(e.target.value)}
+                                placeholder="0"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium">Método de pago</label>
+                            <select
+                                value={paymentMethod}
+                                onChange={(e) => setPaymentMethod(e.target.value as "efectivo" | "transferencia" | "tarjeta" | "otro")}
+                                className="h-10 mt-1 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                aria-label="Método de pago"
+                            >
+                                <option value="transferencia">Transferencia</option>
+                                <option value="efectivo">Efectivo</option>
+                                <option value="tarjeta">Tarjeta</option>
+                                <option value="otro">Otro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium">Nota (opcional)</label>
+                            <Textarea
+                                value={paymentNote}
+                                onChange={(e) => setPaymentNote(e.target.value)}
+                                placeholder="Referencia de transferencia, banco, etc."
+                                className="mt-1"
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setShowPaymentDialog(false);
+                                setPaymentInvoice(null);
+                            }}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button onClick={submitRegisterPayment} disabled={isSubmittingPayment}>
+                            {isSubmittingPayment ? "Guardando..." : "Guardar pago"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Floating Action Button (Mobile Only) */}
             <div className="md:hidden fixed bottom-6 right-6 z-50">

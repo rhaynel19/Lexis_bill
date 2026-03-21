@@ -204,6 +204,20 @@ export const api = {
         );
     },
 
+    async registerInvoicePayment(
+        invoiceId: string,
+        data: { amount: number; paymentMethod?: "efectivo" | "transferencia" | "tarjeta" | "otro"; note?: string }
+    ) {
+        return secureFetch<{
+            message: string;
+            invoice: { id: string; montoPagado: number; balancePendiente: number; estadoPago: string; fechaPago?: string };
+        }>(`${API_URL}/invoices/${invoiceId}/payments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+    },
+
     // Customers (CRM)
     async getCustomers() {
         return secureFetch<any[]>(`${API_URL}/customers`, {
@@ -214,6 +228,16 @@ export const api = {
     async saveCustomer(data: any) {
         const res = await secureFetch<any>(`${API_URL}/customers`, {
             method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        localStorage.removeItem("cache_customers_list");
+        return res;
+    },
+
+    async updateCustomer(id: string, data: any) {
+        const res = await secureFetch<any>(`${API_URL}/customers/${id}`, {
+            method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
         });

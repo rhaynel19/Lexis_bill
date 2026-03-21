@@ -17,7 +17,8 @@ import {
     Phone,
     Receipt,
     FileText,
-    Trash2
+    Trash2,
+    Pencil
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api-service";
@@ -42,6 +43,10 @@ export default function CustomersPage() {
     const [isNewClientOpen, setIsNewClientOpen] = useState(false);
     const [newClientForm, setNewClientForm] = useState({ name: "", rnc: "", phone: "", email: "" });
     const [isSavingNew, setIsSavingNew] = useState(false);
+    const [isEditClientOpen, setIsEditClientOpen] = useState(false);
+    const [editingCustomer, setEditingCustomer] = useState<any>(null);
+    const [editClientForm, setEditClientForm] = useState({ name: "", rnc: "", phone: "", email: "" });
+    const [isSavingEdit, setIsSavingEdit] = useState(false);
 
     useEffect(() => {
         loadCustomers();
@@ -117,6 +122,17 @@ export default function CustomersPage() {
         setIsNewClientOpen(true);
     };
 
+    const openEditClient = (customer: any) => {
+        setEditingCustomer(customer);
+        setEditClientForm({
+            name: customer?.name || "",
+            rnc: customer?.rnc || "",
+            phone: customer?.phone || "",
+            email: customer?.email || ""
+        });
+        setIsEditClientOpen(true);
+    };
+
     const handleSaveNewClient = async (e: React.FormEvent) => {
         e.preventDefault();
         const { name, rnc, phone, email } = newClientForm;
@@ -139,6 +155,41 @@ export default function CustomersPage() {
             toast.error(err?.message || "No se pudo crear el cliente.");
         } finally {
             setIsSavingNew(false);
+        }
+    };
+
+    const handleSaveEditClient = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingCustomer?._id) {
+            toast.error("Cliente inválido.");
+            return;
+        }
+        const { name, rnc, phone, email } = editClientForm;
+        const rncClean = (rnc || "").replace(/\D/g, "");
+        if (!name.trim()) {
+            toast.error("El nombre es obligatorio.");
+            return;
+        }
+        if (rncClean.length < 9 || rncClean.length > 11) {
+            toast.error("RNC debe tener 9 u 11 dígitos.");
+            return;
+        }
+        setIsSavingEdit(true);
+        try {
+            await api.updateCustomer(editingCustomer._id, {
+                name: name.trim(),
+                rnc: rncClean,
+                phone: phone.trim() || undefined,
+                email: email.trim() || undefined
+            });
+            toast.success("Cliente actualizado.");
+            setIsEditClientOpen(false);
+            setEditingCustomer(null);
+            loadCustomers();
+        } catch (err: any) {
+            toast.error(err?.message || "No se pudo actualizar el cliente.");
+        } finally {
+            setIsSavingEdit(false);
         }
     };
 
@@ -320,6 +371,20 @@ export default function CustomersPage() {
                                                         <Button
                                                             size="sm"
                                                             variant="ghost"
+                                                            className="h-9 w-9 p-0 hover:bg-amber-50 hover:text-amber-700 rounded-full"
+                                                            onClick={() => openEditClient(customer)}
+                                                            aria-label="Editar cliente"
+                                                        >
+                                                            <Pencil className="h-4.5 w-4.5" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>Editar cliente</TooltipContent>
+                                                </Tooltip>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
                                                             className="h-9 w-9 p-0 hover:bg-green-50 hover:text-green-600 rounded-full"
                                                             onClick={(e) => handleWhatsApp(e, customer.phone)}
                                                             disabled={!customer.phone}
@@ -448,6 +513,83 @@ export default function CustomersPage() {
                             </Button>
                             <Button type="submit" disabled={isSavingNew}>
                                 {isSavingNew ? "Guardando…" : "Crear cliente"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={isEditClientOpen}
+                onOpenChange={(open) => {
+                    setIsEditClientOpen(open);
+                    if (!open) setEditingCustomer(null);
+                }}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Pencil className="w-5 h-5" /> Editar Cliente
+                        </DialogTitle>
+                        <DialogDescription>
+                            Actualiza nombre, RNC, teléfono y correo del cliente.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSaveEditClient} className="space-y-4">
+                        <div>
+                            <label className="text-sm font-medium text-foreground">Nombre o razón social</label>
+                            <Input
+                                className="mt-1"
+                                placeholder="Ej. Empresa SRL"
+                                value={editClientForm.name}
+                                onChange={(e) => setEditClientForm((f) => ({ ...f, name: e.target.value }))}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground">RNC (9 u 11 dígitos)</label>
+                            <Input
+                                className="mt-1 font-mono"
+                                placeholder="101010101"
+                                value={editClientForm.rnc}
+                                onChange={(e) => setEditClientForm((f) => ({ ...f, rnc: e.target.value.replace(/\D/g, "").slice(0, 11) }))}
+                                maxLength={11}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-muted-foreground">Teléfono (opcional)</label>
+                            <Input
+                                className="mt-1"
+                                placeholder="8095550000"
+                                value={editClientForm.phone}
+                                onChange={(e) => setEditClientForm((f) => ({ ...f, phone: e.target.value }))}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-muted-foreground">Email (opcional)</label>
+                            <Input
+                                type="email"
+                                className="mt-1"
+                                placeholder="contacto@ejemplo.com"
+                                value={editClientForm.email}
+                                onChange={(e) => setEditClientForm((f) => ({ ...f, email: e.target.value }))}
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    setIsEditClientOpen(false);
+                                    setEditingCustomer(null);
+                                }}
+                                disabled={isSavingEdit}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button type="submit" disabled={isSavingEdit}>
+                                {isSavingEdit ? "Guardando…" : "Guardar cambios"}
                             </Button>
                         </DialogFooter>
                     </form>
