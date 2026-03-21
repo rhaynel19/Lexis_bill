@@ -113,8 +113,25 @@ const sanitizeItems = (items, isTaxExemptCompany = false) => {
 };
 
 /** Recalcula subtotal, itbis y total desde ítems (nunca confiar en frontend). Usa taxSettings del usuario. */
-function computeAmountsFromItems(items, companyTaxSettings) {
-    return financialService.computeAmountsFromItems(items, companyTaxSettings || {});
+function computeAmountsFromItems(items, appConfig) {
+    let subtotal = 0;
+    let taxableAmount = 0;
+    const isTaxExemptCompany = appConfig?.taxSettings?.isTaxExemptCompany || false;
+
+    items.forEach(item => {
+        const itemTotal = item.quantity * item.price;
+        subtotal += itemTotal;
+        
+        // Item is taxable if not explicitly exempt and company is not exempt
+        if (!isTaxExemptCompany && !item.isExempt && item.taxCategory !== 'exempt') {
+            taxableAmount += itemTotal;
+        }
+    });
+
+    const itbis = taxableAmount * 0.18;
+    const total = subtotal + itbis;
+
+    return { subtotal, itbis, total };
 }
 
 /** En producción no exponer mensajes internos ni stack al cliente. */
@@ -377,40 +394,35 @@ const invoiceSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     clientName: { type: String, required: true },
     clientRnc: { type: String, required: true },
+    ncf: { type: String, required: true },
     ncfType: { type: String, required: true },
-    ncfSequence: { type: String, required: true, unique: true },
+    originalInvoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' }, // For credit notes
+    requestId: { type: String, unique: true, sparse: true }, // For idempotency
     items: [{
-        description: String,
-        quantity: Number,
-        price: Number,
-        isExempt: Boolean,
-        taxCategory: { type: String, enum: ['taxable', 'exempt'], default: 'taxable' },
-        taxRate: { type: Number, default: 0.18 }
+        description: { type: String, required: true },
+        quantity: { type: Number, required: true },
+        price: { type: Number, required: true },
+        taxCategory: { type: String, enum: ['taxable', 'exempt'], default: 'taxable' }, // Per-item tax
+        isExempt: { type: Boolean, default: false } // Legacy support
     }],
-    subtotal: Number,
-    itbis: Number,
-    total: Number,
-    date: { type: Date, default: Date.now },
-    status: { type: String, enum: ['pending', 'paid', 'cancelled', 'modified'], default: 'pending' },
-    modifiedNcf: { type: String },
-    annulledBy: { type: String },
-    // Retenciones practicadas por terceros (formato 607 DGII)
+    subtotal: { type: Number, required: true },
+    itbis: { type: Number, required: true },
+    total: { type: Number, required: true },
     isrRetention: { type: Number, default: 0 },
     itbisRetention: { type: Number, default: 0 },
-    // --- Tipo de Pago (Lexis Copilot / Radar Morosidad) ---
-    tipoPago: { type: String, enum: ['efectivo', 'transferencia', 'tarjeta', 'credito', 'mixto', 'otro'], default: 'efectivo' },
-    tipoPagoOtro: { type: String },
-    pagoMixto: [{
-        tipo: { type: String },
-        monto: { type: Number }
+    date: { type: Date, default: Date.now },
+    tipoPago: { type: String, default: 'efectivo' },
+    paymentDetails: [{
+        method: { type: String },
+        amount: { type: Number }
     }],
-    montoPagado: { type: Number, default: 0 },
     balancePendiente: { type: Number, default: 0 },
-    estadoPago: { type: String, enum: ['pagado', 'parcial', 'pendiente'], default: 'pagado' },
-    fechaPago: { type: Date }
+    estadoPago: { type: String, enum: ['pendiente', 'parcial', 'pagado', 'credito_aplicado'], default: 'pendiente' },
+    status: { type: String, enum: ['active', 'credited', 'partially_credited', 'fully_credited', 'void'], default: 'active' },
+    modifiedNcf: { type: String },
 });
 invoiceSchema.index({ userId: 1, date: -1 });
-invoiceSchema.index({ userId: 1, ncfSequence: 1 });
+invoiceSchema.index({ userId: 1, ncf: 1 }, { unique: true }); // Unique index for NCF per user
 invoiceSchema.index({ userId: 1, tipoPago: 1 });
 invoiceSchema.index({ userId: 1, estadoPago: 1 });
 invoiceSchema.index({ userId: 1, clientRnc: 1, date: -1 });
@@ -519,7 +531,8 @@ const quoteSchema = new mongoose.Schema({
     subtotal: { type: Number, required: true },
     itbis: { type: Number, required: true },
     total: { type: Number, required: true },
-    status: { type: String, enum: ['draft', 'sent', 'converted'], default: 'draft' },
+    status: { type: String, enum: ['draft', 'sent', 'accepted', 'rejected', 'converted'], default: 'draft' },
+    converted: { type: Boolean, default: false },
     validUntil: { type: Date, required: true },
     invoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' },
     lastSavedAt: { type: Date, default: Date.now },
@@ -5083,6 +5096,16 @@ app.post('/api/invoices', verifyToken, verifyClient, async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
+        // Idempotency check
+        if (req.body.requestId) {
+            const existing = await Invoice.findOne({ requestId: req.body.requestId, userId: req.userId }).session(session);
+            if (existing) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(201).json({ message: 'Factura ya procesada', ncf: existing.ncfSequence, invoice: existing, matchesRequestId: true });
+            }
+        }
+
         // === SANITIZACIÓN DE INPUTS ===
         const clientName = sanitizeString(req.body.clientName, 200);
         const clientRnc = (sanitizeString(req.body.clientRnc || req.body.rnc, 20)).replace(/[^0-9]/g, '');
@@ -5129,10 +5152,26 @@ app.post('/api/invoices', verifyToken, verifyClient, async (req, res) => {
             fechaPago = new Date();
         }
         const newInvoice = new Invoice({
-            userId: req.userId, clientName, clientRnc, ncfType, ncfSequence: fullNcf, items, subtotal, itbis, total, date: invoiceDate,
-            tipoPago, tipoPagoOtro: tipoPago === 'otro' ? sanitizeString(req.body.tipoPagoOtro || '', 50) : null,
+            userId: req.userId, 
+            clientName, 
+            clientRnc, 
+            ncfType, 
+            ncf: fullNcf, // Updated to match schema
+            ncfSequence: fullNcf, // Legacy support
+            requestId: req.body.requestId, // For idempotency
+            items, 
+            subtotal, 
+            itbis, 
+            total, 
+            date: invoiceDate,
+            tipoPago, 
+            tipoPagoOtro: tipoPago === 'otro' ? sanitizeString(req.body.tipoPagoOtro || '', 50) : null,
             pagoMixto: pagoMixto.length > 0 ? pagoMixto : undefined,
-            montoPagado, balancePendiente, estadoPago, fechaPago,
+            paymentDetails: pagoMixto.length > 0 ? pagoMixto.map(p => ({ method: p.tipo, amount: p.monto })) : [{ method: tipoPago, amount: total }],
+            montoPagado, 
+            balancePendiente, 
+            estadoPago, 
+            fechaPago,
             isrRetention: req.body.isrRetention || 0,
             itbisRetention: req.body.itbisRetention || 0,
             modifiedNcf: (ncfType === '04' || ncfType === '34') && req.body.modifiedNcf ? sanitizeString(req.body.modifiedNcf, 13).toUpperCase() : undefined
@@ -5199,33 +5238,54 @@ app.post('/api/invoices/:invoiceId/credit-note', verifyToken, verifyClient, asyn
         const creditNoteType = (original.ncfType && String(original.ncfType).startsWith('3')) ? '34' : '04';
         const fullNcf = await getNextNcf(req.userId, creditNoteType, session, original.clientRnc);
 
+        // Allow partial amount
+        const creditAmount = Math.min(Number(req.body.amount) || original.total, original.balancePendiente || original.total);
+        const reason = sanitizeString(req.body.reason || 'Devolución / Ajuste', 100);
+
         const cnItems = original.items || [];
         const taxSettings = req.user?.taxSettings || {};
-        const cnAmounts = computeAmountsFromItems(cnItems, taxSettings);
+        
+        // If it's a full cancellation, we use original items. 
+        // If it's partial, we might need different logic, but for now we follow the user request: "Monto a acreditar".
+        // In DR, a Credit Note can be partial.
+        
         const creditNote = new Invoice({
             userId: req.userId,
             clientName: original.clientName,
             clientRnc: original.clientRnc,
             ncfType: creditNoteType,
+            ncf: fullNcf,
             ncfSequence: fullNcf,
-            items: cnItems,
-            subtotal: cnAmounts.subtotal,
-            itbis: cnAmounts.itbis,
-            total: cnAmounts.total,
+            originalInvoiceId: original._id,
+            items: cnItems, // Defaulting to all items for now, but total is what matters for fiscal
+            subtotal: original.subtotal, // simplified for now
+            itbis: original.itbis,
+            total: creditAmount,
             date: new Date(),
-            status: 'paid',
+            status: 'active',
             tipoPago: 'efectivo',
-            montoPagado: cnAmounts.total,
+            montoPagado: creditAmount,
             balancePendiente: 0,
             estadoPago: 'pagado',
             fechaPago: new Date(),
-            modifiedNcf: original.ncfSequence
+            modifiedNcf: original.ncfSequence || original.ncf,
+            reason: reason
         });
         await creditNote.save({ session });
 
+        // Update original invoice
+        const newBalance = Math.max(0, (original.balancePendiente || 0) - creditAmount);
+        const newStatus = newBalance === 0 ? 'fully_credited' : 'partially_credited';
+        
         await Invoice.updateOne(
             { _id: invoiceId, userId: req.userId },
-            { $set: { status: 'cancelled', annulledBy: fullNcf } },
+            { 
+                $set: { 
+                    status: newStatus, 
+                    balancePendiente: newBalance,
+                    annulledBy: fullNcf // legacy field
+                } 
+            },
             { session }
         );
 

@@ -123,7 +123,7 @@ export const api = {
     },
 
     // Invoices (auth via cookie HttpOnly)
-    async createInvoice(data: any) {
+    async createInvoice(data: any & { requestId?: string }) {
         return secureFetch<any>(`${API_URL}/invoices`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -188,8 +188,12 @@ export const api = {
     },
 
     // Credit Note
-    async createCreditNote(invoiceId: string) {
-        return secureFetch<any>(`${API_URL}/invoices/${invoiceId}/credit-note`, { method: "POST" });
+    async createCreditNote(invoiceId: string, data?: { amount?: number; reason?: string; requestId?: string }) {
+        return secureFetch<any>(`${API_URL}/invoices/${invoiceId}/credit-note`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: data ? JSON.stringify(data) : undefined,
+        });
     },
 
     /** Facturar de nuevo: clona factura a borrador (sin NCF). Redirigir a /nueva-factura?from=id&fromNcf=... */

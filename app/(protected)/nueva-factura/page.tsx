@@ -40,7 +40,8 @@ interface InvoiceItem {
     description: string;
     quantity: number | string;
     price: number | string;
-    isExempt?: boolean; // Para gastos no gravables (Abogados)
+    isExempt?: boolean; // Legacy/UI support
+    taxCategory?: 'taxable' | 'exempt';
 }
 
 export default function NewInvoice() {
@@ -175,7 +176,7 @@ export default function NewInvoice() {
     const [savedTemplates, setSavedTemplates] = useState<any[]>([]);
 
     const [items, setItems] = useState<InvoiceItem[]>([
-        { id: "1", description: "", quantity: 1, price: 0, isExempt: false }
+        { id: "1", description: "", quantity: 1, price: 0, taxCategory: 'taxable' }
     ]);
 
     // Success Modal & PDF State
@@ -379,7 +380,7 @@ export default function NewInvoice() {
         // Lógica automática al cambiar tipo de comprobante
         if (invoiceType === "44" || invoiceType === "14") {
             // Regímenes Especiales: Todo Exento
-            setItems(prevItems => prevItems.map(item => ({ ...item, isExempt: true })));
+            setItems(prevItems => prevItems.map(item => ({ ...item, isExempt: true, taxCategory: 'exempt' })));
             toast.info(`ℹ️ ${invoiceType === "14" ? "B14" : "E44"} seleccionado: Se ha marcado todo como EXENTO de ITBIS automáticamente.`);
         } else if (invoiceType === "45" || invoiceType === "15") {
             // Gubernamentales
@@ -434,9 +435,10 @@ export default function NewInvoice() {
             description: i.description || "",
             quantity: i.quantity ?? 1,
             price: i.price ?? 0,
-            isExempt: i.isExempt
+            isExempt: i.isExempt || i.taxCategory === 'exempt',
+            taxCategory: i.taxCategory || (i.isExempt ? 'exempt' : 'taxable')
         }));
-        setItems(its.length ? its : [{ id: "1", description: "", quantity: 1, price: 0, isExempt: false }]);
+        setItems(its.length ? its : [{ id: "1", description: "", quantity: 1, price: 0, taxCategory: 'taxable' }]);
         toast.success(`Plantilla "${t.name}" cargada. Los datos están listos para editar.`);
     };
 
@@ -522,7 +524,8 @@ export default function NewInvoice() {
             description: i.description,
             quantity: i.quantity ?? 1,
             price: i.price ?? 0,
-            isExempt: i.isExempt ?? false,
+            isExempt: i.isExempt || i.taxCategory === 'exempt',
+            taxCategory: i.taxCategory || (i.isExempt ? 'exempt' : 'taxable'),
         }));
         setItems(its);
         if (inv.tipoPago) setTipoPago(inv.tipoPago);
@@ -537,7 +540,7 @@ export default function NewInvoice() {
         setLoadingLastItems(true);
         try {
             const { api } = await import("@/lib/api-service");
-            const history = await api.getCustomerHistory(cleanRnc) as { items?: { description?: string; quantity?: number; price?: number; isExempt?: boolean }[] }[];
+            const history = await api.getCustomerHistory(cleanRnc) as { items?: { description?: string; quantity?: number; price?: number; isExempt?: boolean; taxCategory?: 'taxable' | 'exempt' }[] }[];
             const last = Array.isArray(history) ? history[0] : null;
             if (!last?.items?.length) {
                 toast.info("No hay facturas previas para este cliente.");
@@ -548,7 +551,8 @@ export default function NewInvoice() {
                 description: i.description ?? "",
                 quantity: i.quantity ?? 1,
                 price: i.price ?? 0,
-                isExempt: i.isExempt ?? false,
+                isExempt: i.isExempt || i.taxCategory === 'exempt',
+                taxCategory: i.taxCategory || (i.isExempt ? 'exempt' : 'taxable'),
             }));
             setItems(its);
             toast.success("Ítems de la última factura cargados. Revisa y ajusta si hace falta.");
@@ -571,6 +575,7 @@ export default function NewInvoice() {
         updateItem(itemId, "description", s.description);
         updateItem(itemId, "price", s.price);
         updateItem(itemId, "isExempt", s.isExempt);
+        updateItem(itemId, "taxCategory", s.isExempt ? 'exempt' : 'taxable');
         toast.success("Precio sugerido basado en tus últimas facturas.", { duration: 2500 });
     };
 
@@ -590,7 +595,8 @@ export default function NewInvoice() {
                 description: p.description,
                 quantity: p.quantity,
                 price: p.price,
-                isExempt: invoiceType === "44"
+                isExempt: (invoiceType === "44" || p.isExempt),
+                taxCategory: (invoiceType === "44" || p.isExempt) ? 'exempt' : 'taxable'
             }));
 
             if (items.length === 1 && !items[0].description && items[0].price === 0) {
@@ -622,7 +628,8 @@ export default function NewInvoice() {
             description: "",
             quantity: 1,
             price: 0,
-            isExempt: invoiceType === "44", // Auto-exempt if E44
+            isExempt: invoiceType === "44" || invoiceType === "14",
+            taxCategory: (invoiceType === "44" || invoiceType === "14") ? 'exempt' : 'taxable',
         };
         setItems([...items, newItem]);
         setFocusItemId(newItem.id);
@@ -645,6 +652,7 @@ export default function NewInvoice() {
             quantity: item.quantity,
             price: item.price,
             isExempt: item.isExempt,
+            taxCategory: item.taxCategory || (item.isExempt ? 'exempt' : 'taxable'),
         };
         const idx = items.findIndex((i) => i.id === id);
         const next = [...items];
@@ -709,7 +717,8 @@ export default function NewInvoice() {
     const taxableSubtotal = items.reduce((sum, item) => {
         const qty = typeof item.quantity === 'string' ? (parseFloat(item.quantity) || 0) : item.quantity;
         const price = typeof item.price === 'string' ? (parseFloat(item.price) || 0) : item.price;
-        return item.isExempt ? sum : sum + (qty * price);
+        const isExempt = item.taxCategory === 'exempt' || item.isExempt;
+        return isExempt ? sum : sum + (qty * price);
     }, 0);
 
     // Calcular ITBIS (18% de la base imponible)
@@ -912,11 +921,19 @@ export default function NewInvoice() {
                 return;
             }
 
+            const requestId = typeof window !== 'undefined' && window.crypto?.randomUUID ? window.crypto.randomUUID() : `req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
             const invoiceData: Record<string, unknown> = {
                 clientName: cleanClientName,
                 clientRnc: cleanRnc,
                 ncfType: invoiceType,
-                items: validItems,
+                requestId,
+                items: validItems.map(i => ({
+                    description: i.description,
+                    quantity: Number(i.quantity),
+                    price: Number(i.price),
+                    taxCategory: i.taxCategory || (i.isExempt ? 'exempt' : 'taxable')
+                })),
                 date: invoiceDate ? new Date(invoiceDate).toISOString() : new Date().toISOString(),
                 subtotal,
                 itbis,
@@ -929,6 +946,9 @@ export default function NewInvoice() {
             if (tipoPago === "mixto" && pagoMixto.length > 0) {
                 invoiceData.pagoMixto = pagoMixto.filter((p) => (p.monto || 0) > 0).map((p) => ({ tipo: p.tipo, monto: p.monto }));
             }
+            invoiceData.paymentDetails = tipoPago === 'mixto' 
+                ? pagoMixto.filter(p => p.monto > 0).map(p => ({ method: p.tipo, amount: p.monto }))
+                : [{ method: tipoPago, amount: total }];
 
             const { api } = await import("@/lib/api-service");
             const response = await api.createInvoice(invoiceData);
@@ -1617,8 +1637,11 @@ export default function NewInvoice() {
                                                                     <input
                                                                         type="checkbox"
                                                                         className="w-4 h-4 rounded border-slate-300 text-accent focus:ring-accent accent-accent cursor-pointer"
-                                                                        checked={item.isExempt || false}
-                                                                        onChange={(e) => updateItem(item.id, "isExempt", e.target.checked)}
+                                                                        checked={item.taxCategory === 'exempt' || item.isExempt || false}
+                                                                        onChange={(e) => {
+                                                                            updateItem(item.id, "isExempt", e.target.checked);
+                                                                            updateItem(item.id, "taxCategory", e.target.checked ? 'exempt' : 'taxable');
+                                                                        }}
                                                                         title="Marcar si este producto/servicio no lleva ITBIS"
                                                                     />
                                                                 </div>
@@ -1786,7 +1809,15 @@ export default function NewInvoice() {
                                                         onClick={() => {
                                                             const desc = (s as any).name || (s as any).description || "";
                                                             const price = (s as any).price ?? 0;
-                                                            const newItem: InvoiceItem = { id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, description: desc, quantity: 1, price: price, isExempt: invoiceType === "44" };
+                                                            const isExempt = invoiceType === "44" || invoiceType === "14";
+                                                            const newItem: InvoiceItem = { 
+                                                                id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, 
+                                                                description: desc, 
+                                                                quantity: 1, 
+                                                                price: price, 
+                                                                isExempt: isExempt,
+                                                                taxCategory: isExempt ? 'exempt' : 'taxable' 
+                                                            };
                                                             setItems([...items, newItem]);
                                                             setFocusItemId(newItem.id);
                                                             toast.success(`"${desc}" agregado`);

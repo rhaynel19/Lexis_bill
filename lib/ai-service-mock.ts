@@ -42,7 +42,7 @@ export const AIService = {
 
     // Parse natural language text into invoice items
     // Example: "Instalación de 3 aires por 5000 cada uno"
-    parseInvoiceText: (text: string): Promise<{ description: string, quantity: number, price: number }[]> => {
+    parseInvoiceText: (text: string): Promise<{ description: string, quantity: number, price: number, isExempt?: boolean }[]> => {
         return new Promise((resolve) => {
             setTimeout(() => {
                 const items: { description: string, quantity: number, price: number }[] = [];

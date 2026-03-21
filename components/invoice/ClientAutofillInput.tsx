@@ -16,7 +16,7 @@ export interface AutofillClient {
 }
 
 export interface AutofillLastInvoice {
-    items: Array<{ description: string; quantity: number; price: number; isExempt?: boolean }>;
+    items: Array<{ description: string; quantity: number; price: number; isExempt?: boolean; taxCategory?: 'taxable' | 'exempt' }>;
     tipoPago: string;
     ncfType?: string;
     total?: number;

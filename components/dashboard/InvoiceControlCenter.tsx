@@ -83,7 +83,10 @@ const TIPO_PAGO_LABELS: Record<string, string> = {
 const formatCurrency = (n: number) =>
     new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 0 }).format(n);
 
-function getInvoiceStatus(inv: Invoice): "pagada" | "pendiente" | "vencida" {
+function getInvoiceStatus(inv: Invoice): "pagada" | "pendiente" | "vencida" | "acreditada" | "parcialmente_acreditada" {
+    if (inv.status === "fully_credited") return "acreditada";
+    if (inv.status === "partially_credited") return "parcialmente_acreditada";
+    
     const bal = inv.balancePendiente ?? (inv.estadoPago === "pendiente" || inv.estadoPago === "parcial" || inv.status === "pending" ? inv.total : 0);
     const isPaid = bal <= 0 && inv.status !== "cancelled";
     if (isPaid) return "pagada";
@@ -92,11 +95,13 @@ function getInvoiceStatus(inv: Invoice): "pagada" | "pendiente" | "vencida" {
     return "pendiente";
 }
 
-function StatusDot({ status }: { status: "pagada" | "pendiente" | "vencida" }) {
+function StatusDot({ status }: { status: "pagada" | "pendiente" | "vencida" | "acreditada" | "parcialmente_acreditada" }) {
     const config = {
         pagada: { bg: "bg-emerald-500", ring: "ring-emerald-500/30", label: "Pagada" },
         pendiente: { bg: "bg-amber-500", ring: "ring-amber-500/30", label: "Pendiente" },
         vencida: { bg: "bg-rose-500", ring: "ring-rose-500/30", label: "Vencida" },
+        acreditada: { bg: "bg-blue-500", ring: "ring-blue-500/30", label: "Saldada (NC)" },
+        parcialmente_acreditada: { bg: "bg-indigo-400", ring: "ring-indigo-400/30", label: "Parcial (NC)" },
     }[status];
     return (
         <span className={cn("inline-flex items-center gap-1.5")}>
@@ -693,6 +698,15 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                 invoice={creditNoteInvoice}
                 onSuccess={handleCreditNoteSuccess}
             />
+
+            {/* Floating Action Button (Mobile Only) */}
+            <div className="md:hidden fixed bottom-6 right-6 z-50">
+                <Link href="/nueva-factura">
+                    <Button size="icon" className="w-14 h-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-transform active:scale-90 border-4 border-white dark:border-slate-900">
+                        <Plus className="w-7 h-7" />
+                    </Button>
+                </Link>
+            </div>
         </>
     );
 }

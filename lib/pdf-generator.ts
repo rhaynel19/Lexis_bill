@@ -30,6 +30,8 @@ export interface InvoiceData {
     total: number; // Monto comprobante (Subtotal + ITBIS)
     modifiedNcf?: string;
     paymentMethod?: string;
+    paymentDetails?: Array<{ method: string; amount: number }>;
+    balancePendiente?: number;
 }
 
 /**
@@ -225,7 +227,7 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
 
     if (invoiceData.paymentMethod && invoiceData.type !== "quote") {
         topY += 6;
-        const methodLabel = invoiceData.paymentMethod.toUpperCase();
+        const methodLabel = TIPO_PAGO_LABELS[invoiceData.paymentMethod] || invoiceData.paymentMethod.toUpperCase();
         doc.text(`Tipo de Pago: ${methodLabel}`, titleX, topY, { align: "right" });
     }
 
@@ -379,15 +381,44 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
         doc.line(summaryLabelX - 10, yPosition, summaryX, yPosition);
         yPosition += 6;
 
-        const netPayable = invoiceData.total - isrRetention - itbisRetention;
+        const netPayable = (invoiceData.total || 0) - isrRetention - itbisRetention;
         doc.setFont("helvetica", "bold");
         doc.setFontSize(APP_CONFIG.pdf.fontSize.subtitle);
         doc.setTextColor(...blueColor);
-        doc.text("NETO A PAGAR:", summaryLabelX - 15, yPosition);
+        doc.text("NETO A RECIBIR:", summaryLabelX - 15, yPosition);
         doc.text(formatCurrency(netPayable), summaryX, yPosition, { align: "right" });
         yPosition += 10;
     } else {
         yPosition += 4;
+    }
+
+    // ===== PAGO Y BALANCE =====
+    if (invoiceData.type !== "quote") {
+        if (invoiceData.paymentDetails && invoiceData.paymentDetails.length > 0) {
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(...blueColor);
+            doc.text("Detalle de Pago:", margin.left, yPosition);
+            yPosition += 5;
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(60, 60, 60);
+            
+            invoiceData.paymentDetails.forEach(p => {
+                const label = TIPO_PAGO_LABELS[p.method] || p.method;
+                doc.text(`${label}: ${formatCurrency(p.amount)}`, margin.left + 5, yPosition);
+                yPosition += 4;
+            });
+            yPosition += 2;
+        }
+
+        if (invoiceData.balancePendiente !== undefined && invoiceData.balancePendiente > 0) {
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(180, 0, 0);
+            doc.text("BALANCE PENDIENTE:", summaryLabelX - 15, yPosition);
+            doc.text(formatCurrency(invoiceData.balancePendiente), summaryX, yPosition, { align: "right" });
+            yPosition += 8;
+        }
     }
 
     // ===== TOTAL EN LETRAS =====
@@ -544,3 +575,11 @@ export async function downloadQuotePDF(quoteData: QuoteData): Promise<void> {
     const fileName = `Cotizacion_${ref}.pdf`;
     pdf.save(fileName);
 }
+const TIPO_PAGO_LABELS: Record<string, string> = {
+    efectivo: "Efectivo",
+    transferencia: "Transferencia",
+    tarjeta: "Tarjeta",
+    credito: "Crédito",
+    mixto: "Mixto",
+    otro: "Otro",
+};

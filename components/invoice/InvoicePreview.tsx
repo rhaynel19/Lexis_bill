@@ -29,6 +29,8 @@ interface InvoicePreviewProps {
         ncf?: string; // Optional if not yet generated
         modifiedNcf?: string;
         paymentMethod?: string;
+        paymentDetails?: Array<{ method: string; amount: number }>;
+        balancePendiente?: number;
     };
     clientType?: string; // B2B or B2C
 }
@@ -137,13 +139,13 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
                                 {data.date.toLocaleDateString("es-DO", { year: 'numeric', month: 'long', day: 'numeric' })}
                             </p>
                             {data.modifiedNcf && (
-                                <p className="text-[10px] text-red-500 font-bold mt-1 animate-pulse">
+                                <p className="text-[10px] text-red-500 font-bold mt-1 bg-red-50 p-1 rounded border border-red-100">
                                     AFECTA A NCF: {data.modifiedNcf}
                                 </p>
                             )}
                             {data.paymentMethod && (
-                                <p className="text-[10px] text-muted-foreground mt-0.5">
-                                    Pago: {data.paymentMethod.toUpperCase()}
+                                <p className="text-[10px] text-muted-foreground mt-1">
+                                    PAGO: {TIPO_PAGO_LABELS[data.paymentMethod] || data.paymentMethod.toUpperCase()}
                                 </p>
                             )}
                         </div>
@@ -232,6 +234,28 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
                                     {formatCurrency(data.total)}
                                 </span>
                             </div>
+
+                            {/* Payment details and Balance */}
+                            {data.paymentDetails && data.paymentDetails.length > 0 && (
+                                <div className="mt-4 p-3 rounded-lg bg-secondary/20 border border-border/10">
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Detalle de Cobro</p>
+                                    <div className="space-y-1">
+                                        {data.paymentDetails.map((p, i) => (
+                                            <div key={i} className="flex justify-between text-xs">
+                                                <span className="capitalize">{TIPO_PAGO_LABELS[p.method] || p.method}</span>
+                                                <span className="font-medium">{formatCurrency(p.amount)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {data.balancePendiente !== undefined && data.balancePendiente > 0 && (
+                                <div className="mt-2 p-3 rounded-lg bg-red-50 border border-red-100 flex justify-between items-center text-red-700">
+                                    <span className="text-xs font-bold uppercase">Balance Pendiente</span>
+                                    <span className="text-lg font-black">{formatCurrency(data.balancePendiente)}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </CardContent>
@@ -258,3 +282,11 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
         </div>
     );
 }
+const TIPO_PAGO_LABELS: Record<string, string> = {
+    efectivo: "Efectivo",
+    transferencia: "Transferencia",
+    tarjeta: "Tarjeta",
+    credito: "Crédito",
+    mixto: "Mixto",
+    otro: "Otro",
+};

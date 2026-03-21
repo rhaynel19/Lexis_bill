@@ -25,6 +25,7 @@ interface QuoteItem {
     quantity: number | string;
     price: number | string;
     isExempt?: boolean;
+    taxCategory?: "taxable" | "exempt";
 }
 
 function NewQuoteForm() {
@@ -129,7 +130,7 @@ function NewQuoteForm() {
     };
 
     const addItem = () => {
-        setItems([...items, { id: Date.now().toString(), description: "", quantity: 1, price: 0, isExempt: false }]);
+        setItems([...items, { id: Date.now().toString(), description: "", quantity: 1, price: 0, isExempt: false, taxCategory: "taxable" }]);
     };
 
     const removeItem = (id: string) => {
@@ -212,7 +213,8 @@ function NewQuoteForm() {
                         description: item.description,
                         quantity: Number(item.quantity) || 1,
                         price: Number(item.price) || 0,
-                        isExempt: item.isExempt
+                        isExempt: item.isExempt,
+                        taxCategory: item.taxCategory || (item.isExempt ? "exempt" : "taxable")
                     })),
                 subtotal,
                 itbis,
@@ -248,7 +250,13 @@ function NewQuoteForm() {
                 clientName: clientName.trim(),
                 clientRnc: rnc.replace(/\D/g, "") || rnc,
                 clientPhone,
-                items: items.filter(i => i.description.trim()).map(i => ({ description: i.description, quantity: Number(i.quantity) || 1, price: Number(i.price) || 0, isExempt: i.isExempt })),
+                items: items.filter(i => i.description.trim()).map(i => ({ 
+                    description: i.description, 
+                    quantity: Number(i.quantity) || 1, 
+                    price: Number(i.price) || 0, 
+                    isExempt: i.isExempt,
+                    taxCategory: i.taxCategory || (i.isExempt ? "exempt" : "taxable")
+                })),
                 subtotal,
                 itbis,
                 total,
@@ -414,7 +422,14 @@ function NewQuoteForm() {
                                                         <input
                                                             type="checkbox"
                                                             checked={!item.isExempt}
-                                                            onChange={e => updateItem(item.id, "isExempt", !e.target.checked)}
+                                                            onChange={e => {
+                                                                const checked = e.target.checked;
+                                                                setItems(items.map(it => it.id === item.id ? { 
+                                                                    ...it, 
+                                                                    isExempt: !checked, 
+                                                                    taxCategory: checked ? "taxable" : "exempt" 
+                                                                } : it));
+                                                            }}
                                                             className="w-4 h-4 text-indigo-600 rounded-md border-slate-300 focus:ring-indigo-500 cursor-pointer"
                                                             aria-label={item.isExempt ? "Exento de ITBIS - Marcar para gravar" : "Gravado con ITBIS - Marcar para exentar"}
                                                             title={item.isExempt ? "Exento de ITBIS" : "Gravado con ITBIS"}
