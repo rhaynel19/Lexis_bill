@@ -144,24 +144,24 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     // Si hay logo, usarlo
     if (logo) {
         try {
-            doc.addImage(logo, "PNG", margin.left, margin.top, 50, 20); // Ajustar tamaño según necesidad
-            yPosition += 25;
+            doc.addImage(logo, "PNG", margin.left, margin.top, 45, 18);
+            yPosition += 22;
         } catch (e) {
             console.error("Error cargando logo", e);
             // Fallback texto
-            doc.setFontSize(24);
+            doc.setFontSize(22);
             doc.setFont("helvetica", "bold");
             doc.setTextColor(...blueColor);
             doc.text(appConfig.companyName || APP_CONFIG.company.name, margin.left, yPosition + 5);
-            yPosition += 15;
+            yPosition += 12;
         }
     } else {
         // Fallback texto original
-        doc.setFontSize(24);
+        doc.setFontSize(22);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(...blueColor);
         doc.text(appConfig.companyName || APP_CONFIG.company.name, margin.left, yPosition + 5);
-        yPosition += 15;
+        yPosition += 12;
     }
 
     // Información de la empresa (Dynamic)
@@ -196,22 +196,22 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     else if (kind === "serie_b") invoiceTitle = getInvoiceTypeName(invoiceData.type);
     else invoiceTitle = getInvoiceTypeName(invoiceData.type); // serie_e
 
-    doc.setFontSize(22);
+    doc.setFontSize(18); // Slighting smaller title to avoid overlap
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...blueColor);
-    doc.text(invoiceTitle, titleX, margin.top + 10, { align: "right" });
+    doc.text(invoiceTitle, titleX, margin.top + 8, { align: "right" });
 
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setTextColor(...goldColor);
     if (invoiceData.type === "quote") {
         const quoteNum = invoiceData.sequenceNumber?.length > 8 ? `COT-${invoiceData.sequenceNumber.slice(-8)}` : (invoiceData.sequenceNumber || "COT");
-        doc.text(`Número: ${quoteNum}`, titleX, margin.top + 20, { align: "right" });
+        doc.text(`Número: ${quoteNum}`, titleX, margin.top + 16, { align: "right" });
     } else {
-        doc.text(isProforma ? "NCF: BORRADOR" : `NCF: ${invoiceData.sequenceNumber}`, titleX, margin.top + 20, { align: "right" });
+        doc.text(isProforma ? "NCF: BORRADOR" : `NCF: ${invoiceData.sequenceNumber}`, titleX, margin.top + 16, { align: "right" });
     }
 
     const formattedDate = formatDateDominican(new Date(invoiceData.date));
-    let topY = margin.top + 26;
+    let topY = margin.top + 22;
     if (invoiceData.modifiedNcf && invoiceData.type !== "quote") {
         doc.setFontSize(11);
         doc.setFont("helvetica", "bold");
@@ -311,7 +311,7 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     if (invoiceData.itbis === 0) {
         doc.setFontSize(APP_CONFIG.pdf.fontSize.small);
         doc.setFont("helvetica", "italic");
-        doc.setTextColor(APP_CONFIG.pdf.colors.secondary[0], APP_CONFIG.pdf.colors.secondary[1], APP_CONFIG.pdf.colors.secondary[2]);
+        doc.setTextColor(120, 120, 120); // Subtle grey instead of bright green
         doc.text("Operación exenta de ITBIS conforme régimen fiscal aplicable en República Dominicana.", margin.left, yPosition, { maxWidth: pageWidth - margin.left - margin.right });
         doc.setTextColor(APP_CONFIG.pdf.colors.text[0], APP_CONFIG.pdf.colors.text[1], APP_CONFIG.pdf.colors.text[2]);
         doc.setFont("helvetica", "normal");
@@ -320,7 +320,7 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     } else if (hasExemptItems) {
         doc.setFontSize(APP_CONFIG.pdf.fontSize.small);
         doc.setFont("helvetica", "italic");
-        doc.setTextColor(APP_CONFIG.pdf.colors.secondary[0], APP_CONFIG.pdf.colors.secondary[1], APP_CONFIG.pdf.colors.secondary[2]);
+        doc.setTextColor(120, 120, 120); // Subtle grey
         doc.text("Los ítems marcados con (E) están exentos de ITBIS.", margin.left, yPosition, { maxWidth: pageWidth - margin.left - margin.right });
         doc.setTextColor(APP_CONFIG.pdf.colors.text[0], APP_CONFIG.pdf.colors.text[1], APP_CONFIG.pdf.colors.text[2]);
         doc.setFont("helvetica", "normal");

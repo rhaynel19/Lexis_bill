@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -28,10 +28,15 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
 
     const router = useRouter();
 
-    // Initialize amount when invoice is loaded
-    useState(() => {
-        if (invoice) setAmount(invoice.balancePendiente ?? invoice.total);
-    });
+    // Hydration-safe initial amount
+    useEffect(() => {
+        if (isOpen && invoice) {
+            const initial = (invoice.balancePendiente != null && invoice.balancePendiente > 0) 
+                ? invoice.balancePendiente 
+                : (invoice.total || 0);
+            setAmount(initial);
+        }
+    }, [isOpen, invoice]);
 
     const handleConfirm = async () => {
         if (amount <= 0) {
@@ -74,7 +79,11 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
     const invoiceDate = invoice.date ? new Date(invoice.date) : null;
     const daysSince = invoiceDate ? Math.floor((Date.now() - invoiceDate.getTime()) / (24 * 60 * 60 * 1000)) : 0;
     const isOver30Days = daysSince > 30;
-    const maxAmount = invoice.balancePendiente ?? invoice.total;
+    
+    // Si la factura está saldada, el máximo es el total. Si no, el balance pendiente.
+    const maxAmount = (invoice.balancePendiente != null && invoice.balancePendiente > 0) 
+        ? invoice.balancePendiente 
+        : invoice.total;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>

@@ -332,7 +332,7 @@ export function LexisMessageWidget({
                                 )}
                                 {pendingCount > 0 && (
                                     <Link
-                                        href="/documentos"
+                                        href="/dashboard"
                                         className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 inline-flex items-center gap-1 transition-colors duration-200"
                                     >
                                         Ver {pendingCount} pendiente{pendingCount !== 1 ? "s" : ""} de cobro

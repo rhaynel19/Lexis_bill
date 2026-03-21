@@ -91,7 +91,7 @@ class BillingBrain {
                 humanMessage: `Detecté RD$${this._formatCurrency(totalUnpaid)} en facturas pendientes. ¿Quieres enviar recordatorios por WhatsApp ahora?`,
                 action: {
                     label: 'Enviar recordatorios',
-                    url: '/documentos',
+                    url: '/dashboard',
                     type: 'whatsapp_reminders',
                     data: { invoiceIds: unpaid.map(inv => inv._id.toString()) }
                 },

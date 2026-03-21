@@ -21,8 +21,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { NewInvoiceButton } from "@/components/NewInvoiceButton";
 
 const LEXIS_COPILOT_COLLAPSED_KEY = "lexis-copilot-collapsed";
@@ -125,6 +127,7 @@ function getSmartSubtitle(data: BusinessCopilotData): string {
 }
 
 export function LexisBusinessCopilot() {
+    const router = useRouter();
     const [data, setData] = useState<BusinessCopilotData | null>(null);
     const [loading, setLoading] = useState(true);
     const [collapsed, setCollapsed] = useState(false);
@@ -135,6 +138,13 @@ export function LexisBusinessCopilot() {
     useEffect(() => {
         const stored = typeof window !== "undefined" ? localStorage.getItem(LEXIS_COPILOT_COLLAPSED_KEY) : null;
         setCollapsed(stored === "true");
+        
+        // Hydration-safe cache loading
+        const cached = getCachedData();
+        if (cached) {
+            setData(cached);
+            setFromCache(true);
+        }
     }, []);
 
     const fetchWithRetry = useCallback(async (signal?: AbortSignal): Promise<BusinessCopilotData | null> => {
@@ -537,20 +547,23 @@ export function LexisBusinessCopilot() {
                                     <h4 className="font-semibold text-sm mb-1">{insight.title}</h4>
                                     <p className="text-sm opacity-90 mb-3">{insight.humanMessage}</p>
                                     {insight.action && (
-                                        <Link href={insight.action.url}>
-                                            <Button
-                                                size="sm"
-                                                className={cn(
-                                                    "gap-2",
-                                                    insight.priority === 'critical' && "bg-red-600 hover:bg-red-700 text-white",
-                                                    insight.priority === 'important' && "bg-amber-600 hover:bg-amber-700 text-white",
-                                                    insight.priority === 'opportunity' && "bg-blue-600 hover:bg-blue-700 text-white"
-                                                )}
-                                            >
-                                                {insight.action.label}
-                                                <ArrowRight className="w-3.5 h-3.5" />
-                                            </Button>
-                                        </Link>
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            className="lexis-assistant-cta rounded-[10px] font-semibold text-xs px-3 h-8 gap-1.5"
+                                            onClick={() => {
+                                                if (insight.action.type === 'whatsapp_reminders') {
+                                                    toast.info("Recordatorios detectados", {
+                                                        description: `Puedes enviar los recordatorios de WhatsApp desde el listado de facturas pendientes.`
+                                                    });
+                                                } else {
+                                                    router.push(insight.action.url);
+                                                }
+                                            }}
+                                        >
+                                            {insight.action.label}
+                                            <ArrowRight className="w-3.5 h-3.5" />
+                                        </Button>
                                     )}
                                 </div>
                             </motion.div>
