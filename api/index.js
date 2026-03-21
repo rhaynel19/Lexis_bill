@@ -1196,7 +1196,7 @@ async function getNextNcf(userId, type, session, clientRnc) {
             $expr: { $lt: ["$currentValue", "$finalNumber"] }
         },
         { $inc: { currentValue: 1 } },
-        { new: false, session }
+        { new: true, session }
     );
 
     if (!activeBatch) {
