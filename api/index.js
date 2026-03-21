@@ -421,7 +421,7 @@ const invoiceSchema = new mongoose.Schema({
     balancePendiente: { type: Number, default: 0 },
     estadoPago: { type: String, enum: ['pendiente', 'parcial', 'pagado', 'credito_aplicado'], default: 'pendiente' },
     fechaPago: { type: Date, default: null },
-    status: { type: String, enum: ['active', 'credited', 'partially_credited', 'fully_credited', 'void'], default: 'active' },
+    status: { type: String, enum: ['active', 'pending', 'cancelled', 'credited', 'partially_credited', 'fully_credited', 'void'], default: 'active' },
     modifiedNcf: { type: String },
 });
 invoiceSchema.index({ userId: 1, date: -1 });
@@ -5005,7 +5005,34 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
         const [currentMonthAgg, prevMonthAgg, porCobrarAgg, chartAgg, clientCount] = await Promise.all([
             Invoice.aggregate([
                 { $match: { userId: userId, date: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth }, status: { $ne: 'cancelled' } } },
-                { $group: { _id: null, revenue: { $sum: '$total' }, itbis: { $sum: '$itbis' }, count: { $sum: 1 } } }
+                {
+                    $group: {
+                        _id: null,
+                        revenue: { $sum: '$total' },
+                        collected: {
+                            $sum: {
+                                $cond: [
+                                    { $gt: [{ $ifNull: ['$montoPagado', 0] }, 0] },
+                                    { $ifNull: ['$montoPagado', 0] },
+                                    {
+                                        $cond: [
+                                            {
+                                                $or: [
+                                                    { $eq: ['$tipoPago', 'credito'] },
+                                                    { $eq: ['$estadoPago', 'pendiente'] }
+                                                ]
+                                            },
+                                            0,
+                                            { $ifNull: ['$total', 0] }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        itbis: { $sum: '$itbis' },
+                        count: { $sum: 1 }
+                    }
+                }
             ]),
             Invoice.aggregate([
                 { $match: { userId: userId, date: { $gte: startOfPrevMonth, $lte: endOfPrevMonth }, status: { $ne: 'cancelled' } } },
@@ -5073,6 +5100,7 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
         ]);
 
         const monthlyRevenue = (currentMonthAgg[0] && currentMonthAgg[0].revenue) || 0;
+        const monthlyCollected = (currentMonthAgg[0] && currentMonthAgg[0].collected) || 0;
         const monthlyTaxes = (currentMonthAgg[0] && currentMonthAgg[0].itbis) || 0;
         const invoiceCount = (currentMonthAgg[0] && currentMonthAgg[0].count) || 0;
         const previousMonthRevenue = (prevMonthAgg[0] && prevMonthAgg[0].revenue) || 0;
@@ -5095,6 +5123,7 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
 
         res.json({
             monthlyRevenue,
+            monthlyCollected,
             previousMonthRevenue,
             monthlyTaxes,
             invoiceCount,
@@ -5288,7 +5317,7 @@ app.post('/api/invoices/:invoiceId/payments', verifyToken, verifyClient, async (
         const invoiceId = req.params.invoiceId;
         if (!invoiceId) return res.status(400).json({ message: 'ID de factura requerido' });
 
-        const invoice = await Invoice.findOne({ _id: invoiceId, userId: req.userId });
+        const invoice = await Invoice.findOne({ _id: invoiceId, userId: req.userId }).lean();
         if (!invoice) return res.status(404).json({ message: 'Factura no encontrada' });
 
         if (invoice.status === 'cancelled' || invoice.status === 'fully_credited') {
@@ -5320,24 +5349,28 @@ app.post('/api/invoices/:invoiceId/payments', verifyToken, verifyClient, async (
         const newBalance = Math.max(0, currentBalance - amount);
         const newEstado = newBalance <= 0 ? 'pagado' : 'parcial';
 
-        const nextPaymentDetails = Array.isArray(invoice.paymentDetails) ? [...invoice.paymentDetails] : [];
-        nextPaymentDetails.push({ method: paymentMethod, amount });
-
-        invoice.montoPagado = newPaid;
-        invoice.balancePendiente = newBalance;
-        invoice.estadoPago = newEstado;
-        invoice.fechaPago = newEstado === 'pagado' ? new Date() : (invoice.fechaPago || null);
-        invoice.paymentDetails = nextPaymentDetails;
-        await invoice.save();
+        await Invoice.updateOne(
+            { _id: invoiceId, userId: req.userId },
+            {
+                $set: {
+                    montoPagado: newPaid,
+                    balancePendiente: newBalance,
+                    estadoPago: newEstado,
+                    fechaPago: newEstado === 'pagado' ? new Date() : (invoice.fechaPago || null)
+                },
+                $push: { paymentDetails: { method: paymentMethod, amount } }
+            },
+            { runValidators: false }
+        );
 
         return res.json({
             message: newEstado === 'pagado' ? 'Pago registrado. Factura saldada.' : 'Pago parcial registrado.',
             invoice: {
                 id: String(invoice._id),
-                montoPagado: invoice.montoPagado || 0,
-                balancePendiente: invoice.balancePendiente || 0,
-                estadoPago: invoice.estadoPago,
-                fechaPago: invoice.fechaPago
+                montoPagado: newPaid,
+                balancePendiente: newBalance,
+                estadoPago: newEstado,
+                fechaPago: newEstado === 'pagado' ? new Date() : (invoice.fechaPago || null)
             }
         });
     } catch (error) {
@@ -5666,7 +5699,7 @@ app.get('/api/reports/607/validate', verifyToken, verifyClient, async (req, res)
         const periodo = `${y}${m.toString().padStart(2, '0')}`;
         const preErrores = [];
         invoices.forEach((inv, idx) => {
-            const ncf = String(inv.ncfSequence || '').trim();
+            const ncf = String(inv.ncfSequence || inv.ncf || '').trim();
             if (!ncf || ncf.toLowerCase() === 'undefined') {
                 preErrores.push(`Factura ${idx + 1}: NCF vacío o inválido.`);
                 return;
@@ -5701,7 +5734,8 @@ app.get('/api/reports/607/validate', verifyToken, verifyClient, async (req, res)
             const isrRet = (inv.isrRetention || 0).toFixed(2);
             const itbisRet = (inv.itbisRetention || 0).toFixed(2);
             // 19 columnas exactas: col1..col16=MontoTotal|col17|col18|col19
-            report += `${rncCliente}|${tipoId}|${inv.ncfSequence}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|${itbisRet}|0.00|${isrRet}|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00\n`;
+            const ncfValue = inv.ncfSequence || inv.ncf || '';
+            report += `${rncCliente}|${tipoId}|${ncfValue}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|${itbisRet}|0.00|${isrRet}|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00\n`;
         });
 
         const validation = validate607Format(report);
@@ -5742,7 +5776,7 @@ app.get('/api/reports/607', verifyToken, verifyClient, async (req, res) => {
         const periodo = `${y}${m.toString().padStart(2, '0')}`;
         const preErrores = [];
         invoices.forEach((inv, idx) => {
-            const ncf = String(inv.ncfSequence || '').trim();
+            const ncf = String(inv.ncfSequence || inv.ncf || '').trim();
             if (!ncf || ncf.toLowerCase() === 'undefined') {
                 preErrores.push(`Factura ${idx + 1}: NCF vacío o inválido.`);
                 return;
@@ -5781,7 +5815,8 @@ app.get('/api/reports/607', verifyToken, verifyClient, async (req, res) => {
             const isrRet = (inv.isrRetention || 0).toFixed(2);
             const itbisRet = (inv.itbisRetention || 0).toFixed(2);
             // 19 columnas exactas: col1..col16=MontoTotal|col17|col18|col19
-            report += `${rncCliente}|${tipoId}|${inv.ncfSequence}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|${itbisRet}|0.00|${isrRet}|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00\n`;
+            const ncfValue = inv.ncfSequence || inv.ncf || '';
+            report += `${rncCliente}|${tipoId}|${ncfValue}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|${itbisRet}|0.00|${isrRet}|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00\n`;
         });
 
         const validation = validate607Format(report);
@@ -6422,18 +6457,26 @@ app.get('/api/subscription/status', verifyToken, verifyClient, async (req, res) 
 app.get('/api/reports/statement/:rnc', verifyToken, verifyClient, async (req, res) => {
     try {
         const cleanRnc = String(req.params.rnc).replace(/[^0-9]/g, '');
-        const invoices = await Invoice.find({
+        const allInvoices = await Invoice.find({
             userId: req.userId,
             clientRnc: cleanRnc,
-            status: { $nin: ['cancelled', 'void'] },
-            $or: [
-                { balancePendiente: { $gt: 0 } },
-                { estadoPago: { $in: ['pendiente', 'parcial'] } }
-            ]
+            status: { $nin: ['cancelled', 'void'] }
         }).sort({ date: -1 }).lean();
 
         const customer = await Customer.findOne({ userId: req.userId, rnc: cleanRnc }).lean();
-        const totalPending = invoices.reduce((sum, inv) => sum + (inv.balancePendiente || inv.total), 0);
+        const invoices = allInvoices
+            .map((inv) => {
+                const total = Number(inv.total || 0);
+                const paid = Number(inv.montoPagado || 0);
+                const balanceRaw = inv.balancePendiente;
+                const fallback = Math.max(0, total - paid);
+                const effectiveBalance = (balanceRaw != null && balanceRaw > 0)
+                    ? Number(balanceRaw)
+                    : ((inv.estadoPago === 'pendiente' || inv.estadoPago === 'parcial' || inv.status === 'pending' || inv.tipoPago === 'credito') ? fallback : 0);
+                return { ...inv, effectiveBalance };
+            })
+            .filter((inv) => inv.effectiveBalance > 0);
+        const totalPending = invoices.reduce((sum, inv) => sum + inv.effectiveBalance, 0);
 
         res.json({
             customer: customer || { rnc: cleanRnc, name: invoices[0]?.clientName || 'Cliente desconocido' },
@@ -6442,7 +6485,7 @@ app.get('/api/reports/statement/:rnc', verifyToken, verifyClient, async (req, re
                 ncf: inv.ncf || inv.ncfSequence,
                 date: inv.date,
                 total: inv.total,
-                balance: inv.balancePendiente || inv.total,
+                balance: inv.effectiveBalance,
                 type: inv.ncfType
             })),
             totalPending,
@@ -6457,14 +6500,87 @@ app.get('/api/collections/debtors', verifyToken, verifyClient, async (req, res) 
     try {
         const debtors = await Invoice.aggregate([
             { $match: { userId: new mongoose.Types.ObjectId(req.userId), status: { $nin: ['cancelled', 'void'] } } },
+            {
+                $addFields: {
+                    _totalSafe: { $ifNull: ['$total', 0] },
+                    _paidSafe: { $ifNull: ['$montoPagado', 0] },
+                    _balanceRaw: { $ifNull: ['$balancePendiente', null] }
+                }
+            },
+            {
+                $addFields: {
+                    _fallbackBalance: {
+                        $max: [
+                            { $subtract: ['$_totalSafe', '$_paidSafe'] },
+                            0
+                        ]
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    _effectiveBalance: {
+                        $cond: [
+                            { $gt: ['$_balanceRaw', 0] },
+                            '$_balanceRaw',
+                            {
+                                $cond: [
+                                    {
+                                        $or: [
+                                            { $in: ['$estadoPago', ['pendiente', 'parcial']] },
+                                            { $eq: ['$status', 'pending'] },
+                                            { $eq: ['$tipoPago', 'credito'] }
+                                        ]
+                                    },
+                                    '$_fallbackBalance',
+                                    0
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+            { $match: { _effectiveBalance: { $gt: 0 } } },
             { $group: {
                 _id: '$clientRnc',
                 clientName: { $first: '$clientName' },
-                totalBalance: { $sum: { $ifNull: ['$balancePendiente', '$total'] } },
+                totalBalance: { $sum: '$_effectiveBalance' },
                 invoiceCount: { $sum: 1 },
                 lastInvoiceDate: { $max: '$date' }
             }},
-            { $match: { totalBalance: { $gt: 0 } } },
+            {
+                $lookup: {
+                    from: 'customers',
+                    let: { rnc: '$_id', uid: new mongoose.Types.ObjectId(req.userId) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ['$rnc', '$$rnc'] },
+                                        { $eq: ['$userId', '$$uid'] }
+                                    ]
+                                }
+                            }
+                        },
+                        { $project: { _id: 0, phone: 1, email: 1, name: 1 } }
+                    ],
+                    as: 'customerData'
+                }
+            },
+            {
+                $addFields: {
+                    customerDoc: { $arrayElemAt: ['$customerData', 0] }
+                }
+            },
+            {
+                $addFields: {
+                    clientName: { $ifNull: ['$customerDoc.name', '$clientName'] },
+                    phone: { $ifNull: ['$customerDoc.phone', ''] },
+                    email: { $ifNull: ['$customerDoc.email', ''] }
+                }
+            },
+            { $project: { customerData: 0, customerDoc: 0 } },
             { $sort: { totalBalance: -1 } }
         ]);
 

@@ -322,7 +322,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
             return;
         }
         setPaymentInvoice(inv);
-        setPaymentAmount(String(Math.round(balance)));
+        setPaymentAmount(balance.toFixed(2));
         setPaymentMethod("transferencia");
         setPaymentNote("");
         setShowPaymentDialog(true);
@@ -789,8 +789,8 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                             <label className="text-sm font-medium">Monto (RD$)</label>
                             <Input
                                 type="number"
-                                min="1"
-                                step="1"
+                                min="0.01"
+                                step="0.01"
                                 value={paymentAmount}
                                 onChange={(e) => setPaymentAmount(e.target.value)}
                                 placeholder="0"
@@ -838,14 +838,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                 </DialogContent>
             </Dialog>
 
-            {/* Floating Action Button (Mobile Only) */}
-            <div className="md:hidden fixed bottom-6 right-6 z-50">
-                <Link href="/nueva-factura">
-                    <Button size="icon" className="w-14 h-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-transform active:scale-90 border-4 border-white dark:border-slate-900">
-                        <Plus className="w-7 h-7" />
-                    </Button>
-                </Link>
-            </div>
+            {/* FAB móvil lo maneja el layout global para evitar duplicados */}
         </>
     );
 }

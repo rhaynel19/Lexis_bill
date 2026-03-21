@@ -82,14 +82,30 @@ export function CollectionsManager({ isOpen, onClose }: DebtorsListProps) {
     try {
       toast.info("Generando estado de cuenta...");
       const res = await api.getAccountStatement(rnc);
-      // For now, we'll just show a success message or handle as needed.
-      // In a real app, this could trigger a PDF generation.
-      toast.success(`Estado de cuenta para ${res.customer.name} generado correctamente.`);
-      
-      // Basic implementation: Copy to clipboard or alert
-      const text = `ESTADO DE CUENTA - ${res.customer.name}\nTotal Pendiente: ${formatCurrency(res.totalPending)}\nFacturas: ${res.invoices.length}`;
-      navigator.clipboard.writeText(text);
-      toast.info("Resumen copiado al portapapeles.");
+      const lines = [
+        `ESTADO DE CUENTA - ${res.customer.name}`,
+        `RNC/CEDULA: ${res.customer.rnc}`,
+        `FECHA: ${new Date(res.generatedAt).toLocaleString("es-DO")}`,
+        "",
+        `TOTAL PENDIENTE: ${formatCurrency(res.totalPending)}`,
+        "",
+        "DETALLE:",
+        ...res.invoices.map((inv) => {
+          const fecha = new Date(inv.date).toLocaleDateString("es-DO");
+          return `${inv.ncf} | ${fecha} | Balance: ${formatCurrency(inv.balance)}`;
+        }),
+      ];
+      const text = lines.join("\n");
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `estado_cuenta_${res.customer.rnc}_${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(`Estado de cuenta de ${res.customer.name} descargado.`);
     } catch (err) {
       toast.error("Error al generar el estado de cuenta.");
     }

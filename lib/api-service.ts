@@ -143,6 +143,7 @@ export const api = {
     async getDashboardStats() {
         return secureFetch<{
             monthlyRevenue: number;
+            monthlyCollected?: number;
             previousMonthRevenue: number;
             monthlyTaxes: number;
             invoiceCount: number;

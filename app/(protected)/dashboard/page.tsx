@@ -66,6 +66,10 @@ interface Invoice {
   modifiedNcf?: string;
   sequenceNumber?: string;
   subtotal?: number;
+  tipoPago?: string;
+  montoPagado?: number;
+  balancePendiente?: number;
+  estadoPago?: "pendiente" | "parcial" | "pagado" | "credito_aplicado";
 }
 
 // Interfaz para configuración de NCF (API devuelve también expiryDate)
@@ -131,6 +135,7 @@ export default function Dashboard() {
   const router = useRouter();
   // Estados para almacenar las estadísticas del dashboard
   const [totalRevenue, setTotalRevenue] = useState(0);
+  const [collectedThisMonth, setCollectedThisMonth] = useState(0);
   const [previousMonthRevenue, setPreviousMonthRevenue] = useState(0);
   const [pendingInvoices, setPendingInvoices] = useState(0);
   const [totalPorCobrar, setTotalPorCobrar] = useState(0);
@@ -226,6 +231,7 @@ export default function Dashboard() {
 
       if (statsRes) {
         setTotalRevenue(statsRes.monthlyRevenue);
+        setCollectedThisMonth(statsRes.monthlyCollected ?? statsRes.monthlyRevenue);
         setPreviousMonthRevenue(statsRes.previousMonthRevenue);
         setTargetInvoices(statsRes.targetInvoices);
         setEstimatedTaxes(statsRes.monthlyTaxes);
@@ -242,6 +248,14 @@ export default function Dashboard() {
       } else {
         // Fallback: calcular desde facturas (comportamiento anterior)
         if (invoices.length > 0) {
+          const getInvoiceBalance = (inv: Invoice) => {
+            const total = Number(inv.total || 0);
+            const paid = Math.max(0, Number(inv.montoPagado || 0));
+            const fallback = Math.max(0, total - paid);
+            if (typeof inv.balancePendiente === "number" && inv.balancePendiente > 0) return inv.balancePendiente;
+            if (inv.estadoPago === "pendiente" || inv.estadoPago === "parcial" || inv.status === "pending" || inv.tipoPago === "credito") return fallback;
+            return 0;
+          };
           const now = new Date();
           const currentMonth = now.getMonth();
           const currentYear = now.getFullYear();
@@ -250,7 +264,14 @@ export default function Dashboard() {
             return invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear;
           });
           const monthlyRevenue = monthlyInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+          const monthlyCollectedFallback = monthlyInvoices.reduce((sum, inv) => {
+            const paid = Number(inv.montoPagado || 0);
+            if (paid > 0) return sum + paid;
+            if (inv.tipoPago === "credito" || inv.estadoPago === "pendiente") return sum;
+            return sum + (inv.total || 0);
+          }, 0);
           setTotalRevenue(monthlyRevenue);
+          setCollectedThisMonth(monthlyCollectedFallback);
           const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
           const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
           const previousMonthlyInvoices = invoices.filter((inv) => {
@@ -260,7 +281,11 @@ export default function Dashboard() {
           setPreviousMonthRevenue(previousMonthlyInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0));
           setTargetInvoices(Math.max(previousMonthlyInvoices.length, 1));
           setEstimatedTaxes(monthlyInvoices.reduce((sum, inv) => sum + (inv.itbis || 0), 0));
-          setPendingInvoices(invoices.filter((inv) => inv.status === "pending").length);
+          const pendingData = invoices
+            .map((inv) => ({ ...inv, _bal: getInvoiceBalance(inv) }))
+            .filter((inv) => inv._bal > 0);
+          setPendingInvoices(pendingData.length);
+          setTotalPorCobrar(pendingData.reduce((sum, inv) => sum + inv._bal, 0));
           setTotalClients(new Set(invoices.map((inv) => inv.rnc || inv.clientRnc || "")).size);
           const last4MonthsData = [];
           const labels = [];
@@ -308,7 +333,15 @@ export default function Dashboard() {
         setNcfSequenceSummary(firstSummary);
         setNcfLowSequence(lowSummary);
         const { PredictiveService: Pred } = await import("@/lib/predictive-service");
-        const pending = statsRes ? statsRes.pendingInvoices : (invRes?.data || []).filter((inv: Invoice) => inv.status === "pending").length;
+        const pending = statsRes ? statsRes.pendingInvoices : (invRes?.data || []).filter((inv: Invoice) => {
+          const total = Number(inv.total || 0);
+          const paid = Math.max(0, Number(inv.montoPagado || 0));
+          const fallback = Math.max(0, total - paid);
+          const bal = typeof inv.balancePendiente === "number" && inv.balancePendiente > 0
+            ? inv.balancePendiente
+            : ((inv.estadoPago === "pendiente" || inv.estadoPago === "parcial" || inv.status === "pending" || inv.tipoPago === "credito") ? fallback : 0);
+          return bal > 0;
+        }).length;
         const alerts = Pred.getPredictiveAlerts({
           ncfSettings: ncfSettings as { type: string; currentValue: number; finalNumber: number; isActive?: boolean }[],
           invoices: (invRes?.data || []) as { date: string; total?: number; status?: string; rnc?: string; clientRnc?: string; clientName?: string }[],
@@ -537,7 +570,7 @@ export default function Dashboard() {
                   {mode === 'simple' ? "Cobrado este mes" : "Ingresos del Mes"}
                 </CardDescription>
                 <CardTitle className="text-3xl md:text-4xl font-bold tracking-tight">
-                  {formatCurrency(totalRevenue)}
+                  {formatCurrency(mode === 'simple' ? collectedThisMonth : totalRevenue)}
                 </CardTitle>
               </CardHeader>
               <CardContent>
