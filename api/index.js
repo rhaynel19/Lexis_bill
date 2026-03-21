@@ -5626,10 +5626,19 @@ app.get('/api/reports/summary', verifyToken, verifyClient, async (req, res) => {
             status: { $ne: 'cancelled' }
         });
 
-        // Calculamos el subtotal real (sin impuestos)
-        const subtotal = invoices.reduce((sum, inv) => sum + (inv.subtotal || 0), 0);
-        const itbis = invoices.reduce((sum, inv) => sum + (inv.itbis || 0), 0);
-        const total = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+        // Calculamos el subtotal real (sin impuestos) manejando Notas de Crédito
+        const subtotal = invoices.reduce((sum, inv) => {
+            const amount = Number(inv.subtotal || 0);
+            return (inv.ncfType === '04' || inv.ncfType === '34') ? sum - amount : sum + amount;
+        }, 0);
+        const itbis = invoices.reduce((sum, inv) => {
+            const amount = Number(inv.itbis || 0);
+            return (inv.ncfType === '04' || inv.ncfType === '34') ? sum - amount : sum + amount;
+        }, 0);
+        const total = invoices.reduce((sum, inv) => {
+            const amount = Number(inv.total || 0);
+            return (inv.ncfType === '04' || inv.ncfType === '34') ? sum - amount : sum + amount;
+        }, 0);
 
         res.json({
             month,
@@ -5667,11 +5676,23 @@ app.get('/api/reports/tax-health', verifyToken, verifyClient, async (req, res) =
             })
         ]);
 
-        const collectedItbis = invoices.reduce((sum, inv) => sum + (inv.itbis || 0), 0);
-        const retentions = invoices.reduce((sum, inv) => sum + (inv.isrRetention || 0) + (inv.itbisRetention || 0), 0);
-        const subtotalRevenue = invoices.reduce((sum, inv) => sum + (inv.subtotal || ((inv.total || 0) - (inv.itbis || 0))), 0);
+        const collectedItbis = invoices.reduce((sum, inv) => {
+            const amount = Number(inv.itbis || 0);
+            return (inv.ncfType === '04' || inv.ncfType === '34') ? sum - amount : sum + amount;
+        }, 0);
+        const retentions = invoices.reduce((sum, inv) => {
+            const amount = Number(inv.isrRetention || 0) + Number(inv.itbisRetention || 0);
+            return (inv.ncfType === '04' || inv.ncfType === '34') ? sum - amount : sum + amount;
+        }, 0);
+        const subtotalRevenue = invoices.reduce((sum, inv) => {
+            const amount = Number(inv.subtotal || ((inv.total || 0) - (inv.itbis || 0)));
+            return (inv.ncfType === '04' || inv.ncfType === '34') ? sum - amount : sum + amount;
+        }, 0);
         const paidItbis = expenses.reduce((sum, exp) => sum + (exp.itbis != null ? exp.itbis : (exp.amount || 0) * 0.15), 0);
-        const itbisRetentions = invoices.reduce((sum, inv) => sum + (inv.itbisRetention || 0), 0);
+        const itbisRetentions = invoices.reduce((sum, inv) => {
+            const amount = Number(inv.itbisRetention || 0);
+            return (inv.ncfType === '04' || inv.ncfType === '34') ? sum - amount : sum + amount;
+        }, 0);
 
         let liability = collectedItbis - paidItbis;
         if (liability < 0) liability = 0;
@@ -5724,182 +5745,9 @@ const sortExpensesFor606 = (list) => {
 };
 
 // --- REPORTE 607 (VENTAS) - Pre-validación + Log Fiscal ---
-app.get('/api/reports/607/validate', verifyToken, verifyClient, async (req, res) => {
-    if (!req.user.confirmedFiscalName) {
-        return res.status(403).json({ valid: false, message: 'Confirma tu nombre fiscal para generar reportes.' });
-    }
-    try {
-        const { month, year } = req.query;
-        const m = parseInt(month, 10);
-        const y = parseInt(year, 10);
-        if (!m || !y || m < 1 || m > 12) {
-            return res.status(400).json({ valid: false, errors: ['Parámetros month y year inválidos.'] });
-        }
-        const startDate = new Date(y, m - 1, 1);
-        const endDate = new Date(y, m, 0, 23, 59, 59);
-        const invoicesRaw = await Invoice.find({
-            userId: req.userId,
-            date: { $gte: startDate, $lte: endDate },
-            status: { $ne: 'cancelled' }
-        }).sort({ date: 1, ncfSequence: 1 });
-        const invoices = sortInvoicesFor607(invoicesRaw);
 
-        const periodo = `${y}${m.toString().padStart(2, '0')}`;
-        const preErrores = [];
-        invoices.forEach((inv, idx) => {
-            const ncf = String(inv.ncfSequence || inv.ncf || '').trim();
-            if (!ncf || ncf.toLowerCase() === 'undefined') {
-                preErrores.push(`Factura ${idx + 1}: NCF vacío o inválido.`);
-                return;
-            }
-            const ncfRes = validateNcfStructure(ncf);
-            if (!ncfRes.valid) preErrores.push(`Factura ${idx + 1}: ${ncfRes.errors.join('; ')}`);
-        });
-        if (preErrores.length > 0) {
-            await FiscalAuditLog.create({
-                userId: req.userId,
-                tipoReporte: '607',
-                periodo,
-                resultadoValidacion: 'error',
-                errores: preErrores,
-                registros: invoices.length
-            });
-            return res.json({ valid: false, errors: preErrores });
-        }
 
-        const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
-        let report = `607|${rncEmisor}|${periodo}|${invoices.length}\n`;
-        // 607 DGII (19 columnas): RNC|TipoId|NCF|NCFModificado|TipoIngreso|FechaComp|FechaRetencion|
-        //   MontoFacturado|ITBISFacturado|ITBISRetenido|ITBISPercibido|RetencionRenta|ISR|ISC|OtrosImpuestos|MontoTotal|
-        //   ITBIS3ros|Percepciones|Intereses
-        invoices.forEach(inv => {
-            const fechaComp = new Date(inv.date).toISOString().slice(0, 10).replace(/-/g, '');
-            const rncCliente = (inv.clientRnc || '').replace(/[^\d]/g, '');
-            const tipoId = rncCliente.length === 9 ? '1' : '2';
-            const montoFact = (inv.subtotal || 0).toFixed(2);
-            const itbisFact = (inv.itbis || 0).toFixed(2);
-            const montoTotal = (inv.total || 0).toFixed(2);
-            const isrRet = (inv.isrRetention || 0).toFixed(2);
-            const itbisRet = (inv.itbisRetention || 0).toFixed(2);
-            // 19 columnas exactas: col1..col16=MontoTotal|col17|col18|col19
-            const ncfValue = inv.ncfSequence || inv.ncf || '';
-            report += `${rncCliente}|${tipoId}|${ncfValue}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|${itbisRet}|0.00|${isrRet}|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00\n`;
-        });
 
-        const validation = validate607Format(report);
-        await FiscalAuditLog.create({
-            userId: req.userId,
-            tipoReporte: '607',
-            periodo,
-            resultadoValidacion: validation.valid ? 'ok' : 'error',
-            errores: validation.errors,
-            registros: invoices.length
-        });
-        res.json({ valid: validation.valid, errors: validation.errors || [] });
-    } catch (error) {
-        res.status(500).json({ valid: false, errors: [error.message] });
-    }
-});
-
-app.get('/api/reports/607', verifyToken, verifyClient, async (req, res) => {
-    if (!req.user.confirmedFiscalName) {
-        return res.status(403).json({ message: 'Confirma tu nombre fiscal para generar reportes.' });
-    }
-    try {
-        const { month, year } = req.query;
-        const m = parseInt(month, 10);
-        const y = parseInt(year, 10);
-        if (!m || !y || m < 1 || m > 12) {
-            return res.status(400).json({ message: 'Parámetros month y year inválidos.' });
-        }
-        const startDate = new Date(y, m - 1, 1);
-        const endDate = new Date(y, m, 0, 23, 59, 59);
-        const invoicesRaw = await Invoice.find({
-            userId: req.userId,
-            date: { $gte: startDate, $lte: endDate },
-            status: { $ne: 'cancelled' }
-        }).sort({ date: 1, ncfSequence: 1 });
-        const invoices = sortInvoicesFor607(invoicesRaw);
-
-        const periodo = `${y}${m.toString().padStart(2, '0')}`;
-        const preErrores = [];
-        invoices.forEach((inv, idx) => {
-            const ncf = String(inv.ncfSequence || inv.ncf || '').trim();
-            if (!ncf || ncf.toLowerCase() === 'undefined') {
-                preErrores.push(`Factura ${idx + 1}: NCF vacío o inválido.`);
-                return;
-            }
-            const ncfRes = validateNcfStructure(ncf);
-            if (!ncfRes.valid) preErrores.push(`Factura ${idx + 1}: ${ncfRes.errors.join('; ')}`);
-        });
-        if (preErrores.length > 0) {
-            await FiscalAuditLog.create({
-                userId: req.userId,
-                tipoReporte: '607',
-                periodo,
-                resultadoValidacion: 'error',
-                errores: preErrores,
-                registros: invoices.length
-            });
-            return res.status(400).json({
-                message: 'El archivo 607 tiene facturas con NCF inválido o vacío. Corrige antes de descargar.',
-                valid: false,
-                details: preErrores
-            });
-        }
-
-        const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
-        let report = `607|${rncEmisor}|${periodo}|${invoices.length}\n`;
-        // 607 DGII (19 columnas): RNC|TipoId|NCF|NCFModificado|TipoIngreso|FechaComp|FechaRetencion|
-        //   MontoFacturado|ITBISFacturado|ITBISRetenido|ITBISPercibido|RetencionRenta|ISR|ISC|OtrosImpuestos|MontoTotal|
-        //   ITBIS3ros|Percepciones|Intereses
-        invoices.forEach(inv => {
-            const fechaComp = new Date(inv.date).toISOString().slice(0, 10).replace(/-/g, '');
-            const rncCliente = (inv.clientRnc || '').replace(/[^\d]/g, '');
-            const tipoId = rncCliente.length === 9 ? '1' : '2';
-            const montoFact = (inv.subtotal || 0).toFixed(2);
-            const itbisFact = (inv.itbis || 0).toFixed(2);
-            const montoTotal = (inv.total || 0).toFixed(2);
-            const isrRet = (inv.isrRetention || 0).toFixed(2);
-            const itbisRet = (inv.itbisRetention || 0).toFixed(2);
-            // 19 columnas exactas: col1..col16=MontoTotal|col17|col18|col19
-            const ncfValue = inv.ncfSequence || inv.ncf || '';
-            report += `${rncCliente}|${tipoId}|${ncfValue}|${inv.modifiedNcf || ''}|01|${fechaComp}||${montoFact}|${itbisFact}|${itbisRet}|0.00|${isrRet}|0.00|0.00|0.00|${montoTotal}|0.00|0.00|0.00\n`;
-        });
-
-        const validation = validate607Format(report);
-        if (!validation.valid) {
-            await FiscalAuditLog.create({
-                userId: req.userId,
-                tipoReporte: '607',
-                periodo,
-                resultadoValidacion: 'error',
-                errores: validation.errors,
-                registros: invoices.length
-            });
-            return res.status(400).json({
-                message: 'El archivo no cumple el formato DGII. Corrija antes de descargar.',
-                valid: false,
-                details: validation.errors
-            });
-        }
-
-        await FiscalAuditLog.create({
-            userId: req.userId,
-            tipoReporte: '607',
-            periodo,
-            resultadoValidacion: 'ok',
-            errores: [],
-            registros: invoices.length
-        });
-
-        res.setHeader('Content-Type', 'text/plain; charset=iso-8859-1');
-        res.setHeader('Content-Disposition', `attachment; filename=607_${rncEmisor}_${periodo}.txt`);
-        res.send(report);
-    } catch (error) {
-        res.status(500).json({ message: safeErrorMessage(error) });
-    }
-});
 
 // --- GESTIÓN DE GASTOS (606) ---
 app.get('/api/expenses', verifyToken, verifyClient, async (req, res) => {

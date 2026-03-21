@@ -301,21 +301,29 @@ export const api = {
     },
 
     async downloadReport607(month: number, year: number): Promise<Blob> {
-        const res = await fetch(`${API_URL}/reports/607?month=${month}&year=${year}`, { credentials: "include" });
+        const res = await fetch(`${API_URL}/reports/607?month=${month}&year=${year}`, {
+            credentials: "include",
+            headers: {
+                "Accept": "text/plain, application/octet-stream"
+            }
+        });
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            const details = (err as { details?: string[] }).details;
-            throw new Error(details?.length ? details.join("; ") : (err as { message?: string }).message || "Error al descargar reporte 607");
+            throw new Error((err as { message?: string }).message || `Error ${res.status} al descargar reporte 607`);
         }
         return res.blob();
     },
 
     async downloadReport606(month: number, year: number): Promise<Blob> {
-        const res = await fetch(`${API_URL}/reports/606?month=${month}&year=${year}`, { credentials: "include" });
+        const res = await fetch(`${API_URL}/reports/606?month=${month}&year=${year}`, {
+            credentials: "include",
+            headers: {
+                "Accept": "text/plain, application/octet-stream"
+            }
+        });
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            const details = (err as { details?: string[] }).details;
-            throw new Error(details?.length ? details.join("; ") : (err as { message?: string }).message || "Error al descargar reporte 606");
+            throw new Error((err as { message?: string }).message || `Error ${res.status} al descargar reporte 606`);
         }
         return res.blob();
     },

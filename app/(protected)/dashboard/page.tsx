@@ -676,6 +676,12 @@ export default function Dashboard() {
           invoices={recentInvoices}
           onRefresh={handleRefresh}
           isLoading={isLoading}
+          externalStats={{
+            monthlyRevenue: totalRevenue,
+            monthlyCollected: collectedThisMonth,
+            totalPorCobrar: totalPorCobrar,
+            revenueChange: previousMonthRevenue > 0 ? ((totalRevenue - previousMonthRevenue) / previousMonthRevenue) * 100 : 0
+          }}
         />
 
       </div>

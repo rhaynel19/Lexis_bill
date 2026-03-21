@@ -119,7 +119,20 @@ function StatusDot({ status }: { status: "pagada" | "pendiente" | "vencida" | "a
     );
 }
 
-export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote, isLoading }: InvoiceControlCenterProps) {
+export function InvoiceControlCenter({ 
+    invoices, 
+    onRefresh, 
+    onRequestCreditNote, 
+    isLoading,
+    externalStats 
+}: InvoiceControlCenterProps & { 
+    externalStats?: { 
+        monthlyRevenue: number; 
+        monthlyCollected: number; 
+        totalPorCobrar: number;
+        revenueChange?: number;
+    } 
+}) {
     const router = useRouter();
     const [quickFilter, setQuickFilter] = useState<string>("all");
     const [searchQuery, setSearchQuery] = useState("");
@@ -148,7 +161,16 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     const stats = useMemo(() => {
-        const s = { facturadoMes: 0, cobrado: 0, pendiente: 0, vencido: 0, vencidasCount: 0, pctChange: 0, monthInvs: [] as Invoice[] };
+        const s = { 
+            facturadoMes: externalStats?.monthlyRevenue ?? 0, 
+            cobrado: externalStats?.monthlyCollected ?? 0, 
+            pendiente: externalStats?.totalPorCobrar ?? 0, 
+            vencido: 0, 
+            vencidasCount: 0, 
+            pctChange: externalStats?.revenueChange ?? 0, 
+            monthInvs: [] as Invoice[] 
+        };
+        
         if (!invoices || !Array.isArray(invoices)) return s;
 
         const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
@@ -163,12 +185,14 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
             const isPrevMonth = invDate.getMonth() === prevMonth && invDate.getFullYear() === prevYear;
 
             if (isThisMonth) {
-                const amount = (inv.total || 0);
-                const isCreditNote = inv.ncfType === '04' || inv.ncfType === '34';
-                s.facturadoMes += isCreditNote ? -amount : amount;
+                if (!externalStats) {
+                    const amount = (inv.total || 0);
+                    const isCreditNote = inv.ncfType === '04' || inv.ncfType === '34';
+                    s.facturadoMes += isCreditNote ? -amount : amount;
+                }
                 s.monthInvs.push(inv);
             }
-            if (isPrevMonth) {
+            if (isPrevMonth && !externalStats) {
                 const amount = (inv.total || 0);
                 const isCreditNote = inv.ncfType === '04' || inv.ncfType === '34';
                 prevFacturado += isCreditNote ? -amount : amount;
@@ -178,13 +202,15 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
             const bal = inv.balancePendiente ?? (inv.estadoPago === "pendiente" || inv.estadoPago === "parcial" || inv.status === "pending" ? inv.total : 0);
             const valBal = (isNaN(bal) || bal === null) ? 0 : bal;
 
-            // Cobrado debe ser la suma de lo pagado, no solo de las facturas 'pagadas' totalmente
-            const paid = inv.montoPagado || 0;
-            const isCreditNote = inv.ncfType === '04' || inv.ncfType === '34';
-            s.cobrado += isCreditNote ? -paid : paid;
+            // Si no hay stats externos, calculamos basados en la lista (parcial)
+            if (!externalStats) {
+                const paid = inv.montoPagado || 0;
+                const isCreditNote = inv.ncfType === '04' || inv.ncfType === '34';
+                s.cobrado += isCreditNote ? -paid : paid;
+            }
 
             if (status !== "pagada") {
-                s.pendiente += valBal;
+                if (!externalStats) s.pendiente += valBal;
                 if (status === "vencida") {
                     s.vencido += valBal;
                     s.vencidasCount++;
@@ -192,9 +218,11 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
             }
         });
 
-        s.pctChange = prevFacturado > 0 ? ((s.facturadoMes - prevFacturado) / prevFacturado) * 100 : 0;
+        if (!externalStats) {
+            s.pctChange = prevFacturado > 0 ? ((s.facturadoMes - prevFacturado) / prevFacturado) * 100 : 0;
+        }
         return s;
-    }, [invoices, currentMonth, currentYear]);
+    }, [invoices, currentMonth, currentYear, externalStats]);
 
     const filteredInvoices = useMemo(() => {
         let list = invoices;
@@ -377,7 +405,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
             <div className="relative mt-6 space-y-6">
                 {/* Tarjetas Resumen Financiero */}
                 {!isEmpty && (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <Card className="border-border/20 shadow-sm overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setQuickFilter("mes")}>
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
@@ -387,19 +415,6 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                                     </div>
                                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                                         <DollarSign className="w-5 h-5 text-primary" />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card className="border-border/20 shadow-sm overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setQuickFilter("pagadas")}>
-                            <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">📥 Cobrado</p>
-                                        <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{formatCurrency(stats.cobrado)}</p>
-                                    </div>
-                                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                                        <ArrowDownLeft className="w-5 h-5 text-emerald-600" />
                                     </div>
                                 </div>
                             </CardContent>
