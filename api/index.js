@@ -1218,8 +1218,8 @@ async function getNextNcf(userId, type, session, clientRnc) {
 
     if (!activeBatch) {
         const expired = await NCFSettings.findOne({ userId, type, isActive: true, expiryDate: { $lt: now } }).session(session);
-        if (expired) throw new Error('El rango de NCF ha vencido. Configure un nuevo lote en Configuración.');
-        throw new Error('No hay secuencias NCF disponibles para este tipo. Configure un lote en Configuración.');
+        if (expired) throw new Error(`El rango de NCF para el tipo ${type} ha vencido. Configure un nuevo lote en Configuración.`);
+        throw new Error(`No hay secuencias NCF disponibles para el tipo ${type}. Configure un lote en Configuración.`);
     }
 
     const isElectronic = activeBatch.series === 'E';
@@ -5025,12 +5025,20 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
                 {
                     $group: {
                         _id: null,
-                        revenue: { $sum: { $cond: [{ $in: ['$ncfType', ['04', '34']] }, { $multiply: [{ $ifNull: ['$total', 0] }, -1] }, { $ifNull: ['$total', 0] }] } },
+                        revenue: { 
+                            $sum: { 
+                                $cond: [
+                                    { $in: ['$ncfType', ['04', '34']] }, 
+                                    { $multiply: [{ $convert: { input: { $ifNull: ['$total', 0] }, to: 'double', onError: 0 } }, -1] }, 
+                                    { $convert: { input: { $ifNull: ['$total', 0] }, to: 'double', onError: 0 } }
+                                ] 
+                            } 
+                        },
                         collectedBase: {
                             $sum: {
                                 $cond: [
-                                    { $gt: [{ $ifNull: ['$montoPagado', 0] }, 0] },
-                                    { $ifNull: ['$montoPagado', 0] },
+                                    { $gt: [{ $convert: { input: { $ifNull: ['$montoPagado', 0] }, to: 'double', onError: 0 } }, 0] },
+                                    { $convert: { input: { $ifNull: ['$montoPagado', 0] }, to: 'double', onError: 0 } },
                                     {
                                         $cond: [
                                             {
@@ -5040,13 +5048,21 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
                                                 ]
                                             },
                                             0,
-                                            { $ifNull: ['$total', 0] }
+                                            { $convert: { input: { $ifNull: ['$total', 0] }, to: 'double', onError: 0 } }
                                         ]
                                     }
                                 ]
                             }
                         },
-                        itbis: { $sum: { $cond: [{ $in: ['$ncfType', ['04', '34']] }, { $multiply: [{ $ifNull: ['$itbis', 0] }, -1] }, { $ifNull: ['$itbis', 0] }] } },
+                        itbis: { 
+                            $sum: { 
+                                $cond: [
+                                    { $in: ['$ncfType', ['04', '34']] }, 
+                                    { $multiply: [{ $convert: { input: { $ifNull: ['$itbis', 0] }, to: 'double', onError: 0 } }, -1] }, 
+                                    { $convert: { input: { $ifNull: ['$itbis', 0] }, to: 'double', onError: 0 } }
+                                ] 
+                            } 
+                        },
                         count: { $sum: 1 }
                     }
                 },
@@ -6166,7 +6182,7 @@ app.get('/api/reports/607/validate', verifyToken, verifyClient, async (req, res)
     res.json({ message: 'Validación completada', valid: true, details: [] });
 });
 
-app.get('/api/reports/607/download', verifyToken, verifyClient, async (req, res) => {
+app.get('/api/reports/607', verifyToken, verifyClient, async (req, res) => {
     try {
         const { month, year } = req.query;
         if (!month || !year) return res.status(400).json({ message: 'Se requiere mes y año' });
@@ -6175,7 +6191,12 @@ app.get('/api/reports/607/download', verifyToken, verifyClient, async (req, res)
         const startOfMonth = new Date(y, m - 1, 1);
         const endOfMonth = new Date(y, m, 0, 23, 59, 59, 999);
 
-        const invoices = await Invoice.find({ userId: req.userId, status: { $ne: 'cancelled' }, ncfType: { $nin: ['00', ''] }, date: { $gte: startOfMonth, $lte: endOfMonth } }).lean();
+        const invoices = await Invoice.find({ 
+            userId: req.userId, 
+            status: { $ne: 'cancelled' }, 
+            ncf: { $exists: true, $ne: '' },
+            date: { $gte: startOfMonth, $lte: endOfMonth } 
+        }).lean();
         
         const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
         const periodo = `${y}${m.toString().padStart(2, '0')}`;

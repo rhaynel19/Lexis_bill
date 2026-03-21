@@ -33,6 +33,7 @@ export default function Quotes() {
     const [convertingId, setConvertingId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
+    const [availableBatches, setAvailableBatches] = useState<any[]>([]);
 
     const [showConvertModal, setShowConvertModal] = useState(false);
     const [convertingQuote, setConvertingQuote] = useState<Quote | null>(null);
@@ -87,12 +88,22 @@ export default function Quotes() {
 
     useEffect(() => {
         loadQuotes();
+        loadNcfSettings();
         const storedConfig = localStorage.getItem("appConfig");
         if (storedConfig) {
             const config = JSON.parse(storedConfig);
             setUseSerieE(config.hasElectronicInvoice || false);
         }
     }, []);
+
+    const loadNcfSettings = async () => {
+        try {
+            const data = await api.getNcfSettings();
+            setAvailableBatches(data || []);
+        } catch (error) {
+            console.error("Error loading NCF settings:", error);
+        }
+    };
 
     const loadQuotes = async () => {
         setIsLoading(true);
@@ -337,13 +348,32 @@ export default function Quotes() {
                                     <SelectValue placeholder="Seleccionar NCF" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="31">E31 - Crédito Fiscal</SelectItem>
-                                    <SelectItem value="32">E32 - Consumo</SelectItem>
-                                    <SelectItem value="34">E34 - Nota de Crédito</SelectItem>
-                                    <SelectItem value="45">E45 - Gubernamentales</SelectItem>
-                                    <SelectItem value="01">B01 - Crédito Fiscal</SelectItem>
-                                    <SelectItem value="02">B02 - Consumo</SelectItem>
-                                    <SelectItem value="15">B15 - Gubernamentales</SelectItem>
+                                    {availableBatches.length > 0 ? (
+                                        availableBatches
+                                            .filter(b => b.isActive && (b.finalNumber - b.currentValue > 0))
+                                            .map(batch => {
+                                                const isElectronic = batch.sequenceType === "electronic" || batch.series === "E";
+                                                const label = isElectronic ? `e-CF ${batch.type}` : `B${batch.type}`;
+                                                const description = isElectronic 
+                                                    ? (batch.type === '31' ? 'Crédito Fiscal' : batch.type === '32' ? 'Consumo' : batch.type === '34' ? 'Nota de Crédito' : 'Gubernamental')
+                                                    : (batch.type === '01' ? 'Crédito Fiscal' : batch.type === '02' ? 'Consumo' : batch.type === '04' ? 'Nota de Crédito' : 'Gubernamental');
+                                                return (
+                                                    <SelectItem key={batch._id} value={batch.type}>
+                                                        {label} - {description}
+                                                    </SelectItem>
+                                                );
+                                            })
+                                    ) : (
+                                        <>
+                                            <SelectItem value="31">E31 - Crédito Fiscal</SelectItem>
+                                            <SelectItem value="32">E32 - Consumo</SelectItem>
+                                            <SelectItem value="34">E34 - Nota de Crédito</SelectItem>
+                                            <SelectItem value="45">E45 - Gubernamentales</SelectItem>
+                                            <SelectItem value="01">B01 - Crédito Fiscal</SelectItem>
+                                            <SelectItem value="02">B02 - Consumo</SelectItem>
+                                            <SelectItem value="15">B15 - Gubernamentales</SelectItem>
+                                        </>
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>
