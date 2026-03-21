@@ -396,6 +396,7 @@ const invoiceSchema = new mongoose.Schema({
     clientRnc: { type: String, required: true },
     ncf: { type: String, required: true },
     ncfType: { type: String, required: true },
+    clientPhone: { type: String },
     originalInvoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' }, // For credit notes
     requestId: { type: String, unique: true, sparse: true }, // For idempotency
     items: [{
@@ -1193,7 +1194,7 @@ async function getNextNcf(userId, type, session, clientRnc) {
             $expr: { $lt: ["$currentValue", "$finalNumber"] }
         },
         { $inc: { currentValue: 1 } },
-        { new: true, session }
+        { new: false, session }
     );
 
     if (!activeBatch) {
@@ -5155,6 +5156,7 @@ app.post('/api/invoices', verifyToken, verifyClient, async (req, res) => {
             userId: req.userId, 
             clientName, 
             clientRnc, 
+            clientPhone: req.body.clientPhone || req.body.phone,
             ncfType, 
             ncf: fullNcf, // Updated to match schema
             ncfSequence: fullNcf, // Legacy support
@@ -6184,6 +6186,61 @@ app.get('/api/subscription/status', verifyToken, verifyClient, async (req, res) 
     } catch (e) {
         log.error({ err: e.message, userId: req.userId }, 'Error obteniendo estado de suscripción');
         res.status(500).json({ message: safeErrorMessage(e) });
+    }
+});
+
+app.get('/api/reports/statement/:rnc', verifyToken, verifyClient, async (req, res) => {
+    try {
+        const cleanRnc = String(req.params.rnc).replace(/[^0-9]/g, '');
+        const invoices = await Invoice.find({
+            userId: req.userId,
+            clientRnc: cleanRnc,
+            status: { $nin: ['cancelled', 'void'] },
+            $or: [
+                { balancePendiente: { $gt: 0 } },
+                { estadoPago: { $in: ['pendiente', 'parcial'] } }
+            ]
+        }).sort({ date: -1 }).lean();
+
+        const customer = await Customer.findOne({ userId: req.userId, rnc: cleanRnc }).lean();
+        const totalPending = invoices.reduce((sum, inv) => sum + (inv.balancePendiente || inv.total), 0);
+
+        res.json({
+            customer: customer || { rnc: cleanRnc, name: invoices[0]?.clientName || 'Cliente desconocido' },
+            invoices: invoices.map(inv => ({
+                id: inv._id,
+                ncf: inv.ncf || inv.ncfSequence,
+                date: inv.date,
+                total: inv.total,
+                balance: inv.balancePendiente || inv.total,
+                type: inv.ncfType
+            })),
+            totalPending,
+            generatedAt: new Date()
+        });
+    } catch (error) {
+        res.status(500).json({ message: safeErrorMessage(error) });
+    }
+});
+
+app.get('/api/collections/debtors', verifyToken, verifyClient, async (req, res) => {
+    try {
+        const debtors = await Invoice.aggregate([
+            { $match: { userId: new mongoose.Types.ObjectId(req.userId), status: { $nin: ['cancelled', 'void'] } } },
+            { $group: {
+                _id: '$clientRnc',
+                clientName: { $first: '$clientName' },
+                totalBalance: { $sum: { $ifNull: ['$balancePendiente', '$total'] } },
+                invoiceCount: { $sum: 1 },
+                lastInvoiceDate: { $max: '$date' }
+            }},
+            { $match: { totalBalance: { $gt: 0 } } },
+            { $sort: { totalBalance: -1 } }
+        ]);
+
+        res.json({ debtors });
+    } catch (error) {
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 });
 

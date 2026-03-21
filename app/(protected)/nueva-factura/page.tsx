@@ -940,6 +940,7 @@ export default function NewInvoice() {
                 total,
                 isrRetention,
                 tipoPago,
+                clientPhone,
                 modifiedNcf: (invoiceType === "04" || invoiceType === "34") ? modifiedNcf : undefined,
             };
             if (tipoPago === "otro" && tipoPagoOtro?.trim()) invoiceData.tipoPagoOtro = tipoPagoOtro.trim();
@@ -1028,15 +1029,13 @@ export default function NewInvoice() {
 
     const handleWhatsAppShare = () => {
         const text = `Hola *${clientName}*! 🇩🇴\n\nLe envío su comprobante fiscal *${lastInvoiceNCF}* por valor de *${formatCurrency(total)}*.\n\n📎 Te envío adjunto el PDF del comprobante.\n\nGracias por preferirnos.`;
-        let phone = (clientPhone || "").replace(/[^\d]/g, '');
-        if (phone.length === 10 && (phone.startsWith("809") || phone.startsWith("829") || phone.startsWith("849"))) {
-            phone = "1" + phone;
-        }
-        if (!phone) {
+        const phoneDigits = (clientPhone || "").replace(/\D/g, '');
+        const finalPhone = phoneDigits.length === 10 ? `1${phoneDigits}` : phoneDigits;
+        if (!finalPhone) {
             toast.info("Añade el teléfono del cliente para enviar por WhatsApp.");
             return;
         }
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+        window.open(`https://wa.me/${finalPhone}?text=${encodeURIComponent(text)}`, '_blank');
     };
 
     const handleEmailShare = () => {

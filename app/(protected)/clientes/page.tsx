@@ -84,8 +84,9 @@ export default function CustomersPage() {
     const handleWhatsApp = (e: React.MouseEvent, phone?: string) => {
         e.stopPropagation();
         if (!phone) return;
-        const cleanPhone = phone.replace(/[^\d]/g, '');
-        window.open(`https://wa.me/${cleanPhone}`, '_blank');
+        const phoneDigits = phone.replace(/\D/g, '');
+        const finalPhone = phoneDigits.length === 10 ? `1${phoneDigits}` : phoneDigits;
+        window.open(`https://wa.me/${finalPhone}`, '_blank');
     };
 
     const handleDelete = async () => {

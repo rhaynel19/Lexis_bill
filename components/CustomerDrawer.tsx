@@ -38,8 +38,9 @@ export function CustomerDrawer({ isOpen, onClose, customer }: CustomerDrawerProp
 
     const handleWhatsApp = () => {
         if (!customer.phone) return;
-        const cleanPhone = customer.phone.replace(/[^\d]/g, '');
-        window.open(`https://wa.me/${cleanPhone}`, '_blank');
+        const phoneDigits = customer.phone.replace(/\D/g, '');
+        const finalPhone = phoneDigits.length === 10 ? `1${phoneDigits}` : phoneDigits;
+        window.open(`https://wa.me/${finalPhone}`, '_blank');
     };
 
     if (!customer) return null;

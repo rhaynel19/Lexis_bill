@@ -807,4 +807,13 @@ export const api = {
     async getBillingHealth() {
         return secureFetch<{ success: boolean; healthScore: number; isHealthy: boolean; metrics: { totalPayments: number; approvedPayments: number; consistentPayments: number; inconsistentPayments: number }; alerts: number; recommendation: string }>(`${API_URL}/admin/billing-health`);
     },
+
+    // Collections Management
+    async getDebtors() {
+        return secureFetch<{ debtors: Array<{ _id: string; clientName: string; totalBalance: number; invoiceCount: number; lastInvoiceDate: string; phone?: string; email?: string }> }>(`${API_URL}/collections/debtors`);
+    },
+
+    async getAccountStatement(rnc: string) {
+        return secureFetch<{ customer: { rnc: string; name: string; email?: string; phone?: string }; invoices: Array<{ id: string; ncf: string; date: string; total: number; balance: number; type: string }>; totalPending: number; generatedAt: string }>(`${API_URL}/reports/statement/${rnc}`);
+    }
 };

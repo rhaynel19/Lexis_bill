@@ -88,12 +88,12 @@ class BillingBrain {
                 type: 'unpaid_invoices',
                 title: 'Facturas sin cobrar',
                 message: `Detecté RD$${this._formatCurrency(totalUnpaid)} en facturas pendientes.`,
-                humanMessage: `Detecté RD$${this._formatCurrency(totalUnpaid)} en facturas pendientes. ¿Quieres enviar recordatorios por WhatsApp ahora?`,
+                humanMessage: `Detecté RD$${this._formatCurrency(totalUnpaid)} en facturas pendientes. ¿Quieres gestionar estos cobros ahora?`,
                 action: {
-                    label: 'Enviar recordatorios',
+                    label: 'Gestionar',
                     url: '/dashboard',
-                    type: 'whatsapp_reminders',
-                    data: { invoiceIds: unpaid.map(inv => inv._id.toString()) }
+                    type: 'open_collections_manager',
+                    data: { unpaidCount: unpaid.length, totalUnpaid }
                 },
                 metadata: {
                     count: unpaid.length,
@@ -141,11 +141,12 @@ class BillingBrain {
             type: 'overdue_invoices',
             title: 'Facturas vencidas',
             message: `Tienes ${overdue.length} factura${overdue.length > 1 ? 's' : ''} vencida${overdue.length > 1 ? 's' : ''} por más de 30 días (RD$${this._formatCurrency(totalOverdue)}).`,
-            humanMessage: `Tienes ${overdue.length} factura${overdue.length > 1 ? 's' : ''} vencida${overdue.length > 1 ? 's' : ''} por más de 30 días. La más antigua tiene ${oldestDays} días. ¿Quieres contactar a estos clientes?`,
+            humanMessage: `Tienes ${overdue.length} factura${overdue.length > 1 ? 's' : ''} vencida${overdue.length > 1 ? 's' : ''} por más de 30 días. La más antigua tiene ${oldestDays} días. ¿Quieres gestionar estos cobros?`,
             action: {
-                label: 'Ver facturas vencidas',
-                url: '/documentos?filter=overdue',
-                type: 'view_overdue'
+                label: 'Gestionar',
+                url: '/dashboard',
+                type: 'open_collections_manager',
+                data: { overdueCount: overdue.length, totalOverdue }
             },
             metadata: {
                 count: overdue.length,

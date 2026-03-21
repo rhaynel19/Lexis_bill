@@ -72,7 +72,7 @@ export default function ReportsPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `607_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.txt`;
+        a.download = `0607_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.txt`;
         a.click();
         URL.revokeObjectURL(url);
     };

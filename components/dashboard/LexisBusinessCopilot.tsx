@@ -19,6 +19,9 @@ import {
     RefreshCw,
     ArrowRight,
 } from "lucide-react";
+import { LexisMessageWidget } from "./LexisMessageWidget";
+import { CollectionsManager } from "./CollectionsManager";
+import { api } from "@/lib/api-service";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -136,6 +139,7 @@ export function LexisBusinessCopilot() {
     const [showError, setShowError] = useState(false);
     const [isRetrying, setIsRetrying] = useState(false);
     const [fromCache, setFromCache] = useState(false);
+    const [showCollections, setShowCollections] = useState(false);
 
     useEffect(() => {
         const stored = typeof window !== "undefined" ? localStorage.getItem(LEXIS_COPILOT_COLLAPSED_KEY) : null;
@@ -485,7 +489,7 @@ export function LexisBusinessCopilot() {
                         {collapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
                     </Button>
                 </div>
-
+    
                 {/* Score de salud - siempre visible */}
                 <div className="flex items-center gap-4 mt-4 pl-0 sm:pl-16">
                     <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
@@ -557,7 +561,13 @@ export function LexisBusinessCopilot() {
                                             variant="outline"
                                             className="rounded-[10px] font-semibold text-xs px-3 h-8 gap-1.5 border-primary/20 hover:bg-primary/5 hover:text-primary transition-colors"
                                             onClick={() => {
-                                                router.push(insight.action.url);
+                                                if (insight.action?.type === 'open_collections_manager') {
+                                                    setShowCollections(true);
+                                                    return;
+                                                }
+                                                if (insight.action?.url) {
+                                                    router.push(insight.action.url);
+                                                }
                                             }}
                                         >
                                             {insight.action.label}
@@ -682,6 +692,16 @@ export function LexisBusinessCopilot() {
                                         <p className="text-sm text-slate-700 dark:text-slate-300">
                                             {(a.message || "").replace(/RD\$RD\$/g, "RD$")}
                                         </p>
+                                        {(a.type === 'unpaid_invoices' || a.type === 'overdue_invoices') && (
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="ml-auto text-amber-600 hover:text-amber-700 hover:bg-amber-50 h-7 text-xs font-semibold"
+                                                onClick={() => setShowCollections(true)}
+                                            >
+                                                Gestionar
+                                            </Button>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -805,6 +825,11 @@ export function LexisBusinessCopilot() {
                     <NewInvoiceButton variant="card" />
                 </CardContent>
             )}
+            {/* 🔥 Collections Manager Sheet */}
+            <CollectionsManager 
+                isOpen={showCollections} 
+                onClose={() => setShowCollections(false)} 
+            />
         </Card>
     );
 }
