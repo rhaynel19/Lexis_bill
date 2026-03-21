@@ -5012,7 +5012,7 @@ app.delete('/api/documents/:id', verifyToken, verifyClient, async (req, res) => 
 // Stats del dashboard por agregación (evita cargar 200 facturas en memoria)
 app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
     try {
-        const userId = req.userId;
+        const userId = mongoose.Types.ObjectId(req.userId);
         const now = new Date();
         const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);

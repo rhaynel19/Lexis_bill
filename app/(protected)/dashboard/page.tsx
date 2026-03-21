@@ -88,48 +88,6 @@ interface NcfSequenceSummary {
   expiryDate: string;
 }
 
-// Componente simple de Gráfico de Línea SVG
-const SimpleLineChart = ({ data }: { data: number[] }) => {
-  const height = 100;
-  const width = 300;
-
-  // Defensive check for empty or invalid data
-  if (!data || data.length === 0) return null;
-
-  const validData = data.map(v => (isNaN(v) || v === null) ? 0 : v);
-  const max = Math.max(...validData, 1);
-  const denominator = validData.length > 1 ? validData.length - 1 : 1;
-
-  const points = validData.map((val, i) => {
-    const x = (i / denominator) * width;
-    const y = height - (val / max) * height;
-    return `${x},${y}`;
-  }).join(" ");
-
-  // Fill path (cerrado abajo)
-  const fillPath = `${points} ${width},${height} 0,${height}`;
-
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
-      <defs>
-        <linearGradient id="gradient" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="#10b981" stopOpacity="0.2" />
-          <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={`M ${points}`} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      <path d={`M ${points} L ${width},${height} L 0,${height} Z`} fill="url(#gradient)" stroke="none" />
-      {/* Puntos */}
-      {data.map((val, i) => {
-        const x = (i / (data.length - 1)) * width;
-        const y = height - (val / max) * height;
-        return (
-          <circle key={i} cx={x} cy={y} r="4" fill="#fff" stroke="#10b981" strokeWidth="2" />
-        );
-      })}
-    </svg>
-  );
-};
 
 export default function Dashboard() {
   const router = useRouter();
@@ -148,9 +106,6 @@ export default function Dashboard() {
   const { mode, profession } = usePreferences();
   const { user: authUser, refresh } = useAuth();
 
-  const [estimatedTaxes, setEstimatedTaxes] = useState(0);
-  const [chartData, setChartData] = useState<number[]>([0, 0, 0, 0]);
-  const [monthLabels, setMonthLabels] = useState<string[]>([]);
 
   // Estado para el Wizard de Configuración e Identidad Fiscal
   const [fiscalState, setFiscalState] = useState<{ suggested: string; confirmed: string | null }>({ suggested: "", confirmed: null });
@@ -234,12 +189,6 @@ export default function Dashboard() {
         setCollectedThisMonth(statsRes.monthlyCollected ?? statsRes.monthlyRevenue);
         setPreviousMonthRevenue(statsRes.previousMonthRevenue);
         setTargetInvoices(statsRes.targetInvoices);
-        setEstimatedTaxes(statsRes.monthlyTaxes);
-        setPendingInvoices(statsRes.pendingInvoices);
-        setTotalPorCobrar(statsRes.totalPorCobrar ?? 0);
-        setTotalClients(statsRes.totalClients);
-        setChartData(statsRes.chartData || [0, 0, 0, 0]);
-        setMonthLabels(statsRes.monthLabels || []);
         setMonthlyStats({
           revenue: statsRes.monthlyRevenue,
           invoiceCount: statsRes.invoiceCount,
@@ -280,26 +229,12 @@ export default function Dashboard() {
           });
           setPreviousMonthRevenue(previousMonthlyInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0));
           setTargetInvoices(Math.max(previousMonthlyInvoices.length, 1));
-          setEstimatedTaxes(monthlyInvoices.reduce((sum, inv) => sum + (inv.itbis || 0), 0));
           const pendingData = invoices
             .map((inv) => ({ ...inv, _bal: getInvoiceBalance(inv) }))
             .filter((inv) => inv._bal > 0);
           setPendingInvoices(pendingData.length);
           setTotalPorCobrar(pendingData.reduce((sum, inv) => sum + inv._bal, 0));
           setTotalClients(new Set(invoices.map((inv) => inv.rnc || inv.clientRnc || "")).size);
-          const last4MonthsData = [];
-          const labels = [];
-          for (let i = 3; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const monthDetails = invoices.filter((inv) => {
-              const invDate = new Date(inv.date);
-              return invDate.getMonth() === d.getMonth() && invDate.getFullYear() === d.getFullYear();
-            });
-            last4MonthsData.push(monthDetails.reduce((sum, inv) => sum + (inv.total || 0), 0));
-            labels.push(d.toLocaleDateString("es-DO", { month: "short" }));
-          }
-          setChartData(last4MonthsData);
-          setMonthLabels(labels);
           setMonthlyStats({
             revenue: monthlyRevenue,
             invoiceCount: monthlyInvoices.length,
@@ -543,62 +478,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Grid de tarjetas con estadísticas */}
-        {isLoading ? (
-          <div className="grid gap-6 md:grid-cols-3 mb-8">
-            <div className="col-span-3 flex items-center gap-3 text-muted-foreground text-sm">
-              <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin shrink-0"></div>
-              Revisando tus datos...
-            </div>
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="h-40 bg-slate-200 animate-pulse border-none"></Card>
-            ))}
-          </div>
-        ) : error ? (
-          <div className="bg-red-50 border border-red-200 p-6 rounded-2xl text-center mb-8">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <p className="text-red-800 font-medium">{error}</p>
-            <Button variant="outline" className="mt-4" onClick={() => loadDashboardData()}>Reintentar</Button>
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-3 mb-8 animate-in fade-in duration-700">
-            {/* Tarjeta: Ingresos del Mes */}
-            <Card className="bg-primary text-primary-foreground border-none shadow-xl shadow-primary/20 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20"></div>
-              <CardHeader className="pb-2">
-                <CardDescription className="text-primary-foreground/70 font-medium font-sans text-xs md:text-sm">
-                  {mode === 'simple' ? "Cobrado este mes" : "Ingresos del Mes"}
-                </CardDescription>
-                <CardTitle className="text-3xl md:text-4xl font-bold tracking-tight">
-                  {formatCurrency(mode === 'simple' ? (() => {
-                      const currentMonth = new Date().getMonth();
-                      const currentYear = new Date().getFullYear();
-                      return recentInvoices.reduce((sum, inv) => {
-                          const getInvoiceStatus = (inv: Invoice) => {
-                              if (!inv) return "pendiente";
-                              if (inv.status === "cancelled") return "anulada";
-                              const bal = inv.balancePendiente ?? (inv.estadoPago === "pendiente" || inv.estadoPago === "parcial" || inv.status === "pending" ? inv.total : 0);
-                              return (bal || 0) <= 0 ? "pagada" : "pendiente";
-                          };
-                          const invDate = new Date(inv.date);
-                          const isThisMonth = invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear;
-                          return (isThisMonth && getInvoiceStatus(inv) === "pagada") ? sum + (inv.total || 0) : sum;
-                      }, 0);
-                  })() : totalRevenue)}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-16 mt-2 relative z-10">
-                  <SimpleLineChart data={chartData} />
-                </div>
-              </CardContent>
-            </Card>
 
-
-
-
-          </div>
-        )}
 
         {/* Facturar a cliente frecuente */}
         {!isLoading && frequentClients.length > 0 && (
