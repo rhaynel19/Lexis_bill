@@ -78,8 +78,8 @@ export function EmotionalStatusWidget({ ncfHealthy, blockers }: EmotionalStatusP
                             status === "red" ? "text-red-900 dark:text-red-200" :
                                 "text-amber-900 dark:text-amber-200"
                         )}>
-                            {blockers.map(b => <div key={b}>• {b}</div>)}
-                            {!ncfHealthy && !blockers.length && <div>• Secuencia de facturas baja</div>}
+                            {blockers?.map(b => <div key={b}>• {b}</div>)}
+                            {!ncfHealthy && (!blockers || !blockers.length) && <div>• Secuencia de facturas baja</div>}
                         </div>
                     )}
                 </div>

@@ -73,8 +73,10 @@ export interface BusinessCopilotData {
     proactiveInsights?: ProactiveInsight[];
 }
 
-const formatCurrency = (n: number) =>
-    new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 0 }).format(n);
+const formatCurrency = (n: number | null | undefined) => {
+    if (n === null || n === undefined || isNaN(n)) return "RD$0";
+    return new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 0 }).format(n);
+};
 
 function AlertIcon({ severity }: { severity: string }) {
     switch (severity) {
@@ -505,9 +507,10 @@ export function LexisBusinessCopilot() {
             </CardHeader>
 
             {/* 🔥 INSIGHTS PROACTIVOS DEL BILLING BRAIN */}
-            {data.proactiveInsights && data.proactiveInsights.length > 0 && (
+            {data?.proactiveInsights && data.proactiveInsights.length > 0 && (
                 <div className="px-6 pb-4 space-y-3">
                     {data.proactiveInsights.map((insight) => {
+                        if (!insight) return null;
                         const priorityColors = {
                             critical: "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/40 text-red-900 dark:text-red-100",
                             important: "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 text-amber-900 dark:text-amber-100",
@@ -572,10 +575,10 @@ export function LexisBusinessCopilot() {
                 </div>
             )}
 
-            {!collapsed && hasContent && (
+            {!collapsed && data && (
                 <CardContent className="pt-0 space-y-6">
                     {/* Predicción + Caja */}
-                    {data.prediction.daysRemaining > 0 && data.prediction.currentRevenue >= 0 && (
+                    {data.prediction && data.prediction.daysRemaining > 0 && (
                         <div className="grid gap-3 sm:grid-cols-2">
                             <div className="rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 p-4">
                                 <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -595,7 +598,7 @@ export function LexisBusinessCopilot() {
                     )}
 
                     {/* Radar de Morosidad */}
-                    {data.morosityRadar && data.morosityRadar.totalPendiente > 0 && (
+                    {data?.morosityRadar && data.morosityRadar.totalPendiente > 0 && (
                         <div>
                             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                                 <Radar className="w-4 h-4" /> Radar de Morosidad
@@ -609,24 +612,24 @@ export function LexisBusinessCopilot() {
                                     data.morosityRadar.riesgoGeneral === 'bajo' && "bg-emerald-50 dark:bg-emerald-950/20 border-b border-emerald-100 dark:border-emerald-900/20"
                                 )}>
                                     <span className="font-semibold text-slate-800 dark:text-slate-200">
-                                        Riesgo de cobro: {data.morosityRadar.riesgoGeneral === 'critico' ? 'Crítico' : data.morosityRadar.riesgoGeneral === 'alto' ? 'Alto' : data.morosityRadar.riesgoGeneral === 'medio' ? 'Medio' : 'Bajo'}
+                                        Riesgo de cobro: {data?.morosityRadar?.riesgoGeneral === 'critico' ? 'Crítico' : data?.morosityRadar?.riesgoGeneral === 'alto' ? 'Alto' : data?.morosityRadar?.riesgoGeneral === 'medio' ? 'Medio' : 'Bajo'}
                                     </span>
-                                    <span className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(data.morosityRadar.totalPendiente)} pendientes</span>
+                                    <span className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(data?.morosityRadar?.totalPendiente)} pendientes</span>
                                 </div>
                                 <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-48 overflow-y-auto">
-                                    {data.morosityRadar.clientes.slice(0, 5).map((c, i) => (
-                                        <div key={c.rnc || i} className="px-4 py-2 flex items-center justify-between text-sm">
+                                    {data?.morosityRadar?.clientes?.slice(0, 5).map((c, i) => (
+                                        <div key={c?.rnc || i} className="px-4 py-2 flex items-center justify-between text-sm">
                                             <div className="flex items-center gap-2">
                                                 <span className={cn(
                                                     "w-2 h-2 rounded-full",
-                                                    c.nivel === 'critico' && "bg-red-500",
-                                                    c.nivel === 'riesgo' && "bg-amber-500",
-                                                    c.nivel === 'atencion' && "bg-yellow-500",
-                                                    c.nivel === 'normal' && "bg-emerald-500"
+                                                    c?.nivel === 'critico' && "bg-red-500",
+                                                    c?.nivel === 'riesgo' && "bg-amber-500",
+                                                    c?.nivel === 'atencion' && "bg-yellow-500",
+                                                    c?.nivel === 'normal' && "bg-emerald-500"
                                                 )} />
-                                                <span className="font-medium truncate max-w-[180px]">{c.clientName || c.rnc}</span>
+                                                <span className="font-medium truncate max-w-[180px]">{c?.clientName || c?.rnc || "—"}</span>
                                             </div>
-                                            <span className="text-slate-600 dark:text-slate-400">{formatCurrency(c.totalPendiente)} · {c.diasMayorAntiguedad}d</span>
+                                            <span className="text-slate-600 dark:text-slate-400">{formatCurrency(c?.totalPendiente)} · {c?.diasMayorAntiguedad || 0}d</span>
                                         </div>
                                     ))}
                                 </div>
@@ -638,7 +641,7 @@ export function LexisBusinessCopilot() {
                     )}
 
                     {/* Insights de tipo de pago */}
-                    {data.paymentInsights && (data.paymentInsights.creditPct > 0 || data.paymentInsights.transferPct > 0) && (
+                    {data?.paymentInsights && (data.paymentInsights.creditPct > 0 || data.paymentInsights.transferPct > 0) && (
                         <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50/30 dark:bg-slate-900/20">
                             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                                 <DollarSign className="w-4 h-4" /> Distribución de ingresos por tipo de pago
@@ -659,7 +662,7 @@ export function LexisBusinessCopilot() {
                     )}
 
                     {/* Alertas inteligentes */}
-                    {data.alerts.length > 0 && (
+                    {data?.alerts && data.alerts.length > 0 && (
                         <div>
                             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                                 <Zap className="w-4 h-4" /> Lexis detectó algo importante
@@ -688,7 +691,7 @@ export function LexisBusinessCopilot() {
                     )}
 
                     {/* Detector de errores fiscales */}
-                    {data.fiscalAlerts.length > 0 && (
+                    {data?.fiscalAlerts && data.fiscalAlerts.length > 0 && (
                         <div>
                             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                                 <ShieldAlert className="w-4 h-4" /> Errores fiscales detectados
@@ -713,13 +716,13 @@ export function LexisBusinessCopilot() {
                     )}
 
                     {/* Ranking automático */}
-                    {(data.rankings.topClient || data.rankings.droppedClient || data.rankings.topService) && (
+                    {data?.rankings && (data?.rankings?.topClient || data?.rankings?.droppedClient || data?.rankings?.topService) && (
                         <div>
                             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                                 <BarChart3 className="w-4 h-4" /> Resumen del período
                             </h4>
                             <div className="grid gap-3 sm:grid-cols-3">
-                                {data.rankings.topClient && (
+                                {data?.rankings?.topClient && (
                                     <div className="p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20">
                                         <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Cliente que más pagó</p>
                                         <p className="font-semibold text-slate-900 dark:text-slate-100 mt-1 truncate">{data.rankings.topClient.name}</p>
@@ -733,11 +736,11 @@ export function LexisBusinessCopilot() {
                                         <p className="text-sm text-slate-600 dark:text-slate-400">Facturaba {formatCurrency(data.rankings.droppedClient.lastMonthTotal)}/mes</p>
                                     </div>
                                 )}
-                                {data.rankings.topService && (
+                                {data?.rankings?.topService && (
                                     <div className="p-4 rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20">
                                         <p className="text-xs font-medium text-blue-700 dark:text-blue-400 uppercase tracking-wider">Servicio más vendido</p>
-                                        <p className="font-semibold text-slate-900 dark:text-slate-100 mt-1 truncate">{data.rankings.topService.description}</p>
-                                        <p className="text-sm text-slate-600 dark:text-slate-400">{formatCurrency(data.rankings.topService.totalRevenue)} · {data.rankings.topService.totalQuantity} ventas</p>
+                                        <p className="font-semibold text-slate-900 dark:text-slate-100 mt-1 truncate">{data?.rankings?.topService?.description || "—"}</p>
+                                        <p className="text-sm text-slate-600 dark:text-slate-400">{formatCurrency(data?.rankings?.topService?.totalRevenue)} · {data?.rankings?.topService?.totalQuantity || 0} ventas</p>
                                     </div>
                                 )}
                             </div>
@@ -745,14 +748,14 @@ export function LexisBusinessCopilot() {
                     )}
 
                     {/* Radar de clientes (scoring) */}
-                    {data.clientRadar.length > 0 && (
+                    {data?.clientRadar && data.clientRadar.length > 0 && (
                         <div>
                             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                                 <Users className="w-4 h-4" /> Radar de clientes
                             </h4>
                             <div className="overflow-x-auto">
                                 <div className="flex gap-2 min-w-max pb-2">
-                                    {data.clientRadar.slice(0, 8).map((c, i) => (
+                                    {data?.clientRadar?.slice(0, 8).map((c, i) => (
                                         <div
                                             key={c.rnc || i}
                                             className={cn(

@@ -34,7 +34,8 @@ export function TaxHealthWidget() {
         return () => { cancelled = true; };
     }, []);
 
-    const formatCurrency = (amount: number) => {
+    const formatCurrency = (amount: number | null | undefined) => {
+        if (amount === null || amount === undefined || isNaN(amount)) return "RD$0";
         return new Intl.NumberFormat("es-DO", {
             style: "currency",
             currency: "DOP",
