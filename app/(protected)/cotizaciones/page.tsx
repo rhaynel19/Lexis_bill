@@ -20,6 +20,7 @@ import { generateQuoteWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp-utils
 import { toast } from "sonner";
 import { api } from "@/lib/api-service";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { PaymentTypeSelector } from "@/components/invoice/PaymentTypeSelector";
 
 export default function Quotes() {
     const router = useRouter();
@@ -35,7 +36,14 @@ export default function Quotes() {
 
     const [showConvertModal, setShowConvertModal] = useState(false);
     const [convertingQuote, setConvertingQuote] = useState<Quote | null>(null);
-    const [convertForm, setConvertForm] = useState({
+    const [convertForm, setConvertForm] = useState<{
+        ncfType: string;
+        isrRetention: number;
+        itbisRetention: number;
+        tipoPago: string;
+        tipoPagoOtro?: string;
+        pagoMixto?: any[];
+    }>({
         ncfType: "31",
         isrRetention: 0,
         itbisRetention: 0,
@@ -55,7 +63,7 @@ export default function Quotes() {
         } else {
             ncf = rncLen === 9 ? '01' : '02';
         }
-        setConvertForm({ ncfType: ncf, isrRetention: 0, itbisRetention: 0, tipoPago: "efectivo" });
+        setConvertForm({ ncfType: ncf, isrRetention: 0, itbisRetention: 0, tipoPago: "efectivo", pagoMixto: [], tipoPagoOtro: "" });
         setShowConvertModal(true);
     };
 
@@ -341,16 +349,21 @@ export default function Quotes() {
                         </div>
                         <div className="space-y-2">
                             <Label>Método de Pago</Label>
-                            <Select value={convertForm.tipoPago} onValueChange={(v) => setConvertForm({ ...convertForm, tipoPago: v })}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar Pago" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="efectivo">Efectivo / Transferencia (Pagado)</SelectItem>
-                                    <SelectItem value="tarjeta">Tarjeta (Pagado)</SelectItem>
-                                    <SelectItem value="credito">A Crédito (Pendiente)</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <PaymentTypeSelector
+                                tipoPago={convertForm.tipoPago}
+                                onTipoPagoChange={(v) => {
+                                    setConvertForm({...convertForm, tipoPago: v});
+                                    if (v === 'mixto' && (!convertForm.pagoMixto || convertForm.pagoMixto.length === 0)) {
+                                        setConvertForm({...convertForm, tipoPago: v, pagoMixto: [{tipo: 'efectivo', monto: convertingQuote?.total || 0}]});
+                                    }
+                                }}
+                                tipoPagoOtro={convertForm.tipoPagoOtro || ""}
+                                onTipoPagoOtroChange={(v) => setConvertForm({...convertForm, tipoPagoOtro: v})}
+                                pagoMixto={convertForm.pagoMixto || []}
+                                onPagoMixtoChange={(v) => setConvertForm({...convertForm, pagoMixto: v})}
+                                total={convertingQuote?.total || 0}
+                                habitualTipoPago={undefined}
+                            />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">

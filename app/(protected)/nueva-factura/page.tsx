@@ -1526,13 +1526,13 @@ export default function NewInvoice() {
                                     <div className="hidden md:block overflow-x-auto">
                                         <Table>
                                             <TableHeader>
-                                                <TableRow>
-                                                    <TableHead className="w-[35%]">Descripción</TableHead>
-                                                    <TableHead className="w-[12%]">Cantidad</TableHead>
-                                                    <TableHead className="w-[15%]">Precio Unit.</TableHead>
-                                                    <TableHead className="w-[15%]">Exento ITBIS</TableHead>
-                                                    <TableHead className="w-[18%]">Subtotal</TableHead>
-                                                    <TableHead className="w-[5%]"></TableHead>
+                                                <TableRow className="bg-muted/30 hover:bg-transparent">
+                                                    <TableHead className="w-[45%] font-bold text-foreground">Descripción</TableHead>
+                                                    <TableHead className="w-[10%] text-center font-bold text-foreground">Cant.</TableHead>
+                                                    <TableHead className="w-[20%] text-right font-bold text-foreground">Precio</TableHead>
+                                                    <TableHead className="w-[10%] text-center font-bold text-foreground">ITBIS</TableHead>
+                                                    <TableHead className="w-[15%] text-right font-bold text-foreground">Total</TableHead>
+                                                    <TableHead className="w-[50px]"></TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -1630,18 +1630,20 @@ export default function NewInvoice() {
                                                                 />
                                                             </TableCell>
 
-                                                            {/* Checkbox Exento ITBIS */}
-                                                            <TableCell>
+                                                            {/* Checkbox ITBIS Gravado */}
+                                                            <TableCell className="text-center">
                                                                 <div className="flex items-center justify-center h-full">
                                                                     <input
                                                                         type="checkbox"
-                                                                        className="w-4 h-4 rounded border-slate-300 text-accent focus:ring-accent accent-accent cursor-pointer"
-                                                                        checked={item.taxCategory === 'exempt' || item.isExempt || false}
+                                                                        className="w-4 h-4 text-indigo-600 rounded-md border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                                                                        checked={!(item.taxCategory === 'exempt' || item.isExempt || false)}
                                                                         onChange={(e) => {
-                                                                            updateItem(item.id, "isExempt", e.target.checked);
-                                                                            updateItem(item.id, "taxCategory", e.target.checked ? 'exempt' : 'taxable');
+                                                                            const isGravado = e.target.checked;
+                                                                            updateItem(item.id, "isExempt", !isGravado);
+                                                                            updateItem(item.id, "taxCategory", isGravado ? 'taxable' : 'exempt');
                                                                         }}
-                                                                        title="Marcar si este producto/servicio no lleva ITBIS"
+                                                                        aria-label={!(item.taxCategory === 'exempt' || item.isExempt) ? "Gravado con ITBIS - Marcar para exentar" : "Exento de ITBIS - Marcar para gravar"}
+                                                                        title={!(item.taxCategory === 'exempt' || item.isExempt) ? "Gravado con ITBIS" : "Exento de ITBIS"}
                                                                     />
                                                                 </div>
                                                             </TableCell>
