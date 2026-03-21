@@ -5025,8 +5025,8 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
                 {
                     $group: {
                         _id: null,
-                        revenue: { $sum: '$total' },
-                        collected: {
+                        revenue: { $sum: { $cond: [{ $in: ['$ncfType', ['04', '34']] }, { $multiply: ['$total', -1] }, '$total'] } },
+                        collectedBase: {
                             $sum: {
                                 $cond: [
                                     { $gt: [{ $ifNull: ['$montoPagado', 0] }, 0] },
@@ -5046,9 +5046,15 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
                                 ]
                             }
                         },
-                        itbis: { $sum: '$itbis' },
+                        itbis: { $sum: { $cond: [{ $in: ['$ncfType', ['04', '34']] }, { $multiply: ['$itbis', -1] }, '$itbis'] } },
                         count: { $sum: 1 }
                     }
+                },
+                {
+                    $addFields: {
+                        collected: { $cond: [{ $in: ['$ncfType', ['04', '34']] }, { $multiply: ['$collectedBase', -1] }, '$collectedBase'] }
+                    }
+                }
                 }
             ]),
             Invoice.aggregate([
@@ -5100,12 +5106,12 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
                         }
                     }
                 },
-                { $match: { _effectiveBalance: { $gt: 0 } } },
+                { $match: { _effectiveBalance: { $gt: 0 }, ncfType: { $nin: ['04', '34'] } } },
                 { $group: { _id: null, count: { $sum: 1 }, totalPorCobrar: { $sum: '$_effectiveBalance' } } }
             ]),
             Invoice.aggregate([
                 { $match: { userId, status: { $ne: 'cancelled' } } },
-                { $project: { year: { $year: '$date' }, month: { $month: '$date' }, total: 1 } },
+                { $project: { year: { $year: '$date' }, month: { $month: '$date' }, total: { $cond: [{ $in: ['$ncfType', ['04', '34']] }, { $multiply: ['$total', -1] }, '$total'] } } },
                 { $group: { _id: { year: '$year', month: '$month' }, total: { $sum: '$total' } } },
                 { $sort: { '_id.year': 1, '_id.month': 1 } }
             ]),
@@ -5260,6 +5266,13 @@ app.post('/api/invoices', verifyToken, verifyClient, async (req, res) => {
             tipo: String(p.tipo).slice(0, 30),
             monto: Math.max(0, Math.min(Number(p.monto) || 0, 999999999))
         })) : [];
+
+        if (tipoPago === 'mixto' && pagoMixto.length > 0) {
+            const sum = pagoMixto.reduce((acc, p) => acc + p.monto, 0);
+            if (Math.abs(sum - total) > 0.05) {
+                return res.status(400).json({ message: `La suma de los montos (${sum.toFixed(2)}) debe coincidir exactamente con el total de la factura (${total.toFixed(2)}).` });
+            }
+        }
         let montoPagado = 0, balancePendiente = total, estadoPago = 'pendiente', fechaPago = null;
         if (tipoPago === 'credito') {
             montoPagado = 0;
@@ -5422,6 +5435,13 @@ app.post('/api/invoices/:invoiceId/credit-note', verifyToken, verifyClient, asyn
             await session.abortTransaction();
             session.endSession();
             return res.status(400).json({ message: 'Esta factura ya fue anulada con una nota de crédito.' });
+        }
+        
+        const existingNC = await Invoice.findOne({ originalInvoiceId: invoiceId, status: { $ne: 'cancelled' } }).session(session).lean();
+        if (existingNC) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: 'Esta factura ya tiene una nota de crédito activa.' });
         }
         if (original.status === 'cancelled') {
             await session.abortTransaction();

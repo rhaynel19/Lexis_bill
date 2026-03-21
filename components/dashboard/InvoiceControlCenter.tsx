@@ -56,10 +56,10 @@ export interface Invoice {
     subtotal?: number;
     isrRetention?: number;
     itbisRetention?: number;
+    modifiedNcf?: string;
     date: string;
     status: string;
     annulledBy?: string;
-    modifiedNcf?: string;
     clientPhone?: string;
     balancePendiente?: number;
     estadoPago?: string;
@@ -273,6 +273,7 @@ export function InvoiceControlCenter({ invoices, onRefresh, onRequestCreditNote,
                 paymentMethod: invoice.tipoPago,
                 paymentDetails: invoice.paymentDetails,
                 balancePendiente: invoice.balancePendiente,
+                modifiedNcf: invoice.modifiedNcf,
             };
             await downloadInvoicePDF(data);
             toast.success("✅ Comprobante descargado");

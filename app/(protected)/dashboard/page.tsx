@@ -594,23 +594,21 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Tarjeta: ITBIS Acumulado (Hidden in Simple Mode) */}
-            {mode !== 'simple' && (
-              <Card className="bg-white border text-foreground shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-muted-foreground font-medium uppercase tracking-wider text-xs">ITBIS Acumulado</CardDescription>
-                  <CardTitle className="text-3xl font-bold text-foreground">
-                    {formatCurrency(estimatedTaxes)}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground mt-4">
-                    <div className="w-2 h-2 rounded-full bg-secondary"></div>
-                    <p>Generado este mes</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* Tarjeta: ITBIS Acumulado (Always visible as per user request) */}
+            <Card className="bg-white border text-foreground shadow-sm">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-muted-foreground font-medium uppercase tracking-wider text-xs">ITBIS Acumulado a pagar a la DGII</CardDescription>
+                <CardTitle className="text-3xl font-bold text-foreground">
+                  {formatCurrency(estimatedTaxes)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground mt-4">
+                  <div className="w-2 h-2 rounded-full bg-secondary"></div>
+                  <p>Generado este mes</p>
+                </div>
+              </CardContent>
+            </Card>
 
 
           </div>
