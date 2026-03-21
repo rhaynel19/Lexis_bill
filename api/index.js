@@ -1076,7 +1076,7 @@ function getUserSubscription(user) {
 // --- 3. MIDDLEWARE ---
 // 🔥 MIDDLEWARE INTELIGENTE CON NIVELES DE ACCESO (Anti-Errores)
 // SEGURIDAD: Token solo en cookie HttpOnly (no en URL ni localStorage)
-const verifyToken = (req, res, next) => {
+function verifyToken(req, res, next) {
     const token = req.cookies?.lexis_auth;
     if (!token) return res.status(403).json({ message: 'Sesión no válida. Inicie sesión.' });
 
@@ -1139,10 +1139,10 @@ const verifyToken = (req, res, next) => {
             res.status(500).json({ error: 'Error verificando suscripción' });
         }
     });
-};
+}
 
 // Middleware para verificar acceso completo (solo FULL)
-const requireFullAccess = (req, res, next) => {
+function requireFullAccess(req, res, next) {
     if (req.accessLevel !== 'FULL') {
         return res.status(403).json({
             message: 'Acceso limitado. Regulariza tu suscripción para continuar.',
@@ -1151,17 +1151,17 @@ const requireFullAccess = (req, res, next) => {
         });
     }
     next();
-};
+}
 
-const verifyAdmin = (req, res, next) => {
+function verifyAdmin(req, res, next) {
     if (req.user?.role !== 'admin') {
         return res.status(403).json({ message: 'Acceso denegado. Solo administradores.' });
     }
     next();
-};
+}
 
 /** Solo cuentas cliente (user/admin). No se puede ser partner y user con el mismo correo: partners no acceden a facturación. */
-const verifyClient = (req, res, next) => {
+function verifyClient(req, res, next) {
     if (req.user && req.user.role === 'partner') {
         return res.status(403).json({
             message: 'No puedes usar la facturación con esta cuenta. Es una cuenta partner; inicia sesión para acceder al panel de partners.',
@@ -1169,7 +1169,7 @@ const verifyClient = (req, res, next) => {
         });
     }
     next();
-};
+}
 
 // --- 4. HELPERS ---
 // DGII NCF: Tipos soportados - B01/E31 Empresas, B02/E32 Consumidor, B14 Educación, B15/E15 Gobierno
