@@ -186,14 +186,14 @@ export function InvoiceControlCenter({
 
             if (isThisMonth) {
                 if (!externalStats) {
-                    const amount = (inv.total || 0);
+                    const amount = (inv.subtotal || 0);
                     const isCreditNote = inv.ncfType === '04' || inv.ncfType === '34';
                     s.facturadoMes += isCreditNote ? -amount : amount;
                 }
                 s.monthInvs.push(inv);
             }
             if (isPrevMonth && !externalStats) {
-                const amount = (inv.total || 0);
+                const amount = (inv.subtotal || 0);
                 const isCreditNote = inv.ncfType === '04' || inv.ncfType === '34';
                 prevFacturado += isCreditNote ? -amount : amount;
             }

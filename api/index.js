@@ -5025,6 +5025,15 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
                 {
                     $group: {
                         _id: null,
+                        subtotal: { 
+                            $sum: { 
+                                $cond: [
+                                    { $in: ['$ncfType', ['04', '34']] }, 
+                                    { $multiply: [{ $convert: { input: { $ifNull: ['$subtotal', 0] }, to: 'double', onError: 0 } }, -1] }, 
+                                    { $convert: { input: { $ifNull: ['$subtotal', 0] }, to: 'double', onError: 0 } }
+                                ] 
+                            } 
+                        },
                         revenue: { 
                             $sum: { 
                                 $cond: [
@@ -5070,7 +5079,7 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
             ]),
             Invoice.aggregate([
                 { $match: { userId: userId, date: { $gte: startOfPrevMonth, $lte: endOfPrevMonth }, status: { $ne: 'cancelled' } } },
-                { $group: { _id: null, revenue: { $sum: '$total' }, count: { $sum: 1 } } }
+                { $group: { _id: null, revenue: { $sum: { $cond: [{ $in: ['$ncfType', ['04', '34']] }, { $multiply: ['$subtotal', -1] }, '$subtotal'] } }, count: { $sum: 1 } } }
             ]),
             // Cuentas por cobrar robustas: soporta facturas antiguas sin balancePendiente consistente.
             Invoice.aggregate([
@@ -5133,7 +5142,8 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
             ])
         ]);
 
-        const monthlyRevenue = (currentMonthAgg[0] && currentMonthAgg[0].revenue) || 0;
+        const monthlyRevenue = (currentMonthAgg[0] && currentMonthAgg[0].subtotal) || 0;
+        const totalRevenue = (currentMonthAgg[0] && currentMonthAgg[0].revenue) || 0;
         const monthlyCollected = (currentMonthAgg[0] && currentMonthAgg[0].collected) || 0;
         const monthlyTaxes = (currentMonthAgg[0] && currentMonthAgg[0].itbis) || 0;
         const invoiceCount = (currentMonthAgg[0] && currentMonthAgg[0].count) || 0;
@@ -5157,6 +5167,7 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
 
         res.json({
             monthlyRevenue,
+            totalRevenue,
             monthlyCollected,
             previousMonthRevenue,
             monthlyTaxes,
@@ -5617,28 +5628,52 @@ app.post('/api/invoices/:id/duplicate', verifyToken, verifyClient, async (req, r
 app.get('/api/reports/summary', verifyToken, verifyClient, async (req, res) => {
     try {
         const { month, year } = req.query;
+        const userId = mongoose.Types.ObjectId(req.userId);
         const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0, 23, 59, 59);
+        const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
-        const invoices = await Invoice.find({
-            userId: req.userId,
-            date: { $gte: startDate, $lte: endDate },
-            status: { $ne: 'cancelled' }
-        });
+        const summaryAgg = await Invoice.aggregate([
+            { $match: { userId: userId, date: { $gte: startDate, $lte: endDate }, status: { $ne: 'cancelled' } } },
+            {
+                $group: {
+                    _id: null,
+                    subtotal: { 
+                        $sum: { 
+                            $cond: [
+                                { $in: ['$ncfType', ['04', '34']] }, 
+                                { $multiply: [{ $convert: { input: { $ifNull: ['$subtotal', 0] }, to: 'double', onError: 0 } }, -1] }, 
+                                { $convert: { input: { $ifNull: ['$subtotal', 0] }, to: 'double', onError: 0 } }
+                            ] 
+                        } 
+                    },
+                    itbis: { 
+                        $sum: { 
+                            $cond: [
+                                { $in: ['$ncfType', ['04', '34']] }, 
+                                { $multiply: [{ $convert: { input: { $ifNull: ['$itbis', 0] }, to: 'double', onError: 0 } }, -1] }, 
+                                { $convert: { input: { $ifNull: ['$itbis', 0] }, to: 'double', onError: 0 } }
+                            ] 
+                        } 
+                    },
+                    total: { 
+                        $sum: { 
+                            $cond: [
+                                { $in: ['$ncfType', ['04', '34']] }, 
+                                { $multiply: [{ $convert: { input: { $ifNull: ['$total', 0] }, to: 'double', onError: 0 } }, -1] }, 
+                                { $convert: { input: { $ifNull: ['$total', 0] }, to: 'double', onError: 0 } }
+                            ] 
+                        } 
+                    },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
 
-        // Calculamos el subtotal real (sin impuestos) manejando Notas de Crédito
-        const subtotal = invoices.reduce((sum, inv) => {
-            const amount = Number(inv.subtotal || 0);
-            return (inv.ncfType === '04' || inv.ncfType === '34') ? sum - amount : sum + amount;
-        }, 0);
-        const itbis = invoices.reduce((sum, inv) => {
-            const amount = Number(inv.itbis || 0);
-            return (inv.ncfType === '04' || inv.ncfType === '34') ? sum - amount : sum + amount;
-        }, 0);
-        const total = invoices.reduce((sum, inv) => {
-            const amount = Number(inv.total || 0);
-            return (inv.ncfType === '04' || inv.ncfType === '34') ? sum - amount : sum + amount;
-        }, 0);
+        const s = summaryAgg[0] || { subtotal: 0, itbis: 0, total: 0, count: 0 };
+        const subtotal = s.subtotal;
+        const itbis = s.itbis;
+        const total = s.total;
+        const count = s.count;
 
         res.json({
             month,
@@ -5646,7 +5681,7 @@ app.get('/api/reports/summary', verifyToken, verifyClient, async (req, res) => {
             subtotal,
             itbis,
             total,
-            count: invoices.length,
+            count: count,
             confirmedName: req.user.confirmedFiscalName
         });
     } catch (error) {
@@ -5664,35 +5699,67 @@ app.get('/api/reports/tax-health', verifyToken, verifyClient, async (req, res) =
         const startDate = new Date(y, m - 1, 1);
         const endDate = new Date(y, m, 0, 23, 59, 59);
 
-        const [invoices, expenses] = await Promise.all([
-            Invoice.find({
-                userId: req.userId,
-                date: { $gte: startDate, $lte: endDate },
-                status: { $ne: 'cancelled' }
-            }),
+        const userId = mongoose.Types.ObjectId(req.userId);
+        const [invoiceAgg, expenses] = await Promise.all([
+            Invoice.aggregate([
+                { $match: { userId: userId, date: { $gte: startDate, $lte: endDate }, status: { $ne: 'cancelled' } } },
+                {
+                    $group: {
+                        _id: null,
+                        collectedItbis: { 
+                            $sum: { 
+                                $cond: [
+                                    { $in: ['$ncfType', ['04', '34']] }, 
+                                    { $multiply: [{ $convert: { input: { $ifNull: ['$itbis', 0] }, to: 'double', onError: 0 } }, -1] }, 
+                                    { $convert: { input: { $ifNull: ['$itbis', 0] }, to: 'double', onError: 0 } }
+                                ] 
+                            } 
+                        },
+                        retentions: {
+                            $sum: {
+                                $cond: [
+                                    { $in: ['$ncfType', ['04', '34']] },
+                                    { $multiply: [{ $add: [ { $convert: { input: { $ifNull: ['$isrRetention', 0] }, to: 'double', onError: 0 } }, { $convert: { input: { $ifNull: ['$itbisRetention', 0] }, to: 'double', onError: 0 } } ] }, -1] },
+                                    { $add: [ { $convert: { input: { $ifNull: ['$isrRetention', 0] }, to: 'double', onError: 0 } }, { $convert: { input: { $ifNull: ['$itbisRetention', 0] }, to: 'double', onError: 0 } } ] }
+                                ]
+                            }
+                        },
+                        subtotalRevenue: {
+                            $sum: {
+                                $cond: [
+                                    { $in: ['$ncfType', ['04', '34']] },
+                                    { $multiply: [{ $convert: { input: { $ifNull: ['$subtotal', 0] }, to: 'double', onError: 0 } }, -1] },
+                                    { $convert: { input: { $ifNull: ['$subtotal', 0] }, to: 'double', onError: 0 } }
+                                ]
+                            }
+                        },
+                        itbisRetentions: {
+                            $sum: {
+                                $cond: [
+                                    { $in: ['$ncfType', ['04', '34']] },
+                                    { $multiply: [{ $convert: { input: { $ifNull: ['$itbisRetention', 0] }, to: 'double', onError: 0 } }, -1] },
+                                    { $convert: { input: { $ifNull: ['$itbisRetention', 0] }, to: 'double', onError: 0 } }
+                                ]
+                            }
+                        },
+                        count: { $sum: 1 }
+                    }
+                }
+            ]),
             Expense.find({
                 userId: req.userId,
                 date: { $gte: startDate, $lte: endDate }
             })
         ]);
 
-        const collectedItbis = invoices.reduce((sum, inv) => {
-            const amount = Number(inv.itbis || 0);
-            return (inv.ncfType === '04' || inv.ncfType === '34') ? sum - amount : sum + amount;
-        }, 0);
-        const retentions = invoices.reduce((sum, inv) => {
-            const amount = Number(inv.isrRetention || 0) + Number(inv.itbisRetention || 0);
-            return (inv.ncfType === '04' || inv.ncfType === '34') ? sum - amount : sum + amount;
-        }, 0);
-        const subtotalRevenue = invoices.reduce((sum, inv) => {
-            const amount = Number(inv.subtotal || ((inv.total || 0) - (inv.itbis || 0)));
-            return (inv.ncfType === '04' || inv.ncfType === '34') ? sum - amount : sum + amount;
-        }, 0);
+        const i = invoiceAgg[0] || { collectedItbis: 0, retentions: 0, subtotalRevenue: 0, itbisRetentions: 0, count: 0 };
+        const collectedItbis = i.collectedItbis;
+        const retentions = i.retentions;
+        const subtotalRevenue = i.subtotalRevenue;
+        const itbisRetentions = i.itbisRetentions;
+        const invoiceCount = i.count;
         const paidItbis = expenses.reduce((sum, exp) => sum + (exp.itbis != null ? exp.itbis : (exp.amount || 0) * 0.15), 0);
-        const itbisRetentions = invoices.reduce((sum, inv) => {
-            const amount = Number(inv.itbisRetention || 0);
-            return (inv.ncfType === '04' || inv.ncfType === '34') ? sum - amount : sum + amount;
-        }, 0);
+
 
         let liability = collectedItbis - paidItbis;
         if (liability < 0) liability = 0;
