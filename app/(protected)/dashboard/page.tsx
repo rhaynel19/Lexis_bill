@@ -93,10 +93,12 @@ export default function Dashboard() {
   const router = useRouter();
   // Estados para almacenar las estadísticas del dashboard
   const [totalRevenue, setTotalRevenue] = useState(0);
+  const [monthlyRevenue, setMonthlyRevenue] = useState(0);
   const [collectedThisMonth, setCollectedThisMonth] = useState(0);
   const [previousMonthRevenue, setPreviousMonthRevenue] = useState(0);
   const [pendingInvoices, setPendingInvoices] = useState(0);
   const [totalPorCobrar, setTotalPorCobrar] = useState(0);
+  const [totalVencido, setTotalVencido] = useState(0);
   const [predictiveAlerts, setPredictiveAlerts] = useState<string[]>([]);
   const [totalClients, setTotalClients] = useState(0);
   const [recentInvoices, setRecentInvoices] = useState<Invoice[]>([]);
@@ -185,10 +187,13 @@ export default function Dashboard() {
       setRecentInvoices(invoices);
 
       if (statsRes) {
-        setTotalRevenue(statsRes.monthlyRevenue);
-        setCollectedThisMonth(statsRes.monthlyCollected ?? statsRes.monthlyRevenue);
+        setMonthlyRevenue(statsRes.monthlyRevenue);
+        setTotalRevenue(statsRes.totalRevenue || statsRes.monthlyRevenue);
+        setCollectedThisMonth(statsRes.monthlyCollected ?? (statsRes.totalRevenue || statsRes.monthlyRevenue));
         setPreviousMonthRevenue(statsRes.previousMonthRevenue);
-        setTargetInvoices(statsRes.targetInvoices);
+        setPendingInvoices(statsRes.pendingInvoices);
+        setTotalPorCobrar(statsRes.totalPorCobrar);
+        setTotalVencido(statsRes.totalVencido || 0);
         setMonthlyStats({
           revenue: statsRes.monthlyRevenue,
           invoiceCount: statsRes.invoiceCount,
@@ -196,7 +201,8 @@ export default function Dashboard() {
         });
       } else {
         // Fallback: calcular desde facturas (comportamiento anterior)
-        if (invoices.length > 0) {
+        if (recentInvoices.length > 0) {
+          const invoices = recentInvoices;
           const getInvoiceBalance = (inv: Invoice) => {
             const total = Number(inv.total || 0);
             const paid = Math.max(0, Number(inv.montoPagado || 0));
@@ -234,6 +240,9 @@ export default function Dashboard() {
             .filter((inv) => inv._bal > 0);
           setPendingInvoices(pendingData.length);
           setTotalPorCobrar(pendingData.reduce((sum, inv) => sum + inv._bal, 0));
+          const overdueThreshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          const vencidoData = pendingData.filter(inv => new Date(inv.date) < overdueThreshold);
+          setTotalVencido(vencidoData.reduce((sum, inv) => sum + inv._bal, 0));
           setTotalClients(new Set(invoices.map((inv) => inv.rnc || inv.clientRnc || "")).size);
           setMonthlyStats({
             revenue: monthlyRevenue,
@@ -557,9 +566,12 @@ export default function Dashboard() {
           onRefresh={handleRefresh}
           isLoading={isLoading}
           externalStats={{
-            monthlyRevenue: totalRevenue,
+            monthlyRevenue: monthlyRevenue,
+            totalRevenue: totalRevenue,
             monthlyCollected: collectedThisMonth,
             totalPorCobrar: totalPorCobrar,
+            totalVencido: totalVencido,
+            invoiceCount: monthlyStats?.invoiceCount || 0,
             revenueChange: previousMonthRevenue > 0 ? ((totalRevenue - previousMonthRevenue) / previousMonthRevenue) * 100 : 0
           }}
         />

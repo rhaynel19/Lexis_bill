@@ -18,6 +18,8 @@ import {
     AlertCircle,
     ChevronDown,
     ChevronUp,
+    TrendingUp,
+    Receipt,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -74,6 +76,15 @@ interface InvoiceControlCenterProps {
     onRefresh: () => void;
     onRequestCreditNote?: (inv: Invoice) => void;
     isLoading?: boolean;
+    externalStats?: { 
+        monthlyRevenue: number; 
+        totalRevenue: number;
+        monthlyCollected: number; 
+        totalPorCobrar: number;
+        totalVencido?: number;
+        invoiceCount?: number;
+        revenueChange?: number;
+    };
 }
 
 const TIPO_PAGO_LABELS: Record<string, string> = {
@@ -125,14 +136,7 @@ export function InvoiceControlCenter({
     onRequestCreditNote, 
     isLoading,
     externalStats 
-}: InvoiceControlCenterProps & { 
-    externalStats?: { 
-        monthlyRevenue: number; 
-        monthlyCollected: number; 
-        totalPorCobrar: number;
-        revenueChange?: number;
-    } 
-}) {
+}: InvoiceControlCenterProps) {
     const router = useRouter();
     const [quickFilter, setQuickFilter] = useState<string>("all");
     const [searchQuery, setSearchQuery] = useState("");
@@ -403,8 +407,60 @@ export function InvoiceControlCenter({
     return (
         <>
             <div className="relative mt-6 space-y-6">
-                {/* Tarjetas Resumen Financiero removidas por redundancia con Copilot */}
-
+                {externalStats && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <Card className="bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/20 dark:to-background border-emerald-100 dark:border-emerald-900/50">
+                            <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
+                                <CardTitle className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Total Facturado</CardTitle>
+                                <TrendingUp className="h-4 w-4 text-emerald-500" />
+                            </CardHeader>
+                            <CardContent className="py-0 px-4 pb-4">
+                                <div className="text-xl font-bold">{formatCurrency(externalStats.totalRevenue)}</div>
+                                <p className="text-[10px] text-muted-foreground mt-1">Total con impuestos este mes</p>
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background border-blue-100 dark:border-blue-900/50">
+                            <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
+                                <CardTitle className="text-xs font-medium text-blue-600 dark:text-blue-400">Cobrado este Mes</CardTitle>
+                                <DollarSign className="h-4 w-4 text-blue-500" />
+                            </CardHeader>
+                            <CardContent className="py-0 px-4 pb-4">
+                                <div className="text-xl font-bold">{formatCurrency(externalStats.monthlyCollected)}</div>
+                                <p className="text-[10px] text-muted-foreground mt-1">Ingresos reales recibidos</p>
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background border-amber-100 dark:border-amber-900/50">
+                            <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
+                                <CardTitle className="text-xs font-medium text-amber-600 dark:text-amber-400">Pendiente de Cobro</CardTitle>
+                                <Clock className="h-4 w-4 text-amber-500" />
+                            </CardHeader>
+                            <CardContent className="py-0 px-4 pb-4">
+                                <div className="text-xl font-bold">{formatCurrency(externalStats.totalPorCobrar)}</div>
+                                <p className="text-[10px] text-muted-foreground mt-1">Montos por saldar</p>
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background border-red-100 dark:border-red-900/50">
+                            <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
+                                <CardTitle className="text-xs font-medium text-red-600 dark:text-red-400">Vencido / Atrasado</CardTitle>
+                                <AlertCircle className="h-4 w-4 text-red-500" />
+                            </CardHeader>
+                            <CardContent className="py-0 px-4 pb-4">
+                                <div className="text-xl font-bold">{formatCurrency(externalStats.totalVencido || 0)}</div>
+                                <p className="text-[10px] text-muted-foreground mt-1">Requieren atención inmediata</p>
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-stone-50/50 dark:bg-stone-900/20 border-stone-100 dark:border-stone-800/50">
+                            <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
+                                <CardTitle className="text-xs font-medium text-stone-600 dark:text-stone-400">Total Facturas</CardTitle>
+                                <Receipt className="h-4 w-4 text-stone-500" />
+                            </CardHeader>
+                            <CardContent className="py-0 px-4 pb-4">
+                                <div className="text-xl font-bold">{externalStats.invoiceCount || invoices.length}</div>
+                                <p className="text-[10px] text-muted-foreground mt-1">Este período fiscal</p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
                 {/* Alertas Inteligentes */}
                 {alerts.length > 0 && (
                     <div className="space-y-2">

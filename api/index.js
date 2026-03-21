@@ -5127,7 +5127,22 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
                     }
                 },
                 { $match: { _effectiveBalance: { $gt: 0 }, ncfType: { $nin: ['04', '34'] } } },
-                { $group: { _id: null, count: { $sum: 1 }, totalPorCobrar: { $sum: '$_effectiveBalance' } } }
+                { 
+                    $group: { 
+                        _id: null, 
+                        count: { $sum: 1 }, 
+                        totalPorCobrar: { $sum: '$_effectiveBalance' },
+                        totalVencido: {
+                            $sum: {
+                                $cond: [
+                                    { $lt: ['$date', new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)] },
+                                    '$_effectiveBalance',
+                                    0
+                                ]
+                            }
+                        }
+                    } 
+                }
             ]),
             Invoice.aggregate([
                 { $match: { userId, status: { $ne: 'cancelled' } } },
@@ -5174,6 +5189,7 @@ app.get('/api/dashboard/stats', verifyToken, verifyClient, async (req, res) => {
             invoiceCount,
             pendingInvoices,
             totalPorCobrar,
+            totalVencido: (porCobrarRow && porCobrarRow.totalVencido) || 0,
             totalClients,
             chartData: last4MonthsData,
             monthLabels,
