@@ -1523,15 +1523,15 @@ export default function NewInvoice() {
                                         </div>
                                     )}
                                     {/* Vista tabla (escritorio) */}
-                                    <div className="hidden md:block overflow-x-auto">
-                                        <Table>
+                                    <div className="hidden md:block overflow-x-auto pb-4">
+                                        <Table className="min-w-[700px]">
                                             <TableHeader>
                                                 <TableRow className="bg-muted/30 hover:bg-transparent">
-                                                    <TableHead className="w-[45%] font-bold text-foreground">Descripción</TableHead>
-                                                    <TableHead className="w-[10%] text-center font-bold text-foreground">Cant.</TableHead>
-                                                    <TableHead className="w-[20%] text-right font-bold text-foreground">Precio</TableHead>
-                                                    <TableHead className="w-[10%] text-center font-bold text-foreground">ITBIS</TableHead>
-                                                    <TableHead className="w-[15%] text-right font-bold text-foreground">Total</TableHead>
+                                                    <TableHead className="w-[45%] min-w-[280px] font-bold text-foreground">Descripción</TableHead>
+                                                    <TableHead className="w-[10%] min-w-[70px] text-center font-bold text-foreground">Cant.</TableHead>
+                                                    <TableHead className="w-[20%] min-w-[100px] text-right font-bold text-foreground">Precio</TableHead>
+                                                    <TableHead className="w-[10%] min-w-[60px] text-center font-bold text-foreground">ITBIS</TableHead>
+                                                    <TableHead className="w-[15%] min-w-[100px] text-right font-bold text-foreground">Total</TableHead>
                                                     <TableHead className="w-[50px]"></TableHead>
                                                 </TableRow>
                                             </TableHeader>

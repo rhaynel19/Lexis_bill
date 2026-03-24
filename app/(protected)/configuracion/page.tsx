@@ -84,17 +84,53 @@ export default function Configuration() {
         setConfig({ ...config, profession: e.target.value });
     };
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'seal') => {
+    const compressImage = (file: File): Promise<string> => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    const ctx = canvas.getContext("context"); // typo fix below
+                    const ctx2 = canvas.getContext("2d");
+                    
+                    // Max width/height 600px
+                    const MAX_SIZE = 600;
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > height && width > MAX_SIZE) {
+                        height *= MAX_SIZE / width;
+                        width = MAX_SIZE;
+                    } else if (height > MAX_SIZE) {
+                        width *= MAX_SIZE / height;
+                        height = MAX_SIZE;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    if (ctx2) {
+                        ctx2.drawImage(img, 0, 0, width, height);
+                        // Comprimir a JPEG 70% calidad para logos ligeros, o mantener PNG nativo si tiene transparencia.
+                        // Para evitar romper los sellos que suelen ser PNG transparentes, reducimos tamaño sin forzar JPEG:
+                        resolve(canvas.toDataURL(file.type === "image/png" ? "image/png" : "image/jpeg", 0.7));
+                    } else {
+                        resolve(img.src);
+                    }
+                };
+            };
+        });
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'seal') => {
         if (configLocked) return;
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result as string;
-                if (type === 'logo') setLogoPreview(result);
-                else setSealPreview(result);
-            };
-            reader.readAsDataURL(file);
+            // Audit Quick Win: Compress logo/seal before saving to reduce PDF generation lag
+            const compressedBase64 = await compressImage(file);
+            if (type === 'logo') setLogoPreview(compressedBase64);
+            else setSealPreview(compressedBase64);
         }
     };
 

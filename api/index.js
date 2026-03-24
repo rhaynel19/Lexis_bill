@@ -136,6 +136,8 @@ function computeAmountsFromItems(items, appConfig) {
 
 /** En producción no exponer mensajes internos ni stack al cliente. */
 function safeErrorMessage(err) {
+    // Audit Quick Win: Registrar el error real en la consola del servidor para depuración
+    if (err) console.error('[SAFE_ERROR_LOG]', err);
     return (err && err.message ? err.message : 'Error interno del servidor');
 }
 

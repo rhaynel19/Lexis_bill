@@ -36,6 +36,11 @@ class BillingBrain {
      */
     async analyze() {
         this.insights = [];
+        
+        // Audit Quick Win: Limitar el análisis a los últimos 6 meses para proteger la memoria del servidor
+        const sixMonthsAgo = new Date(this.now);
+        sixMonthsAgo.setMonth(this.now.getMonth() - 6);
+        this.invoices = this.invoices.filter(inv => new Date(inv.date) >= sixMonthsAgo);
 
         // Análisis críticos (dinero en riesgo)
         this._analyzeUnpaidInvoices();
