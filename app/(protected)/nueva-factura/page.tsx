@@ -1913,7 +1913,7 @@ export default function NewInvoice() {
                                                             <SelectValue placeholder="Seleccione ITBIS" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="0.10">10%</SelectItem>
+                                                            <SelectItem value="0.10">10% (Casos Específicos)</SelectItem>
                                                             <SelectItem value="0.30">30% (Profesionales)</SelectItem>
                                                             <SelectItem value="0.75">75% (Construcción/Seguridad)</SelectItem>
                                                             <SelectItem value="1.00">100% (Honorarios y Estado)</SelectItem>
