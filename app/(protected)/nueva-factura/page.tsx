@@ -1890,15 +1890,15 @@ export default function NewInvoice() {
                                                 <div>
                                                     <Label htmlFor="isr-ret-rate" className="text-xs">Tasa Retención ISR</Label>
                                                     <Select
-                                                        value={isrRetentionRate.toString()}
+                                                        value={isrRetentionRate.toFixed(2)}
                                                         onValueChange={(val) => setIsrRetentionRate(parseFloat(val))}
                                                     >
-                                                        <SelectTrigger id="isr-ret-rate" className="h-8">
-                                                            <SelectValue />
+                                                        <SelectTrigger id="isr-ret-rate" className="h-8 w-full">
+                                                            <SelectValue placeholder="Seleccione ISR" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="0.10">10% (Servicios Profesionales/Alquiler)</SelectItem>
-                                                            <SelectItem value="0.02">2% (Servicios Técnicos/Contratistas)</SelectItem>
+                                                            <SelectItem value="0.10">10% (Profesional/Alquiler)</SelectItem>
+                                                            <SelectItem value="0.02">2% (Técnico/Contratista)</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                     <p className="text-[10px] text-muted-foreground mt-1">Se retiene del subtotal gravable.</p>
@@ -1906,17 +1906,17 @@ export default function NewInvoice() {
                                                 <div>
                                                     <Label htmlFor="itbis-ret-rate" className="text-xs">Tasa Retención ITBIS</Label>
                                                     <Select
-                                                        value={itbisRetentionRate.toString()}
+                                                        value={itbisRetentionRate.toFixed(2)}
                                                         onValueChange={(val) => setItbisRetentionRate(parseFloat(val))}
                                                     >
-                                                        <SelectTrigger id="itbis-ret-rate" className="h-8">
-                                                            <SelectValue />
+                                                        <SelectTrigger id="itbis-ret-rate" className="h-8 w-full">
+                                                            <SelectValue placeholder="Seleccione ITBIS" />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectItem value="0.10">10%</SelectItem>
-                                                            <SelectItem value="0.30">30% (Servicios Profesionales)</SelectItem>
-                                                            <SelectItem value="0.75">75% (Seguridad/Limpieza)</SelectItem>
-                                                            <SelectItem value="1.00">100% (Casos Especiales/Honorarios)</SelectItem>
+                                                            <SelectItem value="0.30">30% (Profesionales)</SelectItem>
+                                                            <SelectItem value="0.75">75% (Construcción/Seguridad)</SelectItem>
+                                                            <SelectItem value="1.00">100% (Honorarios y Estado)</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                     <p className="text-[10px] text-muted-foreground mt-1">Se retiene del ITBIS facturado.</p>
