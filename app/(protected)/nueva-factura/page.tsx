@@ -59,6 +59,7 @@ export default function NewInvoice() {
     const [rncError, setRncError] = useState("");
     const [applyRetentions, setApplyRetentions] = useState(false);
     const [itbisRetentionRate, setItbisRetentionRate] = useState(0.30); // 30% por defecto
+    const [isrRetentionRate, setIsrRetentionRate] = useState(0.10); // 10% por defecto
     const [showPreview, setShowPreview] = useState(false);
     const [showPasteItemsDialog, setShowPasteItemsDialog] = useState(false);
     const [pasteItemsText, setPasteItemsText] = useState("");
@@ -726,7 +727,7 @@ export default function NewInvoice() {
 
     // Calcular Retenciones (solo si se activan)
     // ISR: 10% de la base imponible (Servicios Profesionales)
-    const isrRetention = applyRetentions ? taxableSubtotal * 0.10 : 0;
+    const isrRetention = applyRetentions ? taxableSubtotal * isrRetentionRate : 0;
 
     // Retención ITBIS: 30% del ITBIS (Norma 02-05 para servicios)
     const itbisRetention = applyRetentions ? itbis * itbisRetentionRate : 0;
@@ -1407,12 +1408,20 @@ export default function NewInvoice() {
                                                         <SelectValue placeholder="Selecciona ARS" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="senasa">SeNaSa</SelectItem>
-                                                        <SelectItem value="mapfre">Mapfre Salud</SelectItem>
+                                                        <SelectItem value="senasa">ARS SeNaSa</SelectItem>
                                                         <SelectItem value="humano">Primera ARS (Humano)</SelectItem>
+                                                        <SelectItem value="mapfre">Mapfre Salud</SelectItem>
                                                         <SelectItem value="universal">ARS Universal</SelectItem>
-                                                        <SelectItem value="palic">ARS Palic</SelectItem>
-                                                        <SelectItem value="other">Otras / Privado</SelectItem>
+                                                        <SelectItem value="yunen">ARS Yunén</SelectItem>
+                                                        <SelectItem value="monumental">ARS Monumental</SelectItem>
+                                                        <SelectItem value="reservas">ARS Reservas</SelectItem>
+                                                        <SelectItem value="metasalud">ARS Meta Salud</SelectItem>
+                                                        <SelectItem value="simag">ARS Simag</SelectItem>
+                                                        <SelectItem value="renacer">ARS Renacer</SelectItem>
+                                                        <SelectItem value="futuro">ARS Futuro</SelectItem>
+                                                        <SelectItem value="cmd">ARS CMD</SelectItem>
+                                                        <SelectItem value="aps">ARS APS</SelectItem>
+                                                        <SelectItem value="other">Privado / Ninguna</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -1878,9 +1887,21 @@ export default function NewInvoice() {
                                         </div>
                                         {applyRetentions && (
                                             <div className="mt-3 ml-6 grid gap-4 grid-cols-1 md:grid-cols-2">
-                                                <div className="text-sm text-muted-foreground">
-                                                    <span className="block font-medium text-foreground">ISR (10%)</span>
-                                                    Se retiene el 10% del subtotal por servicios profesionales.
+                                                <div>
+                                                    <Label htmlFor="isr-ret-rate" className="text-xs">Tasa Retención ISR</Label>
+                                                    <Select
+                                                        value={isrRetentionRate.toString()}
+                                                        onValueChange={(val) => setIsrRetentionRate(parseFloat(val))}
+                                                    >
+                                                        <SelectTrigger id="isr-ret-rate" className="h-8">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="0.10">10% (Servicios Profesionales/Alquiler)</SelectItem>
+                                                            <SelectItem value="0.02">2% (Servicios Técnicos/Contratistas)</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <p className="text-[10px] text-muted-foreground mt-1">Se retiene del subtotal gravable.</p>
                                                 </div>
                                                 <div>
                                                     <Label htmlFor="itbis-ret-rate" className="text-xs">Tasa Retención ITBIS</Label>
@@ -1892,10 +1913,13 @@ export default function NewInvoice() {
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
+                                                            <SelectItem value="0.10">10%</SelectItem>
                                                             <SelectItem value="0.30">30% (Servicios Profesionales)</SelectItem>
-                                                            <SelectItem value="1.00">100% (Casos Especiales)</SelectItem>
+                                                            <SelectItem value="0.75">75% (Seguridad/Limpieza)</SelectItem>
+                                                            <SelectItem value="1.00">100% (Casos Especiales/Honorarios)</SelectItem>
                                                         </SelectContent>
                                                     </Select>
+                                                    <p className="text-[10px] text-muted-foreground mt-1">Se retiene del ITBIS facturado.</p>
                                                 </div>
                                             </div>
                                         )}
@@ -1937,7 +1961,7 @@ export default function NewInvoice() {
                                     {isrRetention > 0 && (
                                         <div className="flex justify-between items-center py-2 border-b border-border/10 text-destructive">
                                             <span className="font-medium">
-                                                Retención ISR (10%):
+                                                Retención ISR ({isrRetentionRate * 100}%):
                                             </span>
                                             <span className="text-xl font-semibold">
                                                 - {formatCurrency(isrRetention)}
