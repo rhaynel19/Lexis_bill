@@ -1922,8 +1922,9 @@ export default function NewInvoice() {
                                                             <SelectValue placeholder="Seleccione ISR" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="0.10">10% (Profesional/Alquiler)</SelectItem>
-                                                            <SelectItem value="0.02">2% (Técnico/Contratista)</SelectItem>
++                                                            <SelectItem value="0.00">0% (Sin Retención)</SelectItem>
+                                                             <SelectItem value="0.10">10% (Profesional/Alquiler)</SelectItem>
+                                                             <SelectItem value="0.02">2% (Técnico/Contratista)</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                     <p className="text-[10px] text-muted-foreground mt-1">Se retiene del subtotal gravable.</p>
@@ -1938,10 +1939,11 @@ export default function NewInvoice() {
                                                             <SelectValue placeholder="Seleccione ITBIS" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="0.10">10% (Casos Específicos)</SelectItem>
-                                                            <SelectItem value="0.30">30% (Profesionales)</SelectItem>
-                                                            <SelectItem value="0.75">75% (Construcción/Seguridad)</SelectItem>
-                                                            <SelectItem value="1.00">100% (Honorarios y Estado)</SelectItem>
++                                                            <SelectItem value="0.00">0% (Sin Retención)</SelectItem>
+                                                             <SelectItem value="0.10">10% (Casos Específicos)</SelectItem>
+                                                             <SelectItem value="0.30">30% (Profesionales)</SelectItem>
+                                                             <SelectItem value="0.75">75% (Construcción/Seguridad)</SelectItem>
+                                                             <SelectItem value="1.00">100% (Honorarios y Estado)</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                     <p className="text-[10px] text-muted-foreground mt-1">Se retiene del ITBIS facturado.</p>
