@@ -200,6 +200,15 @@ export const api = {
         });
     },
 
+    /** Anulación simple para Reporte 608 (Pérdida/Deterioro/Errores) */
+    async annulInvoice(invoiceId: string, reason: string) {
+        return secureFetch<{ success: boolean; message: string }>(`${API_URL}/invoices/${invoiceId}/annul`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reason }),
+        });
+    },
+
     /** Facturar de nuevo: clona factura a borrador (sin NCF). Redirigir a /nueva-factura?from=id&fromNcf=... */
     async duplicateInvoice(invoiceId: string) {
         return secureFetch<{ success: boolean; fromInvoiceId: string; fromInvoiceNcf: string }>(

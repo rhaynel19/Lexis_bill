@@ -40,6 +40,7 @@ interface InvoiceItem {
     description: string;
     quantity: number | string;
     price: number | string;
+    taxRate?: number;
     isExempt?: boolean; // Legacy/UI support
     taxCategory?: 'taxable' | 'exempt';
 }
@@ -174,7 +175,7 @@ export default function NewInvoice() {
     const [savedTemplates, setSavedTemplates] = useState<any[]>([]);
 
     const [items, setItems] = useState<InvoiceItem[]>([
-        { id: "1", description: "", quantity: 1, price: 0, taxCategory: 'taxable' }
+        { id: "1", description: "", quantity: 1, price: 0, taxCategory: 'taxable', taxRate: 0.18 }
     ]);
 
     // Success Modal & PDF State
@@ -439,10 +440,11 @@ export default function NewInvoice() {
             description: i.description || "",
             quantity: i.quantity ?? 1,
             price: i.price ?? 0,
+            taxRate: i.taxRate ?? (i.taxCategory === 'exempt' || i.isExempt ? 0 : 0.18),
             isExempt: i.isExempt || i.taxCategory === 'exempt',
             taxCategory: i.taxCategory || (i.isExempt ? 'exempt' : 'taxable')
         }));
-        setItems(its.length ? its : [{ id: "1", description: "", quantity: 1, price: 0, taxCategory: 'taxable' }]);
+        setItems(its.length ? its : [{ id: "1", description: "", quantity: 1, price: 0, taxCategory: 'taxable', taxRate: 0.18 }]);
         toast.success(`Plantilla "${t.name}" cargada. Los datos están listos para editar.`);
     };
 
@@ -523,11 +525,12 @@ export default function NewInvoice() {
     const handleUseSameConfig = () => {
         const inv = lastInvoiceFromAutofill;
         if (!inv?.items?.length) return;
-        const its = inv.items.map((i, idx) => ({
+        const its = inv.items.map((i: any, idx) => ({
             id: Date.now().toString() + idx,
             description: i.description,
             quantity: i.quantity ?? 1,
             price: i.price ?? 0,
+            taxRate: i.taxRate ?? (i.taxCategory === 'exempt' || i.isExempt ? 0 : 0.18),
             isExempt: i.isExempt || i.taxCategory === 'exempt',
             taxCategory: i.taxCategory || (i.isExempt ? 'exempt' : 'taxable'),
         }));
@@ -555,6 +558,7 @@ export default function NewInvoice() {
                 description: i.description ?? "",
                 quantity: i.quantity ?? 1,
                 price: i.price ?? 0,
+                taxRate: (i as any).taxRate ?? ((i.isExempt || i.taxCategory === 'exempt') ? 0 : 0.18),
                 isExempt: i.isExempt || i.taxCategory === 'exempt',
                 taxCategory: i.taxCategory || (i.isExempt ? 'exempt' : 'taxable'),
             }));
@@ -599,6 +603,7 @@ export default function NewInvoice() {
                 description: p.description,
                 quantity: p.quantity,
                 price: p.price,
+                taxRate: 0.18,
                 isExempt: (invoiceType === "44" || p.isExempt),
                 taxCategory: (invoiceType === "44" || p.isExempt) ? 'exempt' : 'taxable'
             }));
@@ -632,6 +637,7 @@ export default function NewInvoice() {
             description: "",
             quantity: 1,
             price: 0,
+            taxRate: 0.18,
             isExempt: invoiceType === "44" || invoiceType === "14",
             taxCategory: (invoiceType === "44" || invoiceType === "14") ? 'exempt' : 'taxable',
         };
@@ -725,8 +731,15 @@ export default function NewInvoice() {
         return isExempt ? sum : sum + (qty * price);
     }, 0);
 
-    // Calcular ITBIS (18% de la base imponible)
-    const itbis = taxableSubtotal * 0.18;
+    // Calcular ITBIS (Basado en la tasa individual de cada ítem)
+    const itbis = items.reduce((sum, item) => {
+        const qty = typeof item.quantity === 'string' ? (parseFloat(item.quantity) || 0) : item.quantity;
+        const price = typeof item.price === 'string' ? (parseFloat(item.price) || 0) : item.price;
+        const isExempt = item.taxCategory === 'exempt' || item.isExempt;
+        if (isExempt) return sum;
+        const rate = item.taxRate != null ? item.taxRate : 0.18;
+        return sum + (qty * price * rate);
+    }, 0);
 
     // Calcular Retenciones (solo si se activan)
     // ISR: 10% de la base imponible (Servicios Profesionales)
@@ -736,8 +749,6 @@ export default function NewInvoice() {
     const itbisRetention = applyRetentions ? itbis * itbisRetentionRate : 0;
 
     // Total Factura (lo que paga el cliente antes de retenciones)
-    // Nota: En e-CF, el total de la factura incluye ITBIS. Las retenciones son informativas para el pago.
-    // Sin embargo, para "cuánto recibiré neto", calculamos:
     const invoiceTotal = subtotal + itbis;
 
     // Total a Recibir (Neto)
@@ -1643,22 +1654,32 @@ export default function NewInvoice() {
                                                                 />
                                                             </TableCell>
 
-                                                            {/* Checkbox ITBIS Gravado */}
+                                                            {/* Tasa ITBIS Gravado */}
                                                             <TableCell className="text-center">
-                                                                <div className="flex items-center justify-center h-full">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        className="w-4 h-4 text-indigo-600 rounded-md border-slate-300 focus:ring-indigo-500 cursor-pointer"
-                                                                        checked={!(item.taxCategory === 'exempt' || item.isExempt || false)}
-                                                                        onChange={(e) => {
-                                                                            const isGravado = e.target.checked;
-                                                                            updateItem(item.id, "isExempt", !isGravado);
-                                                                            updateItem(item.id, "taxCategory", isGravado ? 'taxable' : 'exempt');
-                                                                        }}
-                                                                        aria-label={!(item.taxCategory === 'exempt' || item.isExempt) ? "Gravado con ITBIS - Marcar para exentar" : "Exento de ITBIS - Marcar para gravar"}
-                                                                        title={!(item.taxCategory === 'exempt' || item.isExempt) ? "Gravado con ITBIS" : "Exento de ITBIS"}
-                                                                    />
-                                                                </div>
+                                                                <Select 
+                                                                    value={item.taxCategory === 'exempt' || item.isExempt ? "0" : (item.taxRate || 0.18).toString()} 
+                                                                    onValueChange={(val) => {
+                                                                        const rate = parseFloat(val);
+                                                                        if (rate === 0) {
+                                                                            updateItem(item.id, "isExempt", true);
+                                                                            updateItem(item.id, "taxCategory", 'exempt');
+                                                                            updateItem(item.id, "taxRate", 0);
+                                                                        } else {
+                                                                            updateItem(item.id, "isExempt", false);
+                                                                            updateItem(item.id, "taxCategory", 'taxable');
+                                                                            updateItem(item.id, "taxRate", rate);
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <SelectTrigger className="h-8 text-xs font-semibold">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="0.18">18%</SelectItem>
+                                                                        <SelectItem value="0.16">16%</SelectItem>
+                                                                        <SelectItem value="0">0% (Exento)</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
                                                             </TableCell>
 
                                                             {/* Subtotal del ítem */}

@@ -115,23 +115,23 @@ const sanitizeItems = (items, isTaxExemptCompany = false) => {
 /** Recalcula subtotal, itbis y total desde ítems (nunca confiar en frontend). Usa taxSettings del usuario. */
 function computeAmountsFromItems(items, appConfig) {
     let subtotal = 0;
-    let taxableAmount = 0;
+    let totalItbis = 0;
     const isTaxExemptCompany = appConfig?.taxSettings?.isTaxExemptCompany || false;
 
     items.forEach(item => {
         const itemTotal = item.quantity * item.price;
         subtotal += itemTotal;
         
-        // Item is taxable if not explicitly exempt and company is not exempt
+        // El ítem es gravado si no es exento Y la empresa no es exenta
         if (!isTaxExemptCompany && !item.isExempt && item.taxCategory !== 'exempt') {
-            taxableAmount += itemTotal;
+            const rate = item.taxRate != null ? Number(item.taxRate) : 0.18;
+            totalItbis += itemTotal * rate;
         }
     });
 
-    const itbis = taxableAmount * 0.18;
-    const total = subtotal + itbis;
+    const total = subtotal + totalItbis;
 
-    return { subtotal, itbis, total };
+    return { subtotal, itbis: totalItbis, total };
 }
 
 /** En producción no exponer mensajes internos ni stack al cliente. */
@@ -422,6 +422,7 @@ const invoiceSchema = new mongoose.Schema({
         quantity: { type: Number, required: true },
         price: { type: Number, required: true },
         taxCategory: { type: String, enum: ['taxable', 'exempt'], default: 'taxable' }, // Per-item tax
+        taxRate: { type: Number, default: 0.18 },
         isExempt: { type: Boolean, default: false } // Legacy support
     }],
     subtotal: { type: Number, required: true },
@@ -440,6 +441,8 @@ const invoiceSchema = new mongoose.Schema({
     estadoPago: { type: String, enum: ['pendiente', 'parcial', 'pagado', 'credito_aplicado'], default: 'pendiente' },
     fechaPago: { type: Date, default: null },
     status: { type: String, enum: ['active', 'pending', 'cancelled', 'credited', 'partially_credited', 'fully_credited', 'void'], default: 'active' },
+    cancellationReason: { type: String }, // DGII 608: 01-05
+    cancelledAt: { type: Date },
     modifiedNcf: { type: String },
 });
 invoiceSchema.index({ userId: 1, date: -1 });
@@ -5449,6 +5452,37 @@ app.post('/api/invoices/:invoiceId/payments', verifyToken, verifyClient, async (
     }
 });
 
+// --- Anular Factura (Simple, sin Nota de Crédito, para Reporte 608) ---
+app.post('/api/invoices/:id/annul', verifyToken, verifyClient, async (req, res) => {
+    const { id } = req.params;
+    const { reason } = req.body; // 01:Deterioro, 02:Errores Impresión, 03:Impresión Defectuosa, 04:Duplicidad, 05:Otros
+
+    if (!reason) return res.status(400).json({ message: 'El motivo de anulación (01-05) es obligatorio conforme a DGII.' });
+
+    try {
+        const invoice = await Invoice.findOne({ _id: id, userId: req.userId });
+        if (!invoice) return res.status(404).json({ message: 'Factura no encontrada.' });
+        if (invoice.status === 'cancelled') return res.status(400).json({ message: 'La factura ya se encuentra anulada.' });
+        if (invoice.status === 'fully_credited' || invoice.status === 'partially_credited') {
+            return res.status(400).json({ message: 'No se puede anular (608) una factura que ya tiene una Nota de Crédito (607). Debe anular la Nota de Crédito primero si aplica.' });
+        }
+
+        invoice.status = 'cancelled';
+        invoice.cancellationReason = reason;
+        invoice.cancelledAt = new Date();
+        await invoice.save();
+
+        res.json({ 
+            success: true,
+            message: 'Factura anulada exitosamente para reporte 608.', 
+            ncf: invoice.ncfSequence || invoice.ncf 
+        });
+    } catch (error) {
+        log.error({ err: error.message, id }, 'Error en anulación simple');
+        res.status(500).json({ message: safeErrorMessage(error) });
+    }
+});
+
 // --- Nota de Crédito (anular factura con e-CF 34 o B04) ---
 app.post('/api/invoices/:invoiceId/credit-note', verifyToken, verifyClient, async (req, res) => {
     const invoiceId = req.params.invoiceId;
@@ -6187,6 +6221,47 @@ app.get('/api/reports/607', verifyToken, verifyClient, async (req, res) => {
         }).catch(() => {});
     } catch (error) {
         log.error({ err: error.message }, 'Error 607');
+        res.status(500).json({ message: safeErrorMessage(error) });
+    }
+});
+
+// --- Generar Reporte 608 (Anulaciones) ---
+app.get('/api/reports/608', verifyToken, verifyClient, async (req, res) => {
+    try {
+        const { month, year } = req.query;
+        if (!month || !year) return res.status(400).json({ message: 'Mes y año son requeridos para el reporte 608.' });
+
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+        const annulledInvoices = await Invoice.find({
+            userId: req.userId,
+            status: 'cancelled',
+            cancelledAt: { $gte: startDate, $lte: endDate }
+        }).lean();
+
+        const periodo = `${year}${month.toString().padStart(2, '0')}`;
+        const rncEmisor = req.user.rnc.replace(/[^\d]/g, '');
+        
+        // Header DGII 608: 608|RNC|Periodo|Cantidad
+        let report = `608|${rncEmisor}|${periodo}|${annulledInvoices.length}\n`;
+
+        annulledInvoices.forEach(inv => {
+            const rncCliente = (inv.clientRnc || '').replace(/[^0-9]/g, '');
+            const ncf = inv.ncfSequence || inv.ncf;
+            // Fecha de anulación en formato YYYYMMDD
+            const fecha = new Date(inv.cancelledAt || inv.date).toISOString().slice(0, 10).replace(/-/g, '');
+            const tipoAnulacion = inv.cancellationReason || '05'; // 05 = Otros
+            
+            // Formato DGII 608 (4 Columnas): RNC/Cédula|NCF Anulado|FechaAnulacion|TipoAnulacion
+            report += `${rncCliente}|${ncf}|${fecha}|${tipoAnulacion}\n`;
+        });
+
+        res.setHeader('Content-Type', 'text/plain; charset=iso-8859-1');
+        res.setHeader('Content-Disposition', `attachment; filename=608_${rncEmisor}_${periodo}.txt`);
+        res.send(report);
+    } catch (error) {
+        log.error({ err: error.message }, 'Error generando reporte 608');
         res.status(500).json({ message: safeErrorMessage(error) });
     }
 });

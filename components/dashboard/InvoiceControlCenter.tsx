@@ -19,7 +19,7 @@ import {
     ChevronDown,
     ChevronUp,
     TrendingUp,
-    Receipt,
+    Receipt, Ban,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -160,6 +160,10 @@ export function InvoiceControlCenter({
     const [amountMin, setAmountMin] = useState("");
     const [amountMax, setAmountMax] = useState("");
     const [filterTipoPago, setFilterTipoPago] = useState<string>("");
+    const [showAnnulDialog, setShowAnnulDialog] = useState(false);
+    const [annulInvoice, setAnnulInvoice] = useState<Invoice | null>(null);
+    const [annulReason, setAnnulReason] = useState("05"); // DGII: 01:Deterioro, 02:Errores Impresión, 03:Impresión Defectuosa, 04:Duplicidad, 05:Otros
+    const [isAnnulling, setIsAnnulling] = useState(false);
 
     const now = useMemo(() => new Date(), []);
     const currentMonth = now.getMonth();
@@ -290,6 +294,31 @@ export function InvoiceControlCenter({
     const handleView = (inv: Invoice) => {
         setSelectedInvoice(inv);
         setIsViewerOpen(true);
+    };
+
+    const handleAnnulClick = (inv: Invoice) => {
+        setAnnulInvoice(inv);
+        setAnnulReason("05");
+        setShowAnnulDialog(true);
+    };
+
+    const submitAnnul = async () => {
+        if (!annulInvoice) return;
+        const invoiceId = annulInvoice._id || annulInvoice.id;
+        if (!invoiceId) return;
+        
+        setIsAnnulling(true);
+        try {
+            await api.annulInvoice(invoiceId, annulReason);
+            toast.success("Factura anulada correctamente (Reporte 608)");
+            setShowAnnulDialog(false);
+            setAnnulInvoice(null);
+            onRefresh();
+        } catch (e: any) {
+            toast.error(e?.message || "No se pudo anular la factura.");
+        } finally {
+            setIsAnnulling(false);
+        }
     };
 
     const handleDownloadPDF = async (inv?: Invoice) => {
@@ -724,10 +753,15 @@ export function InvoiceControlCenter({
                                                                     </Button>
                                                                 )}
                                                                 {inv.status !== "cancelled" && !inv.annulledBy && (
-                                                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleDuplicate(inv)} title="Facturar de nuevo" disabled={!!duplicatingId}>
-                                                                        <Repeat className="w-4 h-4" />
-                                                                    </Button>
-                                                                )}
+                                                                     <>
+                                                                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50" onClick={() => handleAnnulClick(inv)} title="Anular Factura (608)">
+                                                                             <Ban className="w-4 h-4" />
+                                                                         </Button>
+                                                                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleDuplicate(inv)} title="Facturar de nuevo" disabled={!!duplicatingId}>
+                                                                             <Repeat className="w-4 h-4" />
+                                                                         </Button>
+                                                                     </>
+                                                                 )}
                                                             </div>
                                                         </TableCell>
                                                     </TableRow>
@@ -895,7 +929,46 @@ export function InvoiceControlCenter({
                 </DialogContent>
             </Dialog>
 
+            <Dialog open={showAnnulDialog} onOpenChange={setShowAnnulDialog}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-rose-600">
+                            <Ban className="w-5 h-5" /> Anular Factura
+                        </DialogTitle>
+                        <DialogDescription>
+                            Esta acción anulará el NCF y lo reportará como anulado en el reporte 608 de la DGII. Esta acción no se puede deshacer.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-4 space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Motivo de Anulación (DGII)</label>
+                            <select 
+                                value={annulReason} 
+                                onChange={(e) => setAnnulReason(e.target.value)}
+                                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                aria-label="Motivo de anulación"
+                            >
+                                <option value="01">01 - Deterioro de Factura</option>
+                                <option value="02">02 - Errores de Impresión</option>
+                                <option value="03">03 - Impresión Defectuosa</option>
+                                <option value="04">04 - Duplicidad</option>
+                                <option value="05">05 - Otros</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowAnnulDialog(false)}>Cancelar</Button>
+                        <Button variant="destructive" onClick={submitAnnul} disabled={isAnnulling}>
+                            {isAnnulling ? "Anulando..." : "Confirmar Anulación"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* FAB móvil lo maneja el layout global para evitar duplicados */}
         </>
     );
 }
+
