@@ -340,6 +340,27 @@ export const api = {
         return res.blob();
     },
 
+    async validateReport608(month: number, year: number): Promise<{ valid: boolean; errors?: string[] }> {
+        const res = await fetch(`${API_URL}/reports/608/validate?month=${month}&year=${year}`, { credentials: "include" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return { valid: false, errors: [(data as { message?: string }).message || "Error de validación"] };
+        return data as { valid: boolean; errors?: string[] };
+    },
+
+    async downloadReport608(month: number, year: number): Promise<Blob> {
+        const res = await fetch(`${API_URL}/reports/608?month=${month}&year=${year}`, {
+            credentials: "include",
+            headers: {
+                "Accept": "text/plain, application/octet-stream"
+            }
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error((err as { message?: string }).message || `Error ${res.status} al descargar reporte 608`);
+        }
+        return res.blob();
+    },
+
     /** Envía recordatorio 606/607 por email (máx. 1 por periodo). Llamar al entrar a Reportes. */
     async sendReportReminder(): Promise<{ sent: boolean; period?: string; reason?: string }> {
         const res = await fetch(`${API_URL}/reports/reminder`, { method: "POST", credentials: "include" });

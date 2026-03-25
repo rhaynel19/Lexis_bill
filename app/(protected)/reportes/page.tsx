@@ -14,7 +14,8 @@ import {
     ArrowUpRight,
     Loader2,
     DollarSign,
-    Calculator
+    Calculator,
+    Ban
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api-service";
@@ -30,7 +31,7 @@ export default function ReportsPage() {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [disclaimerOpen, setDisclaimerOpen] = useState(false);
-    const [reportToDownload, setReportToDownload] = useState<"606" | "607" | null>(null);
+    const [reportToDownload, setReportToDownload] = useState<"606" | "607" | "608" | null>(null);
     const [isDownloading, setIsDownloading] = useState(false);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [itbisSummaryOpen, setItbisSummaryOpen] = useState(false);
@@ -87,6 +88,17 @@ export default function ReportsPage() {
         URL.revokeObjectURL(url);
     };
 
+    const doDownload608 = async () => {
+        const blob = await api.downloadReport608(selectedMonth, selectedYear);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const rncEmisor = summary?.rnc || "RNC";
+        a.download = `0608_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     const handleDisclaimerConfirm = async () => {
         if (!reportToDownload) return;
         setIsDownloading(true);
@@ -95,7 +107,9 @@ export default function ReportsPage() {
             // Pre-validación obligatoria antes de descargar
             const validateRes = reportToDownload === "607"
                 ? await api.validateReport607(selectedMonth, selectedYear)
-                : await api.validateReport606(selectedMonth, selectedYear);
+                : reportToDownload === "606"
+                    ? await api.validateReport606(selectedMonth, selectedYear)
+                    : await api.validateReport608(selectedMonth, selectedYear);
 
             if (!validateRes.valid && validateRes.errors?.length) {
                 setValidationErrors(validateRes.errors);
@@ -103,7 +117,8 @@ export default function ReportsPage() {
             }
 
             if (reportToDownload === "607") await doDownload607();
-            else await doDownload606();
+            else if (reportToDownload === "606") await doDownload606();
+            else await doDownload608();
             toast.success(`Reporte ${reportToDownload} descargado correctamente`);
             setDisclaimerOpen(false);
             setReportToDownload(null);
@@ -115,7 +130,7 @@ export default function ReportsPage() {
         }
     };
 
-    const openDisclaimer = (report: "606" | "607") => {
+    const openDisclaimer = (report: "606" | "607" | "608") => {
         setReportToDownload(report);
         setValidationErrors([]);
         setDisclaimerOpen(true);
@@ -287,6 +302,13 @@ export default function ReportsPage() {
                                         </Link>
                                         <Button
                                             variant="ghost"
+                                            className="w-full justify-between font-bold h-10 text-rose-600 hover:bg-rose-50 hover:text-rose-700 border-0"
+                                            onClick={(e) => { e.stopPropagation(); openDisclaimer("608"); }}
+                                        >
+                                            608 - Anulaciones <Ban className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
                                             className="w-full justify-between font-bold h-10 text-muted-foreground hover:bg-muted/80 hover:text-accent border-0"
                                             onClick={(e) => { e.stopPropagation(); setItbisSummaryOpen(true); }}
                                         >
@@ -362,7 +384,7 @@ export default function ReportsPage() {
                     open={disclaimerOpen}
                     onOpenChange={(open) => { setDisclaimerOpen(open); if (!open) { setReportToDownload(null); setValidationErrors([]); } }}
                     reportType={reportToDownload}
-                    reportLabel={reportToDownload === "607" ? "Ventas de Bienes y Servicios" : "Compras y Gastos"}
+                    reportLabel={reportToDownload === "607" ? "Ventas de Bienes y Servicios" : reportToDownload === "606" ? "Compras y Gastos" : "Facturas Anuladas"}
                     onConfirmDownload={handleDisclaimerConfirm}
                     isDownloading={isDownloading}
                     validationErrors={validationErrors}

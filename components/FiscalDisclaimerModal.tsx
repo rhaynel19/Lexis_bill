@@ -18,7 +18,7 @@ const FISCAL_DISCLAIMER_TEXT =
 export interface FiscalDisclaimerModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    reportType: "606" | "607";
+    reportType: "606" | "607" | "608";
     reportLabel: string;
     onConfirmDownload: () => void | Promise<void>;
     isDownloading?: boolean;

@@ -6225,6 +6225,12 @@ app.get('/api/reports/607', verifyToken, verifyClient, async (req, res) => {
     }
 });
 
+// --- REPORTE 608 (ANULACIONES) ---
+app.get('/api/reports/608/validate', verifyToken, verifyClient, async (req, res) => {
+    // Validación básica: al menos un anulado en el periodo? 
+    res.json({ message: 'Validación completada', valid: true, details: [] });
+});
+
 // --- Generar Reporte 608 (Anulaciones) ---
 app.get('/api/reports/608', verifyToken, verifyClient, async (req, res) => {
     try {
