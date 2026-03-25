@@ -92,7 +92,7 @@ export default function Quotes() {
         const storedConfig = localStorage.getItem("appConfig");
         if (storedConfig) {
             const config = JSON.parse(storedConfig);
-            setUseSerieE(config.hasElectronicInvoice || false);
+            setUseSerieE(false); // Facturación electrónica (Serie E) deshabilitada temporalmente
         }
     }, []);
 

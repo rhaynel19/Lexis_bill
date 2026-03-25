@@ -51,7 +51,7 @@ export default function NewInvoice() {
     // Estados para los campos del formulario
     const [invoiceType, setInvoiceType] = useState("");
     /** Serie E (electrónica) cuando true; Serie B (tradicional) cuando false. Viene de Configuración > Facturación Electrónica Activa. */
-    const [useSerieE, setUseSerieE] = useState<boolean>(true);
+    const [useSerieE, setUseSerieE] = useState<boolean>(false);
     const [clientName, setClientName] = useState("");
     const [rnc, setRnc] = useState("");
     const [clientPhone, setClientPhone] = useState("");
@@ -128,9 +128,6 @@ export default function NewInvoice() {
     // Smart NCF Logic
     const suggestNCF = (rncValue: string, name: string) => {
         const cleanRnc = rncValue.replace(/[^0-9]/g, "");
-        const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
-        const hasElectronic = config.hasElectronicBilling || false;
-
         let clientType = "consumer";
         if (cleanRnc.length === 9) clientType = "business";
 
@@ -140,7 +137,7 @@ export default function NewInvoice() {
         }
 
         let suggested = "02"; // Default B02
-        if (hasElectronic) {
+        if (useSerieE) {
             if (clientType === "business") suggested = "31";
             else if (clientType === "consumer") suggested = "32";
             else if (clientType === "government") suggested = "45";
@@ -327,14 +324,20 @@ export default function NewInvoice() {
         // Load Profession and User Details from Config/User (incl. Serie B vs E)
         const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
         if (config.exequatur) setExequatur(config.exequatur);
-        setUseSerieE(config.hasElectronicBilling === true);
+        setUseSerieE(false); // Facturación electrónica (Serie E) deshabilitada temporalmente
     }, [authUser]);
 
     // Ajustar tipo de comprobante al rango configurado (Serie B o E)
     useEffect(() => {
         const allowed = useSerieE ? (SERIE_E_TYPES as readonly string[]) : (SERIE_B_TYPES as readonly string[]);
         if (invoiceType && !allowed.includes(invoiceType)) {
-            setInvoiceType(useSerieE ? "32" : "02");
+            // Map common e-CF to Serie B and vice-versa si cambian de tipo o cargan un borrador
+            const typeMapBtoE: Record<string, string> = { "01": "31", "02": "32", "04": "34", "14": "44", "15": "45" };
+            const typeMapEtoB: Record<string, string> = { "31": "01", "32": "02", "33": "03", "34": "04", "44": "14", "45": "15" };
+            
+            const mappedType = useSerieE ? typeMapBtoE[invoiceType] : typeMapEtoB[invoiceType];
+            
+            setInvoiceType(mappedType || (useSerieE ? "32" : "02"));
         } else if (!invoiceType) {
             setInvoiceType(useSerieE ? "32" : "02");
         }
@@ -1092,13 +1095,14 @@ export default function NewInvoice() {
         <div className="container mx-auto px-4 py-8 pb-20 md:pb-8 max-w-5xl">
             <Breadcrumbs items={[{ label: "Inicio", href: "/dashboard" }, { label: "Nueva factura" }]} className="mb-4 text-muted-foreground" />
             {/* Encabezado */}
-            <div className="mb-8 flex items-center justify-between">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold text-accent">Nueva Factura</h2>
-                    <p className="text-muted-foreground">
-                        {useSerieE ? "Crear comprobante fiscal electrónico (e-CF, Serie E)" : "Crear comprobante fiscal (Serie B)"}
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-foreground font-serif lowercase tracking-tighter">
+                        {useSerieE ? "nueva factura electrónica (e-CF)" : "nueva factura (serie b)"}
+                    </h1>
+                    <p className="text-slate-500 dark:text-muted-foreground font-medium">
+                        {useSerieE ? "Emisión de comprobantes fiscales electrónicos (Serie E)" : "Emisión de comprobantes tradicionales (Serie B)"}
                     </p>
-                    <p className="text-xs text-muted-foreground/80 mt-1">Según configuración. Tu borrador se guarda automáticamente.</p>
                 </div>
                 <Link href="/dashboard">
                     <Button variant="outline">← Volver</Button>
@@ -1187,7 +1191,7 @@ export default function NewInvoice() {
                                             </SelectContent>
                                         </Select>
                                         <p className="text-xs text-muted-foreground">
-                                            {useSerieE ? "💡 Tipo 31 incluye retención de ISR del 10%. Cambia a Serie B en Configuración si facturas sin e-CF." : "💡 Sin código QR. Activa Facturación Electrónica en Configuración para Serie E."}
+                                            {useSerieE ? "💡 Tipo 31 incluye retención de ISR del 10%. Cambia a Serie B en Configuración si facturas sin e-CF." : "💡 Por el momento, el sistema factura exclusivamente con la Serie B."}
                                         </p>
                                         {(invoiceType === "04" || invoiceType === "34") && (
                                             <div className="mt-4 p-4 border rounded-md bg-accent/5 border-accent/20 space-y-2 animate-in fade-in slide-in-from-top-2">

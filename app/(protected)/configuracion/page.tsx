@@ -261,17 +261,16 @@ export default function Configuration() {
                         <CardDescription>Configure cómo Lexis Bill automatiza sus comprobantes.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-white rounded-xl border border-indigo-100 shadow-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-white rounded-xl border border-indigo-100 shadow-sm opacity-80">
                             <div className="space-y-0.5 min-w-0">
-                                <Label className="text-base font-bold text-slate-800">Facturación Electrónica Activa</Label>
-                                <p className="text-sm text-slate-500">Lexis Bill sugerirá Serie E (E31, E32...) en lugar de Serie B.</p>
+                                <Label className="text-base font-bold text-slate-800">Facturación Electrónica Activa <span className="text-xs font-normal text-amber-600 bg-amber-50 px-2 py-0.5 rounded ml-2 border border-amber-200">Próximamente</span></Label>
+                                <p className="text-sm text-slate-500">Por el momento, el sistema factura exclusivamente con la Serie B. La Serie E estará disponible cuando conectemos con la API de facturación electrónica.</p>
                             </div>
                             <div
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none ${configLocked ? "cursor-not-allowed opacity-70" : "cursor-pointer"} ${config.hasElectronicBilling ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                                onClick={() => !configLocked && setConfig({ ...config, hasElectronicBilling: !config.hasElectronicBilling })}
-                                title="Activar o desactivar facturación electrónica"
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none cursor-not-allowed bg-slate-200`}
+                                title="Opción temporalmente deshabilitada"
                             >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${config.hasElectronicBilling ? 'translate-x-6' : 'translate-x-1'}`} />
+                                <span className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out translate-x-1" />
                             </div>
                         </div>
                     </CardContent>
