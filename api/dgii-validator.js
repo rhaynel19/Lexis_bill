@@ -36,7 +36,7 @@ function validate607Format(content) {
     if (headerParts[1] && !/^\d{9,11}$/.test(headerParts[1].replace(/\D/g, ''))) errors.push('Cabecera 607: RNC emisor inválido');
     if (headerParts[2] && !/^\d{6}$/.test(headerParts[2])) errors.push('Cabecera 607: periodo debe ser YYYYMM');
 
-    const expectedCols = 19;
+    const expectedCols = 23;
     lines.slice(1).forEach((line, idx) => {
         const parts = line.split('|');
         if (parts.length !== expectedCols) errors.push(`Línea ${idx + 2}: se esperan ${expectedCols} columnas, hay ${parts.length}`);
@@ -59,9 +59,10 @@ function validate606Format(content) {
     if (headerParts[0] !== '606') errors.push('Cabecera 606: debe iniciar con 606');
     if (headerParts[2] && !/^\d{6}$/.test(headerParts[2])) errors.push('Cabecera 606: periodo debe ser YYYYMM');
 
+    const expectedCols = 22;
     lines.slice(1).forEach((line, idx) => {
         const parts = line.split('|');
-        if (parts.length < 10) errors.push(`Línea ${idx + 2}: columnas insuficientes (mínimo 10)`);
+        if (parts.length !== expectedCols) errors.push(`Línea ${idx + 2}: se esperan ${expectedCols} columnas, hay ${parts.length}`);
         if (parts.length >= 4 && parts[2] && !DGII_EXPENSE_CATEGORIES.includes(parts[2])) errors.push(`Línea ${idx + 2}: categoría ${parts[2]} inválida (01-11)`);
         if (parts.length >= 5) {
             const ncfRes = validateNcfStructure(parts[3] || '');

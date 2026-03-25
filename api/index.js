@@ -6065,10 +6065,12 @@ app.get('/api/reports/606', verifyToken, verifyClient, async (req, res) => {
             const fecha = new Date(exp.date).toISOString().slice(0, 10).replace(/-/g, '');
             const rncLimpiado = (exp.supplierRnc || '').replace(/[^0-9]/g, '');
             const tipoId = rncLimpiado.length === 9 ? '1' : '2';
-            const itbisPagado = (exp.itbis || 0).toFixed(2);
+            const itbisFacturado = (exp.itbis || 0).toFixed(2);
             const montoTotal = (exp.amount || 0).toFixed(2);
             const formaPago = exp.paymentMethod || '01';
-            report += `${rncLimpiado}|${tipoId}|${exp.category}|${exp.ncf}||${fecha}||${montoTotal}|0.00|${montoTotal}|${itbisPagado}|${itbisPagado}|${formaPago}||||||||\n`;
+            // Formato DGII 606 (22 Columnas, index 1-22)
+            // 8:MontoServ, 9:MontoBien, 10:Total, 11:ITBISFact, 12:ITBISRet, 13:Prop, 14:Adelant, 15:PercPurch, 16:TipoRetISR, 17:RetRent, 18:PercRent, 19:ISC, 20:Otros, 21:LegalTip, 22:Payment
+            report += `${rncLimpiado}|${tipoId}|${exp.category}|${exp.ncf}||${fecha}||${montoTotal}|0.00|${montoTotal}|${itbisFacturado}|0.00|0.00|0.00|0.00||0.00|0.00|0.00|0.00|0.00|${formaPago}\n`;
         });
 
         const validation = validate606Format(report);
@@ -6165,8 +6167,9 @@ app.get('/api/reports/607', verifyToken, verifyClient, async (req, res) => {
                 bonos = (inv.total || 0).toFixed(2);
             }
 
-            // Formato DGII 607 (19 Columnas, 18 Separadores)
-            report += `${rncLimpiado}|${tipoId}|${ncf}|${modifiedNcf}|${tipoIngreso}|${fecha}||${montoFacturado}|${itbis}|${itbisRet}|0.00|${isrRet}|0.00|0.00|${efectivo}|${banco}|${tarjeta}|${credito}|${bonos}\n`;
+            // Formato DGII 607 (23 Columnas, 1-23)
+            // 8:Monto, 9:ITBISFact, 10:ITBISRet3ro, 11:ITBISPerc, 12:ISRRet3ro, 13:ISRPerc, 14:ISC, 15:Otros, 16:LegalTip, 17-21:Payments, 22:Permuta, 23:Otros
+            report += `${rncLimpiado}|${tipoId}|${ncf}|${modifiedNcf}|${tipoIngreso}|${fecha}||${montoFacturado}|${itbis}|${itbisRet}|0.00|${isrRet}|0.00|0.00|0.00|0.00|${efectivo}|${banco}|${tarjeta}|${credito}|${bonos}|0.00|0.00\n`;
         });
 
         res.setHeader('Content-Type', 'text/plain; charset=iso-8859-1');
