@@ -60,11 +60,11 @@ export default function PaymentsPage() {
         const d = payment.date ? new Date(payment.date) : new Date();
         const dateStr = d.toLocaleDateString("es-DO", { day: "2-digit", month: "2-digit", year: "numeric" });
         const timeStr = d.toLocaleTimeString("es-DO", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        const concept = payment.plan ? `Plan ${String(payment.plan).toUpperCase()} - Lexis Bill` : "Suscripción Lexis Bill";
+        const concept = payment.plan ? `Plan ${String(payment.plan).toUpperCase()} - Trinalyze Billing` : "Suscripción Trinalyze Billing";
         const statusLabel = (payment.status === "pending" || payment.status === "under_review") ? "Pendiente de validación" : "COMPLETADO";
         const receiptText = [
             "",
-            "  LEXIS BILL — RECIBO DE PAGO",
+            "  TRINALYZE BILLING — RECIBO DE PAGO",
             "  ─────────────────────────────────",
             "",
             `  Referencia:    ${payment.reference || "—"}`,
@@ -76,7 +76,7 @@ export default function PaymentsPage() {
             "  ─────────────────────────────────",
             "  Conserve este comprobante para sus registros.",
             "",
-            "  Gracias por confiar en Lexis Bill.",
+            "  Gracias por confiar en Trinalyze Billing.",
             ""
         ].join("\n");
         const blob = new Blob([receiptText], { type: "text/plain;charset=utf-8" });
@@ -151,7 +151,7 @@ export default function PaymentsPage() {
             <Card className="border-none shadow-2xl bg-white overflow-hidden">
                 <CardHeader className="border-b border-slate-50 bg-slate-50/50">
                     <CardTitle className="text-lg font-black text-slate-800">Historial de Transacciones</CardTitle>
-                    <CardDescription>Consulta tus facturas y recibos de Lexis Bill</CardDescription>
+                    <CardDescription>Consulta tus facturas y recibos de Trinalyze Billing</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>

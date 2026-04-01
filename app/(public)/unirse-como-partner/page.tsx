@@ -11,19 +11,19 @@ import Link from "next/link";
 import { ArrowLeft, Users, DollarSign, Zap, CheckCircle2, Loader2, Handshake, Mail, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
-const TERMS_SUMMARY = "La cartera de clientes referidos pertenece a Lexis Bill. Recibes comisión mientras el cliente permanezca activo. Pago mensual 30 días después del cobro. Lexis Bill puede modificar tasas con 30 días de anticipación o suspender por incumplimiento.";
+const TERMS_SUMMARY = "La cartera de clientes referidos pertenece a Trinalyze Billing. Recibes comisión mientras el cliente permanezca activo. Pago mensual 30 días después del cobro. Trinalyze Billing puede modificar tasas con 30 días de anticipación o suspender por incumplimiento.";
 
-const TERMS_FULL = `Términos del Programa de Partners Lexis Bill
+const TERMS_FULL = `Términos del Programa de Partners Trinalyze Billing
 
-• La cartera de clientes referidos pertenece a Lexis Bill. El partner recibe comisión mientras el cliente permanezca activo dentro del programa.
+• La cartera de clientes referidos pertenece a Trinalyze Billing. El partner recibe comisión mientras el cliente permanezca activo dentro del programa.
 
 • La comisión se paga mensualmente, 30 días después del cobro efectivo al cliente.
 
 • El partner se compromete a brindar soporte básico de onboarding a sus referidos.
 
-• Lexis Bill se reserva el derecho de modificar tasas de comisión con 30 días de anticipación.
+• Trinalyze Billing se reserva el derecho de modificar tasas de comisión con 30 días de anticipación.
 
-• Lexis Bill puede suspender al partner por incumplimiento de términos o conducta fraudulenta.`;
+• Trinalyze Billing puede suspender al partner por incumplimiento de términos o conducta fraudulenta.`;
 
 function UnirseComoPartnerContent() {
     const router = useRouter();
@@ -110,14 +110,14 @@ function UnirseComoPartnerContent() {
                         <div className="h-2 w-full bg-gradient-to-r from-blue-600 via-amber-500 to-blue-950" />
                         <CardHeader className="text-center pb-2 pt-8">
                             <Handshake className="w-14 h-14 mx-auto text-amber-500 mb-2" />
-                            <CardTitle className="text-2xl font-black text-slate-900 dark:text-foreground">Programa Partners Lexis Bill</CardTitle>
+                            <CardTitle className="text-2xl font-black text-slate-900 dark:text-foreground">Programa Partners Trinalyze Billing</CardTitle>
                             <CardDescription className="text-slate-500 font-medium pt-1">
                                 Gana comisiones recurrentes por cada cliente que refieras
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="px-6 md:px-10 pb-10">
                             <p className="text-center text-slate-600 dark:text-muted-foreground mb-6">
-                                Debes tener una cuenta en Lexis Bill para aplicar como partner.
+                                Debes tener una cuenta en Trinalyze Billing para aplicar como partner.
                             </p>
                             <div className="flex flex-col gap-3">
                                 {inviteParam && (
@@ -151,7 +151,7 @@ function UnirseComoPartnerContent() {
                     <div className="h-2 w-full bg-gradient-to-r from-blue-600 via-amber-500 to-blue-950" />
                     <CardHeader className="text-center pb-2 pt-8">
                         <Handshake className="w-14 h-14 mx-auto text-amber-500 mb-2" />
-                        <CardTitle className="text-2xl font-black text-slate-900 dark:text-foreground">Programa Partners Lexis Bill</CardTitle>
+                        <CardTitle className="text-2xl font-black text-slate-900 dark:text-foreground">Programa Partners Trinalyze Billing</CardTitle>
                         <CardDescription className="text-slate-500 font-medium pt-1">
                             Gana comisiones recurrentes por cada cliente activo
                         </CardDescription>
@@ -192,7 +192,7 @@ function UnirseComoPartnerContent() {
                             <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-muted-foreground">
                                 <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" /> Comisión mensual sobre clientes activos</li>
                                 <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" /> Pago 30 días después del cobro</li>
-                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" /> La cartera pertenece a Lexis Bill</li>
+                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" /> La cartera pertenece a Trinalyze Billing</li>
                                 <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" /> Dashboard para ver métricas en tiempo real</li>
                             </ul>
                         </section>
@@ -230,7 +230,7 @@ function UnirseComoPartnerContent() {
                                     aria-required
                                 />
                                 <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-foreground">
-                                    Acepto los términos del Programa de Partners Lexis Bill (cartera de Lexis Bill, comisión mientras activo, pago 30 días después del cobro).
+                                    Acepto los términos del Programa de Partners Trinalyze Billing (cartera de Trinalyze Billing, comisión mientras activo, pago 30 días después del cobro).
                                 </span>
                             </label>
                         </section>

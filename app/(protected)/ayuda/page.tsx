@@ -31,7 +31,7 @@ export default function AyudaPage() {
         <div className="container mx-auto px-4 py-6 md:py-8 max-w-4xl pb-20">
             <div className="mb-8">
                 <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2">Centro de Ayuda</h1>
-                <p className="text-muted-foreground">Tutoriales, manual de uso y soporte para Lexis Bill.</p>
+                <p className="text-muted-foreground">Tutoriales, manual de uso y soporte para Trinalyze Billing.</p>
             </div>
 
             <div className="grid gap-6">

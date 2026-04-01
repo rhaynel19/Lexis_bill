@@ -51,7 +51,15 @@
   --color-warning: var(--warning);
   --color-danger-foreground: var(--destructive-foreground);
   --color-danger: var(--danger);
-  /* Lexis Bill marca (landing y páginas públicas) */
+  /* Trinalyze Billing marca (landing y páginas públicas) */
+  --color-trinalyze-bg-deep: var(--lexis-bg-deep);
+  --color-trinalyze-bg-mid: var(--lexis-bg-mid);
+  --color-trinalyze-primary: var(--lexis-gold);
+  --color-trinalyze-secondary: var(--lexis-gold-hover);
+  --color-trinalyze-text-light: var(--lexis-text-light);
+  --color-trinalyze-brand-blue: var(--lexis-brand-blue);
+  --color-trinalyze-bg-darker: var(--lexis-bg-darker);
+  
   --color-lexis-bg-deep: var(--lexis-bg-deep);
   --color-lexis-bg-mid: var(--lexis-bg-mid);
   --color-lexis-gold: var(--lexis-gold);
@@ -64,14 +72,14 @@
 :root {
   --radius: 0.75rem;
 
-  /* --- Lexis Bill marca (colores originales landing) --- */
-  --lexis-bg-deep: #1E2A47;
-  --lexis-bg-mid: #172238;
-  --lexis-bg-darker: #081221;
-  --lexis-gold: #d4af37;
-  --lexis-gold-hover: #b8962e;
+  /* --- Trinalyze Billing marca (colores originales landing) --- */
+  --lexis-bg-deep: #0B0F1A;
+  --lexis-bg-mid: #121A2F;
+  --lexis-bg-darker: #06080E;
+  --lexis-gold: #00C6FF;
+  --lexis-gold-hover: #0072FF;
   --lexis-text-light: #ffffff;
-  --lexis-brand-blue: #5b8fb9;
+  --lexis-brand-blue: #0072FF;
 
   /* --- LIGHT THEME (Default) --- */
   --bg-primary: oklch(0.985 0 0);
@@ -438,22 +446,22 @@
   animation: shimmer 3s infinite linear !important;
 }
 
-/* Lexis Assistant premium: gradiente navy → blue → violet */
+/* Trinalyze Assistant premium: gradiente */
 .lexis-assistant-bar {
-  background: linear-gradient(180deg, #1e3a5f 0%, #2563eb 50%, #5b21b6 100%);
-  box-shadow: 0 0 20px rgba(37, 99, 235, 0.35);
+  background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%);
+  box-shadow: 0 0 20px rgba(0, 198, 255, 0.35);
 }
 .lexis-assistant-glow {
   background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, transparent 70%);
   filter: blur(32px);
 }
 .lexis-assistant-icon {
-  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #5b21b6 100%);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%);
+  box-shadow: 0 4px 14px rgba(0, 198, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 .lexis-assistant-cta {
-  background: linear-gradient(to right, #1e3a5f, #2563eb, #5b21b6);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+  background: linear-gradient(135deg, #0072FF, #00C6FF);
+  box-shadow: 0 4px 14px rgba(0, 198, 255, 0.4);
 }
 .lexis-assistant-cta:hover {
   box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);

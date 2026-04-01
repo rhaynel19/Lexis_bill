@@ -2041,7 +2041,7 @@ export default function NewInvoice() {
                                 <CardHeader>
                                     <CardTitle className="text-base">Tipo de Pago</CardTitle>
                                     <CardDescription>
-                                        Registra cómo pagó el cliente para insights financieros en Lexis
+                                        Registra cómo pagó el cliente para insights financieros en Trinalyze
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>

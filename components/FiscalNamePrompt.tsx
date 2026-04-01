@@ -45,7 +45,7 @@ export function FiscalNamePrompt({ initialSuggestedName, onConfirmed }: FiscalNa
                         <CheckCircle2 className="w-7 h-7" />
                     </div>
                     <h3 className="text-emerald-900 font-bold">¡Identidad Confirmada!</h3>
-                    <p className="text-emerald-700 text-sm">Lexis Bill ya está listo para trabajar por ti.</p>
+                    <p className="text-emerald-700 text-sm">Trinalyze Billing ya está listo para trabajar por ti.</p>
                 </CardContent>
             </Card>
         );
@@ -93,7 +93,7 @@ export function FiscalNamePrompt({ initialSuggestedName, onConfirmed }: FiscalNa
                             {isSubmitting ? "Guardando..." : "Confirmar Identidad"}
                         </Button>
                         <p className="text-[10px] text-slate-400 italic text-center sm:text-left leading-tight">
-                            "Lexis Bill sugiere este nombre según fuentes públicas dominicanas. <br className="hidden sm:block" /> Tú tienes el control final."
+                            "Trinalyze Billing sugiere este nombre según fuentes públicas dominicanas. <br className="hidden sm:block" /> Tú tienes el control final."
                         </p>
                     </div>
                 </div>

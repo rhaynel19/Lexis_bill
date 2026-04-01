@@ -115,7 +115,7 @@ export default function OnboardingPage() {
                     Configuración inicial
                 </h1>
                 <p className="text-muted-foreground mt-1">
-                    Completa tus datos para empezar a facturar con Lexis Bill
+                    Completa tus datos para empezar a facturar con Trinalyze Billing
                 </p>
             </div>
 

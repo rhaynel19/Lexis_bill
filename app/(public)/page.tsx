@@ -133,7 +133,7 @@ export default function LandingPage() {
               <span className="text-lexis-gold">Y tu sistema debe hablar tu mismo idioma.</span>
             </h2>
             <p className="text-xl md:text-2xl text-lexis-gold font-semibold mb-12">
-              Lexis Bill — El único sistema que habla dominicano.
+              Trinalyze Billing — El único sistema que habla dominicano.
             </p>
             <ul className="space-y-4 text-left max-w-md mx-auto">
               <li className="flex items-center gap-3 text-slate-300">
@@ -168,7 +168,7 @@ export default function LandingPage() {
               Recupera tus noches y tus <span className="text-lexis-gold">fines de semana.</span>
             </h2>
             <p className="text-xl text-slate-400 leading-relaxed mb-8 font-light">
-              Mientras otros se pierden en formularios de la DGII y cálculos manuales, tú ya terminaste. Lexis Bill automatiza la burocracia para que tu única preocupación sea la excelencia en tu servicio.
+              Mientras otros se pierden en formularios de la DGII y cálculos manuales, tú ya terminaste. Trinalyze Billing automatiza la burocracia para que tu única preocupación sea la excelencia en tu servicio.
             </p>
             <p className="text-lexis-gold/90 font-medium mb-16">Facturar no debería ser complicado.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 text-left">
@@ -196,7 +196,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-center">
             <div>
-              <h2 className="font-serif text-4xl font-bold mb-8">¿Es Lexis Bill <br /><span className="text-lexis-gold">para mí?</span></h2>
+              <h2 className="font-serif text-4xl font-bold mb-8">¿Es Trinalyze Billing <br /><span className="text-lexis-gold">para mí?</span></h2>
               <div className="space-y-6">
                 <div className="flex gap-4">
                   <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 mt-1">
@@ -221,7 +221,7 @@ export default function LandingPage() {
             <div className="p-8 rounded-3xl bg-gradient-to-br from-white/5 to-transparent border border-white/10">
               <h4 className="font-serif text-xl font-bold mb-4 text-lexis-gold">La realidad local</h4>
               <p className="text-slate-400 leading-relaxed font-light mb-4">
-                Mientras otros sistemas usan lenguaje extraño, Lexis Bill entiende que tu prioridad es servir a tu cliente, no pelear con formularios electrónicos.
+                Mientras otros sistemas usan lenguaje extraño, Trinalyze Billing entiende que tu prioridad es servir a tu cliente, no pelear con formularios electrónicos.
               </p>
               <p className="text-lexis-gold/90 font-medium">Tu negocio es serio — tu sistema también debe serlo. Profesional por fuera. Simple por dentro.</p>
             </div>
@@ -240,7 +240,7 @@ export default function LandingPage() {
               </div>
               <div className="text-5xl font-serif text-lexis-gold/20 font-bold italic">01</div>
               <h3 className="text-xl font-bold">Organiza tus comprobantes desde el inicio</h3>
-              <p className="text-slate-400 font-light px-4">Registra tus rangos de NCF y mantén el control de tu numeración. Lexis Bill te alerta cuando necesites nuevos.</p>
+              <p className="text-slate-400 font-light px-4">Registra tus rangos de NCF y mantén el control de tu numeración. Trinalyze Billing te alerta cuando necesites nuevos.</p>
             </div>
             <div className="space-y-6 group cursor-default">
               <div className="w-16 h-16 bg-lexis-gold/5 rounded-full flex items-center justify-center mx-auto border border-lexis-gold/10 group-hover:bg-lexis-gold/20 transition-all duration-300">
@@ -310,13 +310,13 @@ export default function LandingPage() {
       <section className="py-24 bg-lexis-bg-darker">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-4xl mx-auto text-center space-y-8">
-            <span className="text-lexis-gold text-xs font-bold tracking-[0.4em] uppercase">El Porqué de Lexis Bill</span>
+            <span className="text-lexis-gold text-xs font-bold tracking-[0.4em] uppercase">El Porqué de Trinalyze Billing</span>
             <h2 className="font-serif text-3xl md:text-5xl font-bold leading-tight">
               Mientras otros miran a las corporaciones, <br />
               <span className="text-lexis-gold">nosotros te miramos a ti.</span>
             </h2>
             <p className="text-xl text-slate-400 leading-relaxed font-light">
-              La mayoría de los sistemas fueron hechos para grandes empresas con ejércitos de contadores. Lexis Bill nace para el profesional autónomo, el técnico independiente y el profesional que realmente mueve la economía dominicana. Somos el aliado que te da el estatus de una multinacional, sin importar el tamaño de tu oficina hoy.
+              La mayoría de los sistemas fueron hechos para grandes empresas con ejércitos de contadores. Trinalyze Billing nace para el profesional autónomo, el técnico independiente y el profesional que realmente mueve la economía dominicana. Somos el aliado que te da el estatus de una multinacional, sin importar el tamaño de tu oficina hoy.
             </p>
           </div>
         </div>
@@ -328,7 +328,7 @@ export default function LandingPage() {
           <h2 className="font-serif text-3xl md:text-5xl font-bold mb-16 text-center text-lexis-gold">Preguntas Frecuentes</h2>
           <div className="space-y-8">
             <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
-              <h4 className="font-bold text-lg mb-2">¿Lexis Bill emite mis comprobantes?</h4>
+              <h4 className="font-bold text-lg mb-2">¿Trinalyze Billing emite mis comprobantes?</h4>
               <p className="text-slate-400 text-sm">No. Tú mantienes el control total de tus rangos autorizados por la DGII. Nosotros somos el puente que los organiza para que los uses sin errores.</p>
             </div>
             <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
@@ -341,7 +341,7 @@ export default function LandingPage() {
             </div>
             <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
               <h4 className="font-bold text-lg mb-2">¿Es difícil de usar?</h4>
-              <p className="text-slate-400 text-sm">Está hecho para que lo uses desde el celular mientras te mueves. Si sabes enviar un WhatsApp, sabes usar Lexis Bill.</p>
+              <p className="text-slate-400 text-sm">Está hecho para que lo uses desde el celular mientras te mueves. Si sabes enviar un WhatsApp, sabes usar Trinalyze Billing.</p>
             </div>
           </div>
         </div>
@@ -470,7 +470,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-slate-500 uppercase tracking-widest">
-            <p>© {new Date().getFullYear()} Lexis Bill. Todos los derechos reservados.</p>
+            <p>© {new Date().getFullYear()} Trinalyze Billing. Todos los derechos reservados.</p>
             <div className="flex flex-wrap justify-center gap-6 md:gap-8">
               <Link href="/terminos" className="hover:text-lexis-gold">Términos y Condiciones</Link>
               <Link href="/privacidad" className="hover:text-lexis-gold">Privacidad</Link>

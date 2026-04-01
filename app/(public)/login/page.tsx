@@ -170,7 +170,7 @@ function LoginForm() {
 
         // Simulación de envío
         if (channel === "whatsapp") {
-            alert(`💬 [WhatsApp API Mock]:\n"Tu código de seguridad para Lexis Bill es: ${code}. No lo compartas con nadie."`);
+            alert(`💬 [WhatsApp API Mock]:\n"Tu código de seguridad para Trinalyze Billing es: ${code}. No lo compartas con nadie."`);
         } else {
             alert(`📧 [Email API Mock]:\n"Código de recuperación enviado a ${email}: ${code}"`);
         }

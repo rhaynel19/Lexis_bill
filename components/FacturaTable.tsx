@@ -80,7 +80,7 @@ export function FacturaTable({ invoices, onRefresh, onRequestCreditNote }: Factu
 
     const handleEmail = (inv: Invoice) => {
         const subject = `Factura NCF ${(inv.ncfSequence || inv.id).slice(-11)} - ${new Date(inv.date).toLocaleDateString("es-DO")}`;
-        const body = `Estimado ${inv.clientName},\n\nAdjunto encontrará los detalles de su factura por ${formatCurrency(inv.total)}.\n\nSaludos,\nLEXIS BILL`;
+        const body = `Estimado ${inv.clientName},\n\nAdjunto encontrará los detalles de su factura por ${formatCurrency(inv.total)}.\n\nSaludos,\nTRINALYZE BILLING`;
         window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
     };
 

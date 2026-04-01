@@ -7,11 +7,11 @@ import { MessageCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const FAQ_ITEMS: { q: string; a: string }[] = [
-    { q: "¿Qué tipo de comprobante usar?", a: "Si tu cliente es una empresa con RNC de 9 dígitos, usa B01 o E31 (Crédito Fiscal). Si es persona física o consumidor final, usa B02 o E32 (Consumo). Lexis te sugiere el tipo según el RNC." },
-    { q: "¿Cuándo enviar el reporte 606?", a: "El 606 se presenta mensualmente a la DGII. Debes declarar las compras y gastos del mes. Lexis genera el archivo en formato DGII desde la sección Reportes Fiscales." },
+    { q: "¿Qué tipo de comprobante usar?", a: "Si tu cliente es una empresa con RNC de 9 dígitos, usa B01 o E31 (Crédito Fiscal). Si es persona física o consumidor final, usa B02 o E32 (Consumo). Trinalyze te sugiere el tipo según el RNC." },
+    { q: "¿Cuándo enviar el reporte 606?", a: "El 606 se presenta mensualmente a la DGII. Debes declarar las compras y gastos del mes. Trinalyze genera el archivo en formato DGII desde la sección Reportes Fiscales." },
     { q: "¿Cuándo enviar el reporte 607?", a: "El 607 declara las ventas del mes. Se presenta mensualmente junto con el 606. Genera ambos desde Reportes Fiscales antes del plazo de la DGII." },
     { q: "¿Qué significa retención ISR?", a: "Es el 10% que las empresas retienen de tus honorarios cuando facturas como profesional (B01/E31). Tú emites el monto bruto; ellos retienen el 10% y te pagan el neto. Es obligatorio para persona jurídica." },
-    { q: "¿Cómo obtengo más NCF?", a: "Solicita nuevos rangos de NCF a la DGII. Cuando una secuencia esté por agotarse, Lexis te alertará. Ve a Configuración → Comprobantes Fiscales para gestionar tus secuencias." },
+    { q: "¿Cómo obtengo más NCF?", a: "Solicita nuevos rangos de NCF a la DGII. Cuando una secuencia esté por agotarse, Trinalyze te alertará. Ve a Configuración → Comprobantes Fiscales para gestionar tus secuencias." },
     { q: "¿Puedo cambiar una factura emitida?", a: "Una factura emitida no se edita. Si hay error, debes emitir una Nota de Crédito (B04/E34) que anula o corrige el comprobante original." },
 ];
 
@@ -43,17 +43,17 @@ export function LexisHelpPanel() {
                     variant="outline"
                     size="sm"
                     className="gap-2 text-amber-700 border-amber-200 hover:bg-amber-50 hover:border-amber-300 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950/50"
-                    aria-label="Preguntarle a Lexis"
+                    aria-label="Preguntarle a Trinalyze"
                 >
                     <MessageCircle className="w-4 h-4" />
-                    Pregúntale a Lexis
+                    Pregúntale a Trinalyze
                 </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
                 <SheetHeader>
                     <SheetTitle className="flex items-center gap-2">
                         <MessageCircle className="w-5 h-5 text-amber-600" />
-                        Pregúntale a Lexis
+                        Pregúntale a Trinalyze
                     </SheetTitle>
                 </SheetHeader>
                 <p className="text-sm text-muted-foreground mt-2 mb-6">

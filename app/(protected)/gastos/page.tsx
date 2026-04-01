@@ -824,7 +824,7 @@ export default function GastosPage() {
             </div>
 
             <div className="mt-8 text-center text-[10px] text-muted-foreground/30 uppercase tracking-[0.3em]">
-                Lexis Bill Smart Ledger &bull; Dominican Republic
+                Trinalyze Billing Smart Ledger &bull; Dominican Republic
             </div>
         </div>
     );

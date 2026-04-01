@@ -452,7 +452,7 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                     </p>
                                     <div className="flex items-center gap-2">
                                         <code className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-sm font-mono truncate">
-                                            LexisBill {selectedPlan} {userEmail ? `- ${userEmail}` : ""}
+                                            TrinalyzeBilling {selectedPlan} {userEmail ? `- ${userEmail}` : ""}
                                         </code>
                                         <Button
                                             type="button"
@@ -460,7 +460,7 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                             size="icon"
                                             className="shrink-0"
                                             onClick={() => {
-                                                const note = `LexisBill ${selectedPlan}${userEmail ? ` - ${userEmail}` : ""}`;
+                                                const note = `TrinalyzeBilling ${selectedPlan}${userEmail ? ` - ${userEmail}` : ""}`;
                                                 navigator.clipboard.writeText(note);
                                                 toast.success("Nota copiada");
                                             }}

@@ -299,7 +299,7 @@ export default function AdminUsuariosPage() {
             <div className="space-y-8">
                 <div>
                     <h1 className="text-2xl font-bold">Usuarios registrados</h1>
-                    <p className="text-muted-foreground text-sm">Listado de personas registradas en Lexis Bill</p>
+                    <p className="text-muted-foreground text-sm">Listado de personas registradas en Trinalyze Billing</p>
                 </div>
                 <Skeleton className="h-10 w-80 rounded-md" />
                 <Skeleton className="h-64 rounded-lg" />
@@ -314,7 +314,7 @@ export default function AdminUsuariosPage() {
                     <UserCircle className="w-7 h-7 text-amber-500" />
                     Usuarios registrados
                 </h1>
-                <p className="text-muted-foreground text-sm mt-1">Listado de personas registradas en Lexis Bill. Busca por nombre, email o RNC.</p>
+                <p className="text-muted-foreground text-sm mt-1">Listado de personas registradas en Trinalyze Billing. Busca por nombre, email o RNC.</p>
             </div>
 
             {/* KPIs resumen (página actual) */}

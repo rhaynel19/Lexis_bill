@@ -59,9 +59,9 @@ export function SupportChat() {
 
         let message = "";
         if (type === "tech") {
-            message = `Hola, soy ${displayName} de Lexis Bill${desde} Necesito soporte técnico con...`;
+            message = `Hola, soy ${displayName} de Trinalyze Billing${desde} Necesito soporte técnico con...`;
         } else {
-            message = `Hola, soy ${displayName} de Lexis Bill${desde} Tengo una consulta de facturación o pagos sobre...`;
+            message = `Hola, soy ${displayName} de Trinalyze Billing${desde} Tengo una consulta de facturación o pagos sobre...`;
         }
 
         window.open(`https://wa.me/${SUPPORT_PHONE}?text=${encodeURIComponent(message)}`, "_blank");
@@ -106,7 +106,7 @@ export function SupportChat() {
                     >
                         <SheetHeader className="p-4 pb-0 text-left shrink-0 bg-[#25D366] text-white rounded-t-2xl">
                             <SheetTitle id="support-title" className="text-white font-bold">
-                                Soporte Lexis Bill
+                                Soporte Trinalyze Billing
                             </SheetTitle>
                             <p className="text-xs opacity-90 flex items-center gap-1.5 mt-0.5">
                                 <Clock className="w-3 h-3" aria-hidden />
@@ -120,7 +120,7 @@ export function SupportChat() {
                     data-support-trigger
                     onClick={() => setIsOpen(!isOpen)}
                     className="h-14 w-14 bg-[#25D366] text-white rounded-full shadow-xl shadow-green-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
-                    aria-label={isOpen ? "Cerrar soporte" : "Abrir soporte Lexis Bill"}
+                    aria-label={isOpen ? "Cerrar soporte" : "Abrir soporte Trinalyze Billing"}
                     {...(isOpen ? { "aria-expanded": "true" as const } : { "aria-expanded": "false" as const })}
                 >
                     <MessageCircle className="h-8 w-8" aria-hidden />
@@ -146,7 +146,7 @@ export function SupportChat() {
                     <div className="p-4 text-white flex justify-between items-center bg-[#25D366]">
                         <div>
                             <h3 id="support-title" className="font-bold">
-                                Soporte Lexis Bill
+                                Soporte Trinalyze Billing
                             </h3>
                             <p className="text-xs opacity-90 flex items-center gap-1.5 mt-0.5">
                                 <Clock className="w-3 h-3" aria-hidden />
@@ -169,7 +169,7 @@ export function SupportChat() {
                 data-support-trigger
                 onClick={() => setIsOpen(!isOpen)}
                 className="h-14 w-14 bg-[#25D366] text-white rounded-full shadow-xl shadow-green-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
-                aria-label={isOpen ? "Cerrar soporte" : "Abrir soporte Lexis Bill"}
+                aria-label={isOpen ? "Cerrar soporte" : "Abrir soporte Trinalyze Billing"}
                 {...(isOpen ? { "aria-expanded": "true" as const } : { "aria-expanded": "false" as const })}
             >
                 <MessageCircle className="h-8 w-8" aria-hidden />

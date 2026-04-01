@@ -340,8 +340,8 @@ export default function ReportsPage() {
                             size="lg"
                             className="h-14 px-8 text-lg bg-foreground text-background hover:bg-foreground/90 font-bold shadow-xl transition-all hover:scale-105"
                             onClick={() => {
-                                const subject = `Reportes Fiscales LexisBill - ${months[selectedMonth - 1]} ${selectedYear}`;
-                                const body = `Hola,\n\nAdjunto el resumen fiscal del periodo ${months[selectedMonth - 1]} ${selectedYear}:\n\n- Resumen ITBIS: RD$ ${(summary?.itbis || 0).toLocaleString()}\n- Subtotal Neto: RD$ ${(summary?.subtotal || 0).toLocaleString()}\n- Comprobantes: ${summary?.count || 0}\n\nLos reportes 606 y 607 deben descargarse desde tu cuenta LexisBill (Reportes Fiscales).\n\nGenerado automáticamente por LexisBill.`;
+                                const subject = `Reportes Fiscales TrinalyzeBilling - ${months[selectedMonth - 1]} ${selectedYear}`;
+                                const body = `Hola,\n\nAdjunto el resumen fiscal del periodo ${months[selectedMonth - 1]} ${selectedYear}:\n\n- Resumen ITBIS: RD$ ${(summary?.itbis || 0).toLocaleString()}\n- Subtotal Neto: RD$ ${(summary?.subtotal || 0).toLocaleString()}\n- Comprobantes: ${summary?.count || 0}\n\nLos reportes 606 y 607 deben descargarse desde tu cuenta TrinalyzeBilling (Reportes Fiscales).\n\nGenerado automáticamente por TrinalyzeBilling.`;
                                 window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
                             }}
                         >

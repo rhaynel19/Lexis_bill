@@ -12,19 +12,19 @@ const OPTIONS = [
     id: "plan",
     label: "Info del plan / precios",
     icon: CreditCard,
-    message: "Hola, me interesa conocer el plan y precios de Lexis Bill. Me gustaría que me respondan sobre...",
+    message: "Hola, me interesa conocer el plan y precios de Trinalyze Billing. Me gustaría que me respondan sobre...",
   },
   {
     id: "soporte",
     label: "Soporte técnico",
     icon: HeadphonesIcon,
-    message: "Hola, necesito soporte técnico con Lexis Bill. Me gustaría que me respondan sobre...",
+    message: "Hola, necesito soporte técnico con Trinalyze Billing. Me gustaría que me respondan sobre...",
   },
   {
     id: "cotizacion",
     label: "Cotización u otro",
     icon: FileQuestion,
-    message: "Hola, tengo una consulta sobre Lexis Bill (cotización u otro). Me gustaría que me respondan sobre...",
+    message: "Hola, tengo una consulta sobre Trinalyze Billing (cotización u otro). Me gustaría que me respondan sobre...",
   },
 ];
 

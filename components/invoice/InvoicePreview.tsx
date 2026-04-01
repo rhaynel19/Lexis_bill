@@ -35,7 +35,7 @@ interface InvoicePreviewProps {
     clientType?: string; // B2B or B2C
 }
 
-const APP_NAME = "Lexis Bill";
+const APP_NAME = "Trinalyze Billing";
 
 export function InvoicePreview({ data }: InvoicePreviewProps) {
     const { profession } = usePreferences();
@@ -116,7 +116,7 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
                 {/* Watermark / Background */}
                 <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-br from-accent/5 to-transparent rounded-full -mr-32 -mt-32 pointer-events-none opacity-50"></div>
 
-                {/* Header: factura para [cliente]; emitido por [tu empresa]; Lexis Bill = gestor */}
+                {/* Header: factura para [cliente]; emitido por [tu empresa]; Trinalyze Billing = gestor */}
                 <div className="bg-secondary text-secondary-foreground p-8 relative overflow-hidden transition-colors">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-accent rounded-full blur-[60px] opacity-20 -mr-10 -mt-10"></div>
 
@@ -260,7 +260,7 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
                     </div>
                 </CardContent>
 
-                {/* Footer: Lexis Bill como gestor (puente cliente–DGII), no emisor */}
+                {/* Footer: Trinalyze Billing como gestor (puente cliente–DGII), no emisor */}
                 <div className="bg-secondary/30 p-4 text-center border-t border-border/10">
                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-2">
                         <ShieldCheck className="w-3 h-3 text-accent" /> Documento gestionado con {APP_NAME}

@@ -408,7 +408,7 @@ export default function Dashboard() {
 
   const handleEmail = (inv: Invoice) => {
     const subject = `Factura NCF ${inv.id.slice(-6)} - ${new Date(inv.date).toLocaleDateString("es-DO")}`;
-    const body = `Estimado ${inv.clientName},\n\nAdjunto encontrará los detalles de su factura por RD$${inv.total.toLocaleString('es-DO')}.\n\nSaludos,\nLEXIS BILL`;
+    const body = `Estimado ${inv.clientName},\n\nAdjunto encontrará los detalles de su factura por RD$${inv.total.toLocaleString('es-DO')}.\n\nSaludos,\nTRINALYZE BILLING`;
     window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
     toast.info("📧 Abriendo cliente de correo...");
   };
@@ -423,7 +423,7 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 py-8">
         <TrialBanner />
         <SubscriptionAlert />
-        {/* Lexis Business Copilot: observa tu negocio, alertas, scoring, predicción */}
+        {/* Trinalyze Business Copilot: observa tu negocio, alertas, scoring, predicción */}
         {!isLoading && <LexisBusinessCopilot />}
 
         {/* Alertas proactivas: NCF bajo, secuencias por vencer, suscripción */}

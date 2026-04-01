@@ -66,7 +66,7 @@ export function CollectionsManager({ isOpen, onClose }: DebtorsListProps) {
     }
     // Prefix with 1 if it's DR and not present
     const cleanPhone = phone.length === 10 ? `1${phone}` : phone;
-    const msg = encodeURIComponent(`Hola ${debtor.clientName}, de parte de Lexis Bill le recordamos que tiene un balance pendiente de ${formatCurrency(debtor.totalBalance)}. Puede realizar su pago vía transferencia.`);
+    const msg = encodeURIComponent(`Hola ${debtor.clientName}, de parte de Trinalyze Billing le recordamos que tiene un balance pendiente de ${formatCurrency(debtor.totalBalance)}. Puede realizar su pago vía transferencia.`);
     window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");
   };
 

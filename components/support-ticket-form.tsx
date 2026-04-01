@@ -46,7 +46,7 @@ export function SupportTicketForm() {
             <CardHeader>
                 <CardTitle>Centro de Ayuda y Sugerencias</CardTitle>
                 <CardDescription>
-                    ¿Encontraste un problema o tienes una idea para mejorar Lexis Bill?
+                    ¿Encontraste un problema o tienes una idea para mejorar Trinalyze Billing?
                 </CardDescription>
             </CardHeader>
             <CardContent>

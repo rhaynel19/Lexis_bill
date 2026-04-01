@@ -78,7 +78,7 @@ export default function ProtectedLayout({
             <div className="h-screen w-full bg-background flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-accent font-serif tracking-widest uppercase text-xs">Lexis está verificando tu sesión...</p>
+                    <p className="text-accent font-serif tracking-widest uppercase text-xs">Trinalyze está verificando tu sesión...</p>
                 </div>
             </div>
         );
@@ -140,7 +140,7 @@ export default function ProtectedLayout({
                             </SheetTrigger>
                             <SheetContent side="left" className="bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-0 w-72 flex flex-col">
                                 <SheetHeader className="p-6 border-b border-sidebar-border/50 flex-none">
-                                    <SheetTitle className="text-sidebar-primary text-left uppercase tracking-tighter font-black">LEXIS BILL</SheetTitle>
+                                    <SheetTitle className="text-sidebar-primary text-left uppercase tracking-tighter font-black">TRINALYZE BILLING</SheetTitle>
                                 </SheetHeader>
                                 <nav className="flex-1 overflow-y-auto p-4">
                                     <SidebarLinks isMobile isAdmin={userFromApi?.role === "admin"} isPartner={userFromApi?.partner?.status === "active"} onLogout={handleLogout} onNavigate={() => setMenuOpen(false)} />
@@ -163,7 +163,7 @@ export default function ProtectedLayout({
                         <SidebarLinks isAdmin={userFromApi?.role === "admin"} isPartner={userFromApi?.partner?.status === "active"} onLogout={handleLogout} />
                     </nav>
                     <div className="p-6 border-t border-sidebar-border/50 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Lexis Bill Pro</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Trinalyze Billing Pro</p>
                     </div>
                 </aside>
 

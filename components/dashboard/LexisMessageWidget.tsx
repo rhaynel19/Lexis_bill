@@ -193,7 +193,7 @@ export function LexisMessageWidget({
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                Asistente Lexis
+                                Asistente Trinalyze
                             </span>
                             <p className="text-[15px] leading-relaxed text-slate-800 dark:text-slate-200 font-semibold tracking-tight mt-0.5">
                                 {greetingTitle}
@@ -311,7 +311,7 @@ export function LexisMessageWidget({
                             </p>
                         )}
                         <p className="text-xs text-slate-500 dark:text-slate-500 mt-2 pt-2 border-t border-slate-200/80 dark:border-slate-700/50 font-normal">
-                            <span className="font-medium text-slate-600 dark:text-slate-400">Lexis te recomienda:</span> {consejo}
+                            <span className="font-medium text-slate-600 dark:text-slate-400">Trinalyze te recomienda:</span> {consejo}
                         </p>
                                 </div>
                             </div>

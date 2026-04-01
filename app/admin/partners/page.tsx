@@ -210,7 +210,7 @@ export default function AdminPartnersPage() {
 
     const shareInviteByWhatsApp = () => {
         if (!inviteUrl) return;
-        const message = `Hola! Te invito a ser Partner de Lexis Bill. Regístrate con este enlace y obtén prioridad en aprobación:\n\n${inviteUrl}`;
+        const message = `Hola! Te invito a ser Partner de Trinalyze Billing. Regístrate con este enlace y obtén prioridad en aprobación:\n\n${inviteUrl}`;
         openWhatsApp(undefined, message);
     };
 
@@ -345,7 +345,7 @@ export default function AdminPartnersPage() {
             <div className="space-y-8">
                 <div>
                     <h1 className="text-2xl font-bold">Programa Partners</h1>
-                    <p className="text-muted-foreground text-sm">Estadísticas y gestión de partners Lexis Bill</p>
+                    <p className="text-muted-foreground text-sm">Estadísticas y gestión de partners Trinalyze Billing</p>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}

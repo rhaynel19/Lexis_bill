@@ -35,7 +35,7 @@ export default function CheckoutPage() {
                         <div>
                             <h1 className="font-serif text-4xl font-bold mb-4">Finalizar Suscripción</h1>
                             <p className="text-slate-400 leading-relaxed">
-                                Está a un paso de automatizar su vida fiscal con Lexis Bill.
+                                Está a un paso de automatizar su vida fiscal con Trinalyze Billing.
                             </p>
                         </div>
 
@@ -167,7 +167,7 @@ export default function CheckoutPage() {
                                                     </div>
                                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-4 group cursor-pointer">
                                                         <span className="text-[10px] text-slate-500 uppercase tracking-widest">Beneficiario</span>
-                                                        <span className="text-sm font-bold text-lexis-text-light">LEXIS BILL SOLUTIONS SRL</span>
+                                                        <span className="text-sm font-bold text-lexis-text-light">TRINALYZE BILLING SOLUTIONS SRL</span>
                                                     </div>
                                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-4 group cursor-pointer">
                                                         <span className="text-[10px] text-slate-500 uppercase tracking-widest">RNC</span>
@@ -178,10 +178,10 @@ export default function CheckoutPage() {
 
                                             <div className="space-y-3">
                                                 <Button asChild className="w-full h-14 text-lg border-2 border-lexis-gold text-lexis-gold hover:bg-lexis-gold hover:text-[#0A192F] bg-transparent font-bold rounded-xl transition-all">
-                                                    <Link href="/pagos">Completar pago en Lexis Bill</Link>
+                                                    <Link href="/pagos">Completar pago en Trinalyze Billing</Link>
                                                 </Button>
                                                 <a
-                                                    href={`https://wa.me/18290000000?text=${encodeURIComponent("Hola Lexis Bill, acabo de realizar mi transferencia para el Plan Profesional. Adjunto el comprobante.")}`}
+                                                    href={`https://wa.me/18290000000?text=${encodeURIComponent("Hola Trinalyze Billing, acabo de realizar mi transferencia para el Plan Profesional. Adjunto el comprobante.")}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="w-full h-12 flex items-center justify-center gap-2 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white border border-[#25D366]/20 font-bold rounded-xl transition-all text-sm"
@@ -209,7 +209,7 @@ export default function CheckoutPage() {
                             <CreditCard className="w-6 h-6" />
                         </div>
                     </div>
-                    <p className="text-[10px] text-slate-600 uppercase tracking-widest">© 2026 Lexis Bill • Facturación Segura</p>
+                    <p className="text-[10px] text-slate-600 uppercase tracking-widest">© 2026 Trinalyze Billing • Facturación Segura</p>
                 </div>
             </div>
         </div>

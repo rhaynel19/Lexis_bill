@@ -85,7 +85,7 @@ export default function PartnerDashboardPage() {
 
     const shareReferralByWhatsApp = () => {
         if (!data?.referralUrl) return;
-        const message = `Hola! Te recomiendo Lexis Bill para facturación y reportes fiscales en República Dominicana. Prueba gratis 15 días con mi enlace:\n\n${data.referralUrl}`;
+        const message = `Hola! Te recomiendo Trinalyze Billing para facturación y reportes fiscales en República Dominicana. Prueba gratis 15 días con mi enlace:\n\n${data.referralUrl}`;
         openWhatsApp(undefined, message);
     };
 
@@ -131,7 +131,7 @@ export default function PartnerDashboardPage() {
                     Programa Partner
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">
-                    Estadísticas y gestión de tus referidos Lexis Bill · Comisión {commissionRatePct}% por cliente activo
+                    Estadísticas y gestión de tus referidos Trinalyze Billing · Comisión {commissionRatePct}% por cliente activo
                 </p>
             </div>
 

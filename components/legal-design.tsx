@@ -26,17 +26,17 @@ export function TermsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                 <div className="p-8 max-h-[60vh] overflow-y-auto font-sans leading-[1.8] text-base space-y-8">
                     <section>
                         <h3 className="font-serif font-bold text-xl mb-3 text-[#0A192F]">1. Aceptación del Compromiso</h3>
-                        <p className="text-slate-600">Al acceder y utilizar Lexis Bill, usted acepta quedar vinculado por estos términos, diseñados bajo los estándares de la Ley 07-23 de la República Dominicana sobre Facturación Electrónica.</p>
+                        <p className="text-slate-600">Al acceder y utilizar Trinalyze Billing, usted acepta quedar vinculado por estos términos, diseñados bajo los estándares de la Ley 07-23 de la República Dominicana sobre Facturación Electrónica.</p>
                     </section>
 
                     <section>
                         <h3 className="font-serif font-bold text-lg mb-2 text-[#0A192F]">2. Privacidad y Datos</h3>
-                        <p>Su información está protegida por cifrado de grado bancario. Lexis Bill actúa como un procesador de datos fiscales, asegurando que su información nunca sea compartida con terceros sin su consentimiento explícito.</p>
+                        <p>Su información está protegida por cifrado de grado bancario. Trinalyze Billing actúa como un procesador de datos fiscales, asegurando que su información nunca sea compartida con terceros sin su consentimiento explícito.</p>
                     </section>
 
                     <section>
                         <h3 className="font-serif font-bold text-lg mb-2 text-[#0A192F]">3. Responsabilidad Fiscal</h3>
-                        <p>Lexis Bill facilita el cumplimiento con la DGII mediante la validación automática de RNC y NCF. Sin embargo, el usuario final es responsable de la veracidad de la información ingresada en cada comprobante.</p>
+                        <p>Trinalyze Billing facilita el cumplimiento con la DGII mediante la validación automática de RNC y NCF. Sin embargo, el usuario final es responsable de la veracidad de la información ingresada en cada comprobante.</p>
                     </section>
 
                     <section>
@@ -98,7 +98,7 @@ export function TrustFooter() {
             <div className="container mx-auto px-6">
                 <div className="grid md:grid-cols-4 gap-8 mb-10">
                     <div className="col-span-1 md:col-span-2">
-                        <div className="font-serif text-xl font-bold text-[#D4AF37] mb-4">Lexis Bill</div>
+                        <div className="font-serif text-xl font-bold text-[#D4AF37] mb-4">Trinalyze Billing</div>
                         <p className="text-[11px] text-slate-400 max-w-xs leading-relaxed">
                             Tecnología protegida por cifrado de grado bancario. Adaptado a la Ley 07-23 de RD.
                         </p>
@@ -124,7 +124,7 @@ export function TrustFooter() {
                 </div>
                 <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p className="text-[10px] text-slate-600 uppercase tracking-widest">
-                        © 2026 Lexis Bill. Todos los derechos reservados.
+                        © 2026 Trinalyze Billing. Todos los derechos reservados.
                     </p>
                     <div className="flex items-center gap-4">
                         <ShieldCheck className="w-4 h-4 text-emerald-500/50" />

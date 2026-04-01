@@ -30,7 +30,7 @@ export default function NotFound() {
                 </div>
 
                 <p className="text-xs text-slate-400 mt-8">
-                    Lexis Bill &copy; {new Date().getFullYear()}
+                    Trinalyze Billing &copy; {new Date().getFullYear()}
                 </p>
             </div>
         </div>

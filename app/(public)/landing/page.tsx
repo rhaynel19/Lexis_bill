@@ -10,7 +10,7 @@ export default function LandingPage() {
             <nav className="fixed top-0 w-full z-50 bg-lexis-bg-deep/80 backdrop-blur-md border-b border-lexis-gold/10">
                 <div className="container mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
                     <div className="text-2xl font-serif font-bold tracking-tighter">
-                        <span className="text-lexis-gold">Lexis</span>{" "}
+                        <span className="text-lexis-gold">Trinalyze</span>{" "}
                         <span className="text-lexis-text-light">Bill</span>
                     </div>
                     <div className="hidden md:flex items-center gap-8">
@@ -72,7 +72,7 @@ export default function LandingPage() {
                             Recupera tus noches y tus <span className="text-lexis-gold">fines de semana.</span>
                         </h2>
                         <p className="text-xl text-slate-400 leading-relaxed mb-16 font-light">
-                            Mientras otros se pierden en formularios de la DGII y cálculos manuales, tú ya terminaste. Lexis Bill automatiza la burocracia para que tu única preocupación sea la excelencia en tu servicio.
+                            Mientras otros se pierden en formularios de la DGII y cálculos manuales, tú ya terminaste. Trinalyze Billing automatiza la burocracia para que tu única preocupación sea la excelencia en tu servicio.
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 text-left">
                             <div className="flex items-start gap-6 p-8 rounded-2xl bg-white/[0.02] border border-white/5">
@@ -142,13 +142,13 @@ export default function LandingPage() {
             <section className="py-24 bg-lexis-bg-mid">
                 <div className="container mx-auto px-4 sm:px-6">
                     <div className="max-w-4xl mx-auto text-center space-y-8">
-                        <span className="text-lexis-gold text-xs font-bold tracking-[0.4em] uppercase">El Porqué de Lexis Bill</span>
+                        <span className="text-lexis-gold text-xs font-bold tracking-[0.4em] uppercase">El Porqué de Trinalyze Billing</span>
                         <h2 className="font-serif text-3xl md:text-5xl font-bold leading-tight">
                             Mientras otros miran a las corporaciones, <br />
                             <span className="text-lexis-gold">nosotros te miramos a ti.</span>
                         </h2>
                         <p className="text-xl text-slate-400 leading-relaxed font-light">
-                            La mayoría de los sistemas fueron hechos para grandes empresas con ejércitos de contadores. Lexis Bill nace para el profesional autónomo, el técnico independiente y el profesional que realmente mueve la economía dominicana. Somos el aliado que te da el estatus de una multinacional, sin importar el tamaño de tu oficina hoy.
+                            La mayoría de los sistemas fueron hechos para grandes empresas con ejércitos de contadores. Trinalyze Billing nace para el profesional autónomo, el técnico independiente y el profesional que realmente mueve la economía dominicana. Somos el aliado que te da el estatus de una multinacional, sin importar el tamaño de tu oficina hoy.
                         </p>
                     </div>
                 </div>
@@ -247,7 +247,7 @@ export default function LandingPage() {
                     <div className="grid md:grid-cols-4 gap-12 mb-16">
                         <div className="col-span-1 md:col-span-2">
                             <div className="font-serif text-2xl font-bold mb-6">
-                                <span className="text-lexis-gold">Lexis</span>{" "}
+                                <span className="text-lexis-gold">Trinalyze</span>{" "}
                                 <span className="text-lexis-text-light">Bill</span>
                             </div>
                             <p className="text-slate-400 max-w-sm mb-6">
@@ -272,7 +272,7 @@ export default function LandingPage() {
                         </div>
                     </div>
                     <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-slate-500 uppercase tracking-widest">
-                        <p>© {new Date().getFullYear()} Lexis Bill. Todos los derechos reservados.</p>
+                        <p>© {new Date().getFullYear()} Trinalyze Billing. Todos los derechos reservados.</p>
                         <div className="flex flex-wrap justify-center gap-6 md:gap-8">
                             <Link href="/terminos" className="hover:text-lexis-gold">Términos y Condiciones</Link>
                             <Link href="/privacidad" className="hover:text-lexis-gold">Privacidad</Link>

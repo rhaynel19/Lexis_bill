@@ -15,7 +15,7 @@ export default function PartnersInfoPage() {
                     Programa Partners
                 </h1>
                 <p className="text-slate-500 dark:text-muted-foreground font-medium mt-1">
-                    Gana comisiones recurrentes por cada cliente que refieras a Lexis Bill
+                    Gana comisiones recurrentes por cada cliente que refieras a Trinalyze Billing
                 </p>
             </div>
             <Card className="border-amber-200/50 dark:border-amber-900/30 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/20 dark:to-background">
@@ -25,7 +25,7 @@ export default function PartnersInfoPage() {
                         Únete como Partner
                     </CardTitle>
                     <CardDescription>
-                        Refiere negocios a Lexis Bill y recibe un porcentaje de sus suscripciones activas. Sin coste para ti.
+                        Refiere negocios a Trinalyze Billing y recibe un porcentaje de sus suscripciones activas. Sin coste para ti.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-4">

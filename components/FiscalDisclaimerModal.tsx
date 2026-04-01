@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ShieldAlert, Download, Loader2 } from "lucide-react";
 
 const FISCAL_DISCLAIMER_TEXT =
-    "LexisBill genera archivos con base en la información suministrada por el usuario. Debes pre-validar los archivos con la herramienta oficial de la DGII antes de presentarlos. La validación y presentación ante la DGII es responsabilidad del contribuyente.";
+    "TrinalyzeBilling genera archivos con base en la información suministrada por el usuario. Debes pre-validar los archivos con la herramienta oficial de la DGII antes de presentarlos. La validación y presentación ante la DGII es responsabilidad del contribuyente.";
 
 export interface FiscalDisclaimerModalProps {
     open: boolean;

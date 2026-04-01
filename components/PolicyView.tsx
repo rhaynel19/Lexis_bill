@@ -100,7 +100,7 @@ export function PolicyView({ slug, backHref = "/", backLabel = "Volver al inicio
                     {renderPolicyContent(policy.content)}
                 </div>
                 <p className="mt-8 text-center text-xs text-muted-foreground">
-                    © {new Date().getFullYear()} Lexis Bill. Documento legal — no modificar.
+                    © {new Date().getFullYear()} Trinalyze Billing. Documento legal — no modificar.
                 </p>
             </main>
         </div>

@@ -13,7 +13,7 @@ const TUTORIAL_STORAGE_KEY = "lexis_tutorial_completed";
 const STEPS = [
     {
         id: "welcome",
-        title: "Bienvenido a Lexis Bill",
+        title: "Bienvenido a Trinalyze Billing",
         bullets: [
             "Facturación y reportes fiscales en un solo lugar.",
             "En pocos pasos estarás listo para facturar.",

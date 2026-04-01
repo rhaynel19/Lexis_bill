@@ -124,7 +124,7 @@ function getSmartSubtitle(data: BusinessCopilotData): string {
     const hasGrowth = data.alerts?.some(a => a.type === "revenue_growth");
     const hasDrop = data.alerts?.some(a => a.type === "revenue_drop");
     if (hasGrowth) return "Detectamos oportunidades para aumentar tu facturación.";
-    if (hasDrop) return "Lexis ha detectado variaciones en tu ritmo. Te sugerimos revisar el análisis.";
+    if (hasDrop) return "Trinalyze ha detectado variaciones en tu ritmo. Te sugerimos revisar el análisis.";
     if (hasAlerts) return "Hay aspectos de tu negocio que requieren tu atención.";
     if (score >= 70) return "Hoy tu negocio muestra un comportamiento estable.";
     if (score >= 50) return "Tu negocio se mantiene. Hay margen para optimizar.";
@@ -340,7 +340,7 @@ export function LexisBusinessCopilot() {
                         <div className="flex-1 space-y-2">
                             <div className="h-4 w-48 bg-slate-200/80 dark:bg-slate-700/80 rounded animate-pulse" />
                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                                Lexis Copilot está analizando tu negocio…
+                                Trinalyze Copilot está analizando tu negocio…
                             </p>
                         </div>
                     </div>
@@ -359,7 +359,7 @@ export function LexisBusinessCopilot() {
                                 <Activity className="w-6 h-6 text-slate-500 dark:text-slate-400" />
                             </div>
                             <div>
-                                <p className="font-semibold text-foreground">Lexis Business Copilot</p>
+                                <p className="font-semibold text-foreground">Trinalyze Business Copilot</p>
                                 <p className="text-sm text-muted-foreground mt-0.5">
                                     El asistente está teniendo dificultades para cargar el análisis.<br />
                                     Estamos reintentando en segundo plano.
@@ -386,7 +386,7 @@ export function LexisBusinessCopilot() {
                                 <Activity className="w-6 h-6 text-slate-500 dark:text-slate-400" />
                             </div>
                             <div>
-                                <p className="font-semibold text-foreground">Lexis Business Copilot</p>
+                                <p className="font-semibold text-foreground">Trinalyze Business Copilot</p>
                                 <p className="text-sm text-muted-foreground mt-0.5">
                                     El asistente está teniendo dificultades para cargar el análisis.<br />
                                     Estamos reintentando en segundo plano.
@@ -413,7 +413,7 @@ export function LexisBusinessCopilot() {
                             <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                            <p className="font-semibold text-foreground">Lexis Business Copilot</p>
+                            <p className="font-semibold text-foreground">Trinalyze Business Copilot</p>
                             <p className="text-sm text-muted-foreground mt-1">
                                 {data.message ?? "Aún no tenemos suficientes datos para generar un análisis inteligente. Crea tus primeras facturas y el Copilot comenzará a darte recomendaciones automáticamente."}
                             </p>
@@ -455,7 +455,7 @@ export function LexisBusinessCopilot() {
                         </div>
                         <div>
                             <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                                Lexis observa tu negocio
+                                Trinalyze observa tu negocio
                             </CardTitle>
                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                                 {getSmartSubtitle(data)}
@@ -671,7 +671,7 @@ export function LexisBusinessCopilot() {
                     {data?.alerts && data.alerts.length > 0 && (
                         <div>
                             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                                <Zap className="w-4 h-4" /> Lexis detectó algo importante
+                                <Zap className="w-4 h-4" /> Trinalyze detectó algo importante
                             </h4>
                             <div className="grid gap-3 sm:grid-cols-2">
                                 {data.alerts.slice(0, 6).map((a, i) => (
@@ -820,7 +820,7 @@ export function LexisBusinessCopilot() {
             {!collapsed && !hasContent && (
                 <CardContent>
                     <p className="text-sm text-slate-500 dark:text-slate-400 py-4">
-                        Lexis analizará tu negocio cuando tengas facturas y clientes. Crea tu primera factura para comenzar.
+                        Trinalyze analizará tu negocio cuando tengas facturas y clientes. Crea tu primera factura para comenzar.
                     </p>
                     <NewInvoiceButton variant="card" />
                 </CardContent>

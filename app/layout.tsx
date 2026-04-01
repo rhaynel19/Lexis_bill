@@ -10,15 +10,15 @@ import { AuthProvider } from "@/components/providers/AuthContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Lexis Bill | El orden que te deja tranquilo",
-  description: "El único sistema que habla dominicano 🇩🇴. La plataforma de facturación premium para el profesional independiente en República Dominicana.",
+  title: "Trinalyze Billing | El orden que te deja tranquilo",
+  description: "Modern billing and business management platform.",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#1E2A47",
+  themeColor: "#0B0F1A",
   viewportFit: "cover",
 };
 
@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${inter.className} bg-slate-50 antialiased`}>
-        <ThemeProvider defaultTheme="system" storageKey="lexis-theme">
+        <ThemeProvider defaultTheme="system" storageKey="trinalyze-theme">
           <PreferencesProvider>
             <AuthProvider>
               {children}

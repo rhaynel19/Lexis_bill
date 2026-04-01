@@ -252,7 +252,7 @@ function RegisterForm() {
                                 {ref && (
                                     <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 text-xs font-semibold border border-amber-200">
                                         <CheckCircle2 className="w-3.5 h-3.5" />
-                                        Referido por un Partner Lexis Bill
+                                        Referido por un Partner Trinalyze Billing
                                     </div>
                                 )}
                             </>
@@ -337,14 +337,14 @@ function RegisterForm() {
                                             <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                                             <div>
                                                 <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{rncStatus.error || "No pudimos validar este RNC. Revísalo con calma."}</p>
-                                                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">Lexis Bill valida RNCs usando fuentes públicas de la República Dominicana.</p>
+                                                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">Trinalyze Billing valida RNCs usando fuentes públicas de la República Dominicana.</p>
                                             </div>
                                         </div>
                                     )}
                                 </div>
                                 {!(rncStatus.valid === false && !rncStatus.loading) && (
                                     <p className="text-[9px] text-slate-400 pt-1 pl-1 italic">
-                                        Lexis Bill valida RNCs usando fuentes públicas de la República Dominicana.
+                                        Trinalyze Billing valida RNCs usando fuentes públicas de la República Dominicana.
                                     </p>
                                 )}
                             </div>

@@ -130,7 +130,7 @@ export function DocumentViewer({
             } catch { return {}; }
         })()
         : {};
-    const companyName = authUser?.fiscalStatus?.confirmed || appConfig.companyName || appConfig.name || APP_CONFIG.company.name || "Lexis Bill";
+    const companyName = authUser?.fiscalStatus?.confirmed || appConfig.companyName || appConfig.name || APP_CONFIG.company.name || "Trinalyze Billing";
     const companyRnc = authUser?.rnc ?? appConfig.rnc ?? APP_CONFIG.company.rnc ?? "N/A";
     const companyAddress = appConfig.address ?? APP_CONFIG.company.address ?? "";
     const companyPhone = appConfig.phone ?? APP_CONFIG.company.phone ?? "";

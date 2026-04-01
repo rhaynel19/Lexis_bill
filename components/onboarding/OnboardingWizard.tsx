@@ -37,7 +37,7 @@ export function OnboardingWizard() {
                     {/* Sidebar Progress */}
                     <div className="w-full md:w-1/3 bg-[#081221] p-4 md:p-8 flex md:flex-col flex-row items-center justify-between gap-4 border-b md:border-b-0 md:border-r border-[#D4AF37]/10 shrink-0">
                         <div>
-                            <h2 className="text-2xl font-serif font-bold text-[#D4AF37] mb-2">Lexis Bill</h2>
+                            <h2 className="text-2xl font-serif font-bold text-[#D4AF37] mb-2">Trinalyze Billing</h2>
                             <p className="text-slate-400 text-sm">Configuración Inicial</p>
                         </div>
                         <div className="flex md:flex-col flex-row gap-2 md:gap-6 md:space-y-0">
@@ -80,7 +80,7 @@ export function OnboardingWizard() {
                                     exit={{ opacity: 0, x: -10 }}
                                     className="space-y-6"
                                 >
-                                    <h3 className="text-2xl font-bold">Hola, soy Lexis 👋</h3>
+                                    <h3 className="text-2xl font-bold">Hola, soy Trinalyze 👋</h3>
                                     <p className="text-slate-400">Te ayudo con la facturación y los reportes fiscales. ¿A qué te dedicas? Así personalizo todo para ti.</p>
                                     <div className="grid grid-cols-2 gap-3">
                                         {professions.map((p) => (
@@ -209,7 +209,7 @@ export function OnboardingWizard() {
                                         <div className="flex gap-3">
                                             <CheckCircle2 className="w-5 h-5 text-[#D4AF37] shrink-0" />
                                             <p className="text-xs text-slate-400">
-                                                Tus datos están seguros. LexisBill solo los usa para generar tus reportes 606 y 607 automáticamente.
+                                                Tus datos están seguros. TrinalyzeBilling solo los usa para generar tus reportes 606 y 607 automáticamente.
                                             </p>
                                         </div>
                                     </div>

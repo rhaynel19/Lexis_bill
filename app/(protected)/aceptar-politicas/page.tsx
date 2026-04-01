@@ -78,7 +78,7 @@ export default function AceptarPoliticasPage() {
                     </div>
                     <CardTitle className="text-2xl">Actualización de políticas</CardTitle>
                     <CardDescription>
-                        Hemos actualizado nuestros documentos legales. Para continuar usando Lexis Bill, lea y acepte las siguientes políticas.
+                        Hemos actualizado nuestros documentos legales. Para continuar usando Trinalyze Billing, lea y acepte las siguientes políticas.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">

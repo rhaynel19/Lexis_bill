@@ -94,7 +94,7 @@ export default function AdminLayout({
                     </div>
                     <Link href="/dashboard" className="shrink-0 self-start sm:self-center">
                         <Button variant="ghost" size="sm" className="gap-2">
-                            <ArrowLeft className="w-4 h-4" /> Volver a LexisBill
+                            <ArrowLeft className="w-4 h-4" /> Volver a TrinalyzeBilling
                         </Button>
                     </Link>
                 </div>

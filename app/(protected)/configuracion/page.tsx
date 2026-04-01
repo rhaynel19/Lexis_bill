@@ -258,7 +258,7 @@ export default function Configuration() {
                         <CardTitle className="text-xl text-indigo-900 flex items-center gap-2">
                             <Settings className="w-5 h-5" /> Preferencias de Facturación
                         </CardTitle>
-                        <CardDescription>Configure cómo Lexis Bill automatiza sus comprobantes.</CardDescription>
+                        <CardDescription>Configure cómo Trinalyze Billing automatiza sus comprobantes.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-white rounded-xl border border-indigo-100 shadow-sm opacity-80">
@@ -374,7 +374,7 @@ export default function Configuration() {
             <Card className="border-none shadow-lg bg-white/50 backdrop-blur-sm">
                 <CardHeader>
                     <CardTitle className="text-xl">Documentos legales</CardTitle>
-                    <CardDescription>Políticas y condiciones de Lexis Bill. Consulte y descargue cuando lo necesite.</CardDescription>
+                    <CardDescription>Políticas y condiciones de Trinalyze Billing. Consulte y descargue cuando lo necesite.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ul className="grid gap-2 sm:grid-cols-2">

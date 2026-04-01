@@ -66,7 +66,7 @@ export function DocumentPreview({
             <div className="bg-card p-4 sm:p-8 md:p-12 rounded-xl shadow-xl border border-border/20 min-h-[600px] relative overflow-hidden transition-colors">
                 {/* Watermark */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none text-foreground">
-                    <h1 className="text-[120px] font-serif font-bold -rotate-45">LEXIS</h1>
+                    <h1 className="text-[120px] font-serif font-bold -rotate-45">TRINALYZE</h1>
                 </div>
 
                 {/* Header */}
