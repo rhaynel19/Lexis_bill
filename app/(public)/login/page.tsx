@@ -39,19 +39,16 @@ function getPostLoginPath(me: { role?: string; partner?: { status?: string } | n
 
 /** Mensaje seguro según tipo de error (sin exponer datos sensibles). */
 function getLoginErrorMessage(err: { status?: number; message?: string; code?: string } | null): string {
-    if (!err) return "Error al iniciar sesión. Intenta de nuevo.";
+    if (!err) return "Error desconocido. Por favor intenta nuevamente.";
     const status = err.status;
     const msg = (err.message || "").toLowerCase();
 
-    if (status === 404 || status === 405 || status === 503) return "El servicio de inicio de sesión no está disponible. Contacte al administrador o a soporte.";
-    if (status === 502) return "El servidor de inicio de sesión no responde. Verifica que el API esté en línea o intenta en unos minutos.";
+    if (status === 404 || status === 405 || status === 503 || status === 502 || (status != null && status >= 500 && status < 600)) return "Error temporal del servidor. Estamos trabajando para solucionarlo. Intenta nuevamente en unos minutos.";
     if (status === 401 || msg.includes("credencial") || msg.includes("invalid") || msg.includes("unauthorized") || msg.includes("contraseña")) return "Correo o contraseña incorrectos. Verifica e intenta de nuevo.";
     if (status === 403 || err.code === "ACCOUNT_BLOCKED") return "Cuenta bloqueada. Contacte a soporte.";
-    if (status != null && (status === 500 || (status >= 500 && status < 600))) return "Error temporal del servidor. Intenta en unos minutos o contacta a soporte.";
-    if (msg.includes("timeout") || msg.includes("tardando") || msg.includes("abort")) return "El servidor tarda demasiado. Verifica tu conexión e intenta de nuevo.";
-    if (msg.includes("conexión") || msg.includes("no responde") || msg.includes("failed to fetch") || msg.includes("network")) return "No se pudo conectar. Verifica tu conexión a internet e intenta de nuevo.";
+    if (msg.includes("timeout") || msg.includes("tardando") || msg.includes("abort") || msg.includes("conexión") || msg.includes("no responde") || msg.includes("failed to fetch") || msg.includes("network")) return "Problema de conexión. Verifica tu internet o intenta nuevamente.";
 
-    return err.message && err.message.length < 120 ? err.message : "Error al iniciar sesión. Intenta de nuevo o contacta a soporte.";
+    return err.message && err.message.length < 120 ? err.message : "Error desconocido. Por favor intenta nuevamente.";
 }
 
 function LoginForm() {
@@ -194,22 +191,21 @@ function LoginForm() {
             {/* Background Luxury Effects */}
             <div className="absolute inset-0">
                 <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5" />
-                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-900/30 rounded-full blur-[120px]" />
+                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-amber-900/30 rounded-full blur-[120px]" />
                 <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] bg-lexis-gold/10 rounded-full blur-[100px]" />
             </div>
 
             <Card className="w-full max-w-md bg-white/95 backdrop-blur border-none shadow-2xl relative z-10 overflow-hidden">
                 <div className="w-full">
-                    <div className="h-1.5 w-full bg-gradient-to-r from-[#0072FF] to-[#00C6FF]" />
+                    <div className="h-1.5 w-full bg-gradient-to-r from-[#D97706] to-[#F59E0B]" />
                 </div>
                 <CardHeader className="text-center pb-6 pt-10">
                     <CardTitle className="text-3xl font-bold tracking-tight flex items-center justify-center gap-2">
-                        <LexisWord className="text-3xl" />
-                        <span className="text-slate-900 font-bold tracking-tight">BILL</span>
+                        <LexisWord className="text-3xl" showBill={true} />
                     </CardTitle>
                     <CardDescription className="text-slate-500 font-medium mt-2 text-sm">Oficina Fiscal Inteligente</CardDescription>
                 </CardHeader>
-                <CardContent className="px-8 pb-8">
+                <CardContent className="px-6 sm:px-8 pb-8">
                     {apiUnavailable && (
                         <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2">
                             <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
@@ -283,12 +279,12 @@ function LoginForm() {
 
                         <Button
                             type="submit"
-                            className="w-full bg-gradient-to-r from-[#0072FF] to-[#00C6FF] text-white font-bold py-6 text-base tracking-wide shadow-lg shadow-[#0072FF]/20 transition-all hover:scale-[1.01] hover:shadow-[#0072FF]/30 rounded-xl rounded-[12px]"
+                            className="w-full bg-gradient-to-r from-[#D97706] to-[#F59E0B] text-white font-bold py-6 text-base tracking-wide shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.01] hover:shadow-amber-500/30 rounded-xl"
                             disabled={isLoading}
                             aria-busy={isLoading}
                         >
                             {isLoading ? (
-                                <span className="flex items-center gap-2"><Lock className="w-4 h-4 animate-spin" aria-hidden /> Entrando...</span>
+                                <span className="flex items-center gap-2"><Loader2 className="w-5 h-5 animate-spin" aria-hidden /> Entrando...</span>
                             ) : (
                                 "Entrar a mi Oficina Fiscal"
                             )}

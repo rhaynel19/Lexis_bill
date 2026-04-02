@@ -24,7 +24,10 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
 
     // 1. Interceptor de Conexión (Offline)
     if (typeof window !== 'undefined' && !navigator.onLine) {
-        toast.error("📡 Sin conexión a internet. Los datos se sincronizarán cuando vuelvas a estar en línea.");
+        toast.warning("Modo sin conexión.\\nMostrando datos guardados.", { 
+            duration: 8000,
+            icon: "🔌"
+        });
 
         // Intentar servir desde caché si es posible
         if (cacheKey) {
@@ -55,7 +58,7 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
                 signal: controller.signal
             }).catch(e => {
                 if (e.message === 'Failed to fetch') {
-                    throw new Error("Error de conexión: El servidor no responde.");
+                    throw new Error("Problema de conexión.\\nVerifica tu internet o intenta nuevamente.");
                 }
                 throw e;
             });
@@ -65,14 +68,14 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
             // Manejo de Errores HTTP (objeto con status, message y data para que el caller pueda mostrar el error real)
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                let errorMessage = errorData.message ?? errorData.error ?? `Server Error: ${response.status}`;
+                let errorMessage = errorData.message ?? errorData.error ?? `Error temporal del servidor.\\nEstamos trabajando para solucionarlo. Intenta nuevamente en unos minutos.`;
                 if (typeof errorMessage !== "string") {
-                    errorMessage = response.status === 502
-                        ? "El servidor no responde. Intenta en unos minutos."
+                    errorMessage = response.status >= 500
+                        ? "Error temporal del servidor.\\nEstamos trabajando para solucionarlo. Intenta nuevamente en unos minutos."
                         : `Server Error: ${response.status}`;
                 }
-                if (response.status === 502) {
-                    errorMessage = "El servidor no responde. Intenta en unos minutos.";
+                if (response.status >= 500) {
+                    errorMessage = "Error temporal del servidor.\\nEstamos trabajando para solucionarlo. Intenta nuevamente en unos minutos.";
                 }
                 const errPayload = { status: response.status, message: errorMessage, data: errorData };
 
@@ -81,7 +84,7 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
                     const path = window.location.pathname || '';
                     const isPublic = ['/', '/login', '/registro', '/landing', '/recuperar-contrasena', '/restablecer-contrasena', '/unirse-como-partner', '/programa-partners'].some(p => path === p || path.startsWith(p + '?'));
                     if (!isPublic) {
-                        toast.error("Tu sesión expiró o no es válida. Inicia sesión de nuevo.");
+                        toast.error("Tu sesión ha expirado.\\nPor favor inicia sesión nuevamente.");
                         window.location.href = `/login?redirect=${encodeURIComponent(path)}`;
                     }
                     throw errPayload;
@@ -113,9 +116,9 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
 
             // Manejo de Timeout específico
             if (error.name === 'AbortError') {
-                error.message = "La conexión está tardando más de lo esperado. Por favor, verifica tu internet o reintenta.";
+                error.message = "Problema de conexión.\\nVerifica tu internet o intenta nuevamente.";
                 if (isLastAttempt) {
-                    toast.error("⏱️ Tiempo de espera agotado. El servidor está tardando mucho en responder.");
+                    toast.error("Problema de conexión.\\nVerifica tu internet o intenta nuevamente.", { icon: "📡" });
 
                     // Fallback a caché en timeout final
                     if (cacheKey) {
@@ -139,7 +142,7 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
                 if (cacheKey && typeof window !== 'undefined') {
                     const cached = localStorage.getItem(`cache_${cacheKey}`);
                     if (cached) {
-                        toast.warning("⚠️ Problemas de conexión. Mostrando datos guardados.");
+                        toast.warning("Modo sin conexión.\\nMostrando datos guardados.", { icon: "🔌" });
                         return JSON.parse(cached);
                     }
                 }

@@ -25,8 +25,7 @@ export default function LandingPage() {
       <nav className="fixed top-0 w-full z-50 bg-lexis-bg-deep/80 backdrop-blur-md border-b-2 border-lexis-gold/40">
         <div className="container mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
           <Link href="/" className="text-2xl font-serif font-bold tracking-tighter flex items-baseline gap-1">
-            <LexisWord className="text-2xl" />{" "}
-            <span className="text-lexis-text-light">Bill</span>
+            <LexisWord className="text-2xl" showBill={true} />
           </Link>
           <div className="hidden md:flex items-center gap-8">
             <Link href="#beneficios" className="text-sm font-medium hover:text-lexis-gold transition-colors">Beneficios</Link>
@@ -97,7 +96,7 @@ export default function LandingPage() {
       <header className="relative pt-32 pb-20 sm:pt-40 sm:pb-24 md:pt-56 md:pb-40 overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 opacity-20">
           <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-lexis-gold rounded-full blur-[140px]"></div>
-          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-amber-600 rounded-full blur-[120px]"></div>
         </div>
 
         <div className="container mx-auto px-4 sm:px-6 text-center max-w-6xl">
@@ -441,8 +440,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-2">
               <div className="font-serif text-2xl font-bold mb-6 flex items-baseline gap-1">
-                <LexisWord className="text-2xl" />{" "}
-                <span className="text-lexis-text-light">Bill</span>
+                <LexisWord className="text-2xl" showBill={true} />
               </div>
               <p className="text-slate-400 max-w-sm mb-6">
                 Diseñado para profesionales y técnicos independientes que mueven la República Dominicana. Elegancia, cumplimiento y rapidez en un solo lugar.

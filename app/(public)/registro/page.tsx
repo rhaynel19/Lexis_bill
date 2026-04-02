@@ -203,8 +203,8 @@ function RegisterForm() {
         <div className="min-h-screen flex items-center justify-center bg-[#0F172A] px-4 py-8 relative overflow-hidden">
             {/* Background Luxury Effects */}
             <div className="absolute inset-0">
-                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-900/30 rounded-full blur-[120px]"></div>
-                <div className="absolute bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px]"></div>
+                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-amber-900/30 rounded-full blur-[120px]"></div>
+                <div className="absolute bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-amber-600/10 rounded-full blur-[100px]"></div>
             </div>
 
             <div className="w-full max-w-lg relative z-10">
@@ -442,12 +442,12 @@ function RegisterForm() {
                                 type="submit"
                                 className={isPartnerFlow
                                     ? "w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-7 px-4 text-base sm:text-lg shadow-xl shadow-amber-500/20 transition-all active:scale-[0.98] rounded-xl whitespace-normal text-center leading-snug"
-                                    : "w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-7 px-4 text-base sm:text-lg shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98] rounded-xl whitespace-normal text-center leading-snug"}
+                                    : "w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-7 px-4 text-base sm:text-lg shadow-xl shadow-amber-500/20 transition-all active:scale-[0.98] rounded-xl whitespace-normal text-center leading-snug"}
                                 disabled={isLoading || !acceptedTerms}
                                 aria-busy={isLoading}
                             >
                                 {isLoading
-                                    ? "Creando cuenta…"
+                                    ? <span className="flex items-center gap-2 justify-center"><Loader2 className="w-5 h-5 animate-spin" /> Creando cuenta…</span>
                                     : isPartnerFlow
                                         ? "Crear cuenta y continuar como Partner"
                                         : plan === 'pro'
