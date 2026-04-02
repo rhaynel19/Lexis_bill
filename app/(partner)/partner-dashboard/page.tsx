@@ -26,8 +26,10 @@ interface PartnerDashboard {
     commissionRate?: number;
     activeClients?: number;
     trialClients?: number;
-    totalRevenue?: number;
-    commissionThisMonth?: number;
+    totalReferrals?: number;
+    estimatedMonthlyEarnings?: number;
+    totalCommissions?: number;
+    pendingCommissionsTotal?: number;
     showWelcomeMessage?: boolean;
     commissions?: PartnerCommission[];
     referrals?: Array<{
@@ -35,6 +37,8 @@ interface PartnerDashboard {
         name: string;
         email: string;
         status: string;
+        plan?: string;
+        monthlyCommission?: number;
         joinedAt: string;
     }>;
 }
@@ -135,13 +139,13 @@ export default function PartnerDashboardPage() {
                 </div>
             )}
 
-            <div className="mb-8">
+            <div className="mb-8" id="dashboard">
                 <h1 className="text-2xl font-bold flex items-center gap-2 text-foreground">
                     <Handshake className="w-7 h-7 text-amber-500" />
                     Programa Partner
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">
-                    Estadísticas y gestión de tus referidos Trinalyze Billing · Comisión {commissionRatePct}% por cliente activo
+                    Estadísticas y gestión de tus referidos Trinalyze Billing · Comisión {commissionRatePct}% por suscripción
                 </p>
             </div>
 
@@ -149,8 +153,16 @@ export default function PartnerDashboardPage() {
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                            <Users className="w-4 h-4" /> Clientes activos
+                            <Users className="w-4 h-4" /> Total Referidos
                         </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <span className="text-2xl font-bold">{data.totalReferrals ?? 0}</span>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xs font-medium text-muted-foreground">Clientes Activos</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <span className="text-2xl font-bold text-amber-600 dark:text-amber-400">{data.activeClients ?? 0}</span>
@@ -158,31 +170,25 @@ export default function PartnerDashboardPage() {
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground">En prueba</CardTitle>
+                        <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4" /> Ganancias Mensuales Estimadas
+                        </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <span className="text-2xl font-bold">{data.trialClients ?? 0}</span>
+                        <span className="text-2xl font-bold">{formatCurrency(data.estimatedMonthlyEarnings ?? 0)}</span>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                            <Wallet className="w-4 h-4" /> Revenue generado
+                            <DollarSign className="w-4 h-4" /> Total Comisiones
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <span className="text-2xl font-bold">{formatCurrency(data.totalRevenue ?? 0)}</span>
-                        <p className="text-xs text-muted-foreground mt-1">Cartera activa × RD$950</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                            <DollarSign className="w-4 h-4" /> Comisión este mes
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <span className="text-2xl font-bold text-green-600 dark:text-green-500">{formatCurrency(data.commissionThisMonth ?? 0)}</span>
+                        <span className="text-2xl font-bold text-green-600 dark:text-green-500">{formatCurrency(data.totalCommissions ?? 0)}</span>
+                        {data.pendingCommissionsTotal ? (
+                            <p className="text-[10px] text-amber-600 font-medium mt-1 uppercase">Pendiente: {formatCurrency(data.pendingCommissionsTotal)}</p>
+                        ) : null}
                     </CardContent>
                 </Card>
             </div>
@@ -240,11 +246,11 @@ export default function PartnerDashboardPage() {
                 </Card>
             )}
 
-            <Card>
+            <Card id="payouts">
                 <CardHeader>
-                    <CardTitle className="text-base font-semibold">Comisiones mensuales</CardTitle>
+                    <CardTitle className="text-base font-semibold">Historial de Pagos (Payouts)</CardTitle>
                     <CardDescription>
-                        Historial de comisiones. El pago se realiza 30 días después del cierre del mes.
+                        Visualiza las comisiones pagadas y pendientes.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -252,8 +258,7 @@ export default function PartnerDashboardPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow className="hover:bg-transparent">
-                                    <TableHead>Mes</TableHead>
-                                    <TableHead className="text-center">Clientes</TableHead>
+                                    <TableHead>Fecha</TableHead>
                                     <TableHead className="text-right">Monto</TableHead>
                                     <TableHead className="text-right">Estado</TableHead>
                                 </TableRow>
@@ -264,7 +269,6 @@ export default function PartnerDashboardPage() {
                                         <TableCell className="font-medium">
                                             {MONTH_NAMES[parseInt((c.month ?? "01").split("-")[1] || "1", 10) - 1]} {c.year}
                                         </TableCell>
-                                        <TableCell className="text-center">{c.activeClients ?? 0}</TableCell>
                                         <TableCell className="text-right font-medium">{formatCurrency(c.amount ?? 0)}</TableCell>
                                         <TableCell className="text-right">
                                             <span
@@ -291,7 +295,7 @@ export default function PartnerDashboardPage() {
                 </CardContent>
             </Card>
 
-            <Card className="mt-8">
+            <Card className="mt-8" id="referrals">
                 <CardHeader>
                     <CardTitle className="text-base font-semibold">Tus Referidos</CardTitle>
                     <CardDescription>
@@ -304,7 +308,9 @@ export default function PartnerDashboardPage() {
                             <TableHeader>
                                 <TableRow className="hover:bg-transparent">
                                     <TableHead>Cliente</TableHead>
+                                    <TableHead>Plan</TableHead>
                                     <TableHead>Estado</TableHead>
+                                    <TableHead className="text-right">Comisión Mensual</TableHead>
                                     <TableHead className="text-right">Fecha de Registro</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -314,6 +320,11 @@ export default function PartnerDashboardPage() {
                                         <TableCell>
                                             <div className="font-medium">{r.name}</div>
                                             <div className="text-xs text-muted-foreground">{r.email}</div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-800 dark:bg-slate-800 dark:text-slate-300">
+                                                {r.plan ?? "Estándar"}
+                                            </span>
                                         </TableCell>
                                         <TableCell>
                                             <span
@@ -327,6 +338,9 @@ export default function PartnerDashboardPage() {
                                             >
                                                 {r.status === "active" ? "Activo" : r.status === "trial" ? "En Prueba" : "Inactivo"}
                                             </span>
+                                        </TableCell>
+                                        <TableCell className="text-right font-medium text-green-600 dark:text-green-400">
+                                            {formatCurrency(r.monthlyCommission ?? 0)}
                                         </TableCell>
                                         <TableCell className="text-right text-sm text-muted-foreground">
                                             {r.joinedAt ? new Date(r.joinedAt).toLocaleDateString("es-DO") : "N/A"}

@@ -12,10 +12,20 @@ import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger }
 
 type PeriodFilter = "current" | "last";
 
-const CHART_COLORS = ["#0072FF", "#00C6FF", "#1e3a5f", "#2d5a87", "#3d7ab5"];
-const PIE_COLORS = ["#0072FF", "#00C6FF", "#0B0F1A"];
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function AdminCEODashboard() {
+    const { theme } = useTheme();
+    const isDark = theme === "dark";
+
+    const CHART_COLORS = isDark 
+        ? ["#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe", "#dbeafe"] 
+        : ["#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"];
+    
+    const PIE_COLORS = isDark
+        ? ["#3b82f6", "#60a5fa", "#f8fafc"]
+        : ["#2563eb", "#3b82f6", "#1e293b"];
+
     const [stats, setStats] = useState<any>(null);
     const [metrics, setMetrics] = useState<any>(null);
     const [partnerStats, setPartnerStats] = useState<any>(null);
@@ -23,6 +33,7 @@ export default function AdminCEODashboard() {
     const [alerts, setAlerts] = useState<Array<{ type: string; count?: number; severity: string; message: string }>>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [period, setPeriod] = useState<PeriodFilter>("current");
+
 
     useEffect(() => {
         const fetchData = async () => {

@@ -48,7 +48,7 @@ export function EmotionalStatusWidget({ ncfHealthy, blockers }: EmotionalStatusP
                 status === "yellow" ? "bg-amber-500/10" : "bg-red-500/10"
         )}>
             {/* Background decoration */}
-            <div className={cn("absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl opacity-20 -mr-10 -mt-10",
+            <div className={cn("absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl opacity-20 dark:opacity-30 -mr-10 -mt-10",
                 status === "green" ? "bg-emerald-500" :
                     status === "yellow" ? "bg-amber-500" : "bg-red-500"
             )}></div>
@@ -62,14 +62,14 @@ export function EmotionalStatusWidget({ ncfHealthy, blockers }: EmotionalStatusP
                 </div>
                 <div className="space-y-2">
                     <h3 className={cn("text-2xl font-serif font-bold",
-                        status === "green" ? "text-emerald-900" :
-                            status === "yellow" ? "text-amber-900" : "text-red-900"
+                        status === "green" ? "text-emerald-900 dark:text-emerald-400" :
+                            status === "yellow" ? "text-amber-900 dark:text-amber-400" : "text-red-900 dark:text-red-400"
                     )}>
                         {title}
                     </h3>
                     <p className={cn("text-lg font-light leading-relaxed",
-                        status === "green" ? "text-emerald-800" :
-                            status === "yellow" ? "text-amber-800" : "text-red-800"
+                        status === "green" ? "text-emerald-800 dark:text-emerald-300" :
+                            status === "yellow" ? "text-amber-800 dark:text-amber-300" : "text-red-800 dark:text-red-300"
                     )}>
                         {message}
                     </p>
@@ -85,5 +85,6 @@ export function EmotionalStatusWidget({ ncfHealthy, blockers }: EmotionalStatusP
                 </div>
             </CardContent>
         </Card>
+
     );
 }

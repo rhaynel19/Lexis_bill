@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${inter.className} bg-slate-50 antialiased`}>
-        <ThemeProvider defaultTheme="system" storageKey="trinalyze-theme">
+        <ThemeProvider defaultTheme="light" storageKey="trinalyze-theme">
           <PreferencesProvider>
             <AuthProvider>
               {children}

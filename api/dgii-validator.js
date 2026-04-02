@@ -1,3 +1,6 @@
+
+const { Transform } = require('stream');
+
 /**
  * Motor de Validación DGII - Reportes 606/607
  * Cumplimiento Norma General 07-2018 / 05-2019
@@ -25,6 +28,9 @@ function validateNcfStructure(ncf) {
     return { valid: errors.length === 0, errors };
 }
 
+/**
+ * Validación síncrona para strings (usada para reportes normales)
+ */
 function validate607Format(content) {
     const errors = [];
     const lines = content.trim().split('\n').filter(l => l.length > 0);
@@ -74,4 +80,74 @@ function validate606Format(content) {
     return { valid: errors.length === 0, errors };
 }
 
-module.exports = { validate607Format, validate606Format, validateNcfStructure };
+/**
+ * Stream Validator Factory
+ */
+function createValidatorStream(type) {
+    let lineCount = 0;
+    let errors = [];
+    let leftover = '';
+    const expectedCols = type === '606' ? 22 : 23;
+
+    return new Transform({
+        transform(chunk, encoding, callback) {
+            let content = leftover + chunk.toString();
+            let lines = content.split(/\r?\n/);
+            leftover = lines.pop(); // Keep partial line
+
+            for (let line of lines) {
+                lineCount++;
+                if (!line.trim()) continue;
+
+                const parts = line.split('|');
+                
+                // Header validation (Line 1)
+                if (lineCount === 1) {
+                    if (parts[0] !== type) errors.push(`Cabecera ${type}: debe iniciar con ${type}`);
+                    if (parts.length < 4) errors.push(`Cabecera ${type}: faltan columnas (RNC, periodo)`);
+                    continue;
+                }
+
+                // Data row validation
+                if (parts.length !== expectedCols) {
+                    errors.push(`Línea ${lineCount}: se esperan ${expectedCols} columnas, hay ${parts.length}`);
+                }
+
+                if (type === '606') {
+                    if (parts.length >= 4 && parts[2] && !DGII_EXPENSE_CATEGORIES.includes(parts[2])) {
+                        errors.push(`Línea ${lineCount}: categoría ${parts[2]} inválida (01-11)`);
+                    }
+                    if (parts.length >= 5) {
+                        const ncfRes = validateNcfStructure(parts[3] || '');
+                        if (!ncfRes.valid) errors.push(`Línea ${lineCount}: ${ncfRes.errors.join('; ')}`);
+                    }
+                } else { // 607
+                    if (parts.length >= 6 && parts[5] && !/^\d{8}$/.test(parts[5])) {
+                        errors.push(`Línea ${lineCount}: fecha comprobante debe ser YYYYMMDD`);
+                    }
+                }
+            }
+            callback();
+        },
+        flush(callback) {
+            if (leftover.trim()) {
+                lineCount++;
+                const parts = leftover.split('|');
+                if (parts.length !== expectedCols) {
+                    errors.push(`Línea ${lineCount}: se esperan ${expectedCols} columnas, hay ${parts.length}`);
+                }
+            }
+            this.push(JSON.stringify({ valid: errors.length === 0, errors, records: lineCount - 1 }));
+            callback();
+        }
+    });
+}
+
+module.exports = { 
+    validate607Format, 
+    validate606Format, 
+    validateNcfStructure,
+    create606ValidatorStream: () => createValidatorStream('606'),
+    create607ValidatorStream: () => createValidatorStream('607')
+};
+

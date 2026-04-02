@@ -1,5 +1,5 @@
 /**
- * Mailer para Lexis Bill (recuperación de contraseña y notificaciones).
+ * Mailer para Trinalyze (recuperación de contraseña y notificaciones).
  * Con SMTP configurado envía emails; si no, solo registra en logs (útil en dev).
  */
 
@@ -39,7 +39,7 @@ function getTransporter() {
  */
 async function sendVerificationEmail(email, verifyUrl) {
     const transport = getTransporter();
-    const appName = process.env.APP_NAME || 'Lexis Bill';
+    const appName = process.env.APP_NAME || 'Trinalyze';
     if (transport) {
         await transport.sendMail({
             from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -61,7 +61,7 @@ async function sendVerificationEmail(email, verifyUrl) {
  */
 async function sendPasswordReset(email, resetUrl) {
     const transport = getTransporter();
-    const appName = process.env.APP_NAME || 'Lexis Bill';
+    const appName = process.env.APP_NAME || 'Trinalyze';
     if (transport) {
         await transport.sendMail({
             from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -81,15 +81,15 @@ async function sendPasswordReset(email, resetUrl) {
  */
 async function sendPaymentApproved(email, plan, billingCycle) {
     const transport = getTransporter();
-    const appName = process.env.APP_NAME || 'Lexis Bill';
+    const appName = process.env.APP_NAME || 'Trinalyze';
     const cycle = billingCycle === 'annual' ? 'anual' : 'mensual';
     if (transport) {
         await transport.sendMail({
             from: process.env.SMTP_FROM || process.env.SMTP_USER,
             to: email,
             subject: `Pago aprobado - ${appName}`,
-            text: `Hola,\n\nTu pago ha sido validado. Tu plan ${plan} (${cycle}) está activo. Ya puedes usar todas las funciones de Lexis Bill.\n\n— ${appName}`,
-            html: `<p>Hola,</p><p>Tu pago ha sido validado. Tu plan <strong>${plan}</strong> (${cycle}) está activo. Ya puedes usar todas las funciones de Lexis Bill.</p><p>— ${appName}</p>`
+            text: `Hola,\n\nTu pago ha sido validado. Tu plan ${plan} (${cycle}) está activo. Ya puedes usar todas las funciones de Trinalyze.\n\n— ${appName}`,
+            html: `<p>Hola,</p><p>Tu pago ha sido validado. Tu plan <strong>${plan}</strong> (${cycle}) está activo. Ya puedes usar todas las funciones de Trinalyze.</p><p>— ${appName}</p>`
         });
         log.info({ email }, 'Email pago aprobado enviado');
         return;
@@ -102,7 +102,7 @@ async function sendPaymentApproved(email, plan, billingCycle) {
  */
 async function sendInvoiceCreated(email, ncf, total, clientName) {
     const transport = getTransporter();
-    const appName = process.env.APP_NAME || 'Lexis Bill';
+    const appName = process.env.APP_NAME || 'Trinalyze';
     if (transport) {
         await transport.sendMail({
             from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -122,14 +122,14 @@ async function sendInvoiceCreated(email, ncf, total, clientName) {
  */
 async function send606607Reminder(email, period) {
     const transport = getTransporter();
-    const appName = process.env.APP_NAME || 'Lexis Bill';
+    const appName = process.env.APP_NAME || 'Trinalyze';
     if (transport) {
         await transport.sendMail({
             from: process.env.SMTP_FROM || process.env.SMTP_USER,
             to: email,
             subject: `Recordatorio reportes fiscales ${period} - ${appName}`,
-            text: `Hola,\n\nTe recordamos presentar tus reportes 606 y 607 del periodo ${period} en la DGII. Puedes generarlos desde Lexis Bill en la sección Reportes.\n\n— ${appName}`,
-            html: `<p>Hola,</p><p>Te recordamos presentar tus reportes 606 y 607 del periodo <strong>${period}</strong> en la DGII. Puedes generarlos desde Lexis Bill en la sección Reportes.</p><p>— ${appName}</p>`
+            text: `Hola,\n\nTe recordamos presentar tus reportes 606 y 607 del periodo ${period} en la DGII. Puedes generarlos desde Trinalyze en la sección Reportes.\n\n— ${appName}`,
+            html: `<p>Hola,</p><p>Te recordamos presentar tus reportes 606 y 607 del periodo <strong>${period}</strong> en la DGII. Puedes generarlos desde Trinalyze en la sección Reportes.</p><p>— ${appName}</p>`
         });
         log.info({ email, period }, 'Email recordatorio 606/607 enviado');
         return;

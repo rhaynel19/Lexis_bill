@@ -41,7 +41,7 @@ Lexis Bill puede actualizar estas políticas. En caso de cambios sustanciales, s
 
 ## 7. Contacto
 
-Para dudas sobre estos términos: info@lexisbill.do — Lexis Bill Solutions, República Dominicana.
+Para dudas sobre estos términos: info@trinalyze.do — Lexis Bill Solutions, República Dominicana.
 
 Última actualización: ${EFFECTIVE_DATE}. Versión 1.
 `.trim()
@@ -54,7 +54,7 @@ Para dudas sobre estos términos: info@lexisbill.do — Lexis Bill Solutions, Re
         content: `
 ## 1. Responsable del Tratamiento
 
-Lexis Bill Solutions ("Lexis Bill") es el responsable del tratamiento de los datos personales que usted facilita al utilizar el Servicio, en cumplimiento de la normativa aplicable en República Dominicana.
+Lexis Bill Solutions ("Trinalyze") es el responsable del tratamiento de los datos personales que usted facilita al utilizar el Servicio, en cumplimiento de la normativa aplicable en República Dominicana.
 
 ## 2. Datos que Recolectamos
 
@@ -76,7 +76,7 @@ Solo compartimos datos cuando sea necesario: (a) con autoridades (ej. DGII) cuan
 
 ## 6. Sus Derechos
 
-Usted puede acceder, rectificar o solicitar la eliminación de sus datos personales, en la medida permitida por la ley y por la necesidad de conservar información fiscal. Contacto: info@lexisbill.do.
+Usted puede acceder, rectificar o solicitar la eliminación de sus datos personales, en la medida permitida por la ley y por la necesidad de conservar información fiscal. Contacto: info@trinalyze.do.
 
 ## 7. Cambios
 
@@ -111,7 +111,7 @@ El incumplimiento de esta política puede dar lugar a la suspensión o baja de l
 
 ## 4. Denuncia
 
-Si tiene conocimiento de un uso inadecuado del Servicio, puede reportarlo a info@lexisbill.do.
+Si tiene conocimiento de un uso inadecuado del Servicio, puede reportarlo a info@trinalyze.do.
 
 Última actualización: ${EFFECTIVE_DATE}. Versión 1.
 `.trim()
@@ -158,7 +158,7 @@ Las suscripciones a Lexis Bill (planes Pro, Premium u otros) se facturan según 
 ## 2. Solicitud de Reembolso
 
 - Puede solicitar un reembolso dentro de los **7 días** siguientes a la fecha de pago si no ha utilizado de forma significativa el Servicio (por ejemplo, no ha emitido facturas con NCF ni generado reportes fiscales con la cuenta).
-- Las solicitudes deben enviarse a info@lexisbill.do indicando el motivo y la referencia de pago.
+- Las solicitudes deben enviarse a info@trinalyze.do indicando el motivo y la referencia de pago.
 
 ## 3. Criterios de Reembolso
 

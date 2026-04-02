@@ -2,9 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "light" | "midnight" | "luxury" | "system";
-/** Tema efectivo aplicado al DOM (cuando system prefiere oscuro usamos "dark") */
-type AppliedTheme = "light" | "dark" | "midnight" | "luxury";
+type Theme = "light" | "dark";
 
 interface ThemeProviderProps {
     children: React.ReactNode;
@@ -18,7 +16,7 @@ interface ThemeProviderState {
 }
 
 const initialState: ThemeProviderState = {
-    theme: "system",
+    theme: "light",
     setTheme: () => null,
 };
 
@@ -26,14 +24,15 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({
     children,
-    defaultTheme = "system",
+    defaultTheme = "light",
     storageKey = "lexis-theme",
     ...props
 }: ThemeProviderProps) {
     const [theme, setTheme] = useState<Theme>(() => {
         if (typeof window !== "undefined") {
             const savedTheme = localStorage.getItem(storageKey) as Theme;
-            return savedTheme || defaultTheme;
+            if (savedTheme === "light" || savedTheme === "dark") return savedTheme;
+            return defaultTheme;
         }
         return defaultTheme;
     });
@@ -41,24 +40,16 @@ export function ThemeProvider({
     useEffect(() => {
         const root = window.document.documentElement;
 
-        // Remove old theme classes and attributes
-        root.classList.remove("light", "dark", "midnight", "luxury");
+        // Remove old theme classes
+        root.classList.remove("light", "dark", "midnight", "luxury", "system");
         root.removeAttribute("data-theme");
 
-        let themeToApply: AppliedTheme;
-        if (theme === "system") {
-            const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-            themeToApply = isDark ? "dark" : "light";
-        } else {
-            themeToApply = theme;
-        }
+        // Apply theme
+        root.classList.add(theme);
+        root.setAttribute("data-theme", theme);
 
-        // Apply theme as class and data-theme attribute
-        root.classList.add(themeToApply);
-        root.setAttribute("data-theme", themeToApply);
-
-        // Map all dark themes to 'dark' class for tailwind 'dark:' utility support
-        if (themeToApply === "dark" || themeToApply === "midnight" || themeToApply === "luxury") {
+        // Support tailwind 'dark:' utility
+        if (theme === "dark") {
             root.classList.add("dark");
         }
     }, [theme]);
@@ -70,6 +61,7 @@ export function ThemeProvider({
             setTheme(theme);
         },
     };
+
 
     return (
         <ThemeProviderContext.Provider {...props} value={value}>

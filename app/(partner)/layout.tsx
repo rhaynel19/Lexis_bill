@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Handshake, LogOut, LayoutDashboard } from "lucide-react";
+import { Handshake, LogOut, LayoutDashboard, Users, DollarSign, CreditCard, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LexisWord } from "@/components/LexisWord";
@@ -79,10 +79,50 @@ export default function PartnerLayout({
                             <Button
                                 variant={pathname === "/partner-dashboard" ? "secondary" : "ghost"}
                                 size="sm"
-                                className="gap-2 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20"
+                                className="gap-2 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 hidden md:flex"
                             >
                                 <LayoutDashboard className="w-4 h-4" />
                                 Dashboard
+                            </Button>
+                        </Link>
+                        <Link href="/partner-dashboard#referrals">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-2 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 hidden lg:flex"
+                            >
+                                <Users className="w-4 h-4" />
+                                Referrals
+                            </Button>
+                        </Link>
+                        <Link href="/partner-dashboard#commissions">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-2 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 hidden lg:flex"
+                            >
+                                <DollarSign className="w-4 h-4" />
+                                Commissions
+                            </Button>
+                        </Link>
+                        <Link href="/partner-dashboard#payouts">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-2 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 hidden lg:flex"
+                            >
+                                <CreditCard className="w-4 h-4" />
+                                Payouts
+                            </Button>
+                        </Link>
+                        <Link href="/partner-dashboard#account">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-2 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 hidden sm:flex"
+                            >
+                                <UserCircle className="w-4 h-4" />
+                                Account
                             </Button>
                         </Link>
                         <ThemeToggle />

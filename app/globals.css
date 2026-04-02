@@ -82,14 +82,10 @@
   --lexis-brand-blue: #0072FF;
 
   /* --- LIGHT THEME (Default) --- */
-  --bg-primary: oklch(0.985 0 0);
-  /* Pure Whiteish */
-  --bg-secondary: oklch(1 0 0);
-  /* Pure White */
-  --text-primary: oklch(0.145 0.02 240);
-  /* Oxford Blue Dark */
-  --text-secondary: oklch(0.45 0.02 240);
-  /* Muted Slate */
+  --bg-primary: #F5F7FA;
+  --bg-secondary: #FFFFFF;
+  --text-primary: #1F2937;
+  --text-secondary: #4B5563;
 
   --border: oklch(0.922 0.01 240);
   --input: oklch(0.922 0.01 240);
@@ -146,9 +142,7 @@
 
 /* --- DARK THEME (System Dark - Neutral) --- */
 .dark,
-[data-theme="dark"],
-[data-theme="midnight"],
-[data-theme="luxury"] {
+[data-theme="dark"] {
   --input-descripcion-text: #f1f5f9;
   --input-descripcion-bg: #0B0F1A;
 }
@@ -156,13 +150,9 @@
 .dark,
 [data-theme="dark"] {
   --bg-primary: #0B0F1A;
-  /* Trinalyze Dark Background */
-  --bg-secondary: #121A2F;
-  /* Trinalyze Card Background */
+  --bg-secondary: #111827;
   --text-primary: #FFFFFF;
-  /* Pure white */
-  --text-secondary: #CBD5E1;
-  /* High contrast grey */
+  --text-secondary: #9CA3AF;
 
   --border: oklch(0.28 0.01 240);
   --input: oklch(0.28 0.01 240);
@@ -194,89 +184,7 @@
   --warning-foreground: oklch(0.96 0.005 240);
 }
 
-/* --- MIDNIGHT THEME (Dark Mode Blue) --- */
-[data-theme="midnight"] {
-  --bg-primary: oklch(0.10 0.04 250);
-  /* Deep Navy Blue */
-  --bg-secondary: oklch(0.14 0.04 250);
-  /* Lighter Navy */
-  --text-primary: oklch(0.94 0.02 250);
-  /* Cool white */
-  --text-secondary: oklch(0.68 0.04 250);
-  /* Blue-tinted grey */
 
-  --border: oklch(0.24 0.05 250);
-  --input: oklch(0.24 0.05 250);
-  --ring: oklch(0.55 0.18 250);
-
-  --accent: oklch(0.55 0.20 250);
-  /* Vibrant Royal Blue */
-  --accent-foreground: oklch(0.985 0 0);
-  --accent-muted: oklch(0.18 0.08 250);
-
-  --primary: var(--accent);
-  --primary-foreground: var(--accent-foreground);
-
-  --secondary: oklch(0.22 0.06 250);
-  --secondary-foreground: oklch(0.94 0.02 250);
-
-  --muted: oklch(0.18 0.04 250);
-  --muted-foreground: var(--text-secondary);
-  --placeholder: oklch(0.72 0.04 250);
-
-  --sidebar: oklch(0.06 0.03 250);
-  --sidebar-foreground: oklch(0.94 0.02 250);
-  --sidebar-primary: var(--accent);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.14 0.05 250);
-  --sidebar-accent-foreground: oklch(0.94 0.02 250);
-
-  --success-foreground: oklch(0.94 0.02 250);
-  --warning-foreground: oklch(0.94 0.02 250);
-}
-
-/* --- LUXURY THEME (Premium Gold & Black) --- */
-[data-theme="luxury"] {
-  --bg-primary: oklch(0.08 0.01 60);
-  /* Rich Black with warm hint */
-  --bg-secondary: oklch(0.12 0.02 60);
-  /* Slightly lighter warm black */
-  --text-primary: oklch(0.97 0.02 85);
-  /* Warm white with gold hint */
-  --text-secondary: oklch(0.72 0.05 85);
-  /* Gold-tinted grey */
-
-  --border: oklch(0.35 0.08 85);
-  /* Soft Gold Border */
-  --input: oklch(0.28 0.06 85);
-  --ring: oklch(0.82 0.14 85);
-  /* Bright Gold Ring focus */
-
-  --accent: oklch(0.82 0.14 85);
-  /* Vibrant Champagne Gold */
-  --accent-foreground: oklch(0.12 0.02 60);
-  --accent-muted: oklch(0.28 0.08 85);
-
-  --primary: var(--accent);
-  --primary-foreground: var(--accent-foreground);
-
-  --secondary: oklch(0.22 0.04 60);
-  --secondary-foreground: var(--accent);
-
-  --muted: oklch(0.16 0.02 60);
-  --muted-foreground: oklch(0.68 0.06 85);
-  --placeholder: oklch(0.70 0.06 85);
-
-  --sidebar: oklch(0.04 0.01 60);
-  --sidebar-foreground: var(--text-primary);
-  --sidebar-primary: var(--accent);
-  --sidebar-primary-foreground: var(--bg-primary);
-  --sidebar-accent: oklch(0.18 0.04 85);
-  --sidebar-accent-foreground: var(--text-primary);
-
-  --success-foreground: var(--text-primary);
-  --warning-foreground: var(--text-primary);
-}
 
 @layer base {
   * {
@@ -308,11 +216,9 @@
     opacity: 1;
   }
 
-  /* Mejor nitidez en temas oscuros (Dark, Midnight, Luxury) - evita letras borrosas */
+  /* Mejor nitidez en temas oscuros (Dark) - evita letras borrosas */
   .dark,
-  [data-theme="dark"],
-  [data-theme="midnight"],
-  [data-theme="luxury"] {
+  [data-theme="dark"] {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -402,9 +308,7 @@
     background-color: #ffffff !important;
   }
   .dark input.input-descripcion-item,
-  [data-theme="dark"] input.input-descripcion-item,
-  [data-theme="midnight"] input.input-descripcion-item,
-  [data-theme="luxury"] input.input-descripcion-item {
+  [data-theme="dark"] input.input-descripcion-item {
     color: #f1f5f9 !important;
     -webkit-text-fill-color: #f1f5f9 !important;
     background-color: #0f172a !important;

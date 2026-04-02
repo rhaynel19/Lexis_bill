@@ -200,18 +200,14 @@ function LoginForm() {
 
             <Card className="w-full max-w-md bg-white/95 backdrop-blur border-none shadow-2xl relative z-10 overflow-hidden">
                 <div className="w-full">
-                    <div className="h-1 w-full bg-lexis-bg-deep" />
-                    <div className="h-1 w-full bg-lexis-gold" />
+                    <div className="h-1.5 w-full bg-gradient-to-r from-[#0072FF] to-[#00C6FF]" />
                 </div>
-                <CardHeader className="text-center pb-2 pt-8">
-                    <div className="mx-auto w-16 h-16 bg-blue-950 rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-blue-900/20 transform rotate-3">
-                        <span className="text-3xl font-bold text-lexis-gold">L</span>
-                    </div>
-                    <CardTitle className="text-3xl font-serif font-bold tracking-tighter flex items-baseline justify-center gap-1">
-                        <LexisWord className="text-3xl text-lexis-gold" />{" "}
-                        <span className="text-slate-900 font-sans">BILL</span>
+                <CardHeader className="text-center pb-6 pt-10">
+                    <CardTitle className="text-3xl font-bold tracking-tight flex items-center justify-center gap-2">
+                        <LexisWord className="text-3xl" />
+                        <span className="text-slate-900 font-bold tracking-tight">BILL</span>
                     </CardTitle>
-                    <CardDescription className="text-slate-500 font-medium">Oficina Fiscal Inteligente</CardDescription>
+                    <CardDescription className="text-slate-500 font-medium mt-2 text-sm">Oficina Fiscal Inteligente</CardDescription>
                 </CardHeader>
                 <CardContent className="px-8 pb-8">
                     {apiUnavailable && (
@@ -287,7 +283,7 @@ function LoginForm() {
 
                         <Button
                             type="submit"
-                            className="w-full bg-lexis-bg-deep hover:bg-lexis-bg-mid text-white font-bold py-6 text-lg shadow-lg shadow-blue-900/20 transition-all hover:scale-[1.01] hover:shadow-blue-900/30"
+                            className="w-full bg-gradient-to-r from-[#0072FF] to-[#00C6FF] text-white font-bold py-6 text-base tracking-wide shadow-lg shadow-[#0072FF]/20 transition-all hover:scale-[1.01] hover:shadow-[#0072FF]/30 rounded-xl rounded-[12px]"
                             disabled={isLoading}
                             aria-busy={isLoading}
                         >
