@@ -1406,6 +1406,7 @@ app.post('/api/auth/register', async (req, res) => {
 
         const newUser = new User({
             email, password: hashedPassword, name, rnc, profession,
+            role: isPartnerRegistration ? 'partner' : 'user',
             subscriptionStatus: status,
             expiryDate: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
             subscription: {
@@ -2013,6 +2014,19 @@ app.get('/api/partners/dashboard', verifyToken, verifyPartner, async (req, res) 
         const commissions = await PartnerCommission.find({ partnerId: p._id })
             .sort({ year: -1, month: -1 }).limit(12).lean();
 
+        const rawReferrals = await PartnerReferral.find({ partnerId: p._id })
+            .populate('userId', 'name email createdAt')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const referrals = rawReferrals.map(r => ({
+            id: r._id,
+            status: r.status,
+            name: r.userId ? r.userId.name : 'Usuario',
+            email: r.userId ? r.userId.email : '',
+            joinedAt: r.createdAt || r.registeredAt
+        }));
+
         const baseUrl = getBaseUrl(req);
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const showWelcome = p.approvedAt && new Date(p.approvedAt) >= sevenDaysAgo;
@@ -2028,6 +2042,7 @@ app.get('/api/partners/dashboard', verifyToken, verifyPartner, async (req, res) 
             commissionThisMonth: commissionAmount,
             approvedAt: p.approvedAt,
             showWelcomeMessage: !!showWelcome,
+            referrals,
             commissions: commissions.map(c => ({
                 month: c.month,
                 year: c.year,

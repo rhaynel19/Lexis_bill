@@ -52,9 +52,15 @@ interface FacturaTableProps {
 export function FacturaTable({ invoices, onRefresh, onRequestCreditNote }: FacturaTableProps) {
     const router = useRouter();
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [visibleCount, setVisibleCount] = useState<number>(15);
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
     const [isViewerOpen, setIsViewerOpen] = useState(false);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
+    const handleFilterChange = (val: string) => {
+        setStatusFilter(val);
+        setVisibleCount(15);
+    };
 
     // Filtrado de facturas
     const filteredInvoices = invoices.filter((inv) => {
@@ -65,6 +71,8 @@ export function FacturaTable({ invoices, onRefresh, onRequestCreditNote }: Factu
         if (statusFilter === "rechazada") return inv.status === "cancelled" || inv.status === "rechazada";
         return true;
     });
+
+    const visibleInvoices = filteredInvoices.slice(0, visibleCount);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat("es-DO", {
@@ -165,7 +173,7 @@ export function FacturaTable({ invoices, onRefresh, onRequestCreditNote }: Factu
                             {/* Filter Dropdown */}
                             <div className="flex items-center gap-2">
                                 <Filter className="w-4 h-4 text-muted-foreground" />
-                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                <Select value={statusFilter} onValueChange={handleFilterChange}>
                                     <SelectTrigger className="w-[140px] h-9 text-sm">
                                         <SelectValue placeholder="Estado" />
                                     </SelectTrigger>
@@ -222,7 +230,7 @@ export function FacturaTable({ invoices, onRefresh, onRequestCreditNote }: Factu
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredInvoices.map((inv) => (
+                                        {visibleInvoices.map((inv) => (
                                             <TableRow key={inv.id} className="hover:bg-muted/50 border-border/10 transition-colors group">
                                                 <TableCell className="font-medium text-foreground pl-8">
                                                     {new Date(inv.date).toLocaleDateString("es-DO", { day: '2-digit', month: 'short' })}
@@ -282,7 +290,7 @@ export function FacturaTable({ invoices, onRefresh, onRequestCreditNote }: Factu
 
                             {/* Mobile View */}
                             <div className="md:hidden divide-y divide-border/10">
-                                {filteredInvoices.map((inv) => (
+                                {visibleInvoices.map((inv) => (
                                     <div key={inv.id} className="p-5 space-y-4 bg-card hover:bg-muted/30 active:bg-muted/50 transition-colors" onClick={() => handleViewInvoice(inv)}>
                                         <div className="flex justify-between items-start">
                                             <div className="space-y-1.5">
@@ -324,6 +332,15 @@ export function FacturaTable({ invoices, onRefresh, onRequestCreditNote }: Factu
                                     </div>
                                 ))}
                             </div>
+                            
+                            {/* Load More Button */}
+                            {filteredInvoices.length > visibleInvoices.length && (
+                                <div className="p-4 md:p-6 flex justify-center border-t border-border/10">
+                                    <Button variant="outline" onClick={() => setVisibleCount(prev => prev + 15)} className="w-full sm:w-auto font-medium">
+                                        Cargar más facturas ({filteredInvoices.length - visibleInvoices.length} restantes)
+                                    </Button>
+                                </div>
+                            )}
                         </>
                     )}
                 </CardContent>

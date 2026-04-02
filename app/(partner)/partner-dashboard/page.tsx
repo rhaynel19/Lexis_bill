@@ -30,6 +30,13 @@ interface PartnerDashboard {
     commissionThisMonth?: number;
     showWelcomeMessage?: boolean;
     commissions?: PartnerCommission[];
+    referrals?: Array<{
+        id: string;
+        name: string;
+        email: string;
+        status: string;
+        joinedAt: string;
+    }>;
 }
 
 const MONTH_NAMES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
@@ -115,6 +122,9 @@ export default function PartnerDashboardPage() {
 
     const commissionRatePct = ((data.commissionRate ?? 0) * 100).toFixed(0);
     const lastCommissions = (data.commissions ?? []).slice(0, 6).reverse();
+    const pendingCommissionsTotal = (data.commissions ?? [])
+        .filter(c => c.status === "pending")
+        .reduce((sum, c) => sum + (c.amount ?? 0), 0);
 
     return (
         <div className="container mx-auto max-w-5xl px-4 py-8">
@@ -276,6 +286,58 @@ export default function PartnerDashboardPage() {
                     ) : (
                         <p className="py-8 text-center text-sm text-muted-foreground">
                             Aún no hay comisiones. Refiere clientes para empezar.
+                        </p>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card className="mt-8">
+                <CardHeader>
+                    <CardTitle className="text-base font-semibold">Tus Referidos</CardTitle>
+                    <CardDescription>
+                        Lista de todos los clientes que se han registrado con tu código.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {(data.referrals?.length ?? 0) > 0 ? (
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead>Cliente</TableHead>
+                                    <TableHead>Estado</TableHead>
+                                    <TableHead className="text-right">Fecha de Registro</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {(data.referrals ?? []).map((r, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell>
+                                            <div className="font-medium">{r.name}</div>
+                                            <div className="text-xs text-muted-foreground">{r.email}</div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <span
+                                                className={`rounded-full px-2 py-0.5 text-xs ${
+                                                    r.status === "active"
+                                                        ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                                                        : r.status === "trial"
+                                                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                                                        : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                                                }`}
+                                            >
+                                                {r.status === "active" ? "Activo" : r.status === "trial" ? "En Prueba" : "Inactivo"}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-right text-sm text-muted-foreground">
+                                            {r.joinedAt ? new Date(r.joinedAt).toLocaleDateString("es-DO") : "N/A"}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <p className="py-8 text-center text-sm text-muted-foreground">
+                            Aún no tienes referidos.
                         </p>
                     )}
                 </CardContent>

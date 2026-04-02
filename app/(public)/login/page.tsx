@@ -15,7 +15,7 @@ import { toast } from "sonner";
 const LAST_EMAIL_KEY = "lexis_last_email";
 
 /** Rutas internas permitidas para redirect post-login (evita open redirect). */
-const ALLOWED_REDIRECT_PREFIXES = ["/dashboard", "/nueva-factura", "/nueva-cotizacion", "/cotizaciones", "/reportes", "/configuracion", "/clientes", "/gastos", "/pagos", "/documentos", "/partners", "/partner", "/onboarding", "/ayuda"];
+const ALLOWED_REDIRECT_PREFIXES = ["/dashboard", "/nueva-factura", "/nueva-cotizacion", "/cotizaciones", "/reportes", "/configuracion", "/clientes", "/gastos", "/pagos", "/documentos", "/partners", "/partner-dashboard", "/onboarding", "/ayuda"];
 
 function getSafeRedirect(redirect: string | null): string {
     if (!redirect || typeof redirect !== "string") return "/dashboard";
@@ -28,11 +28,11 @@ function getSafeRedirect(redirect: string | null): string {
 /** Redirect post-login: admin → dashboard (acceso admin desde sidebar); partner activo (y no admin) → /partner/dashboard; resto → dashboard o redirect. */
 function getPostLoginPath(me: { role?: string; partner?: { status?: string } | null } | null, redirect: string | null): string {
     if (me?.role === "admin") return getSafeRedirect(redirect) || "/dashboard";
-    const isActivePartner = me?.partner?.status === "active" || (me?.role === "partner" && me?.partner?.status === "active");
-    if (isActivePartner) {
+    const isPartner = me?.role === "partner" || me?.partner?.status === "active";
+    if (isPartner) {
         const path = redirect?.trim().split("?")[0] ?? "";
-        if (path.startsWith("/partner")) return getSafeRedirect(redirect);
-        return "/partner/dashboard";
+        if (path.startsWith("/partner-dashboard")) return getSafeRedirect(redirect);
+        return "/partner-dashboard";
     }
     return getSafeRedirect(redirect);
 }

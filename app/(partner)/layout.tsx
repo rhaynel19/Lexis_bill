@@ -29,7 +29,8 @@ export default function PartnerLayout({
                     router.replace("/");
                     return;
                 }
-                if (me.partner?.status !== "active") {
+                const isActivePartner = me.partner?.status === "active" || me.role === "partner";
+                if (!isActivePartner) {
                     router.replace("/dashboard");
                     return;
                 }
@@ -66,7 +67,7 @@ export default function PartnerLayout({
         <div className="flex min-h-screen flex-col bg-background text-foreground">
             <header className="shrink-0 border-b border-amber-500/20 bg-gradient-to-r from-amber-50/80 to-background dark:from-amber-950/20 dark:to-background sticky top-0 z-50">
                 <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-                    <Link href="/partner/dashboard" className="flex items-baseline gap-2">
+                    <Link href="/partner-dashboard" className="flex items-baseline gap-2">
                         <LexisWord className="text-2xl text-accent" />
                         <span className="text-foreground font-light font-serif">BILL</span>
                         <span className="ml-2 text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider border-l border-amber-500/50 pl-2">
@@ -74,9 +75,9 @@ export default function PartnerLayout({
                         </span>
                     </Link>
                     <nav className="flex items-center gap-2">
-                        <Link href="/partner/dashboard">
+                        <Link href="/partner-dashboard">
                             <Button
-                                variant={pathname === "/partner/dashboard" ? "secondary" : "ghost"}
+                                variant={pathname === "/partner-dashboard" ? "secondary" : "ghost"}
                                 size="sm"
                                 className="gap-2 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20"
                             >

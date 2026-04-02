@@ -12,8 +12,8 @@ import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger }
 
 type PeriodFilter = "current" | "last";
 
-const CHART_COLORS = ["#0A192F", "#D4AF37", "#1e3a5f", "#2d5a87", "#3d7ab5"];
-const PIE_COLORS = ["#94a3b8", "#D4AF37", "#0A192F"];
+const CHART_COLORS = ["#0072FF", "#00C6FF", "#1e3a5f", "#2d5a87", "#3d7ab5"];
+const PIE_COLORS = ["#0072FF", "#00C6FF", "#0B0F1A"];
 
 export default function AdminCEODashboard() {
     const [stats, setStats] = useState<any>(null);
@@ -263,9 +263,9 @@ export default function AdminCEODashboard() {
                             <div className="h-[280px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={chartData.monthly || []} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                                        <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                                        <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} tickLine={false} axisLine={{ stroke: "hsl(var(--border))" }} />
+                                        <YAxis tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} tickLine={false} axisLine={{ stroke: "hsl(var(--border))" }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                                         <Tooltip formatter={(value, name) => [name === "revenue" && value != null ? formatCurrency(Number(value)) : value ?? 0, name === "revenue" ? "Ingresos" : "Facturas"]} labelFormatter={(l) => l} />
                                         <Bar dataKey="revenue" fill={CHART_COLORS[0]} name="Ingresos" radius={[4, 4, 0, 0]} />
                                         <Bar dataKey="invoices" fill={CHART_COLORS[1]} name="Facturas" radius={[4, 4, 0, 0]} />

@@ -150,19 +150,19 @@
 [data-theme="midnight"],
 [data-theme="luxury"] {
   --input-descripcion-text: #f1f5f9;
-  --input-descripcion-bg: #0f172a;
+  --input-descripcion-bg: #0B0F1A;
 }
 
 .dark,
 [data-theme="dark"] {
-  --bg-primary: oklch(0.14 0.005 240);
-  /* Neutral Dark Grey */
-  --bg-secondary: oklch(0.18 0.005 240);
-  /* Slightly lighter grey */
-  --text-primary: oklch(0.96 0.005 240);
-  /* Clean white */
-  --text-secondary: oklch(0.68 0.01 240);
-  /* Muted grey */
+  --bg-primary: #0B0F1A;
+  /* Trinalyze Dark Background */
+  --bg-secondary: #121A2F;
+  /* Trinalyze Card Background */
+  --text-primary: #FFFFFF;
+  /* Pure white */
+  --text-secondary: #CBD5E1;
+  /* High contrast grey */
 
   --border: oklch(0.28 0.01 240);
   --input: oklch(0.28 0.01 240);
