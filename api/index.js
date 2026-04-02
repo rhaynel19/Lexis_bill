@@ -1,15 +1,11 @@
-const path = require('path');
-// Load local env if exists
-require('dotenv').config({ path: path.resolve(process.cwd(), '.env.local') });
-require('dotenv').config();
-
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
-const log = require('./logger');
-const connectDB = require('./db');
+
+// Import from _api_core (hidden from Vercel function discovery)
+const log = require('../_api_core/logger');
+const connectDB = require('../_api_core/db');
 
 // --- FAIL-FAST: Critical environment variables ---
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -59,21 +55,42 @@ app.use(async (req, res, next) => {
 // --- ROUTES ---
 
 // Health & System
-app.use('/api', require('./routes/system'));
+app.use('/api', require('../_api_core/routes/system'));
 
 // Modular Domain Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/invoices', require('./routes/invoices'));
-app.use('/api/customers', require('./routes/customers'));
-app.use('/api/reports', require('./routes/reports'));
-app.use('/api/partners', require('./routes/partners'));
-app.use('/api/admin', require('./routes/admin'));
-app.use('/api/billing', require('./routes/billing'));
+app.use('/api/auth', require('../_api_core/routes/auth'));
+app.use('/api/invoices', require('../_api_core/routes/invoices'));
+app.use('/api/customers', require('../_api_core/routes/customers'));
+app.use('/api/reports', require('../_api_core/routes/reports'));
+app.use('/api/partners', require('../_api_core/routes/partners'));
+app.use('/api/admin', require('../_api_core/routes/admin'));
+app.use('/api/billing', require('../_api_core/routes/billing'));
 
 // Legacy compatibility for login
-const authController = require('./controllers/auth');
-const { authLimiter } = require('./middleware/rateLimiter');
+const authController = require('../_api_core/controllers/auth');
+const { authLimiter } = require('../_api_core/middleware/rateLimiter');
 app.post('/api/login', authLimiter, authController.login);
+
+// --- CRON JOBS (Vercel) ---
+const reconciler = require('../_api_core/services/reconciler');
+app.post('/api/cron/reconcile', async (req, res) => {
+    // Security check per docs: require CRON_SECRET
+    const secret = req.headers['x-cron-secret'] || req.body?.secret;
+    const CRON_SECRET = process.env.CRON_SECRET || 'change-me-in-production';
+    
+    if (secret !== CRON_SECRET) {
+        log.warn({ path: req.path }, 'Reconciliation attempt with invalid secret');
+        return res.status(401).json({ error: 'Auth required' });
+    }
+    
+    try {
+        const results = await reconciler.reconcileSystem();
+        res.json({ success: true, results });
+    } catch (e) {
+        log.error({ err: e.message }, 'Cron job reconcile error');
+        res.status(500).send();
+    }
+});
 
 // Global Error Handler
 app.use((err, req, res, next) => {

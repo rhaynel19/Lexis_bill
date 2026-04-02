@@ -32,4 +32,15 @@ router.get('/chart-data', billingController.getChartData);
 router.get('/alerts', adminController.getAdminAlerts);
 router.get('/audit', adminController.getAdminAudit);
 
+// Mantenimiento de Sistema
+const reconciler = require('../services/reconciler');
+router.post('/reconcile', async (req, res) => {
+    try {
+        const results = await reconciler.reconcileSystem(true);
+        res.json(results);
+    } catch (e) {
+        res.status(500).json({ message: 'Error en la reconciliación manual', error: e.message });
+    }
+});
+
 module.exports = router;
