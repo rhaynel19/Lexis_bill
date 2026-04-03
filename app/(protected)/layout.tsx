@@ -78,7 +78,7 @@ export default function ProtectedLayout({
             <div className="h-screen w-full bg-background flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-accent font-serif tracking-widest uppercase text-xs">Factura Directa está verificando tu sesión...</p>
+                    <p className="text-accent font-serif tracking-widest uppercase text-xs">Trinalyze está verificando tu sesión...</p>
                 </div>
             </div>
         );
@@ -108,7 +108,7 @@ export default function ProtectedLayout({
                     <Link href="/dashboard">
                         <div className="group">
                             <h1 className="text-2xl font-extrabold tracking-tight cursor-pointer transition-transform group-hover:scale-105 flex items-baseline gap-1">
-                                <LexisWord className="text-2xl text-accent" /> <span className="text-foreground font-light font-serif uppercase tracking-tighter">Factura</span>
+                                <LexisWord className="text-2xl text-accent" />
                             </h1>
                             <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-medium group-hover:text-accent transition-colors">
                                 El orden que te deja tranquilo
@@ -163,7 +163,7 @@ export default function ProtectedLayout({
                         <SidebarLinks isAdmin={userFromApi?.role === "admin"} isPartner={userFromApi?.partner?.status === "active"} onLogout={handleLogout} />
                     </nav>
                     <div className="p-6 border-t border-sidebar-border/50 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Factura Directa — Eficiencia Fiscal</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Trinalyze — Eficiencia Fiscal</p>
                     </div>
                 </aside>
 

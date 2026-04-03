@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Factura Directa Logo
- * Triángulo con nodos y texto FACTURA DIRECTA (FACTURA en blanco/claro, DIRECTA en gradiente dorado)
+ * Trinalyze Logo
+ * Triángulo con nodos y texto TRINALYZE (TRINA en blanco/claro, LYZE en azul)
  */
 export function LexisWord({ 
   className = "", 
@@ -39,9 +39,9 @@ export function LexisWord({
         aria-hidden="true"
       >
         <defs>
-          <linearGradient id="facturaGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#C79A30" />
-            <stop offset="100%" stopColor="#DEB23E" />
+          <linearGradient id="trinaBlueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#1e3a8a" />
           </linearGradient>
           <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="2" result="blur" />
@@ -52,7 +52,7 @@ export function LexisWord({
         {/* Main Triangle Shadow/Outer */}
         <polygon 
             points="50,15 15,85 85,85" 
-            stroke="url(#facturaGoldGrad)" 
+            stroke="url(#trinaBlueGrad)" 
             strokeWidth="8" 
             fill="none" 
             strokeLinejoin="round" 
@@ -60,15 +60,15 @@ export function LexisWord({
         />
         
         {/* Nodes */}
-        <circle cx="50" cy="15" r="10" fill="url(#facturaGoldGrad)" />
+        <circle cx="50" cy="15" r="10" fill="url(#trinaBlueGrad)" />
         <circle cx="15" cy="85" r="10" fill={isLight ? "#FFFFFF" : isDark ? "#0F172A" : "currentColor"} className={variant === "auto" ? "text-slate-900 dark:text-white" : ""} />
         <circle cx="85" cy="85" r="10" fill={isLight ? "#FFFFFF" : isDark ? "#0F172A" : "currentColor"} className={variant === "auto" ? "text-slate-900 dark:text-white" : ""} />
       </svg>
       
-      {/* Text FACTURA */}
+      {/* Text TRINALYZE */}
       <span className="text-xl tracking-[0.18em] flex items-center font-black">
-        <span className={`${trinaColor} transition-colors`}>FACTURA</span>
-        <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#C79A30] to-[#DEB23E] ml-0.5">DIRECTA</span>
+        <span className={`${trinaColor} transition-colors`}>TRINA</span>
+        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-blue-800 ml-0.5">LYZE</span>
         {showBill && (
           <span className={`${billColor} ml-2 font-medium opacity-80`}>BILL</span>
         )}

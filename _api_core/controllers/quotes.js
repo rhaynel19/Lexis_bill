@@ -7,7 +7,11 @@ const { getNextNcf } = require('../services/dgii');
 
 const getQuotes = async (req, res) => {
     try {
-        const quotes = await Quote.find({ userId: req.userId }).sort({ createdAt: -1 }).lean();
+        const rawQuotes = await Quote.find({ userId: req.userId }).sort({ createdAt: -1 }).lean();
+        const quotes = rawQuotes.map(q => ({
+            ...q,
+            date: q.date || q.createdAt
+        }));
         res.json(quotes);
     } catch (error) {
         res.status(500).json({ message: safeErrorMessage(error) });
@@ -34,7 +38,11 @@ const createQuote = async (req, res) => {
         });
 
         await newQuote.save();
-        res.status(201).json(newQuote);
+        const quoteObj = newQuote.toObject();
+        res.status(201).json({
+            ...quoteObj,
+            date: quoteObj.date || quoteObj.createdAt
+        });
     } catch (error) {
         res.status(500).json({ message: safeErrorMessage(error) });
     }

@@ -28,6 +28,7 @@ export interface Quote {
     itbis: number;
     total: number;
     date: string;
+    createdAt?: string;
     validUntil?: string;
     status?: string;
 }

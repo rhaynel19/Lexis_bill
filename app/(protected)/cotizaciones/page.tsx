@@ -258,7 +258,7 @@ export default function Quotes() {
                                                     <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono uppercase">{q.rnc}</p>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-sm text-slate-600 dark:text-slate-400 font-medium">{new Date(q.date).toLocaleDateString("es-DO")}</TableCell>
+                                            <TableCell className="text-sm text-slate-600 dark:text-slate-400 font-medium">{new Date(q.date || q.createdAt || Date.now()).toLocaleDateString("es-DO")}</TableCell>
                                             <TableCell className="font-black text-slate-900 dark:text-white">
                                                 {new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP" }).format(q.total)}
                                             </TableCell>

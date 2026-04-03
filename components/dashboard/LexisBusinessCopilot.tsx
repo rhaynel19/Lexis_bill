@@ -135,7 +135,7 @@ function getSmartSubtitle(data: BusinessCopilotData): string {
     const hasGrowth = data?.alerts?.some(a => a.type === "revenue_growth");
     const hasDrop = data?.alerts?.some(a => a.type === "revenue_drop");
     if (hasGrowth) return "Detectamos oportunidades para aumentar tu facturación.";
-    if (hasDrop) return "Factura Directa ha detectado variaciones en tu ritmo. Te sugerimos revisar el análisis.";
+    if (hasDrop) return "Trinalyze ha detectado variaciones en tu ritmo. Te sugerimos revisar el análisis.";
     if (hasAlerts) return "Hay aspectos de tu negocio que requieren tu atención.";
     if (score >= 70) return "Hoy tu negocio muestra un comportamiento estable.";
     if (score >= 50) return "Tu negocio se mantiene. Hay margen para optimizar.";
@@ -350,7 +350,7 @@ export function LexisBusinessCopilot() {
             case 'whatsapp_prefill':
                 const wpData = insight.action.data;
                 const phone = (wpData.phone || "").replace(/[^0-9]/g, "");
-                const msg = encodeURIComponent(`Hola ${wpData.clientName}, de parte de Factura Directa le recordamos que la factura ${wpData.ncf} por RD$${formatCurrency(wpData.amount)} vence pronto. Puede realizar su pago vía transferencia.`);
+                const msg = encodeURIComponent(`Hola ${wpData.clientName}, de parte de Trinalyze le recordamos que la factura ${wpData.ncf} por RD$${formatCurrency(wpData.amount)} vence pronto. Puede realizar su pago vía transferencia.`);
                 window.open(`https://wa.me/${phone.length === 10 ? `1${phone}` : phone}?text=${msg}`, "_blank");
                 break;
             case 'open_collections_manager':
@@ -381,7 +381,7 @@ export function LexisBusinessCopilot() {
                         <div className="flex-1 space-y-2">
                             <div className="h-4 w-48 bg-slate-200/80 dark:bg-slate-700/80 rounded animate-pulse" />
                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                                Factura Directa Copilot está analizando tu negocio…
+                                Trinalyze Copilot está analizando tu negocio…
                             </p>
                         </div>
                     </div>
@@ -402,7 +402,7 @@ export function LexisBusinessCopilot() {
                                 <Activity className="w-6 h-6 text-slate-500 dark:text-slate-400" />
                             </div>
                             <div>
-                                <p className="font-semibold text-foreground">Factura Directa Copilot</p>
+                                <p className="font-semibold text-foreground">Trinalyze Copilot</p>
                                 <p className="text-sm text-muted-foreground mt-0.5">
                                     El asistente está teniendo dificultades para cargar el análisis.<br />
                                     Estamos reintentando en segundo plano.
@@ -430,7 +430,7 @@ export function LexisBusinessCopilot() {
                             <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                            <p className="font-semibold text-foreground">Factura Directa Copilot</p>
+                            <p className="font-semibold text-foreground">Trinalyze Copilot</p>
                             <p className="text-sm text-muted-foreground mt-1">
                                 {data.message ?? "Aún no tenemos suficientes datos para generar un análisis inteligente. Crea tus primeras facturas y el Copilot comenzará a darte recomendaciones automáticamente."}
                             </p>
@@ -466,7 +466,7 @@ export function LexisBusinessCopilot() {
                         </div>
                         <div>
                             <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100 italic">
-                                Análisis de Factura Directa
+                                Análisis de Trinalyze
                             </CardTitle>
                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                                 {getSmartSubtitle(data)}
@@ -595,7 +595,7 @@ function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData }: 
                 <SheetHeader className="mb-6">
                     <SheetTitle className="text-2xl font-bold flex items-center gap-2">
                         <Radar className="text-blue-600" />
-                        Centro de Inteligencia Factura Directa
+                        Centro de Inteligencia Trinalyze
                     </SheetTitle>
                     <SheetDescription>
                         Análisis profundo de la salud y proyecciones de tu negocio.
@@ -738,7 +738,7 @@ function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData }: 
                     <div className="space-y-4">
                         <h3 className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 italic">
                             <Zap className="w-5 h-5 text-amber-500" />
-                            Recomendaciones de Factura Directa
+                            Recomendaciones de Trinalyze
                         </h3>
                         
                         <ul className="space-y-3">
