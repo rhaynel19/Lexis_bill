@@ -444,13 +444,42 @@ exports.getMetrics = async (req, res) => {
 };
 
 exports.getBusinessCopilot = async (req, res) => {
-    // Logic extracted from index.js copilot endpoint
     try {
         const userId = req.userId;
-        // In a real implementation, we would copy the full logic here. 
-        // For brevity in this refactor, I'll provide a simplified version that returns the core structure.
-        res.json({ message: "Copilot metrics consolidated", userId });
+        const { Invoice, Customer, NCFSettings } = require('../models');
+        const { BillingBrain } = require('../services/billing-brain');
+
+        const [invoices, customers, ncfSettings] = await Promise.all([
+            Invoice.find({ userId }).lean(),
+            Customer.find({ userId }).lean(),
+            NCFSettings.find({ userId, isActive: true }).lean()
+        ]);
+
+        const brain = new BillingBrain(userId, invoices, customers, ncfSettings);
+        await brain.analyze();
+
+        // Calcular métricas base para el dashboard
+        const now = new Date();
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        
+        const monthlyInvoices = invoices.filter(inv => new Date(inv.date) >= firstDayOfMonth && inv.status !== 'cancelled');
+        const monthlyRevenue = monthlyInvoices.reduce((acc, inv) => acc + (inv.total || 0), 0);
+        
+        const pendingInvoices = invoices.filter(inv => (inv.estadoPago === 'pendiente' || inv.estadoPago === 'parcial') && inv.status !== 'cancelled');
+        const totalPending = pendingInvoices.reduce((acc, inv) => acc + (inv.balancePendiente || 0), 0);
+
+        res.json({
+            success: true,
+            insights: brain.insights,
+            stats: {
+                monthlyRevenue,
+                invoiceCount: monthlyInvoices.length,
+                totalPending,
+                pendingCount: pendingInvoices.length
+            }
+        });
     } catch (e) {
+        console.error("Copilot Error:", e);
         res.status(500).json({ message: safeErrorMessage(e) });
     }
 };

@@ -70,6 +70,15 @@ app.use('/api/partners', require('../_api_core/routes/partners'));
 app.use('/api/admin', require('../_api_core/routes/admin'));
 app.use('/api/billing', require('../_api_core/routes/billing'));
 
+// Root-level aliases for frontend compatibility
+const billingRouter = require('../_api_core/routes/billing');
+app.use('/api/business-copilot', (req, res, next) => {
+    req.url = '/business-copilot'; // Rewrite internally to match the billing router's path
+    billingRouter(req, res, next);
+});
+app.use('/api/quotes', require('../_api_core/routes/quotes')); 
+app.use('/api/expenses', require('../_api_core/routes/expenses'));
+
 // Legacy compatibility for login
 const authController = require('../_api_core/controllers/auth');
 const { authLimiter } = require('../_api_core/middleware/rateLimiter');

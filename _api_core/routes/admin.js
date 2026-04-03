@@ -43,4 +43,20 @@ router.post('/reconcile', async (req, res) => {
     }
 });
 
+// Gestión de Partners (Admin)
+const partnersController = require('../controllers/partners');
+router.get('/partners', partnersController.getPartners);
+router.get('/partners/stats', partnersController.getPartnerStats);
+router.post('/partners/invites', partnersController.invitePartner);
+router.get('/partners/:id', partnersController.getPartnerDetail);
+router.get('/partners/:id/cartera', partnersController.getPartnerCartera);
+router.post('/partners/:id/approve', partnersController.approvePartner);
+router.post('/partners/:id/reject', partnersController.rejectPartner);
+router.post('/partners/:id/suspend', partnersController.suspendPartner);
+router.post('/partners/:id/activate', partnersController.activatePartner);
+router.get('/partners/:id/activity', partnersController.getPartnerActivity);
+router.patch('/partners/:id', partnersController.updatePartner);
+router.post('/partners/calculate-commissions', partnersController.calculateCommissions);
+router.post('/partners/commissions/:commissionId/mark-paid', partnersController.markCommissionPaid);
+
 module.exports = router;

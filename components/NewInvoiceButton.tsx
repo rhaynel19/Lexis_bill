@@ -16,15 +16,15 @@ export function NewInvoiceButton({ variant = "inline", className }: NewInvoiceBu
             <Link href="/nueva-factura">
                 <button
                     className={cn(
-                        "h-14 w-14 bg-accent text-accent-foreground rounded-full",
-                        "shadow-xl shadow-amber-500/30 flex items-center justify-center",
-                        "hover:scale-110 active:scale-95 transition-all",
+                        "h-16 w-16 bg-slate-950 text-[#DEB23E] rounded-full",
+                        "shadow-2xl shadow-amber-600/40 flex items-center justify-center",
+                        "border-2 border-[#DEB23E]/40 hover:scale-110 active:scale-95 transition-all",
                         className
                     )}
                     aria-label="Nueva factura"
                     title="Nueva factura"
                 >
-                    <Plus className="h-8 w-8" />
+                    <Plus className="h-9 w-9" />
                 </button>
             </Link>
         );
@@ -55,7 +55,10 @@ export function NewInvoiceButton({ variant = "inline", className }: NewInvoiceBu
     // inline (default)
     return (
         <Link href="/nueva-factura">
-            <Button className={cn("gap-2", className)}>
+            <Button className={cn(
+                "gap-2 bg-slate-950 hover:bg-slate-900 text-[#DEB23E] border border-[#DEB23E]/30 shadow-lg shadow-amber-900/20 font-bold",
+                className
+            )}>
                 <Plus className="w-4 h-4" />
                 Nueva Factura
             </Button>
