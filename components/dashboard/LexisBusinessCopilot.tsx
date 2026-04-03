@@ -631,7 +631,11 @@ function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData }: 
                             </h3>
                             <div className="grid grid-cols-2 gap-4">
                                 {businessData.biSummary.agingBuckets.map((bucket: any, idx: number) => (
-                                    <div key={idx} className="p-5 rounded-2xl border bg-slate-50/50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800 transition-all hover:shadow-md hover:border-amber-200 dark:hover:border-amber-900 group">
+                                    <div 
+                                        key={idx} 
+                                        className="p-5 rounded-2xl border bg-slate-50/50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800 transition-all hover:shadow-md hover:border-amber-200 dark:hover:border-amber-900 group cursor-pointer"
+                                        onClick={() => handleInsightAction('open_collections_manager')}
+                                    >
                                         <p className="text-[10px] font-black text-slate-400 group-hover:text-amber-600 uppercase tracking-tight transition-colors">{bucket.label}</p>
                                         <p className={cn(
                                             "text-2xl font-black mt-1 tabular-nums transition-transform group-hover:scale-105",
