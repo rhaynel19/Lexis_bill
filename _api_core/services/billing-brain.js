@@ -47,24 +47,26 @@ class BillingBrain {
         });
 
         // Análisis críticos (dinero en riesgo)
-        this._analyzeUnpaidInvoices();
-        this._analyzeOverdueInvoices();
-        this._analyzeRevenueDrop();
+        try { this._analyzeUnpaidInvoices(); } catch (e) { log.error(e, 'Error in _analyzeUnpaidInvoices'); }
+        try { this._analyzeOverdueInvoices(); } catch (e) { log.error(e, 'Error in _analyzeOverdueInvoices'); }
+        try { this._analyzeRevenueDrop(); } catch (e) { log.error(e, 'Error in _analyzeRevenueDrop'); }
 
         // Análisis importantes (tendencias)
-        this._analyzeInactiveClients();
-        this._analyzeClientConcentration();
-        this._analyzePaymentMethods();
+        try { this._analyzeInactiveClients(); } catch (e) { log.error(e, 'Error in _analyzeInactiveClients'); }
+        try { this._analyzeClientConcentration(); } catch (e) { log.error(e, 'Error in _analyzeClientConcentration'); }
+        try { this._analyzePaymentMethods(); } catch (e) { log.error(e, 'Error in _analyzePaymentMethods'); }
 
         // Oportunidades (crecimiento)
-        this._analyzeGrowthOpportunities();
-        this._analyzeRecurringPatterns();
-        this._analyzeSoftCollection();
+        try { this._analyzeGrowthOpportunities(); } catch (e) { log.error(e, 'Error in _analyzeGrowthOpportunities'); }
+        try { this._analyzeRecurringPatterns(); } catch (e) { log.error(e, 'Error in _analyzeRecurringPatterns'); }
+        try { this._analyzeSoftCollection(); } catch (e) { log.error(e, 'Error in _analyzeSoftCollection'); }
 
         // Ordenar por prioridad
         this.insights.sort((a, b) => {
             const priorityOrder = { [INSIGHT_PRIORITY.CRITICAL]: 0, [INSIGHT_PRIORITY.IMPORTANT]: 1, [INSIGHT_PRIORITY.OPPORTUNITY]: 2 };
-            return priorityOrder[a.priority] - priorityOrder[b.priority];
+            const pA = priorityOrder[a.priority] ?? 99;
+            const pB = priorityOrder[b.priority] ?? 99;
+            return pA - pB;
         });
 
         return {
@@ -602,23 +604,29 @@ class BillingBrain {
     _calculateProjectedCashFlow() {
         const projection = { next7Days: 0, next15Days: 0, next30Days: 0 };
         
-        this.invoices.forEach(inv => {
-            const isCredit = (inv.tipoPago === 'credito' || inv.tipoPago === 'crédito');
-            const balance = inv.balancePendiente != null ? inv.balancePendiente : 
-                           ((inv.estadoPago === 'pendiente' || inv.status === 'pending') ? (inv.total || 0) : 0);
-            
-            if (!isCredit || balance <= 0) return;
+        try {
+            this.invoices.forEach(inv => {
+                const isCredit = (inv.tipoPago === 'credito' || inv.tipoPago === 'crédito');
+                const balance = inv.balancePendiente != null ? Number(inv.balancePendiente) : 
+                               ((inv.estadoPago === 'pendiente' || inv.status === 'pending') ? (Number(inv.total) || 0) : 0);
+                
+                if (!isCredit || balance <= 0) return;
 
-            const invoiceDate = new Date(inv.date);
-            const daysSince = Math.floor((this.now - invoiceDate) / (1000 * 60 * 60 * 24));
-            const daysRemaining = 30 - daysSince;
+                const invoiceDate = new Date(inv.date);
+                if (isNaN(invoiceDate.getTime())) return;
 
-            if (daysRemaining > 0) {
-                if (daysRemaining <= 7) projection.next7Days += balance;
-                if (daysRemaining <= 15) projection.next15Days += balance;
-                if (daysRemaining <= 30) projection.next30Days += balance;
-            }
-        });
+                const daysSince = Math.floor((this.now - invoiceDate) / (1000 * 60 * 60 * 24));
+                const daysRemaining = 30 - daysSince;
+
+                if (daysRemaining > 0) {
+                    if (daysRemaining <= 7) projection.next7Days += balance;
+                    if (daysRemaining <= 15) projection.next15Days += balance;
+                    if (daysRemaining <= 30) projection.next30Days += balance;
+                }
+            });
+        } catch (e) {
+            log.error(e, 'Error in _calculateProjectedCashFlow');
+        }
 
         return projection;
     }
@@ -629,22 +637,28 @@ class BillingBrain {
     _getVIPClients() {
         const clientMap = new Map();
         
-        this.invoices.forEach(inv => {
-            if (!inv.clientRnc) return;
-            const key = inv.clientRnc;
-            if (!clientMap.has(key)) {
-                clientMap.set(key, {
-                    name: inv.clientName || 'Sin nombre',
-                    totalRevenue: 0,
-                    invoiceCount: 0
-                });
-            }
-            const client = clientMap.get(key);
-            client.totalRevenue += (inv.total || 0);
-            client.invoiceCount++;
-        });
+        try {
+            this.invoices.forEach(inv => {
+                const rnc = inv.clientRnc || inv.clientName;
+                if (!rnc) return;
+                
+                if (!clientMap.has(rnc)) {
+                    clientMap.set(rnc, {
+                        name: inv.clientName || 'Sin nombre',
+                        totalRevenue: 0,
+                        invoiceCount: 0
+                    });
+                }
+                const client = clientMap.get(rnc);
+                client.totalRevenue += (Number(inv.total) || 0);
+                client.invoiceCount++;
+            });
 
-        return Array.from(clientMap.values()).sort((a, b) => b.totalRevenue - a.totalRevenue);
+            return Array.from(clientMap.values()).sort((a, b) => b.totalRevenue - a.totalRevenue);
+        } catch (e) {
+            log.error(e, 'Error in _getVIPClients');
+            return [];
+        }
     }
 }
 

@@ -40,9 +40,9 @@ import {
 const LEXIS_COPILOT_COLLAPSED_KEY = "lexis-copilot-collapsed";
 const LEXIS_COPILOT_CACHE_KEY = "lexis-copilot-cache";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
-const MIN_LOADING_MS = 6000; // No mostrar error antes de 6 segundos
-const REQUEST_TIMEOUT_MS = 12000;
-const RETRY_ATTEMPTS = 2;
+const MIN_LOADING_MS = 2000; // Reducido para mayor agilidad (era 6000)
+const REQUEST_TIMEOUT_MS = 10000;
+const RETRY_ATTEMPTS = 1;
 const RETRY_DELAY_MS = 2000;
 
 export interface ProactiveInsight {
