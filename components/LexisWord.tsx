@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Trinalyze Billing Logo
- * Triángulo con nodos y texto TRINALYZE (TRINA en blanco/claro, LYZE en azul)
+ * Factura Directa Logo
+ * Triángulo con nodos y texto FACTURA DIRECTA (FACTURA en blanco/claro, DIRECTA en gradiente dorado)
  */
 export function LexisWord({ 
   className = "", 
@@ -39,7 +39,7 @@ export function LexisWord({
         aria-hidden="true"
       >
         <defs>
-          <linearGradient id="lexisGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id="facturaGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#C79A30" />
             <stop offset="100%" stopColor="#DEB23E" />
           </linearGradient>
@@ -52,7 +52,7 @@ export function LexisWord({
         {/* Main Triangle Shadow/Outer */}
         <polygon 
             points="50,15 15,85 85,85" 
-            stroke="url(#lexisGoldGrad)" 
+            stroke="url(#facturaGoldGrad)" 
             strokeWidth="8" 
             fill="none" 
             strokeLinejoin="round" 
@@ -60,7 +60,7 @@ export function LexisWord({
         />
         
         {/* Nodes */}
-        <circle cx="50" cy="15" r="10" fill="url(#lexisGoldGrad)" />
+        <circle cx="50" cy="15" r="10" fill="url(#facturaGoldGrad)" />
         <circle cx="15" cy="85" r="10" fill={isLight ? "#FFFFFF" : isDark ? "#0F172A" : "currentColor"} className={variant === "auto" ? "text-slate-900 dark:text-white" : ""} />
         <circle cx="85" cy="85" r="10" fill={isLight ? "#FFFFFF" : isDark ? "#0F172A" : "currentColor"} className={variant === "auto" ? "text-slate-900 dark:text-white" : ""} />
       </svg>

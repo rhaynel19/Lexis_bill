@@ -433,7 +433,12 @@ const getStatement = async (req, res) => {
 
 const getDebtors = async (req, res) => {
     try {
-        const userId = new mongoose.Types.ObjectId(req.userId);
+        if (!req.userId) {
+            return res.status(401).json({ message: 'Sesión expirada' });
+        }
+        
+        const userId = new mongoose.Types.ObjectId(String(req.userId));
+        
         const debtors = await Invoice.aggregate([
             { $match: { userId, status: { $nin: ['cancelled', 'void'] } } },
             {
@@ -476,9 +481,9 @@ const getDebtors = async (req, res) => {
                     }
                 }
             },
-            { $match: { _effectiveBalance: { $gt: 0 } } },
+            { $match: { _effectiveBalance: { $gt: 0.01 } } }, // Filtro de centavos
             { $group: {
-                _id: '$clientRnc',
+                _id: { $ifNull: ['$clientRnc', 'SIN_RNC'] },
                 clientName: { $first: '$clientName' },
                 totalBalance: { $sum: '$_effectiveBalance' },
                 invoiceCount: { $sum: 1 },
@@ -487,7 +492,7 @@ const getDebtors = async (req, res) => {
             {
                 $lookup: {
                     from: 'customers',
-                    let: { rnc: '$_id', uid: new mongoose.Types.ObjectId(req.userId) },
+                    let: { rnc: '$_id', uid: userId },
                     pipeline: [
                         {
                             $match: {
@@ -520,9 +525,10 @@ const getDebtors = async (req, res) => {
             { $sort: { totalBalance: -1 } }
         ]);
 
-        res.json({ debtors });
+        res.json({ debtors: debtors || [] });
     } catch (error) {
-        res.status(500).json({ message: safeErrorMessage(error) });
+        console.error('Error in getDebtors:', error);
+        res.status(500).json({ message: 'Error interno al cargar deudores' });
     }
 };
 

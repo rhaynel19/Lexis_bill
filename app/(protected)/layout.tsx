@@ -78,7 +78,7 @@ export default function ProtectedLayout({
             <div className="h-screen w-full bg-background flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-accent font-serif tracking-widest uppercase text-xs">Trinalyze está verificando tu sesión...</p>
+                    <p className="text-accent font-serif tracking-widest uppercase text-xs">Factura Directa está verificando tu sesión...</p>
                 </div>
             </div>
         );
@@ -163,7 +163,7 @@ export default function ProtectedLayout({
                         <SidebarLinks isAdmin={userFromApi?.role === "admin"} isPartner={userFromApi?.partner?.status === "active"} onLogout={handleLogout} />
                     </nav>
                     <div className="p-6 border-t border-sidebar-border/50 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Facturación Profesional</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Factura Directa — Eficiencia Fiscal</p>
                     </div>
                 </aside>
 

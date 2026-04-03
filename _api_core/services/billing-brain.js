@@ -59,6 +59,7 @@ class BillingBrain {
         // Oportunidades (crecimiento)
         this._analyzeGrowthOpportunities();
         this._analyzeRecurringPatterns();
+        this._analyzeSoftCollection();
 
         // Ordenar por prioridad
         this.insights.sort((a, b) => {
@@ -66,7 +67,20 @@ class BillingBrain {
             return priorityOrder[a.priority] - priorityOrder[b.priority];
         });
 
-        return this.insights;
+        return {
+            insights: this.insights,
+            summary: this.getBiSummary()
+        };
+    }
+
+    /**
+     * Retorna un resumen de métricas BI (no insights)
+     */
+    getBiSummary() {
+        return {
+            cashFlowProjection: this._calculateProjectedCashFlow(),
+            vipClients: this._getVIPClients().slice(0, 3)
+        };
     }
 
     /**
@@ -199,17 +213,18 @@ class BillingBrain {
                     title: 'Caída de ingresos',
                     message: `Tu facturación bajó ${dropPct}% respecto al mes pasado.`,
                     humanMessage: `Tu facturación bajó ${dropPct}% respecto al mes pasado. ¿Quieres ver qué clientes dejaron de comprar?`,
-                    action: {
-                        label: 'Ver análisis',
-                        url: '/dashboard',
-                        type: 'view_analysis',
-                        data: { 
-                            dropPct, 
-                            currentMonth: currentMonthRevenue, 
-                            lastMonth: lastMonthRevenue,
-                            insightId: 'revenue_drop'
-                        }
-                    },
+                        action: {
+                            label: 'Analizar Caída',
+                            url: '/dashboard',
+                            type: 'view_analysis',
+                            data: { 
+                                dropPct, 
+                                currentMonth: currentMonthRevenue, 
+                                lastMonth: lastMonthRevenue,
+                                insightId: 'revenue_drop',
+                                churnedClients: this._getChurnedClients(lastMonth, lastMonthYear, currentMonth, currentYear)
+                            }
+                        },
                     metadata: {
                         currentMonth: currentMonthRevenue,
                         lastMonth: lastMonthRevenue,
@@ -474,14 +489,10 @@ class BillingBrain {
                 id: 'recurring_service',
                 priority: INSIGHT_PRIORITY.OPPORTUNITY,
                 type: 'recurring_service',
-                title: 'Servicio recurrente detectado',
-                message: `"${topServices[0].description}" es tu servicio más vendido (${topServices[0].count} veces).`,
-                humanMessage: `"${topServices[0].description}" es tu servicio más vendido. ¿Quieres crear un servicio frecuente para facturar más rápido?`,
-                action: {
-                    label: 'Configurar servicio',
-                    url: '/configuracion?tab=servicios',
-                    type: 'navigate'
-                },
+                title: 'Patrón de Servicio Identificado',
+                message: `El servicio "${topServices[0].description}" presenta la mayor recurrencia histórica en tu facturación.`,
+                humanMessage: `El servicio "${topServices[0].description}" es tu producto estrella con ${topServices[0].count} transacciones recientes. Esta recurrencia sugiere una base de clientes fidelizada en este segmento.`,
+                action: null, // Sin botón de configurar, solo información útil
                 metadata: {
                     service: topServices[0].description,
                     count: topServices[0].count,
@@ -489,6 +500,42 @@ class BillingBrain {
                 }
             });
         }
+    }
+
+    /**
+     * Identifica clientes que compraron el mes pasado pero no este (o mucho menos)
+     */
+    _getChurnedClients(lm, lmy, cm, cy) {
+        const lastMonthClients = new Map();
+        const currentMonthClients = new Map();
+
+        this.invoices.forEach(inv => {
+            const d = new Date(inv.date);
+            const rnc = inv.clientRnc || inv.clientName;
+            if (!rnc) return;
+
+            if (d.getMonth() === lm && d.getFullYear() === lmy) {
+                lastMonthClients.set(rnc, (lastMonthClients.get(rnc) || 0) + (inv.total || 0));
+            }
+            if (d.getMonth() === cm && d.getFullYear() === cy) {
+                currentMonthClients.set(rnc, (currentMonthClients.get(rnc) || 0) + (inv.total || 0));
+            }
+        });
+
+        const churned = [];
+        lastMonthClients.forEach((revenue, rnc) => {
+            const currentRevenue = currentMonthClients.get(rnc) || 0;
+            if (currentRevenue < revenue * 0.5) { // Caída de más del 50%
+                churned.push({
+                    name: rnc, // Podría buscarse el nombre real si el RNC es la clave
+                    revenueLastMonth: revenue,
+                    revenueCurrentMonth: currentRevenue,
+                    loss: revenue - currentRevenue
+                });
+            }
+        });
+
+        return churned.sort((a, b) => b.loss - a.loss).slice(0, 5);
     }
 
     /**
@@ -502,16 +549,102 @@ class BillingBrain {
         }).format(amount);
     }
 
-    _getOldestUnpaidDays(invoices) {
-        if (!invoices || invoices.length === 0) return 0;
-        const validInvoices = invoices.filter(inv => inv.date && !isNaN(new Date(inv.date).getTime()));
-        if (validInvoices.length === 0) return 0;
+    /**
+     * 🔵 OPORTUNIDAD: Soft Collection (Facturas próximas a vencer)
+     */
+    _analyzeSoftCollection() {
+        const soonToExpire = this.invoices.filter(inv => {
+            const isCredit = (inv.tipoPago === 'credito' || inv.tipoPago === 'crédito');
+            const hasBalance = (inv.balancePendiente != null && inv.balancePendiente > 0) ||
+                (inv.estadoPago === 'pendiente' || inv.status === 'pending');
+            
+            if (!isCredit || !hasBalance) return false;
+
+            const invoiceDate = new Date(inv.date);
+            const daysSince = Math.floor((this.now - invoiceDate) / (1000 * 60 * 60 * 24));
+            
+            // Si tiene entre 22 y 30 días, es el momento perfecto para un recordatorio amable
+            return daysSince >= 22 && daysSince <= 30;
+        });
+
+        if (soonToExpire.length === 0) return;
+
+        soonToExpire.forEach(inv => {
+            this.insights.push({
+                id: `soft_collection_${inv._id || inv.ncf}`,
+                priority: INSIGHT_PRIORITY.IMPORTANT,
+                type: 'soft_collection',
+                title: 'Recordatorio Amable de Cobro',
+                message: `La factura ${inv.ncf} vence pronto (RD$${this._formatCurrency(inv.balancePendiente || inv.total)}).`,
+                humanMessage: `La factura ${inv.ncf} está por cumplir 30 días. ¿Quieres que prepare un recordatorio de WhatsApp para ${inv.clientName}?`,
+                action: {
+                    label: 'Preparar Mensaje',
+                    url: 'https://wa.me/', // El frontend debe completar con el número y texto
+                    type: 'whatsapp_prefill',
+                    data: {
+                        ncf: inv.ncf,
+                        clientName: inv.clientName,
+                        amount: inv.balancePendiente || inv.total,
+                        phone: inv.clientPhone || ''
+                    }
+                },
+                metadata: {
+                    ncf: inv.ncf,
+                    clientName: inv.clientName
+                }
+            });
+        });
+    }
+
+    /**
+     * Calcula la liquidez esperada en 7, 15 y 30 días
+     */
+    _calculateProjectedCashFlow() {
+        const projection = { next7Days: 0, next15Days: 0, next30Days: 0 };
         
-        const oldest = validInvoices.reduce((oldest, inv) => {
-            const invDate = new Date(inv.date);
-            return invDate < oldest ? invDate : oldest;
-        }, new Date(validInvoices[0].date));
-        return Math.floor((this.now - oldest) / (1000 * 60 * 60 * 24));
+        this.invoices.forEach(inv => {
+            const isCredit = (inv.tipoPago === 'credito' || inv.tipoPago === 'crédito');
+            const balance = inv.balancePendiente != null ? inv.balancePendiente : 
+                           ((inv.estadoPago === 'pendiente' || inv.status === 'pending') ? (inv.total || 0) : 0);
+            
+            if (!isCredit || balance <= 0) return;
+
+            const invoiceDate = new Date(inv.date);
+            const daysSince = Math.floor((this.now - invoiceDate) / (1000 * 60 * 60 * 24));
+            const daysRemaining = 30 - daysSince;
+
+            if (daysRemaining > 0) {
+                if (daysRemaining <= 7) projection.next7Days += balance;
+                if (daysRemaining <= 15) projection.next15Days += balance;
+                if (daysRemaining <= 30) projection.next30Days += balance;
+            }
+        });
+
+        return projection;
+    }
+
+    /**
+     * Identifica los clientes de mayor valor histórico
+     */
+    _getVIPClients() {
+        const clientMap = new Map();
+        
+        this.invoices.forEach(inv => {
+            if (!inv.clientRnc) return;
+            const key = inv.clientRnc;
+            if (!clientMap.has(key)) {
+                clientMap.set(key, {
+                    name: inv.clientName || 'Sin nombre',
+                    totalRevenue: 0,
+                    invoiceCount: 0
+                });
+            }
+            const client = clientMap.get(key);
+            client.totalRevenue += (inv.total || 0);
+            client.invoiceCount++;
+        });
+
+        return Array.from(clientMap.values()).sort((a, b) => b.totalRevenue - a.totalRevenue);
     }
 }
 

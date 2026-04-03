@@ -29,6 +29,13 @@ import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { NewInvoiceButton } from "@/components/NewInvoiceButton";
+import { 
+    Sheet, 
+    SheetContent, 
+    SheetHeader, 
+    SheetTitle, 
+    SheetDescription 
+} from "@/components/ui/sheet";
 
 const LEXIS_COPILOT_COLLAPSED_KEY = "lexis-copilot-collapsed";
 const LEXIS_COPILOT_CACHE_KEY = "lexis-copilot-cache";
@@ -74,6 +81,10 @@ export interface BusinessCopilotData {
         riesgoGeneral: string;
     };
     proactiveInsights?: ProactiveInsight[];
+    biSummary?: {
+        cashFlowProjection: { next7Days: number; next15Days: number; next30Days: number };
+        vipClients: Array<{ name: string; totalRevenue: number; invoiceCount: number }>;
+    };
 }
 
 const formatCurrency = (n: number | null | undefined) => {
@@ -124,7 +135,7 @@ function getSmartSubtitle(data: BusinessCopilotData): string {
     const hasGrowth = data?.alerts?.some(a => a.type === "revenue_growth");
     const hasDrop = data?.alerts?.some(a => a.type === "revenue_drop");
     if (hasGrowth) return "Detectamos oportunidades para aumentar tu facturación.";
-    if (hasDrop) return "Trinalyze ha detectado variaciones en tu ritmo. Te sugerimos revisar el análisis.";
+    if (hasDrop) return "Factura Directa ha detectado variaciones en tu ritmo. Te sugerimos revisar el análisis.";
     if (hasAlerts) return "Hay aspectos de tu negocio que requieren tu atención.";
     if (score >= 70) return "Hoy tu negocio muestra un comportamiento estable.";
     if (score >= 50) return "Tu negocio se mantiene. Hay margen para optimizar.";
@@ -336,6 +347,12 @@ export function LexisBusinessCopilot() {
         const { type, url, data } = insight.action;
         
         switch (type) {
+            case 'whatsapp_prefill':
+                const wpData = insight.action.data;
+                const phone = (wpData.phone || "").replace(/[^0-9]/g, "");
+                const msg = encodeURIComponent(`Hola ${wpData.clientName}, de parte de Factura Directa le recordamos que la factura ${wpData.ncf} por RD$${formatCurrency(wpData.amount)} vence pronto. Puede realizar su pago vía transferencia.`);
+                window.open(`https://wa.me/${phone.length === 10 ? `1${phone}` : phone}?text=${msg}`, "_blank");
+                break;
             case 'open_collections_manager':
                 setShowCollections(true);
                 break;
@@ -364,7 +381,7 @@ export function LexisBusinessCopilot() {
                         <div className="flex-1 space-y-2">
                             <div className="h-4 w-48 bg-slate-200/80 dark:bg-slate-700/80 rounded animate-pulse" />
                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                                Lexis Copilot está analizando tu negocio…
+                                Factura Directa Copilot está analizando tu negocio…
                             </p>
                         </div>
                     </div>
@@ -385,7 +402,7 @@ export function LexisBusinessCopilot() {
                                 <Activity className="w-6 h-6 text-slate-500 dark:text-slate-400" />
                             </div>
                             <div>
-                                <p className="font-semibold text-foreground">Lexis Business Copilot</p>
+                                <p className="font-semibold text-foreground">Factura Directa Copilot</p>
                                 <p className="text-sm text-muted-foreground mt-0.5">
                                     El asistente está teniendo dificultades para cargar el análisis.<br />
                                     Estamos reintentando en segundo plano.
@@ -413,7 +430,7 @@ export function LexisBusinessCopilot() {
                             <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                            <p className="font-semibold text-foreground">Lexis Business Copilot</p>
+                            <p className="font-semibold text-foreground">Factura Directa Copilot</p>
                             <p className="text-sm text-muted-foreground mt-1">
                                 {data.message ?? "Aún no tenemos suficientes datos para generar un análisis inteligente. Crea tus primeras facturas y el Copilot comenzará a darte recomendaciones automáticamente."}
                             </p>
@@ -449,7 +466,7 @@ export function LexisBusinessCopilot() {
                         </div>
                         <div>
                             <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100 italic">
-                                Lexis observa tu negocio
+                                Análisis de Factura Directa
                             </CardTitle>
                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                                 {getSmartSubtitle(data)}
@@ -578,7 +595,7 @@ function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData }: 
                 <SheetHeader className="mb-6">
                     <SheetTitle className="text-2xl font-bold flex items-center gap-2">
                         <Radar className="text-blue-600" />
-                        Centro de Inteligencia Lexis
+                        Centro de Inteligencia Factura Directa
                     </SheetTitle>
                     <SheetDescription>
                         Análisis profundo de la salud y proyecciones de tu negocio.
@@ -587,32 +604,56 @@ function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData }: 
 
                 <div className="space-y-8">
                     {/* Resumen de Salud */}
-                    <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
+                    <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 p-6 rounded-2xl border border-blue-100/50 dark:border-blue-800/30 backdrop-blur-sm shadow-sm">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-slate-900 dark:text-slate-100 italic">Estado Actual</h3>
-                            <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold uppercase">
+                            <h3 className="font-bold text-slate-900 dark:text-slate-100 italic flex items-center gap-2">
+                                <Activity className="w-4 h-4 text-blue-600" />
+                                Estado Actual
+                            </h3>
+                            <span className="px-3 py-1 bg-blue-600 text-white dark:bg-blue-500 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-md">
                                 Salud: {businessData?.businessHealth?.score}/100
                             </span>
                         </div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                            Basado en tu flujo de caja de los últimos 30 días, tu negocio se encuentra en un estado <strong>{businessData?.businessHealth?.label}</strong>.
+                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                            Basado en tu flujo de caja de los últimos 30 días, tu negocio se encuentra en un estado <strong className="text-blue-700 dark:text-blue-300">{businessData?.businessHealth?.label}</strong>.
                         </p>
                     </div>
 
-                    {/* Alerta Específica (si viene de un botón) */}
-                    {insightData && (
+                    {/* Alerta Específica (Caída de Ingresos) */}
+                    {insightData && insightData.insightId === 'revenue_drop' && (
                         <div className="bg-amber-50 dark:bg-amber-950/20 p-6 rounded-2xl border border-amber-200 dark:border-amber-800">
                            <div className="flex items-center gap-3 mb-3">
                                <AlertTriangle className="text-amber-600" />
-                               <h3 className="font-bold text-amber-900 dark:text-amber-400">Alerta de Variación</h3>
+                               <h3 className="font-bold text-amber-900 dark:text-amber-400">Análisis de Variación de Ingresos</h3>
                            </div>
                            <p className="text-sm text-amber-800 dark:text-amber-300 mb-4">
-                               {insightData.insightId === 'revenue_drop' 
-                                 ? `Detectamos una caída del ${insightData.dropPct}% en comparación con el mes pasado. El mes anterior facturaste ${formatCurrency(insightData.lastMonth)}.`
-                                 : "Hemos detectado una variación que requiere tu atención."}
+                               Detectamos una caída del **{insightData.dropPct}%** en comparación con el mes pasado. 
+                               El mes anterior facturaste {formatCurrency(insightData.lastMonth)}.
                            </p>
-                           <Button className="w-full bg-amber-600 hover:bg-amber-700" onClick={() => (window.location.href = '/documentos')}>
-                               Revisar Documentos del Mes
+                           
+                           {insightData.churnedClients && insightData.churnedClients.length > 0 && (
+                               <div className="mt-4 space-y-3">
+                                   <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900/60 dark:text-amber-400/60 flex items-center gap-2">
+                                       <Users className="w-3 h-3" /> Clientes con Menor Actividad
+                                   </h4>
+                                   <div className="space-y-2">
+                                       {insightData.churnedClients.map((client: any, idx: number) => (
+                                           <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-white/50 dark:bg-slate-900/50 border border-amber-200/50">
+                                               <span className="text-sm font-medium truncate max-w-[200px]">{client.name}</span>
+                                               <span className="text-sm font-bold text-red-600">-{formatCurrency(client.loss)}</span>
+                                           </div>
+                                       ))}
+                                   </div>
+                               </div>
+                           )}
+
+                           <Button 
+                                variant="outline"
+                                className="w-full mt-6 border-amber-200 bg-white/50 hover:bg-amber-100 text-amber-900" 
+                                onClick={() => (window.location.href = '/clientes')}
+                            >
+                                <Users className="w-4 h-4 mr-2" />
+                                Gestionar Clientes
                            </Button>
                         </div>
                     )}
@@ -640,11 +681,64 @@ function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData }: 
                         </div>
                     </div>
 
+                    {/* Proyección de Liquidez (Cash Flow) */}
+                    {businessData?.biSummary?.cashFlowProjection && (
+                        <div className="space-y-4">
+                             <h3 className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 italic">
+                                <DollarSign className="w-5 h-5 text-emerald-500" />
+                                Proyección de Liquidez
+                            </h3>
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="p-3 rounded-xl border bg-emerald-50/30 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/30">
+                                    <p className="text-[10px] uppercase font-bold text-emerald-600 mb-1">7 Días</p>
+                                    <p className="text-sm font-bold">{formatCurrency(businessData.biSummary.cashFlowProjection.next7Days)}</p>
+                                </div>
+                                <div className="p-3 rounded-xl border bg-blue-50/30 dark:bg-blue-950/20 border-blue-100 dark:border-blue-900/30">
+                                    <p className="text-[10px] uppercase font-bold text-blue-600 mb-1">15 Días</p>
+                                    <p className="text-sm font-bold">{formatCurrency(businessData.biSummary.cashFlowProjection.next15Days)}</p>
+                                </div>
+                                <div className="p-3 rounded-xl border bg-slate-50/30 dark:bg-slate-950/20 border-slate-100 dark:border-slate-800/30">
+                                    <p className="text-[10px] uppercase font-bold text-slate-600 mb-1">30 Días</p>
+                                    <p className="text-sm font-bold">{formatCurrency(businessData.biSummary.cashFlowProjection.next30Days)}</p>
+                                </div>
+                            </div>
+                            <p className="text-[11px] text-slate-500 italic">
+                                *Basado en facturas a crédito con vencimiento estándar de 30 días.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Clientes VIP */}
+                    {businessData?.biSummary?.vipClients && businessData.biSummary.vipClients.length > 0 && (
+                        <div className="space-y-4">
+                            <h3 className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 italic">
+                                <Users className="w-5 h-5 text-violet-500" />
+                                Clientes de Mayor Valor
+                            </h3>
+                            <div className="space-y-2">
+                                {businessData.biSummary.vipClients.map((client: any, idx: number) => (
+                                    <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-violet-50/20 dark:bg-violet-950/10 border border-violet-100 dark:border-violet-900/30">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/50 flex items-center justify-center text-xs font-bold text-violet-700">
+                                                {idx + 1}
+                                            </div>
+                                            <span className="text-sm font-semibold">{client.name}</span>
+                                        </div>
+                                        <div className="text-right text-xs">
+                                            <p className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(client.totalRevenue)}</p>
+                                            <p className="text-slate-500">{client.invoiceCount} facturas</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Recomendaciones */}
                     <div className="space-y-4">
                         <h3 className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 italic">
                             <Zap className="w-5 h-5 text-amber-500" />
-                            Recomendaciones de Lexis
+                            Recomendaciones de Factura Directa
                         </h3>
                         
                         <ul className="space-y-3">
@@ -668,4 +762,3 @@ function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData }: 
     );
 }
 
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";

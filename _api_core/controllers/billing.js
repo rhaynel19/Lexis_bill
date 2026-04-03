@@ -456,7 +456,8 @@ exports.getBusinessCopilot = async (req, res) => {
         ]);
 
         const brain = new BillingBrain(userId, invoices, customers, ncfSettings);
-        await brain.analyze();
+        const biResult = await brain.analyze();
+        const biSummary = biResult.summary || {};
 
         // Calcular métricas base para el dashboard (con defensa ante datos nulos)
         const now = new Date();
@@ -475,7 +476,8 @@ exports.getBusinessCopilot = async (req, res) => {
         res.json({
             success: true,
             // 🚀 ESTRUCTURA COMPLETA PARA EVITAR CRASHES EN EL FRONTEND
-            proactiveInsights: brain.insights || [],
+            proactiveInsights: biResult.insights || [],
+            biSummary: biSummary,
             alerts: [], // Mantener compatibilidad con el frontend anterior
             clientRadar: [],
             rankings: {
