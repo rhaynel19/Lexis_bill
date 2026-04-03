@@ -76,6 +76,10 @@ app.use('/api/business-copilot', (req, res, next) => {
     req.url = '/business-copilot'; // Rewrite internally to match the billing router's path
     billingRouter(req, res, next);
 });
+app.use('/api/collections', (req, res, next) => {
+    req.url = '/debtors'; // Rewrite to match invoices.js
+    require('../_api_core/routes/invoices')(req, res, next);
+});
 app.use('/api/quotes', require('../_api_core/routes/quotes')); 
 app.use('/api/expenses', require('../_api_core/routes/expenses'));
 

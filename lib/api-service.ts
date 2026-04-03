@@ -876,7 +876,7 @@ export const api = {
 
     // Collections Management
     async getDebtors() {
-        return secureFetch<{ debtors: Array<{ _id: string; clientName: string; totalBalance: number; invoiceCount: number; lastInvoiceDate: string; phone?: string; email?: string }> }>(`${API_URL}/collections/debtors`);
+        return secureFetch<{ debtors: Array<{ _id: string; clientName: string; totalBalance: number; invoiceCount: number; lastInvoiceDate: string; phone?: string; email?: string }> }>(`${API_URL}/invoices/debtors`);
     },
 
     async getAccountStatement(rnc: string) {
