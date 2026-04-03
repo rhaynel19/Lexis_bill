@@ -25,7 +25,7 @@ export default function LandingPage() {
       <nav className="fixed top-0 w-full z-50 bg-lexis-bg-deep/80 backdrop-blur-md border-b-2 border-lexis-gold/40">
         <div className="container mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
           <Link href="/" className="text-2xl font-serif font-bold tracking-tighter flex items-baseline gap-1">
-            <LexisWord className="text-2xl" showBill={true} />
+            <LexisWord className="text-2xl" showBill={true} variant="light" />
           </Link>
           <div className="hidden md:flex items-center gap-8">
             <Link href="#beneficios" className="text-sm font-medium hover:text-lexis-gold transition-colors">Beneficios</Link>
@@ -440,7 +440,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-2">
               <div className="font-serif text-2xl font-bold mb-6 flex items-baseline gap-1">
-                <LexisWord className="text-2xl" showBill={true} />
+                <LexisWord className="text-2xl" showBill={true} variant="light" />
               </div>
               <p className="text-slate-400 max-w-sm mb-6">
                 Diseñado para profesionales y técnicos independientes que mueven la República Dominicana. Elegancia, cumplimiento y rapidez en un solo lugar.

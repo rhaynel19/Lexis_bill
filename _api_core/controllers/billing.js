@@ -458,15 +458,19 @@ exports.getBusinessCopilot = async (req, res) => {
         const brain = new BillingBrain(userId, invoices, customers, ncfSettings);
         await brain.analyze();
 
-        // Calcular métricas base para el dashboard
+        // Calcular métricas base para el dashboard (con defensa ante datos nulos)
         const now = new Date();
         const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         
-        const monthlyInvoices = invoices.filter(inv => new Date(inv.date) >= firstDayOfMonth && inv.status !== 'cancelled');
-        const monthlyRevenue = monthlyInvoices.reduce((acc, inv) => acc + (inv.total || 0), 0);
+        const monthlyInvoices = invoices.filter(inv => {
+            if (!inv.date) return false;
+            const invDate = new Date(inv.date);
+            return !isNaN(invDate.getTime()) && invDate >= firstDayOfMonth && inv.status !== 'cancelled';
+        });
+        const monthlyRevenue = monthlyInvoices.reduce((acc, inv) => acc + (Number(inv.total) || 0), 0);
         
         const pendingInvoices = invoices.filter(inv => (inv.estadoPago === 'pendiente' || inv.estadoPago === 'parcial') && inv.status !== 'cancelled');
-        const totalPending = pendingInvoices.reduce((acc, inv) => acc + (inv.balancePendiente || 0), 0);
+        const totalPending = pendingInvoices.reduce((acc, inv) => acc + (Number(inv.balancePendiente) || 0), 0);
 
         res.json({
             success: true,

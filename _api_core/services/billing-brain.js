@@ -40,7 +40,11 @@ class BillingBrain {
         // Audit Quick Win: Limitar el análisis a los últimos 6 meses para proteger la memoria del servidor
         const sixMonthsAgo = new Date(this.now);
         sixMonthsAgo.setMonth(this.now.getMonth() - 6);
-        this.invoices = this.invoices.filter(inv => new Date(inv.date) >= sixMonthsAgo);
+        this.invoices = this.invoices.filter(inv => {
+            if (!inv.date) return false;
+            const invDate = new Date(inv.date);
+            return !isNaN(invDate.getTime()) && invDate >= sixMonthsAgo;
+        });
 
         // Análisis críticos (dinero en riesgo)
         this._analyzeUnpaidInvoices();
@@ -493,11 +497,14 @@ class BillingBrain {
     }
 
     _getOldestUnpaidDays(invoices) {
-        if (invoices.length === 0) return 0;
-        const oldest = invoices.reduce((oldest, inv) => {
+        if (!invoices || invoices.length === 0) return 0;
+        const validInvoices = invoices.filter(inv => inv.date && !isNaN(new Date(inv.date).getTime()));
+        if (validInvoices.length === 0) return 0;
+        
+        const oldest = validInvoices.reduce((oldest, inv) => {
             const invDate = new Date(inv.date);
             return invDate < oldest ? invDate : oldest;
-        }, new Date(invoices[0].date));
+        }, new Date(validInvoices[0].date));
         return Math.floor((this.now - oldest) / (1000 * 60 * 60 * 24));
     }
 }
