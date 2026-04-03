@@ -343,18 +343,22 @@ export function LexisBusinessCopilot() {
         });
     };
 
-    const handleInsightAction = (insight: ProactiveInsight) => {
-        const { type, url, data } = insight.action;
+    const handleInsightAction = (insightOrAction: any) => {
+        const isString = typeof insightOrAction === 'string';
+        const type = isString ? insightOrAction : insightOrAction.action?.type;
+        const url = isString ? null : insightOrAction.action?.url;
+        const data = isString ? null : insightOrAction.action?.data;
         
         switch (type) {
             case 'whatsapp_prefill':
-                const wpData = insight.action.data;
+                const wpData = data || insightOrAction.action.data;
                 const phone = (wpData.phone || "").replace(/[^0-9]/g, "");
                 const msg = encodeURIComponent(`Hola ${wpData.clientName}, de parte de Trinalyze le recordamos que la factura ${wpData.ncf} por RD$${formatCurrency(wpData.amount)} vence pronto. Puede realizar su pago vía transferencia.`);
                 window.open(`https://wa.me/${phone.length === 10 ? `1${phone}` : phone}?text=${msg}`, "_blank");
                 break;
             case 'open_collections_manager':
-                setShowCollections(true);
+                setShowDetailedAnalysis(false); // Cerrar el drawer primero
+                setTimeout(() => setShowCollections(true), 100);
                 break;
             case 'view_analysis':
                 setSelectedInsight(data);
