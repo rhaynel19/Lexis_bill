@@ -276,7 +276,12 @@ export function FacturaTable({ invoices, onRefresh, onRequestCreditNote }: Factu
                                                                 <DropdownMenuItem onClick={() => handleWhatsApp(inv)}>WhatsApp</DropdownMenuItem>
                                                                 <DropdownMenuItem onClick={() => handleDownloadPDF(inv)}>PDF</DropdownMenuItem>
                                                                 {inv.status !== "cancelled" && !inv.annulledBy && (
-                                                                    <DropdownMenuItem onClick={() => handleDuplicate(inv)}>Facturar de nuevo</DropdownMenuItem>
+                                                                    <>
+                                                                        <DropdownMenuItem onClick={() => handleDuplicate(inv)}>Facturar de nuevo</DropdownMenuItem>
+                                                                        {onRequestCreditNote && (
+                                                                            <DropdownMenuItem onClick={() => onRequestCreditNote(inv)}>Nota de Crédito</DropdownMenuItem>
+                                                                        )}
+                                                                    </>
                                                                 )}
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
@@ -324,9 +329,16 @@ export function FacturaTable({ invoices, onRefresh, onRequestCreditNote }: Factu
                                                 <Download className="w-4 h-4" />
                                             </Button>
                                             {inv.status !== "cancelled" && !inv.annulledBy && (
-                                                <Button variant="outline" size="sm" className="flex-1 h-9" onClick={(e) => { e.stopPropagation(); handleDuplicate(inv); }} disabled={!!duplicatingId}>
-                                                    Facturar de nuevo
-                                                </Button>
+                                                <>
+                                                    <Button variant="outline" size="sm" className="flex-1 h-9 px-3 gap-2 rounded-xl text-xs font-semibold" onClick={(e) => { e.stopPropagation(); handleDuplicate(inv); }} disabled={!!duplicatingId}>
+                                                        <Repeat className="w-3.5 h-3.5" /> Clonar
+                                                    </Button>
+                                                    {onRequestCreditNote && (
+                                                        <Button variant="outline" size="sm" className="flex-1 h-9 px-3 gap-2 rounded-xl text-xs font-semibold text-amber-600 border-amber-100" onClick={(e) => { e.stopPropagation(); onRequestCreditNote(inv); }}>
+                                                            <CreditCard className="w-3.5 h-3.5" /> Nota Cr.
+                                                        </Button>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     </div>

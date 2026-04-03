@@ -41,11 +41,11 @@ export default function CustomersPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [isNewClientOpen, setIsNewClientOpen] = useState(false);
-    const [newClientForm, setNewClientForm] = useState({ name: "", rnc: "", phone: "", email: "" });
+    const [newClientForm, setNewClientForm] = useState({ name: "", rnc: "", phone: "", email: "", address: "" });
     const [isSavingNew, setIsSavingNew] = useState(false);
     const [isEditClientOpen, setIsEditClientOpen] = useState(false);
     const [editingCustomer, setEditingCustomer] = useState<any>(null);
-    const [editClientForm, setEditClientForm] = useState({ name: "", rnc: "", phone: "", email: "" });
+    const [editClientForm, setEditClientForm] = useState({ name: "", rnc: "", phone: "", email: "", address: "" });
     const [isSavingEdit, setIsSavingEdit] = useState(false);
 
     useEffect(() => {
@@ -118,7 +118,7 @@ export default function CustomersPage() {
     };
 
     const openNewClient = () => {
-        setNewClientForm({ name: "", rnc: "", phone: "", email: "" });
+        setNewClientForm({ name: "", rnc: "", phone: "", email: "", address: "" });
         setIsNewClientOpen(true);
     };
 
@@ -128,14 +128,15 @@ export default function CustomersPage() {
             name: customer?.name || "",
             rnc: customer?.rnc || "",
             phone: customer?.phone || "",
-            email: customer?.email || ""
+            email: customer?.email || "",
+            address: customer?.address || ""
         });
         setIsEditClientOpen(true);
     };
 
     const handleSaveNewClient = async (e: React.FormEvent) => {
         e.preventDefault();
-        const { name, rnc, phone, email } = newClientForm;
+        const { name, rnc, phone, email, address } = newClientForm;
         const rncClean = (rnc || "").replace(/\D/g, "");
         if (!name.trim()) {
             toast.error("El nombre es obligatorio.");
@@ -147,7 +148,13 @@ export default function CustomersPage() {
         }
         setIsSavingNew(true);
         try {
-            await api.saveCustomer({ name: name.trim(), rnc: rncClean, phone: phone.trim() || undefined, email: email.trim() || undefined });
+            await api.saveCustomer({
+                name: name.trim(),
+                rnc: rncClean,
+                phone: phone.trim() || undefined,
+                email: email.trim() || undefined,
+                address: address.trim() || undefined
+            });
             toast.success("Cliente creado.");
             setIsNewClientOpen(false);
             loadCustomers();
@@ -164,7 +171,7 @@ export default function CustomersPage() {
             toast.error("Cliente inválido.");
             return;
         }
-        const { name, rnc, phone, email } = editClientForm;
+        const { name, rnc, phone, email, address } = editClientForm;
         const rncClean = (rnc || "").replace(/\D/g, "");
         if (!name.trim()) {
             toast.error("El nombre es obligatorio.");
@@ -180,7 +187,8 @@ export default function CustomersPage() {
                 name: name.trim(),
                 rnc: rncClean,
                 phone: phone.trim() || undefined,
-                email: email.trim() || undefined
+                email: email.trim() || undefined,
+                address: address.trim() || undefined
             });
             toast.success("Cliente actualizado.");
             setIsEditClientOpen(false);
@@ -507,6 +515,15 @@ export default function CustomersPage() {
                                 onChange={(e) => setNewClientForm((f) => ({ ...f, email: e.target.value }))}
                             />
                         </div>
+                        <div>
+                            <label className="text-sm font-medium text-muted-foreground">Dirección (opcional)</label>
+                            <Input
+                                className="mt-1"
+                                placeholder="Ave. Winston Churchill, Santo Domingo"
+                                value={newClientForm.address}
+                                onChange={(e) => setNewClientForm((f) => ({ ...f, address: e.target.value }))}
+                            />
+                        </div>
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setIsNewClientOpen(false)} disabled={isSavingNew}>
                                 Cancelar
@@ -574,6 +591,15 @@ export default function CustomersPage() {
                                 placeholder="contacto@ejemplo.com"
                                 value={editClientForm.email}
                                 onChange={(e) => setEditClientForm((f) => ({ ...f, email: e.target.value }))}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-muted-foreground">Dirección (opcional)</label>
+                            <Input
+                                className="mt-1"
+                                placeholder="Ave. Winston Churchill, Santo Domingo"
+                                value={editClientForm.address}
+                                onChange={(e) => setEditClientForm((f) => ({ ...f, address: e.target.value }))}
                             />
                         </div>
                         <DialogFooter>

@@ -18,6 +18,9 @@ router.get('/608', validate(reportQuerySchema, 'query'), reportController.get608
 router.post('/606/validate', validate(validate606Schema), reportController.validate606);
 router.post('/607/validate', validate(validate607Schema), reportController.validate607);
 
+// Summary Reports
+router.get('/summary', reportController.getTaxSummary);
+
 // Reminders
 router.post('/reminder', reportController.sendReportReminder);
 

@@ -117,8 +117,31 @@ exports.applyPartner = async (req, res) => {
 
 exports.getPartners = async (req, res) => {
     try {
-        const list = await Partner.find({}).populate('userId', 'name email createdAt').sort({ createdAt: -1 });
-        res.json(list);
+        const list = await Partner.find({}).populate('userId', 'name email createdAt').sort({ createdAt: -1 }).lean();
+        
+        // Enriquecer con conteos de clientes y ganancias
+        const enrichedList = await Promise.all(list.map(async (p) => {
+            const [activeClients, trialClients, churnedClients] = await Promise.all([
+                PartnerReferral.countDocuments({ partnerId: p._id, status: 'active' }),
+                PartnerReferral.countDocuments({ partnerId: p._id, status: 'trial' }),
+                PartnerReferral.countDocuments({ partnerId: p._id, status: 'churned' })
+            ]);
+
+            const commissions = await PartnerCommission.find({ partnerId: p._id });
+            const totalEarned = commissions.reduce((sum, c) => sum + (c.commissionAmount || 0), 0);
+            const pendingPayout = commissions.filter(c => c.status === 'pending' || c.status === 'approved').reduce((sum, c) => sum + (c.commissionAmount || 0), 0);
+
+            return {
+                ...p,
+                activeClients,
+                trialClients,
+                churnedClients,
+                totalEarned,
+                pendingPayout
+            };
+        }));
+
+        res.json(enrichedList);
     } catch (e) {
         res.status(500).json({ message: safeErrorMessage(e) });
     }
@@ -143,17 +166,40 @@ exports.invitePartner = async (req, res) => {
 
 exports.getPartnerStats = async (req, res) => {
     try {
-        const [total, pending, active] = await Promise.all([
+        const [totalPartners, pendingApprovals, activePartners] = await Promise.all([
             Partner.countDocuments({}),
             Partner.countDocuments({ status: 'pending' }),
             Partner.countDocuments({ status: 'active' })
         ]);
-        const top = await PartnerReferral.aggregate([
-            { $group: { _id: '$partnerId', count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 5 }
+
+        const [activeReferrals, totalReferrals, trialReferrals, churnedReferrals] = await Promise.all([
+            PartnerReferral.countDocuments({ status: 'active' }),
+            PartnerReferral.countDocuments({}),
+            PartnerReferral.countDocuments({ status: 'trial' }),
+            PartnerReferral.countDocuments({ status: 'churned' })
         ]);
-        res.json({ total, pending, active, topReferrers: top });
+
+        const commissions = await PartnerCommission.find({});
+        const commissionsThisMonth = commissions.filter(c => {
+            const now = new Date();
+            return c.month === String(now.getMonth() + 1).padStart(2, '0') && c.year === now.getFullYear();
+        }).reduce((sum, c) => sum + (c.commissionAmount || 0), 0);
+
+        const commissionsPending = commissions.filter(c => c.status === 'pending' || c.status === 'approved').reduce((sum, c) => sum + (c.commissionAmount || 0), 0);
+        const commissionsPaid = commissions.filter(c => c.status === 'paid').reduce((sum, c) => sum + (c.commissionAmount || 0), 0);
+
+        res.json({
+            totalPartners,
+            pendingApprovals,
+            activePartners,
+            activeReferrals,
+            totalReferrals,
+            trialReferrals,
+            churnedReferrals,
+            commissionsThisMonth,
+            commissionsPending,
+            commissionsPaid
+        });
     } catch (e) {
         res.status(500).json({ message: safeErrorMessage(e) });
     }
@@ -188,8 +234,9 @@ exports.getPartnerDetail = async (req, res) => {
 exports.getPartnerCartera = async (req, res) => {
     try {
         if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'ID inválido' });
-        const referrals = await PartnerReferral.find({ partnerId: req.params.id }).populate('userId', 'name email membershipLevel subscriptionStatus createdAt lastLoginAt');
-        res.json(referrals);
+        const p = await Partner.findById(req.params.id).populate('userId', 'name email').lean();
+        const referrals = await PartnerReferral.find({ partnerId: req.params.id }).populate('userId', 'name email membershipLevel subscriptionStatus createdAt lastLoginAt').lean();
+        res.json({ partner: p, cartera: referrals });
     } catch (e) {
         res.status(500).json({ message: safeErrorMessage(e) });
     }

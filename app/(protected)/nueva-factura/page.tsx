@@ -18,7 +18,7 @@ import { getDominicanDate } from "@/lib/date-utils";
 import { generateInvoiceWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp-utils";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Search, Mic, Save, BookOpen, Loader2, CheckCircle, MessageCircle, UserPlus, FileText, Eye, Sparkles, AlertTriangle, Zap, Copy, ClipboardPaste, CheckCircle2, Mail, Receipt } from "lucide-react";
+import { Search, Mic, Save, BookOpen, Loader2, CheckCircle, MessageCircle, UserPlus, FileText, Eye, Sparkles, AlertTriangle, Zap, Copy, ClipboardPaste, CheckCircle2, Mail, Receipt, Download, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { handleNumericKeyDown } from "@/lib/input-validators";
 import { InvoicePreview } from "@/components/invoice/InvoicePreview";
@@ -225,11 +225,17 @@ export default function NewInvoice() {
         const qRnc = searchParams.get("rnc");
         const qName = searchParams.get("name");
         const qPhone = searchParams.get("phone");
+        const qFromQuote = searchParams.get("fromQuote");
         if (qRnc || qName) {
             if (qRnc) setRnc(qRnc);
             if (qName) setClientName(qName);
             if (qPhone) setClientPhone(qPhone);
             if (qRnc || qName) setIsClientLocked(true);
+        }
+        if (qFromQuote) {
+           // Si viene de cotización, podríamos cargar los ítems automáticamente aquí
+           // pero el flujo habitual es que ya vengan pre-cargados por el clonador o similar.
+           // Por ahora nos aseguramos de que el ID esté disponible para el submit.
         }
 
         // Services: API primero, fallback localStorage
@@ -957,6 +963,7 @@ export default function NewInvoice() {
                 tipoPago,
                 clientPhone,
                 modifiedNcf: (invoiceType === "04" || invoiceType === "34") ? modifiedNcf : undefined,
+                quoteId: searchParams.get("fromQuote") || undefined,
             };
             if (tipoPago === "otro" && tipoPagoOtro?.trim()) invoiceData.tipoPagoOtro = tipoPagoOtro.trim();
             if (tipoPago === "mixto" && pagoMixto.length > 0) {
@@ -1194,7 +1201,7 @@ export default function NewInvoice() {
                                                         <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/30">Serie B (tradicional)</div>
                                                         <SelectItem value="01">01 - Crédito Fiscal</SelectItem>
                                                         <SelectItem value="02">02 - Consumo</SelectItem>
-                                                        <SelectItem value="04">04 - Nota de Crédito</SelectItem>
+                                                        <SelectItem value="04">04 - Nota de Crédito (NC)</SelectItem>
                                                         <SelectItem value="14">14 - Regímenes Especiales</SelectItem>
                                                         <SelectItem value="15">15 - Gubernamental</SelectItem>
                                                     </>
@@ -1654,32 +1661,51 @@ export default function NewInvoice() {
                                                                 />
                                                             </TableCell>
 
-                                                            {/* Tasa ITBIS Gravado */}
+                                                            {/* Tasa ITBIS Gravado / Exento */}
                                                             <TableCell className="text-center">
-                                                                <Select 
-                                                                    value={item.taxCategory === 'exempt' || item.isExempt ? "0" : (item.taxRate || 0.18).toString()} 
-                                                                    onValueChange={(val) => {
-                                                                        const rate = parseFloat(val);
-                                                                        if (rate === 0) {
-                                                                            updateItem(item.id, "isExempt", true);
-                                                                            updateItem(item.id, "taxCategory", 'exempt');
-                                                                            updateItem(item.id, "taxRate", 0);
-                                                                        } else {
-                                                                            updateItem(item.id, "isExempt", false);
-                                                                            updateItem(item.id, "taxCategory", 'taxable');
-                                                                            updateItem(item.id, "taxRate", rate);
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    <SelectTrigger className="h-8 text-xs font-semibold">
-                                                                        <SelectValue />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        <SelectItem value="0.18">18%</SelectItem>
-                                                                        <SelectItem value="0.16">16%</SelectItem>
-                                                                        <SelectItem value="0">0% (Exento)</SelectItem>
-                                                                    </SelectContent>
-                                                                </Select>
+                                                                <div className="flex flex-col items-center gap-1">
+                                                                    <Select 
+                                                                        value={item.taxCategory === 'exempt' || item.isExempt ? "0" : (item.taxRate || 0.18).toString()} 
+                                                                        onValueChange={(val) => {
+                                                                            const rate = parseFloat(val);
+                                                                            if (rate === 0) {
+                                                                                updateItem(item.id, "isExempt", true);
+                                                                                updateItem(item.id, "taxCategory", 'exempt');
+                                                                                updateItem(item.id, "taxRate", 0);
+                                                                            } else {
+                                                                                updateItem(item.id, "isExempt", false);
+                                                                                updateItem(item.id, "taxCategory", 'taxable');
+                                                                                updateItem(item.id, "taxRate", rate);
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <SelectTrigger className="h-8 text-xs font-semibold w-[90px]">
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="0.18">18% ITBIS</SelectItem>
+                                                                            <SelectItem value="0.16">16% ITBIS</SelectItem>
+                                                                            <SelectItem value="0">Exento</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    <div className="flex items-center gap-1">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            id={`exempt-${item.id}`}
+                                                                            checked={item.isExempt || false}
+                                                                            onChange={(e) => {
+                                                                                const isChecked = e.target.checked;
+                                                                                updateItem(item.id, "isExempt", isChecked);
+                                                                                updateItem(item.id, "taxCategory", isChecked ? 'exempt' : 'taxable');
+                                                                                updateItem(item.id, "taxRate", isChecked ? 0 : 0.18);
+                                                                            }}
+                                                                            className="h-3 w-3 rounded border-gray-300 text-primary focus:ring-primary"
+                                                                        />
+                                                                        <label htmlFor={`exempt-${item.id}`} className="text-[10px] text-muted-foreground cursor-pointer uppercase font-bold">
+                                                                            Exento
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
                                                             </TableCell>
 
                                                             {/* Subtotal del ítem */}
@@ -1792,7 +1818,24 @@ export default function NewInvoice() {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center justify-between pt-2 border-t">
-                                                    <span className="font-semibold text-foreground">{formatCurrency(Number(item.quantity) * Number(item.price))}</span>
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="font-semibold text-foreground">{formatCurrency(Number(item.quantity) * Number(item.price))}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                id={`exempt-mob-${item.id}`}
+                                                                checked={item.isExempt || false} 
+                                                                onChange={(e) => {
+                                                                    const isChecked = e.target.checked;
+                                                                    updateItem(item.id, "isExempt", isChecked);
+                                                                    updateItem(item.id, "taxCategory", isChecked ? 'exempt' : 'taxable');
+                                                                    updateItem(item.id, "taxRate", isChecked ? 0 : 0.18);
+                                                                }} 
+                                                                className="h-4 w-4 rounded border-gray-300 text-primary" 
+                                                            />
+                                                            <label htmlFor={`exempt-mob-${item.id}`} className="text-xs text-muted-foreground font-bold">EXENTO DE ITBIS</label>
+                                                        </div>
+                                                    </div>
                                                     <div className="flex gap-1">
                                                         <Button type="button" variant="ghost" size="sm" onClick={() => duplicateItem(item.id)} title="Duplicar"><Copy className="w-4 h-4" /></Button>
                                                         {items.length > 1 && (
@@ -2178,52 +2221,100 @@ export default function NewInvoice() {
             </Dialog>
 
             {/* Success Modal */}
-            <Dialog open={showSuccessModal} onOpenChange={() => router.push('/')}>
-                <DialogContent className="sm:max-w-md bg-background border-border/20">
+            <Dialog open={showSuccessModal} onOpenChange={() => router.push('/dashboard')}>
+                <DialogContent className="sm:max-w-md bg-background border-border/20 shadow-2xl">
                     <DialogHeader>
-                        <div className="mx-auto bg-success/10 p-3 rounded-full mb-4">
-                            <CheckCircle className="h-10 w-10 text-success" />
+                        <div className="mx-auto bg-green-500/10 p-4 rounded-full mb-4">
+                            <CheckCircle className="h-12 w-12 text-green-600 animate-bounce-short" />
                         </div>
-                        <DialogTitle className="text-center text-xl text-foreground">¡Factura Emitida Exitosamente!</DialogTitle>
-                        <DialogDescription className="text-center text-lg font-mono text-foreground font-bold mt-2">
-                            {lastInvoiceNCF}
+                        <DialogTitle className="text-center text-2xl font-black text-foreground">¡Factura Emitida!</DialogTitle>
+                        <div className="flex flex-col items-center gap-1 mt-2">
+                            <span className="text-xs text-muted-foreground uppercase font-bold tracking-widest">Número de Comprobante</span>
+                            <div className="px-4 py-2 bg-muted rounded-lg border border-border/50">
+                                <span className="text-xl font-mono text-foreground font-bold tracking-tighter">
+                                    {lastInvoiceNCF}
+                                </span>
+                            </div>
+                        </div>
+                        <DialogDescription className="text-center mt-4">
+                            La factura ha sido registrada en el sistema y el archivo PDF se ha descargado automáticamente.
                         </DialogDescription>
-                        <DialogDescription className="text-center">
-                            El comprobante ha sido registrado y el PDF descargado.
-                        </DialogDescription>
-                        <p className="text-center text-xs text-muted-foreground mt-2">
-                            Al abrir WhatsApp, <strong>adjunta el PDF</strong> descargado (botón 📎) antes de enviar.
-                        </p>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <Button
-                                onClick={handleWhatsAppShare}
-                                className="w-full bg-[#25D366] hover:bg-[#128C7E] flex gap-2"
-                                variant={clientPhone?.trim() ? "default" : "outline"}
-                            >
-                                <MessageCircle className="w-4 h-4" /> Enviar por WhatsApp
-                            </Button>
-                            <Button variant="outline" onClick={handleEmailShare} className="w-full flex gap-2">
-                                <Mail className="w-4 h-4" /> Enviar por email
-                            </Button>
+                    
+                    <div className="grid gap-6 py-4">
+                        <div className="space-y-3">
+                            <p className="text-xs text-center text-muted-foreground uppercase font-bold">Enviar a Cliente</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <Button
+                                    onClick={handleWhatsAppShare}
+                                    className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white flex gap-2 font-bold h-12"
+                                >
+                                    <MessageCircle className="w-5 h-5" /> WhatsApp
+                                </Button>
+                                <Button variant="outline" onClick={handleEmailShare} className="w-full flex gap-2 font-bold h-12 border-border/50">
+                                    <Mail className="w-5 h-5" /> Email
+                                </Button>
+                            </div>
                         </div>
-                        {!clientPhone?.trim() && (
-                            <p className="text-xs text-muted-foreground">Añade el teléfono del cliente en la factura para enviar por WhatsApp directamente.</p>
-                        )}
-                        <div className="grid grid-cols-2 gap-2">
-                            <Button variant="outline" onClick={() => router.push('/')} className="gap-2">
-                                <FileText className="w-4 h-4" /> Ir al Dashboard
-                            </Button>
-                            <Button variant="outline" onClick={() => {
-                                setShowSuccessModal(false);
-                                setItems([{ id: "1", description: "", quantity: 1, price: 0, isExempt: false }]);
-                                setClientName("");
-                                setRnc("");
-                                setClientPhone("");
-                                setLastInvoiceNCF("");
-                            }} className="gap-2">
-                                <UserPlus className="w-4 h-4" /> Nueva Factura
+
+                        <div className="space-y-3 pt-2 border-t border-border/50">
+                            <p className="text-xs text-center text-muted-foreground uppercase font-bold">Otras Acciones</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <Button 
+                                    variant="secondary" 
+                                    onClick={() => {
+                                        const validItems = items.filter(i => i.description && Number(i.quantity) > 0 && Number(i.price) > 0);
+                                        const pdfData: InvoiceData = {
+                                            id: "re-download", // We'd need the real ID here ideally, but for re-download we can mock it or fetch it
+                                            sequenceNumber: lastInvoiceNCF,
+                                            type: invoiceType,
+                                            clientName,
+                                            rnc,
+                                            date: getDominicanDate(),
+                                            items: validItems.map((item) => ({
+                                                description: item.description,
+                                                quantity: Number(item.quantity),
+                                                price: Number(item.price),
+                                                isExempt: item.isExempt,
+                                            })),
+                                            subtotal,
+                                            itbis,
+                                            isrRetention,
+                                            itbisRetention,
+                                            total: total,
+                                            modifiedNcf: (invoiceType === "04" || invoiceType === "34") ? modifiedNcf : undefined,
+                                            paymentMethod: tipoPago === "otro" ? tipoPagoOtro : tipoPago,
+                                        };
+                                        const companyOverride = authUser ? { companyName: authUser.fiscalStatus?.confirmed, rnc: authUser.rnc } : undefined;
+                                        downloadInvoicePDF(pdfData, companyOverride);
+                                        toast.success("Descargando PDF nuevamente...");
+                                    }} 
+                                    className="gap-2 h-11"
+                                >
+                                    <Download className="w-4 h-4" /> Re-descargar
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => {
+                                        setShowSuccessModal(false);
+                                        setItems([{ id: "1", description: "", quantity: 1, price: 0, isExempt: false }]);
+                                        setClientName("");
+                                        setRnc("");
+                                        setClientPhone("");
+                                        setLastInvoiceNCF("");
+                                        setFocusItemId("1");
+                                    }} 
+                                    className="gap-2 h-11"
+                                >
+                                    <Plus className="w-4 h-4" /> Nueva Factura
+                                </Button>
+                            </div>
+                            <Button 
+                                variant="ghost" 
+                                onClick={() => router.push('/dashboard')} 
+                                className="w-full text-muted-foreground hover:text-foreground"
+                            >
+                                Salir al Dashboard
                             </Button>
                         </div>
                     </div>

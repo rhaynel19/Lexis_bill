@@ -8,7 +8,7 @@ const { fetchRncFromExternalApi } = require('../services/dgii');
 // Mock DB for local fallback (copied from index.js)
 const RNC_MOCK_DB = {
     '101010101': 'JUAN PEREZ',
-    '131888444': 'LEXIS BILL SOLUTIONS S.R.L.',
+    '131888444': 'SOLUCIONES TECNOLOGICAS S.R.L.',
     '40222222222': 'DRA. MARIA RODRIGUEZ (DEMO)',
     '130851255': 'ASOCIACION DE ESPECIALISTAS FISCALES',
     '22301650929': 'ASOCIACION PROFESIONAL DE SANTO DOMINGO'

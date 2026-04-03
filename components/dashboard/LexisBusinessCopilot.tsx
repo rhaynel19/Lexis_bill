@@ -330,6 +330,25 @@ export function LexisBusinessCopilot() {
         });
     };
 
+    const handleInsightAction = (insight: ProactiveInsight) => {
+        const { type, url, data } = insight.action;
+        
+        switch (type) {
+            case 'open_collections_manager':
+                setShowCollections(true);
+                break;
+            case 'navigate':
+                if (url) router.push(url);
+                break;
+            case 'new_invoice':
+                const query = data ? new URLSearchParams(data).toString() : '';
+                router.push(`/nueva-factura${query ? `?${query}` : ''}`);
+                break;
+            default:
+                if (url) router.push(url);
+        }
+    };
+
     if (loading && !data) {
         return (
             <Card className="mb-6 overflow-hidden rounded-2xl border border-white/40 dark:border-slate-600/40 bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl">
@@ -339,7 +358,7 @@ export function LexisBusinessCopilot() {
                         <div className="flex-1 space-y-2">
                             <div className="h-4 w-48 bg-slate-200/80 dark:bg-slate-700/80 rounded animate-pulse" />
                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                                Trinalyze Copilot está analizando tu negocio…
+                                Lexis Copilot está analizando tu negocio…
                             </p>
                         </div>
                     </div>
@@ -347,6 +366,8 @@ export function LexisBusinessCopilot() {
             </Card>
         );
     }
+    
+    // ... (keep previous error and insufficient data states, update branding to Lexis)
 
     if (showError && !data) {
         return (
@@ -358,7 +379,7 @@ export function LexisBusinessCopilot() {
                                 <Activity className="w-6 h-6 text-slate-500 dark:text-slate-400" />
                             </div>
                             <div>
-                                <p className="font-semibold text-foreground">Trinalyze Business Copilot</p>
+                                <p className="font-semibold text-foreground">Lexis Business Copilot</p>
                                 <p className="text-sm text-muted-foreground mt-0.5">
                                     El asistente está teniendo dificultades para cargar el análisis.<br />
                                     Estamos reintentando en segundo plano.
@@ -386,16 +407,11 @@ export function LexisBusinessCopilot() {
                             <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                            <p className="font-semibold text-foreground">Trinalyze Business Copilot</p>
+                            <p className="font-semibold text-foreground">Lexis Business Copilot</p>
                             <p className="text-sm text-muted-foreground mt-1">
                                 {data.message ?? "Aún no tenemos suficientes datos para generar un análisis inteligente. Crea tus primeras facturas y el Copilot comenzará a darte recomendaciones automáticamente."}
                             </p>
-                            <Button asChild variant="default" size="sm" className="mt-4 gap-2">
-                                <Link href="/nueva-factura">
-                                    <FileText className="w-4 h-4" />
-                                    Crear primera factura
-                                </Link>
-                            </Button>
+                            <NewInvoiceButton variant="card" className="mt-4 gap-2" />
                         </div>
                     </div>
                 </CardContent>
@@ -426,8 +442,8 @@ export function LexisBusinessCopilot() {
                             <Activity className="w-6 h-6 text-white" strokeWidth={2} />
                         </div>
                         <div>
-                            <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                                Trinalyze observa tu negocio
+                            <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100 italic">
+                                Lexis observa tu negocio
                             </CardTitle>
                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                                 {getSmartSubtitle(data)}
@@ -471,14 +487,36 @@ export function LexisBusinessCopilot() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             className={cn(
-                                "rounded-xl border p-4 flex items-start gap-3 transition-all",
-                                insight.priority === 'critical' ? "bg-red-50 dark:bg-red-950/20" : "bg-blue-50 dark:bg-blue-950/20"
+                                "rounded-xl border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all",
+                                insight.priority === 'critical' 
+                                    ? "bg-red-50/50 border-red-100 dark:bg-red-950/10 dark:border-red-900/30" 
+                                    : "bg-blue-50/50 border-blue-100 dark:bg-blue-950/10 dark:border-blue-900/30"
                             )}
                         >
                             <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-sm mb-1">{insight.title}</h4>
-                                <p className="text-sm opacity-90 mb-3">{insight.humanMessage}</p>
+                                <h4 className={cn(
+                                    "font-bold text-sm mb-1",
+                                    insight.priority === 'critical' ? "text-red-900 dark:text-red-400" : "text-blue-900 dark:text-blue-400"
+                                )}>
+                                    {insight.title}
+                                </h4>
+                                <p className="text-sm text-slate-700 dark:text-slate-300">{insight.humanMessage}</p>
                             </div>
+                            {insight.action && (
+                                <Button 
+                                    size="sm" 
+                                    onClick={() => handleInsightAction(insight)}
+                                    className={cn(
+                                        "shrink-0 font-semibold gap-2",
+                                        insight.priority === 'critical' 
+                                            ? "bg-red-600 hover:bg-red-700 text-white" 
+                                            : "bg-blue-600 hover:bg-blue-700 text-white"
+                                    )}
+                                >
+                                    {insight.action.label}
+                                    <ArrowRight className="w-4 h-4" />
+                                </Button>
+                            )}
                         </motion.div>
                     ))}
                 </div>

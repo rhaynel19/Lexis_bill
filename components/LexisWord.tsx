@@ -65,10 +65,10 @@ export function LexisWord({
         <circle cx="85" cy="85" r="10" fill={isLight ? "#FFFFFF" : isDark ? "#0F172A" : "currentColor"} className={variant === "auto" ? "text-slate-900 dark:text-white" : ""} />
       </svg>
       
-      {/* Text TRINALYZE */}
+      {/* Text FACTURA */}
       <span className="text-xl tracking-[0.18em] flex items-center font-black">
-        <span className={`${trinaColor} transition-colors`}>TRINA</span>
-        <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#C79A30] to-[#DEB23E] ml-0.5">LYZE</span>
+        <span className={`${trinaColor} transition-colors`}>FACTURA</span>
+        <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#C79A30] to-[#DEB23E] ml-0.5">DIRECTA</span>
         {showBill && (
           <span className={`${billColor} ml-2 font-medium opacity-80`}>BILL</span>
         )}

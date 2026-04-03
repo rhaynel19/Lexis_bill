@@ -10,7 +10,7 @@ const LINE_HEIGHT = 6;
 const TITLE_SIZE = 16;
 const HEADING_SIZE = 12;
 const BODY_SIZE = 10;
-const FOOTER_TEXT = "Lexis Bill © " + new Date().getFullYear() + " · República Dominicana";
+const FOOTER_TEXT = "Facturación Profesional © " + new Date().getFullYear();
 
 function getPageWidth(doc: jsPDF) {
     return doc.internal.pageSize.getWidth();
@@ -92,8 +92,8 @@ export async function generateManualPdf(): Promise<void> {
 
     const sections: { title: string; body: string }[] = [
         {
-            title: "Introducción a Lexis Bill",
-            body: "Lexis Bill es una plataforma SaaS de facturación y cumplimiento fiscal para profesionales y empresas en República Dominicana. Permite emitir comprobantes fiscales (e-CF y Serie B), gestionar clientes, generar reportes 606 y 607, y administrar suscripciones. Importante: Lexis Bill es una herramienta de apoyo. No sustituye la asesoría contable o tributaria. El usuario es responsable de la veracidad de los datos y del uso correcto de los NCF."
+            title: "Introducción",
+            body: "Esta plataforma es una herramienta de facturación y cumplimiento fiscal para profesionales y empresas en República Dominicana. Permite emitir comprobantes fiscales (e-CF y Serie B), gestionar clientes, generar reportes 606 y 607, y administrar suscripciones. Importante: Este sistema es una herramienta de apoyo. No sustituye la asesoría contable o tributaria. El usuario es responsable de la veracidad de los datos y del uso correcto de los NCF."
         },
         {
             title: "Cómo crear una factura",
@@ -129,7 +129,7 @@ export async function generateManualPdf(): Promise<void> {
         },
         {
             title: "Sistema de suscripción",
-            body: "Trial 15 días sin tarjeta. Planes Pro/Premium por transferencia o PayPal. En Pagos solicite activación (referencia LEX-XXXX o PayPal). Política de Reembolsos aplica."
+            body: "Trial 15 días sin tarjeta. Planes Pro/Premium por transferencia o PayPal. En Pagos solicite activación. Política de Reembolsos aplica."
         },
         {
             title: "Advertencias obligatorias",
@@ -145,5 +145,5 @@ export async function generateManualPdf(): Promise<void> {
     doc.setFontSize(10);
     doc.text(FOOTER_TEXT, pageWidth / 2, getPageHeight(doc) - 10, { align: "center" });
 
-    doc.save("Manual_Lexis_Bill.pdf");
+    doc.save("Manual_Facturacion.pdf");
 }

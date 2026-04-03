@@ -143,25 +143,47 @@ const validate607 = async (req, res) => {
     }
 };
 
-const sendReportReminder = async (req, res) => {
+const getTaxSummary = async (req, res) => {
     try {
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = now.getMonth() + 1;
-        const period = `${y}${m.toString().padStart(2, '0')}`;
-        const periodLabel = `${y}-${m.toString().padStart(2, '0')}`;
-        const user = await User.findById(req.userId).select('email lastReportReminderPeriod').lean();
-        if (!user || !user.email) return res.json({ sent: false, reason: 'no_email' });
-        if (user.lastReportReminderPeriod === period) return res.json({ sent: false, reason: 'already_sent', period: periodLabel });
-        const mailer = require('../mailer');
-        if (typeof mailer.send606607Reminder === 'function') {
-            await mailer.send606607Reminder(user.email, periodLabel);
-        }
-        await User.findByIdAndUpdate(req.userId, { lastReportReminderPeriod: period });
-        res.json({ sent: true, period: periodLabel });
-    } catch (e) {
-        log.warn({ err: e.message, userId: req.userId }, 'Report reminder failed');
-        res.status(500).json({ sent: false, error: e.message });
+        const month = parseInt(req.query.month);
+        const year = parseInt(req.query.year);
+        if (!month || !year) return res.status(400).json({ message: 'Mes y Año requeridos' });
+
+        const userId = req.userId;
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+        const periodString = `${year}${String(month).padStart(2, '0')}`;
+
+        // Invoices (607)
+        const invoices = await Invoice.find({
+            userId,
+            date: { $gte: startDate, $lte: endDate },
+            status: { $ne: 'cancelled' }
+        }).select('_id ncf clientName total itbis subtotal date ncfType').lean();
+
+        // Expenses (606)
+        const expenses = await Expense.find({
+            userId,
+            period: periodString,
+            status: 'approved'
+        }).select('_id ncf providerName amount itbis date category').lean();
+
+        const totalItbis = invoices.reduce((s, i) => s + (i.itbis || 0), 0);
+        const totalSubtotal = invoices.reduce((s, i) => s + (i.subtotal || 0), 0);
+        const count = invoices.length;
+
+        res.json({ 
+            itbis: totalItbis, 
+            subtotal: totalSubtotal, 
+            count,
+            documents: {
+                invoices: invoices.map(i => ({ ...i, type: 'invoice' })),
+                expenses: expenses.map(e => ({ ...e, type: 'expense' }))
+            }
+        });
+    } catch (error) {
+        log.error({ err: error.message, userId: req.userId }, 'Error fetching tax summary');
+        res.status(500).json({ message: safeErrorMessage(error) });
     }
 };
 
@@ -171,5 +193,6 @@ module.exports = {
     get608Report,
     validate606,
     validate607,
-    sendReportReminder
+    sendReportReminder,
+    getTaxSummary
 };

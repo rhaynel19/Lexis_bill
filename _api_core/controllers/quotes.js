@@ -69,6 +69,7 @@ const convertToInvoice = async (req, res) => {
             clientName: quote.clientName,
             clientRnc: quote.clientRnc,
             clientPhone: quote.clientPhone,
+            clientAddress: quote.clientAddress,
             ncf: fullNcf,
             ncfType: config.ncfType,
             items: quote.items,

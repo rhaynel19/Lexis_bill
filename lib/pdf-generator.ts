@@ -16,6 +16,7 @@ export interface InvoiceData {
     type: string;
     clientName: string;
     rnc: string;
+    clientAddress?: string;
     date: string;
     items: Array<{
         description: string;
@@ -249,6 +250,10 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     doc.text(displayClientName || "— Indicar nombre del cliente —", margin.left, yPosition);
     yPosition += 5;
     doc.text(`RNC/Cédula: ${invoiceData.rnc || "—"}`, margin.left, yPosition);
+    if (invoiceData.clientAddress) {
+        yPosition += 5;
+        doc.text(`Dirección: ${invoiceData.clientAddress}`, margin.left, yPosition);
+    }
     yPosition += 15;
 
     // ===== TABLA DE ÍTEMS =====
@@ -485,10 +490,6 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
         doc.setTextColor(120, 120, 120);
         doc.text(disclaimerText, pageWidth / 2, footerY + 5, { align: "center" });
     }
-    doc.setFontSize(8);
-    doc.setTextColor(...goldColor);
-    doc.text("Documento gestionado con Lexis Bill", pageWidth / 2, footerY + 10, { align: "center" });
-
     return doc;
 }
 

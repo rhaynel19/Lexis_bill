@@ -1,5 +1,5 @@
 /**
- * Lógica financiera centralizada — Lexis Bill
+ * Lógica financiera centralizada
  * ITBIS RD: empresas exentas, ítems exentos, facturas mixtas.
  * Nunca confiar en totales del frontend.
  */

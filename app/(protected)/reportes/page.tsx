@@ -24,8 +24,15 @@ import { cn } from "@/lib/utils";
 import { FiscalDisclaimerModal } from "@/components/FiscalDisclaimerModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DocumentViewer, Invoice as ViewerInvoice } from "@/components/DocumentViewer";
+import { downloadInvoicePDF } from "@/lib/pdf-generator";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { useAuth } from "@/components/providers/AuthContext";
 
 export default function ReportsPage() {
+    const { user: authUser } = useAuth();
     const [summary, setSummary] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -36,6 +43,19 @@ export default function ReportsPage() {
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [itbisSummaryOpen, setItbisSummaryOpen] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
+    
+    // Interactive document viewing
+    const [selectedInvoice, setSelectedInvoice] = useState<ViewerInvoice | null>(null);
+    const [isViewerOpen, setIsViewerOpen] = useState(false);
+    const [selectedExpense, setSelectedExpense] = useState<any | null>(null);
+    const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat("es-DO", {
+            style: "currency",
+            currency: "DOP",
+        }).format(amount);
+    };
 
     const months = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -59,8 +79,8 @@ export default function ReportsPage() {
         try {
             const data = await api.getTaxSummary(selectedMonth, selectedYear);
             setSummary(data);
-        } catch (error) {
-            const msg = error instanceof Error ? error.message : "Error de conexión";
+        } catch (error: any) {
+            const msg = error?.message || "Error de conexión";
             setLoadError(msg);
             toast.error("No pudimos cargar el resumen. Revisa tu conexión e intenta de nuevo.");
         } finally {
@@ -93,7 +113,6 @@ export default function ReportsPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        const rncEmisor = summary?.rnc || "RNC";
         a.download = `0608_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.txt`;
         a.click();
         URL.revokeObjectURL(url);
@@ -142,6 +161,28 @@ export default function ReportsPage() {
         if (selectedYear < currentYear) return true;
         if (selectedYear === currentYear && mIndex < currentMonth) return true;
         return false;
+    };
+
+    const handleViewInvoice = (inv: any) => {
+        const viewerInv: ViewerInvoice = {
+            id: inv._id,
+            clientName: inv.clientName || 'Cliente',
+            rnc: inv.ncfType === '01' || inv.ncfType === '31' ? (inv.clientRnc || 'N/A') : 'Consumidor Final',
+            clientRnc: inv.clientRnc,
+            ncfSequence: inv.ncf,
+            total: inv.total,
+            itbis: inv.itbis,
+            subtotal: inv.subtotal,
+            date: inv.date,
+            status: 'emitida'
+        };
+        setSelectedInvoice(viewerInv);
+        setIsViewerOpen(true);
+    };
+
+    const handleViewExpense = (exp: any) => {
+        setSelectedExpense(exp);
+        setIsExpenseModalOpen(true);
     };
 
     return (
@@ -194,7 +235,7 @@ export default function ReportsPage() {
                             <span className="text-xs font-black uppercase tracking-widest opacity-80">ITBIS Cobrado</span>
                         </div>
                         <CardTitle className="text-4xl font-black">
-                            {isLoading ? <Loader2 className="animate-spin" /> : `RD$ ${(summary?.itbis || 0).toLocaleString()}`}
+                            {isLoading ? <Loader2 className="animate-spin" /> : formatCurrency(summary?.itbis || 0)}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -213,7 +254,7 @@ export default function ReportsPage() {
                             <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Subtotal Neto</span>
                         </div>
                         <CardTitle className="text-3xl font-black text-foreground">
-                            {isLoading ? <Loader2 className="animate-spin text-accent" /> : `RD$ ${(summary?.subtotal || 0).toLocaleString()}`}
+                            {isLoading ? <Loader2 className="animate-spin text-accent" /> : formatCurrency(summary?.subtotal || 0)}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -322,6 +363,98 @@ export default function ReportsPage() {
                 })}
             </div>
 
+            {/* Document Details Section */}
+            {!isLoading && (summary?.documents?.invoices?.length > 0 || summary?.documents?.expenses?.length > 0) && (
+                <div className="mt-12 space-y-6">
+                    <div className="flex items-center justify-between px-1">
+                        <h3 className="text-lg font-black text-foreground uppercase tracking-widest">
+                            Detalle del Periodo: {months[selectedMonth - 1]}
+                        </h3>
+                        <Badge variant="outline" className="text-[10px] font-bold">
+                            {(summary?.documents?.invoices?.length || 0) + (summary?.documents?.expenses?.length || 0)} DOCUMENTOS
+                        </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Invoices Table */}
+                        <div className="space-y-4">
+                            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                <ArrowUpRight className="w-3.5 h-3.5 text-accent" /> Ventas (607)
+                            </h4>
+                            <div className="bg-card rounded-2xl border border-border/10 overflow-hidden shadow-sm">
+                                <Table>
+                                    <TableHeader className="bg-muted/30">
+                                        <TableRow>
+                                            <TableHead className="text-[10px] font-black uppercase">NCF</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase">Cliente</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase text-right">Total</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {summary?.documents?.invoices?.map((inv: any) => (
+                                            <TableRow 
+                                                key={inv._id} 
+                                                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                                                onClick={() => handleViewInvoice(inv)}
+                                            >
+                                                <TableCell className="font-mono text-xs font-bold text-accent">{inv.ncf}</TableCell>
+                                                <TableCell className="text-xs font-medium truncate max-w-[120px]">{inv.clientName}</TableCell>
+                                                <TableCell className="text-xs font-bold text-right">{formatCurrency(inv.total)}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {(!summary?.documents?.invoices || summary?.documents?.invoices.length === 0) && (
+                                            <TableRow>
+                                                <TableCell colSpan={3} className="text-center py-8 text-xs text-muted-foreground italic">
+                                                    No hay ventas registradas este mes
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </div>
+
+                        {/* Expenses Table */}
+                        <div className="space-y-4">
+                            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                <Calculator className="w-3.5 h-3.5 text-rose-500" /> Gastos (606)
+                            </h4>
+                            <div className="bg-card rounded-2xl border border-border/10 overflow-hidden shadow-sm">
+                                <Table>
+                                    <TableHeader className="bg-muted/30">
+                                        <TableRow>
+                                            <TableHead className="text-[10px] font-black uppercase">Suplidor</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase">NCF</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase text-right">Monto</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {summary?.documents?.expenses?.map((exp: any) => (
+                                            <TableRow 
+                                                key={exp._id} 
+                                                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                                                onClick={() => handleViewExpense(exp)}
+                                            >
+                                                <TableCell className="text-xs font-medium truncate max-w-[120px]">{exp.providerName}</TableCell>
+                                                <TableCell className="font-mono text-xs font-bold text-muted-foreground">{exp.ncf}</TableCell>
+                                                <TableCell className="text-xs font-bold text-right text-rose-600">{formatCurrency(exp.amount)}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {(!summary?.documents?.expenses || summary?.documents?.expenses.length === 0) && (
+                                            <TableRow>
+                                                <TableCell colSpan={3} className="text-center py-8 text-xs text-muted-foreground italic">
+                                                    No hay gastos registrados este mes
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Accountant Share Section */}
             <div className="mt-12 bg-secondary rounded-3xl p-8 md:p-12 relative overflow-hidden border border-accent/20 transition-colors">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-accent blur-[120px] opacity-10 rounded-full pointer-events-none"></div>
@@ -340,8 +473,8 @@ export default function ReportsPage() {
                             size="lg"
                             className="h-14 px-8 text-lg bg-foreground text-background hover:bg-foreground/90 font-bold shadow-xl transition-all hover:scale-105"
                             onClick={() => {
-                                const subject = `Reportes Fiscales TrinalyzeBilling - ${months[selectedMonth - 1]} ${selectedYear}`;
-                                const body = `Hola,\n\nAdjunto el resumen fiscal del periodo ${months[selectedMonth - 1]} ${selectedYear}:\n\n- Resumen ITBIS: RD$ ${(summary?.itbis || 0).toLocaleString()}\n- Subtotal Neto: RD$ ${(summary?.subtotal || 0).toLocaleString()}\n- Comprobantes: ${summary?.count || 0}\n\nLos reportes 606 y 607 deben descargarse desde tu cuenta TrinalyzeBilling (Reportes Fiscales).\n\nGenerado automáticamente por TrinalyzeBilling.`;
+                                const subject = `Reportes Fiscales - ${months[selectedMonth - 1]} ${selectedYear}`;
+                                const body = `Hola,\n\nAdjunto el resumen fiscal del periodo ${months[selectedMonth - 1]} ${selectedYear}:\n\n- Resumen ITBIS: RD$ ${(summary?.itbis || 0).toLocaleString()}\n- Subtotal Neto: RD$ ${(summary?.subtotal || 0).toLocaleString()}\n- Comprobantes: ${summary?.count || 0}\n\nLos reportes 606 y 607 deben descargarse desde tu cuenta de Facturación (Reportes Fiscales).\n\nGenerado automáticamente por la plataforma.`;
                                 window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
                             }}
                         >
@@ -402,6 +535,60 @@ export default function ReportsPage() {
                     </p>
                 </div>
             </div>
+
+            {/* Invoice Viewer */}
+            <DocumentViewer
+                isOpen={isViewerOpen}
+                onClose={() => setIsViewerOpen(false)}
+                document={selectedInvoice}
+                type="invoice"
+                onDownloadPDF={async () => {
+                   if (!selectedInvoice) return;
+                   const companyDetails = { 
+                       companyName: (authUser as any)?.fiscalStatus?.confirmed || 'Mi Empresa',
+                       rnc: (authUser as any)?.rnc || 'N/A'
+                   };
+                   await downloadInvoicePDF(selectedInvoice as any, companyDetails);
+                }}
+            />
+
+            {/* Expense Detail Modal */}
+            <Dialog open={isExpenseModalOpen} onOpenChange={setIsExpenseModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Calculator className="w-5 h-5 text-rose-500" />
+                            Detalle de Gasto
+                        </DialogTitle>
+                    </DialogHeader>
+                    {selectedExpense && (
+                        <div className="space-y-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Suplidor</p>
+                                    <p className="text-sm font-bold">{selectedExpense.providerName}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground">NCF</p>
+                                    <p className="text-sm font-mono">{selectedExpense.ncf}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Fecha</p>
+                                    <p className="text-sm">{format(new Date(selectedExpense.date), "dd/MM/yyyy", { locale: es })}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Categoría</p>
+                                    <p className="text-sm capitalize">{selectedExpense.category || 'General'}</p>
+                                </div>
+                            </div>
+                            <div className="border-t pt-4 flex justify-between items-center">
+                                <p className="text-sm font-bold uppercase">Total del Gasto</p>
+                                <p className="text-xl font-black text-rose-600">{formatCurrency(selectedExpense.amount)}</p>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

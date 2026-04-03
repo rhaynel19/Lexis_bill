@@ -370,8 +370,8 @@ export const api = {
     },
 
     async getQuotes(page = 1, limit = 500) {
-        const res = await secureFetch<{ data: any[]; total: number; page: number; limit: number; pages: number }>(`${API_URL}/quotes?page=${page}&limit=${limit}`, { cacheKey: "quotes_list" });
-        return res.data ?? [];
+        const res = await secureFetch<any>(`${API_URL}/quotes?page=${page}&limit=${limit}`, { cacheKey: "quotes_list" });
+        return Array.isArray(res) ? res : (res.data ?? []);
     },
 
     async createQuote(data: { [key: string]: unknown }) {
@@ -410,8 +410,8 @@ export const api = {
 
     // Expenses (606) — API devuelve { data, total, page, limit, pages }; exponemos array para compatibilidad
     async getExpenses(page = 1, limit = 500) {
-        const res = await secureFetch<{ data: any[]; total: number; page: number; limit: number; pages: number }>(`${API_URL}/expenses?page=${page}&limit=${limit}`);
-        return res.data ?? [];
+        const res = await secureFetch<any>(`${API_URL}/expenses?page=${page}&limit=${limit}`);
+        return Array.isArray(res) ? res : (res.data ?? []);
     },
 
     async saveExpense(expenseData: any) {

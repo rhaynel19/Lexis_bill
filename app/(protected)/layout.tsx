@@ -108,7 +108,7 @@ export default function ProtectedLayout({
                     <Link href="/dashboard">
                         <div className="group">
                             <h1 className="text-2xl font-extrabold tracking-tight cursor-pointer transition-transform group-hover:scale-105 flex items-baseline gap-1">
-                                <LexisWord className="text-2xl text-accent" /> <span className="text-foreground font-light font-serif">BILL</span>
+                                <LexisWord className="text-2xl text-accent" /> <span className="text-foreground font-light font-serif uppercase tracking-tighter">Factura</span>
                             </h1>
                             <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-medium group-hover:text-accent transition-colors">
                                 El orden que te deja tranquilo
@@ -140,7 +140,7 @@ export default function ProtectedLayout({
                             </SheetTrigger>
                             <SheetContent side="left" className="bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-0 w-72 flex flex-col">
                                 <SheetHeader className="p-6 border-b border-sidebar-border/50 flex-none">
-                                    <SheetTitle className="text-sidebar-primary text-left uppercase tracking-tighter font-black">TRINALYZE BILLING</SheetTitle>
+                                    <SheetTitle className="text-sidebar-primary text-left uppercase tracking-tighter font-black">FACTURACIÓN</SheetTitle>
                                 </SheetHeader>
                                 <nav className="flex-1 overflow-y-auto p-4">
                                     <SidebarLinks isMobile isAdmin={userFromApi?.role === "admin"} isPartner={userFromApi?.partner?.status === "active"} onLogout={handleLogout} onNavigate={() => setMenuOpen(false)} />
@@ -163,7 +163,7 @@ export default function ProtectedLayout({
                         <SidebarLinks isAdmin={userFromApi?.role === "admin"} isPartner={userFromApi?.partner?.status === "active"} onLogout={handleLogout} />
                     </nav>
                     <div className="p-6 border-t border-sidebar-border/50 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Trinalyze Billing Pro</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Facturación Profesional</p>
                     </div>
                 </aside>
 

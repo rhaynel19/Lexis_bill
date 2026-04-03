@@ -96,6 +96,7 @@ const invoiceSchema = new mongoose.Schema({
     ncf: { type: String, required: true },
     ncfType: { type: String, required: true },
     clientPhone: { type: String },
+    clientAddress: { type: String },
     originalInvoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' }, // For credit notes
     requestId: { type: String, unique: true, sparse: true }, // For idempotency
     items: [{
@@ -139,6 +140,7 @@ const customerSchema = new mongoose.Schema({
     rnc: { type: String, required: true },
     phone: { type: String },
     email: { type: String },
+    address: { type: String },
     notes: { type: String },
     lastInvoiceDate: { type: Date },
     createdAt: { type: Date, default: Date.now }
@@ -226,6 +228,7 @@ const quoteSchema = new mongoose.Schema({
     clientName: { type: String, required: true },
     clientRnc: { type: String, required: true },
     clientPhone: { type: String },
+    clientAddress: { type: String },
     items: [{
         description: String,
         quantity: Number,

@@ -92,7 +92,7 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
 
                 // Suscripción bloqueada (días de gracia pasados): redirigir a pagos
                 if (response.status === 403 && errorData.code === 'SUBSCRIPTION_LOCKED' && typeof window !== 'undefined') {
-                    toast.error("Tu cuenta está bloqueada por falta de pago. Regulariza para seguir usando Lexis Bill.");
+                    toast.error("Tu cuenta está bloqueada por falta de pago. Regulariza para seguir usando la plataforma.");
                     window.location.href = "/pagos?locked=1";
                     throw errPayload;
                 }

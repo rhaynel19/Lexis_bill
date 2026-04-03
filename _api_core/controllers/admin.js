@@ -1,4 +1,4 @@
-const { User, AdminAuditLog, Partner, PaymentRequest } = require('../models');
+const { User, AdminAuditLog, Partner, PaymentRequest, Invoice } = require('../models');
 const { log, logAdminAction } = require('../models');
 const { safeErrorMessage } = require('../utils/helpers');
 const { isValidObjectId } = require('../utils/validators');
@@ -83,7 +83,7 @@ exports.getUsers = async (req, res) => {
         const partnerByUser = Object.fromEntries(partners.map(p => [p.userId.toString(), p]));
 
         res.json({
-            users: users.map(u => ({ ...u, partnerInfo: partnerByUser[u._id.toString()] })),
+            list: users.map(u => ({ ...u, partnerInfo: partnerByUser[u._id.toString()] })),
             total,
             page,
             pages: Math.ceil(total / limit)
@@ -269,6 +269,9 @@ exports.getAdminAlerts = async (req, res) => {
 /**
  * Log de auditoría administrativa
  */
+/**
+ * Log de auditoría administrativa
+ */
 exports.getAdminAudit = async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -284,4 +287,122 @@ exports.getAdminAudit = async (req, res) => {
     } catch (e) {
         res.status(500).json({ message: safeErrorMessage(e) });
     }
+};
+
+/**
+ * Estadísticas generales (Dashboard Admin)
+ */
+exports.getAdminStats = async (req, res) => {
+    try {
+        const [totalUsers, activeUsers, totalInvoices, totalRevenueArr] = await Promise.all([
+            User.countDocuments({ role: { $ne: 'admin' } }),
+            User.countDocuments({ role: { $ne: 'admin' }, subscriptionStatus: 'Activo' }),
+            Invoice.countDocuments({ status: { $ne: 'cancelled' } }),
+            Invoice.aggregate([
+                { $match: { status: { $ne: 'cancelled' } } },
+                { $group: { _id: null, total: { $sum: '$total' } } }
+            ])
+        ]);
+
+        const totalRevenue = totalRevenueArr[0]?.total || 0;
+
+        res.json({
+            totalUsers,
+            activeUsers,
+            totalInvoices,
+            totalRevenue,
+            usersByPlan: {
+                free: await User.countDocuments({ $or: [{ membershipLevel: 'free' }, { 'subscription.plan': 'free' }] }),
+                pro: await User.countDocuments({ $or: [{ membershipLevel: 'pro' }, { 'subscription.plan': 'pro' }] }),
+                premium: await User.countDocuments({ $or: [{ membershipLevel: 'premium' }, { 'subscription.plan': 'premium' }] })
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ message: safeErrorMessage(e) });
+    }
+};
+
+/**
+ * Métricas detalladas
+ */
+exports.getAdminMetrics = async (req, res) => {
+    try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const [newUsers, invoicesLast30, revenueLast30Arr] = await Promise.all([
+            User.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+            Invoice.countDocuments({ createdAt: { $gte: thirtyDaysAgo }, status: { $ne: 'cancelled' } }),
+            Invoice.aggregate([
+                { $match: { createdAt: { $gte: thirtyDaysAgo }, status: { $ne: 'cancelled' } } },
+                { $group: { _id: null, total: { $sum: '$total' } } }
+            ])
+        ]);
+
+        res.json({
+            newUsers30d: newUsers,
+            invoices30d: invoicesLast30,
+            revenue30d: revenueLast30Arr[0]?.total || 0
+        });
+    } catch (e) {
+        res.status(500).json({ message: safeErrorMessage(e) });
+    }
+};
+
+/**
+ * Datos para gráficos (Revenue e Invoices por mes)
+ */
+exports.getAdminChartData = async (req, res) => {
+    try {
+        const months = parseInt(req.query.months) || 6;
+        const startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - months);
+
+        const monthlyData = await Invoice.aggregate([
+            { $match: { createdAt: { $gte: startDate }, status: { $ne: 'cancelled' } } },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: "$createdAt" },
+                        month: { $month: "$createdAt" }
+                    },
+                    revenue: { $sum: "$total" },
+                    invoices: { $sum: 1 }
+                }
+            },
+            { $sort: { "_id.year": 1, "_id.month": 1 } }
+        ]);
+
+        const formatted = monthlyData.map(d => ({
+            month: `${d._id.year}-${String(d._id.month).padStart(2, '0')}`,
+            revenue: d.revenue,
+            invoices: d.invoices
+        }));
+
+        const usersByPlan = {
+            free: await User.countDocuments({ $or: [{ membershipLevel: 'free' }, { 'subscription.plan': 'free' }] }),
+            pro: await User.countDocuments({ $or: [{ membershipLevel: 'pro' }, { 'subscription.plan': 'pro' }] }),
+            premium: await User.countDocuments({ $or: [{ membershipLevel: 'premium' }, { 'subscription.plan': 'premium' }] })
+        };
+
+        res.json({ monthly: formatted, usersByPlan });
+    } catch (e) {
+        res.status(500).json({ message: safeErrorMessage(e) });
+    }
+};
+
+module.exports = {
+    getUsers: exports.getUsers,
+    getUser: exports.getUser,
+    activateUser: exports.activateUser,
+    deactivateUser: exports.deactivateUser,
+    blockUser: exports.blockUser,
+    unblockUser: exports.unblockUser,
+    updateUserNotes: exports.updateUserNotes,
+    deleteUser: exports.deleteUser,
+    getAdminAlerts: exports.getAdminAlerts,
+    getAdminAudit: exports.getAdminAudit,
+    getAdminStats: exports.getAdminStats,
+    getAdminMetrics: exports.getAdminMetrics,
+    getAdminChartData: exports.getAdminChartData
 };

@@ -1,7 +1,7 @@
 {
-    "name": "LEXIS BILL",
-    "short_name": "LEXIS",
-    "theme_color": "#101827",
+    "name": "FACTURACIÓN",
+    "short_name": "FACTURA",
+    "theme_color": "#1E293B",
     "background_color": "#ffffff",
     "display": "standalone",
     "orientation": "portrait",
