@@ -581,12 +581,13 @@ export function LexisBusinessCopilot() {
                 }} 
                 insightData={selectedInsight}
                 businessData={data}
+                handleInsightAction={handleInsightAction}
             />
         </Card>
     );
 }
 
-function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData }: any) {
+function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData, handleInsightAction }: any) {
     if (!isOpen) return null;
     
     return (
