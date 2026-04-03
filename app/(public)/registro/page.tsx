@@ -203,8 +203,8 @@ function RegisterForm() {
         <div className="min-h-screen flex items-center justify-center bg-[#0F172A] px-4 py-8 relative overflow-hidden">
             {/* Background Luxury Effects */}
             <div className="absolute inset-0">
-                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-amber-900/30 rounded-full blur-[120px]"></div>
-                <div className="absolute bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-amber-600/10 rounded-full blur-[100px]"></div>
+                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-[#DEB23E]/20 rounded-full blur-[120px]"></div>
+                <div className="absolute bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-[#DEB23E]/10 rounded-full blur-[100px]"></div>
             </div>
 
             <div className="w-full max-w-lg relative z-10">
@@ -441,8 +441,8 @@ function RegisterForm() {
                             <Button
                                 type="submit"
                                 className={isPartnerFlow
-                                    ? "w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-7 px-4 text-base sm:text-lg shadow-xl shadow-amber-500/20 transition-all active:scale-[0.98] rounded-xl whitespace-normal text-center leading-snug"
-                                    : "w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-7 px-4 text-base sm:text-lg shadow-xl shadow-amber-500/20 transition-all active:scale-[0.98] rounded-xl whitespace-normal text-center leading-snug"}
+                                    ? "w-full bg-[#DEB23E] hover:bg-[#C79A30] text-blue-950 font-bold py-7 px-4 text-base sm:text-lg shadow-xl shadow-[#DEB23E]/20 transition-all active:scale-[0.98] rounded-xl whitespace-normal text-center leading-snug"
+                                    : "w-full bg-gradient-to-r from-[#C79A30] to-[#DEB23E] text-white font-bold py-7 px-4 text-base sm:text-lg shadow-xl shadow-[#DEB23E]/20 transition-all active:scale-[0.98] rounded-xl whitespace-normal text-center leading-snug"}
                                 disabled={isLoading || !acceptedTerms}
                                 aria-busy={isLoading}
                             >

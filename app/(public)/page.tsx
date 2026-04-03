@@ -96,7 +96,7 @@ export default function LandingPage() {
       <header className="relative pt-32 pb-20 sm:pt-40 sm:pb-24 md:pt-56 md:pb-40 overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 opacity-20">
           <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-lexis-gold rounded-full blur-[140px]"></div>
-          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-amber-600 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#DEB23E]/20 rounded-full blur-[120px]"></div>
         </div>
 
         <div className="container mx-auto px-4 sm:px-6 text-center max-w-6xl">

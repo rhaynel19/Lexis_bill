@@ -12,14 +12,14 @@ const registrationSchema = z.object({
         .regex(/[A-Z]/, 'Debe tener al menos una mayúscula')
         .regex(/[a-z]/, 'Debe tener al menos una minúscula')
         .regex(/[0-9]/, 'Debe tener al menos un número'),
-    name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').trim(),
+    name: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres'),
     rnc: z.string().optional().transform(val => val ? val.replace(/[^0-9]/g, '') : ''),
-    profession: z.string().optional().trim(),
+    profession: z.string().trim().optional(),
     plan: z.enum(['free', 'pro']).optional().default('free'),
-    referralCode: z.string().optional().transform(val => val ? val.trim().toUpperCase() : ''),
+    referralCode: z.string().trim().toUpperCase().optional().transform(val => val || ''),
     isPartnerRegistration: z.boolean().optional(),
     inviteToken: z.string().optional(),
-    suggestedName: z.string().optional().trim(),
+    suggestedName: z.string().trim().optional(),
     acceptedPolicyVersions: z.record(z.string(), z.union([z.number(), z.string().transform(Number)])).optional()
 });
 

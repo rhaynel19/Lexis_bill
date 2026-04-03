@@ -191,19 +191,19 @@ function LoginForm() {
             {/* Background Luxury Effects */}
             <div className="absolute inset-0">
                 <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5" />
-                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-amber-900/30 rounded-full blur-[120px]" />
+                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-[#DEB23E]/20 rounded-full blur-[120px]" />
                 <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] bg-lexis-gold/10 rounded-full blur-[100px]" />
             </div>
 
             <Card className="w-full max-w-md bg-white/95 backdrop-blur border-none shadow-2xl relative z-10 overflow-hidden">
                 <div className="w-full">
-                    <div className="h-1.5 w-full bg-gradient-to-r from-[#D97706] to-[#F59E0B]" />
+                    <div className="h-1.5 w-full bg-gradient-to-r from-[#C79A30] to-[#DEB23E]" />
                 </div>
                 <CardHeader className="text-center pb-6 pt-10">
                     <CardTitle className="text-3xl font-bold tracking-tight flex items-center justify-center gap-2">
                         <LexisWord className="text-3xl" showBill={true} />
                     </CardTitle>
-                    <CardDescription className="text-slate-500 font-medium mt-2 text-sm">Oficina Fiscal Inteligente</CardDescription>
+                    <CardDescription className="text-slate-500 font-medium mt-2 text-sm">Gestión Fiscal de Alto Nivel</CardDescription>
                 </CardHeader>
                 <CardContent className="px-6 sm:px-8 pb-8">
                     {apiUnavailable && (
@@ -279,7 +279,7 @@ function LoginForm() {
 
                         <Button
                             type="submit"
-                            className="w-full bg-gradient-to-r from-[#D97706] to-[#F59E0B] text-white font-bold py-6 text-base tracking-wide shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.01] hover:shadow-amber-500/30 rounded-xl"
+                            className="w-full bg-gradient-to-r from-[#C79A30] to-[#DEB23E] text-white font-bold py-6 text-base tracking-wide shadow-lg shadow-[#DEB23E]/20 transition-all hover:scale-[1.01] hover:shadow-[#DEB23E]/30 rounded-xl"
                             disabled={isLoading}
                             aria-busy={isLoading}
                         >

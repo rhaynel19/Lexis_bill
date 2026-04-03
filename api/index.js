@@ -2,6 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config({ path: '.env.local' });
+    require('dotenv').config({ path: '.env' });
+}
 
 // Import from _api_core (hidden from Vercel function discovery)
 const log = require('../_api_core/logger');
@@ -100,5 +104,10 @@ app.use((err, req, res, next) => {
         error: isProd ? 'Internal Server Error' : err.message
     });
 });
+
+if (require.main === module) {
+    const PORT = process.env.PORT || 3001;
+    app.listen(PORT, () => console.log(`🚀 Backend API local corriendo en puerto ${PORT}`));
+}
 
 module.exports = app;

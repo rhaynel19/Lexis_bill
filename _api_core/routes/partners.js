@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const partnersController = require('../controllers/partners');
-const { verifyToken } = require('../middleware/auth');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
 
 // --- Rutas Públicas ---
