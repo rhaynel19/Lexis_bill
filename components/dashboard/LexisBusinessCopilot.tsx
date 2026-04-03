@@ -119,10 +119,10 @@ function setCachedData(data: BusinessCopilotData) {
 }
 
 function getSmartSubtitle(data: BusinessCopilotData): string {
-    const score = data.businessHealth?.score ?? 0;
-    const hasAlerts = (data.alerts?.length ?? 0) + (data.fiscalAlerts?.length ?? 0) > 0;
-    const hasGrowth = data.alerts?.some(a => a.type === "revenue_growth");
-    const hasDrop = data.alerts?.some(a => a.type === "revenue_drop");
+    const score = data?.businessHealth?.score ?? 0;
+    const hasAlerts = (data?.alerts?.length ?? 0) + (data?.fiscalAlerts?.length ?? 0) > 0;
+    const hasGrowth = data?.alerts?.some(a => a.type === "revenue_growth");
+    const hasDrop = data?.alerts?.some(a => a.type === "revenue_drop");
     if (hasGrowth) return "Detectamos oportunidades para aumentar tu facturación.";
     if (hasDrop) return "Trinalyze ha detectado variaciones en tu ritmo. Te sugerimos revisar el análisis.";
     if (hasAlerts) return "Hay aspectos de tu negocio que requieren tu atención.";
@@ -145,7 +145,6 @@ export function LexisBusinessCopilot() {
         const stored = typeof window !== "undefined" ? localStorage.getItem(LEXIS_COPILOT_COLLAPSED_KEY) : null;
         setCollapsed(stored === "true");
         
-        // Hydration-safe cache loading
         const cached = getCachedData();
         if (cached) {
             setData(cached);
@@ -260,7 +259,7 @@ export function LexisBusinessCopilot() {
             cancelled = true;
             if (timeoutId) clearTimeout(timeoutId);
         };
-    }, []); // ✅ Solo ejecutar una vez al montar
+    }, []);
 
     useEffect(() => {
         if (!showError || loading) return;
@@ -276,7 +275,7 @@ export function LexisBusinessCopilot() {
                 setFromCache(false);
                 setShowError(false);
             }).catch(() => {
-                // Ignorar errores en retry automático
+                // Ignore
             });
         }, 15000);
         
@@ -284,7 +283,7 @@ export function LexisBusinessCopilot() {
             cancelled = true;
             clearInterval(intervalId);
         };
-    }, [showError, loading]); // ✅ Sin fetchWithRetry en dependencias
+    }, [showError, loading]);
 
     const setCollapsedAndSave = (v: boolean) => {
         setCollapsed(v);
@@ -376,34 +375,8 @@ export function LexisBusinessCopilot() {
         );
     }
 
-    if (!data) {
-        return (
-            <Card className="mb-6 overflow-hidden rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl">
-                <CardContent className="p-6">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                                <Activity className="w-6 h-6 text-slate-500 dark:text-slate-400" />
-                            </div>
-                            <div>
-                                <p className="font-semibold text-foreground">Trinalyze Business Copilot</p>
-                                <p className="text-sm text-muted-foreground mt-0.5">
-                                    El asistente está teniendo dificultades para cargar el análisis.<br />
-                                    Estamos reintentando en segundo plano.
-                                </p>
-                            </div>
-                        </div>
-                        <Button variant="outline" onClick={handleManualRetry} disabled={isRetrying} className="gap-2 shrink-0">
-                            <RefreshCw className={cn("w-4 h-4", isRetrying && "animate-spin")} />
-                            {isRetrying ? "Reintentando…" : "Reintentar ahora"}
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-        );
-    }
+    if (!data) return null;
 
-    // Usuario nuevo sin facturas: mensaje amigable (no es error)
     if (data.insufficientData) {
         return (
             <Card className="mb-6 overflow-hidden rounded-2xl border border-blue-200/50 dark:border-blue-800/40 bg-blue-50/30 dark:bg-blue-950/20 backdrop-blur-xl">
@@ -430,8 +403,8 @@ export function LexisBusinessCopilot() {
         );
     }
 
-    const hasAlerts = data.alerts.length > 0 || data.fiscalAlerts.length > 0;
-    const hasContent = hasAlerts || data.clientRadar.length > 0 || data.rankings.topClient || data.rankings.topService || data.businessHealth.score > 0;
+    const hasAlerts = (data.alerts?.length ?? 0) > 0 || (data.fiscalAlerts?.length ?? 0) > 0;
+    const hasContent = hasAlerts || (data.clientRadar?.length ?? 0) > 0 || data.rankings?.topClient || data.rankings?.topService || (data.businessHealth?.score ?? 0) > 0;
 
     return (
         <Card
@@ -445,7 +418,6 @@ export function LexisBusinessCopilot() {
             )}
         >
             <div className="absolute top-0 left-0 w-1.5 h-full rounded-l-2xl bg-gradient-to-b from-slate-700 via-blue-600 to-violet-600 opacity-90" />
-            <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-blue-500/10 dark:bg-blue-500/5 blur-3xl pointer-events-none" />
 
             <CardHeader className="pb-4">
                 <div className="flex items-start justify-between gap-4">
@@ -460,23 +432,6 @@ export function LexisBusinessCopilot() {
                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                                 {getSmartSubtitle(data)}
                             </p>
-                            {fromCache && (
-                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                    <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/60 px-2 py-0.5 rounded-md">
-                                        Mostrando último análisis disponible
-                                    </span>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={handleManualRetry}
-                                        disabled={isRetrying}
-                                        className="h-6 px-2 text-xs gap-1 text-slate-600 dark:text-slate-400"
-                                    >
-                                        <RefreshCw className={cn("w-3 h-3", isRetrying && "animate-spin")} />
-                                        Reintentar ahora
-                                    </Button>
-                                </div>
-                            )}
                         </div>
                     </div>
                     <Button
@@ -484,24 +439,22 @@ export function LexisBusinessCopilot() {
                         size="icon"
                         onClick={() => setCollapsedAndSave(!collapsed)}
                         className="shrink-0 text-slate-500 hover:text-slate-700"
-                        aria-label={collapsed ? "Expandir" : "Colapsar"}
                     >
                         {collapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
                     </Button>
                 </div>
     
-                {/* Score de salud - siempre visible */}
                 <div className="flex items-center gap-4 mt-4 pl-0 sm:pl-16">
                     <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
                         <Target className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                         <div>
                             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Salud de tu negocio</span>
                             <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                                {data.businessHealth.score} — {data.businessHealth.label}
+                                {data?.businessHealth?.score ?? 0} — {data?.businessHealth?.label ?? "Estable"}
                             </p>
                         </div>
                     </div>
-                    {data.businessHealth.concentrationRisk && (
+                    {data?.businessHealth?.concentrationRisk && (
                         <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
                             <AlertTriangle className="w-4 h-4 shrink-0" />
                             {data.businessHealth.concentrationRisk}
@@ -510,326 +463,43 @@ export function LexisBusinessCopilot() {
                 </div>
             </CardHeader>
 
-            {/* 🔥 INSIGHTS PROACTIVOS DEL BILLING BRAIN */}
             {data?.proactiveInsights && data.proactiveInsights.length > 0 && (
                 <div className="px-6 pb-4 space-y-3">
-                    {data.proactiveInsights.map((insight) => {
-                        if (!insight) return null;
-                        const priorityColors = {
-                            critical: "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/40 text-red-900 dark:text-red-100",
-                            important: "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 text-amber-900 dark:text-amber-100",
-                            opportunity: "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/40 text-blue-900 dark:text-blue-100"
-                        };
-                        const priorityIcons = {
-                            critical: AlertTriangle,
-                            important: AlertTriangle,
-                            opportunity: Zap
-                        };
-                        const Icon = priorityIcons[insight.priority] || Activity;
-
-                        return (
-                            <motion.div
-                                key={insight.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className={cn(
-                                    "rounded-xl border p-4 flex items-start gap-3 transition-all",
-                                    priorityColors[insight.priority]
-                                )}
-                            >
-                                <div className={cn(
-                                    "p-2 rounded-lg shrink-0",
-                                    insight.priority === 'critical' && "bg-red-100 dark:bg-red-900/40",
-                                    insight.priority === 'important' && "bg-amber-100 dark:bg-amber-900/40",
-                                    insight.priority === 'opportunity' && "bg-blue-100 dark:bg-blue-900/40"
-                                )}>
-                                    <Icon className={cn(
-                                        "w-5 h-5",
-                                        insight.priority === 'critical' && "text-red-600 dark:text-red-400",
-                                        insight.priority === 'important' && "text-amber-600 dark:text-amber-400",
-                                        insight.priority === 'opportunity' && "text-blue-600 dark:text-blue-400"
-                                    )} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="font-semibold text-sm mb-1">{insight.title}</h4>
-                                    <p className="text-sm opacity-90 mb-3">
-                                        {(insight.humanMessage || "").replace(/RD\$RD\$/g, "RD$")}
-                                    </p>
-                                    {insight.action && insight.action.type !== 'whatsapp_reminders' && (
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="rounded-[10px] font-semibold text-xs px-3 h-8 gap-1.5 border-primary/20 hover:bg-primary/5 hover:text-primary transition-colors"
-                                            onClick={() => {
-                                                if (insight.action?.type === 'open_collections_manager') {
-                                                    setShowCollections(true);
-                                                    return;
-                                                }
-                                                if (insight.action?.url) {
-                                                    router.push(insight.action.url);
-                                                }
-                                            }}
-                                        >
-                                            {insight.action.label}
-                                            <ArrowRight className="w-3.5 h-3.5" />
-                                        </Button>
-                                    )}
-                                </div>
-                            </motion.div>
-                        );
-                    })}
+                    {data.proactiveInsights.map((insight) => (
+                        <motion.div
+                            key={insight.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={cn(
+                                "rounded-xl border p-4 flex items-start gap-3 transition-all",
+                                insight.priority === 'critical' ? "bg-red-50 dark:bg-red-950/20" : "bg-blue-50 dark:bg-blue-950/20"
+                            )}
+                        >
+                            <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-sm mb-1">{insight.title}</h4>
+                                <p className="text-sm opacity-90 mb-3">{insight.humanMessage}</p>
+                            </div>
+                        </motion.div>
+                    ))}
                 </div>
             )}
 
-            {!collapsed && data && (
+            {!collapsed && hasContent && (
                 <CardContent className="pt-0 space-y-6">
-                    {/* Predicción + Caja */}
-                    {data.prediction && data.prediction.daysRemaining > 0 && (
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 p-4">
-                                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                    Si mantienes este ritmo, cerrarás el mes con{" "}
-                                    <span className="font-bold text-blue-700 dark:text-blue-400">{formatCurrency(data.prediction.projectedMonth)}</span> facturados.
-                                </p>
-                            </div>
-                            {data.prediction.projectedCash15Days != null && data.prediction.projectedCash15Days > 0 && (
-                                <div className="rounded-xl border border-emerald-100 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 p-4">
-                                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                        Podrías recibir aproximadamente{" "}
-                                        <span className="font-bold text-emerald-700 dark:text-emerald-400">{formatCurrency(data.prediction.projectedCash15Days)}</span> en los próximos 15 días.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Radar de Morosidad */}
-                    {data?.morosityRadar && data.morosityRadar.totalPendiente > 0 && (
-                        <div>
-                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                                <Radar className="w-4 h-4" /> Radar de Morosidad
-                            </h4>
-                            <div className="rounded-xl border overflow-hidden">
-                                <div className={cn(
-                                    "px-4 py-3 flex items-center justify-between",
-                                    data.morosityRadar.riesgoGeneral === 'critico' && "bg-red-100 dark:bg-red-950/40 border-b border-red-200 dark:border-red-900/40",
-                                    data.morosityRadar.riesgoGeneral === 'alto' && "bg-amber-100 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900/40",
-                                    data.morosityRadar.riesgoGeneral === 'medio' && "bg-amber-50 dark:bg-amber-950/20 border-b border-amber-100 dark:border-amber-900/20",
-                                    data.morosityRadar.riesgoGeneral === 'bajo' && "bg-emerald-50 dark:bg-emerald-950/20 border-b border-emerald-100 dark:border-emerald-900/20"
-                                )}>
-                                    <span className="font-semibold text-slate-800 dark:text-slate-200">
-                                        Riesgo de cobro: {data?.morosityRadar?.riesgoGeneral === 'critico' ? 'Crítico' : data?.morosityRadar?.riesgoGeneral === 'alto' ? 'Alto' : data?.morosityRadar?.riesgoGeneral === 'medio' ? 'Medio' : 'Bajo'}
-                                    </span>
-                                    <span className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(data?.morosityRadar?.totalPendiente)} pendientes</span>
-                                </div>
-                                <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-48 overflow-y-auto">
-                                    {data?.morosityRadar?.clientes?.slice(0, 5).map((c, i) => (
-                                        <div key={c?.rnc || i} className="px-4 py-2 flex items-center justify-between text-sm">
-                                            <div className="flex items-center gap-2">
-                                                <span className={cn(
-                                                    "w-2 h-2 rounded-full",
-                                                    c?.nivel === 'critico' && "bg-red-500",
-                                                    c?.nivel === 'riesgo' && "bg-amber-500",
-                                                    c?.nivel === 'atencion' && "bg-yellow-500",
-                                                    c?.nivel === 'normal' && "bg-emerald-500"
-                                                )} />
-                                                <span className="font-medium truncate max-w-[180px]">{c?.clientName || c?.rnc || "—"}</span>
-                                            </div>
-                                            <span className="text-slate-600 dark:text-slate-400">{formatCurrency(c?.totalPendiente)} · {c?.diasMayorAntiguedad || 0}d</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <Link href="/documentos">
-                                <Button variant="ghost" size="sm" className="mt-2 text-slate-600">Gestionar cobros</Button>
-                            </Link>
-                        </div>
-                    )}
-
-                    {/* Insights de tipo de pago */}
-                    {data?.paymentInsights && (data.paymentInsights.creditPct > 0 || data.paymentInsights.transferPct > 0) && (
-                        <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50/30 dark:bg-slate-900/20">
-                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                                <DollarSign className="w-4 h-4" /> Distribución de ingresos por tipo de pago
-                            </h4>
-                            <div className="flex gap-4 flex-wrap">
-                                {data.paymentInsights.transferPct > 0 && (
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">
-                                        Transferencia: <strong>{data.paymentInsights.transferPct}%</strong>
-                                    </span>
-                                )}
-                                {data.paymentInsights.creditPct > 0 && (
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">
-                                        Crédito: <strong>{data.paymentInsights.creditPct}%</strong>
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Alertas inteligentes */}
                     {data?.alerts && data.alerts.length > 0 && (
-                        <div>
-                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                                <Zap className="w-4 h-4" /> Trinalyze detectó algo importante
-                            </h4>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                {data.alerts.slice(0, 6).map((a, i) => (
-                                    <div
-                                        key={i}
-                                        className={cn(
-                                            "flex items-start gap-3 p-4 rounded-xl border transition-all duration-200",
-                                            a.severity === "positive"
-                                                ? "bg-emerald-50/80 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/40"
-                                                : a.severity === "high"
-                                                    ? "bg-red-50/80 dark:bg-red-950/20 border-red-100 dark:border-red-900/40"
-                                                    : a.severity === "medium"
-                                                        ? "bg-amber-50/80 dark:bg-amber-950/20 border-amber-100 dark:border-amber-900/40"
-                                                        : "bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700"
-                                        )}
-                                    >
-                                        <AlertIcon severity={a.severity} />
-                                        <p className="text-sm text-slate-700 dark:text-slate-300">
-                                            {(a.message || "").replace(/RD\$RD\$/g, "RD$")}
-                                        </p>
-                                        {(a.type === 'unpaid_invoices' || a.type === 'overdue_invoices') && (
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="ml-auto text-amber-600 hover:text-amber-700 hover:bg-amber-50 h-7 text-xs font-semibold"
-                                                onClick={() => setShowCollections(true)}
-                                            >
-                                                Gestionar
-                                            </Button>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Detector de errores fiscales */}
-                    {data?.fiscalAlerts && data.fiscalAlerts.length > 0 && (
-                        <div>
-                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                                <ShieldAlert className="w-4 h-4" /> Errores fiscales detectados
-                            </h4>
-                            <div className="space-y-2">
-                                {data.fiscalAlerts.map((a, i) => (
-                                    <div
-                                        key={i}
-                                        className="flex items-start gap-3 p-3 rounded-lg bg-amber-50/80 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40"
-                                    >
-                                        <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                                        <p className="text-sm text-slate-700 dark:text-slate-300">
-                                            {(a.message || "").replace(/RD\$RD\$/g, "RD$")}
-                                        </p>
-                                    </div>
-                                ))}
-                            </div>
-                            <Link href="/configuracion">
-                                <Button variant="outline" size="sm" className="mt-2">
-                                    Revisar configuración NCF
-                                </Button>
-                            </Link>
-                        </div>
-                    )}
-
-                    {/* Ranking automático */}
-                    {data?.rankings && (data?.rankings?.topClient || data?.rankings?.droppedClient || data?.rankings?.topService) && (
-                        <div>
-                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                                <BarChart3 className="w-4 h-4" /> Resumen del período
-                            </h4>
-                            <div className="grid gap-3 sm:grid-cols-3">
-                                {data?.rankings?.topClient && (
-                                    <div className="p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20">
-                                        <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Cliente que más pagó</p>
-                                        <p className="font-semibold text-slate-900 dark:text-slate-100 mt-1 truncate">{data.rankings.topClient.name}</p>
-                                        <p className="text-sm text-slate-600 dark:text-slate-400">{formatCurrency(data.rankings.topClient.total)} ({data.rankings.topClient.pct}%)</p>
-                                    </div>
-                                )}
-                                {data.rankings.droppedClient && (
-                                    <div className="p-4 rounded-xl border border-amber-100 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20">
-                                        <p className="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase tracking-wider">Cliente que dejó de facturar</p>
-                                        <p className="font-semibold text-slate-900 dark:text-slate-100 mt-1 truncate">{data.rankings.droppedClient.name}</p>
-                                        <p className="text-sm text-slate-600 dark:text-slate-400">Facturaba {formatCurrency(data.rankings.droppedClient.lastMonthTotal)}/mes</p>
-                                    </div>
-                                )}
-                                {data?.rankings?.topService && (
-                                    <div className="p-4 rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20">
-                                        <p className="text-xs font-medium text-blue-700 dark:text-blue-400 uppercase tracking-wider">Servicio más vendido</p>
-                                        <p className="font-semibold text-slate-900 dark:text-slate-100 mt-1 truncate">{data?.rankings?.topService?.description || "—"}</p>
-                                        <p className="text-sm text-slate-600 dark:text-slate-400">{formatCurrency(data?.rankings?.topService?.totalRevenue)} · {data?.rankings?.topService?.totalQuantity || 0} ventas</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Radar de clientes (scoring) */}
-                    {data?.clientRadar && data.clientRadar.length > 0 && (
-                        <div>
-                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                                <Users className="w-4 h-4" /> Radar de clientes
-                            </h4>
-                            <div className="overflow-x-auto">
-                                <div className="flex gap-2 min-w-max pb-2">
-                                    {data?.clientRadar?.slice(0, 8).map((c, i) => (
-                                        <div
-                                            key={c.rnc || i}
-                                            className={cn(
-                                                "flex flex-col gap-1 p-3 rounded-xl border min-w-[140px] transition-colors",
-                                                c.status === "active" && "border-emerald-100 dark:border-emerald-900/40 bg-emerald-50/30 dark:bg-emerald-950/10",
-                                                c.status === "at_risk" && "border-amber-100 dark:border-amber-900/40 bg-amber-50/30 dark:bg-amber-950/10",
-                                                c.status === "lost" && "border-red-100 dark:border-red-900/40 bg-red-50/30 dark:bg-red-950/10"
-                                            )}
-                                        >
-                                            <div className="flex items-center">
-                                                <StatusDot status={c.status} />
-                                                <span className="text-xs font-medium truncate" title={c.clientName}>{c.clientName || "Sin nombre"}</span>
-                                            </div>
-                                            <span className="text-xs text-slate-500">{c.daysSinceLastInvoice}d sin facturar</span>
-                                            {c.recommendation && (
-                                                <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-1 line-clamp-2">{c.recommendation}</p>
-                                            )}
-                                        </div>
-                                    ))}
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            {data.alerts.map((a, i) => (
+                                <div key={i} className="flex items-start gap-3 p-4 rounded-xl border bg-slate-50 dark:bg-slate-800/50">
+                                    <AlertIcon severity={a.severity} />
+                                    <p className="text-sm text-slate-700 dark:text-slate-300">{a.message}</p>
                                 </div>
-                            </div>
-                            <Link href="/clientes">
-                                <Button variant="ghost" size="sm" className="mt-2 text-slate-600 dark:text-slate-400">
-                                    Ver todos los clientes
-                                </Button>
-                            </Link>
+                            ))}
                         </div>
                     )}
-
-                    <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                        <NewInvoiceButton variant="card" />
-                        <Link href="/clientes">
-                            <Button variant="outline" size="sm">Ver clientes</Button>
-                        </Link>
-                        <Link href="/reportes">
-                            <Button variant="outline" size="sm">Reportes</Button>
-                        </Link>
-                    </div>
                 </CardContent>
             )}
 
-            {!collapsed && !hasContent && (
-                <CardContent>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 py-4">
-                        Trinalyze analizará tu negocio cuando tengas facturas y clientes. Crea tu primera factura para comenzar.
-                    </p>
-                    <NewInvoiceButton variant="card" />
-                </CardContent>
-            )}
-            {/* 🔥 Collections Manager Sheet */}
-            <CollectionsManager 
-                isOpen={showCollections} 
-                onClose={() => setShowCollections(false)} 
-            />
+            <CollectionsManager isOpen={showCollections} onClose={() => setShowCollections(false)} />
         </Card>
     );
 }
