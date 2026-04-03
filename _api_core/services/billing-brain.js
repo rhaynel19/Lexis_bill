@@ -202,7 +202,13 @@ class BillingBrain {
                     action: {
                         label: 'Ver análisis',
                         url: '/dashboard',
-                        type: 'view_analysis'
+                        type: 'view_analysis',
+                        data: { 
+                            dropPct, 
+                            currentMonth: currentMonthRevenue, 
+                            lastMonth: lastMonthRevenue,
+                            insightId: 'revenue_drop'
+                        }
                     },
                     metadata: {
                         currentMonth: currentMonthRevenue,
@@ -473,8 +479,8 @@ class BillingBrain {
                 humanMessage: `"${topServices[0].description}" es tu servicio más vendido. ¿Quieres crear un servicio frecuente para facturar más rápido?`,
                 action: {
                     label: 'Configurar servicio',
-                    url: '/configuracion',
-                    type: 'configure_service'
+                    url: '/configuracion?tab=servicios',
+                    type: 'navigate'
                 },
                 metadata: {
                     service: topServices[0].description,

@@ -433,8 +433,9 @@ const getStatement = async (req, res) => {
 
 const getDebtors = async (req, res) => {
     try {
+        const userId = new mongoose.Types.ObjectId(req.userId);
         const debtors = await Invoice.aggregate([
-            { $match: { userId: new mongoose.Types.ObjectId(req.userId), status: { $nin: ['cancelled', 'void'] } } },
+            { $match: { userId, status: { $nin: ['cancelled', 'void'] } } },
             {
                 $addFields: {
                     _totalSafe: { $ifNull: ['$total', 0] },

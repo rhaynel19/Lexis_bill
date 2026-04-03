@@ -42,7 +42,9 @@ export function CollectionsManager({ isOpen, onClose }: DebtorsListProps) {
       setLoading(true);
       setError(null);
       const res = await api.getDebtors();
-      setDebtors(res.debtors || []);
+      // Defensa ante respuestas mal estructuradas
+      const debtorsData = Array.isArray(res) ? res : (res?.debtors || []);
+      setDebtors(debtorsData);
     } catch (err: any) {
       console.error("Error loading debtors:", err);
       setError("No se pudieron cargar los deudores.");
@@ -66,7 +68,7 @@ export function CollectionsManager({ isOpen, onClose }: DebtorsListProps) {
     }
     // Prefix with 1 if it's DR and not present
     const cleanPhone = phone.length === 10 ? `1${phone}` : phone;
-    const msg = encodeURIComponent(`Hola ${debtor.clientName}, de parte de Trinalyze Billing le recordamos que tiene un balance pendiente de ${formatCurrency(debtor.totalBalance)}. Puede realizar su pago vía transferencia.`);
+    const msg = encodeURIComponent(`Hola ${debtor.clientName}, de parte de Factura Directa le recordamos que tiene un balance pendiente de ${formatCurrency(debtor.totalBalance)}. Puede realizar su pago vía transferencia.`);
     window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");
   };
 

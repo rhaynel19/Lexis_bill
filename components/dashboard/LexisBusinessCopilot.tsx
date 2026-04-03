@@ -140,6 +140,8 @@ export function LexisBusinessCopilot() {
     const [isRetrying, setIsRetrying] = useState(false);
     const [fromCache, setFromCache] = useState(false);
     const [showCollections, setShowCollections] = useState(false);
+    const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
+    const [selectedInsight, setSelectedInsight] = useState<any>(null);
 
     useEffect(() => {
         const stored = typeof window !== "undefined" ? localStorage.getItem(LEXIS_COPILOT_COLLAPSED_KEY) : null;
@@ -337,6 +339,10 @@ export function LexisBusinessCopilot() {
             case 'open_collections_manager':
                 setShowCollections(true);
                 break;
+            case 'view_analysis':
+                setSelectedInsight(data);
+                setShowDetailedAnalysis(true);
+                break;
             case 'navigate':
                 if (url) router.push(url);
                 break;
@@ -450,14 +456,25 @@ export function LexisBusinessCopilot() {
                             </p>
                         </div>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setCollapsedAndSave(!collapsed)}
-                        className="shrink-0 text-slate-500 hover:text-slate-700"
-                    >
-                        {collapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowDetailedAnalysis(true)}
+                            className="hidden sm:flex shrink-0 gap-2 font-medium italic border-blue-200 dark:border-blue-800"
+                        >
+                            <Target className="w-4 h-4 text-blue-600" />
+                            Análisis Global
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setCollapsedAndSave(!collapsed)}
+                            className="shrink-0 text-slate-500 hover:text-slate-700"
+                        >
+                            {collapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+                        </Button>
+                    </div>
                 </div>
     
                 <div className="flex items-center gap-4 mt-4 pl-0 sm:pl-16">
@@ -538,6 +555,117 @@ export function LexisBusinessCopilot() {
             )}
 
             <CollectionsManager isOpen={showCollections} onClose={() => setShowCollections(false)} />
+            
+            <DetailedAnalysisDrawer 
+                isOpen={showDetailedAnalysis} 
+                onClose={() => {
+                    setShowDetailedAnalysis(false);
+                    setSelectedInsight(null);
+                }} 
+                insightData={selectedInsight}
+                businessData={data}
+            />
         </Card>
     );
 }
+
+function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData }: any) {
+    if (!isOpen) return null;
+    
+    return (
+        <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <SheetContent side="right" className="sm:max-w-[600px] w-full overflow-y-auto">
+                <SheetHeader className="mb-6">
+                    <SheetTitle className="text-2xl font-bold flex items-center gap-2">
+                        <Radar className="text-blue-600" />
+                        Centro de Inteligencia Lexis
+                    </SheetTitle>
+                    <SheetDescription>
+                        Análisis profundo de la salud y proyecciones de tu negocio.
+                    </SheetDescription>
+                </SheetHeader>
+
+                <div className="space-y-8">
+                    {/* Resumen de Salud */}
+                    <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-bold text-slate-900 dark:text-slate-100 italic">Estado Actual</h3>
+                            <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold uppercase">
+                                Salud: {businessData?.businessHealth?.score}/100
+                            </span>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                            Basado en tu flujo de caja de los últimos 30 días, tu negocio se encuentra en un estado <strong>{businessData?.businessHealth?.label}</strong>.
+                        </p>
+                    </div>
+
+                    {/* Alerta Específica (si viene de un botón) */}
+                    {insightData && (
+                        <div className="bg-amber-50 dark:bg-amber-950/20 p-6 rounded-2xl border border-amber-200 dark:border-amber-800">
+                           <div className="flex items-center gap-3 mb-3">
+                               <AlertTriangle className="text-amber-600" />
+                               <h3 className="font-bold text-amber-900 dark:text-amber-400">Alerta de Variación</h3>
+                           </div>
+                           <p className="text-sm text-amber-800 dark:text-amber-300 mb-4">
+                               {insightData.insightId === 'revenue_drop' 
+                                 ? `Detectamos una caída del ${insightData.dropPct}% en comparación con el mes pasado. El mes anterior facturaste ${formatCurrency(insightData.lastMonth)}.`
+                                 : "Hemos detectado una variación que requiere tu atención."}
+                           </p>
+                           <Button className="w-full bg-amber-600 hover:bg-amber-700" onClick={() => (window.location.href = '/documentos')}>
+                               Revisar Documentos del Mes
+                           </Button>
+                        </div>
+                    )}
+
+                    {/* Proyecciones */}
+                    <div className="space-y-4">
+                        <h3 className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 italic">
+                            <TrendingUp className="w-5 h-5 text-emerald-500" />
+                            Proyecciones a Cierre de Mes
+                        </h3>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-4 rounded-xl border bg-white dark:bg-slate-950">
+                                <p className="text-xs text-slate-500 mb-1">Monto Proyectado</p>
+                                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                                    {formatCurrency(businessData?.prediction?.projectedMonth)}
+                                </p>
+                            </div>
+                            <div className="p-4 rounded-xl border bg-white dark:bg-slate-950">
+                                <p className="text-xs text-slate-500 mb-1">Ritmo Diario</p>
+                                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                                    {formatCurrency(businessData?.prediction?.dailyRate)}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Recomendaciones */}
+                    <div className="space-y-4">
+                        <h3 className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 italic">
+                            <Zap className="w-5 h-5 text-amber-500" />
+                            Recomendaciones de Lexis
+                        </h3>
+                        
+                        <ul className="space-y-3">
+                            <li className="flex gap-3 text-sm text-slate-600 dark:text-slate-400">
+                                <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+                                Para alcanzar tu proyección, sugiere un aumento del 10% en seguimiento a clientes inactivos.
+                            </li>
+                            <li className="flex gap-3 text-sm text-slate-600 dark:text-slate-400">
+                                <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+                                Tienes deudas pendientes por cobrar que representan el 40% de tu facturación mensual. Un recordatorio vía WhatsApp podría mejorar tu liquidez.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <Button variant="outline" className="w-full mt-6" onClick={onClose}>
+                        Cerrar Análisis
+                    </Button>
+                </div>
+            </SheetContent>
+        </Sheet>
+    );
+}
+
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
