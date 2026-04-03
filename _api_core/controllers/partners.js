@@ -214,6 +214,7 @@ exports.markCommissionPaid = async (req, res) => {
         c.paidAt = new Date();
         c.paymentRef = paymentRef;
         await c.save();
+        await logAdminAction(req.userId, 'partner_commission_paid', 'partner', c.partnerId.toString(), { commissionId: c._id, amount: c.commissionAmount, ref: paymentRef });
         res.json({ message: 'Comisión marcada como pagada' });
     } catch (e) {
         res.status(500).json({ message: safeErrorMessage(e) });
@@ -315,6 +316,7 @@ exports.calculateCommissions = async (req, res) => {
             await commission.save().catch(() => {}); // Ignorar duplicados
             results.push(commission);
         }
+        await logAdminAction(req.userId, 'partner_calculate_commissions', 'system', 'all', { month, year, processed: results.length });
         res.json({ success: true, count: results.length });
     } catch (e) {
         res.status(500).json({ message: safeErrorMessage(e) });

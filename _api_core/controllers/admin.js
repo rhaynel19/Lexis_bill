@@ -204,6 +204,7 @@ exports.updateUserNotes = async (req, res) => {
     try {
         const { notes } = req.body;
         await User.findByIdAndUpdate(req.params.id, { adminNotes: sanitizeString(notes, 2000) });
+        await logAdminAction(req.userId, 'user_notes_update', 'user', req.params.id, { notesPreview: notes.slice(0, 100) });
         res.json({ message: 'Notas actualizadas' });
     } catch (e) {
         res.status(500).json({ message: safeErrorMessage(e) });

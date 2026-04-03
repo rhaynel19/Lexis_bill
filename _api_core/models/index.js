@@ -61,6 +61,7 @@ const paymentRequestSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     plan: { type: String, enum: ['free', 'pro', 'premium'], required: true },
     billingCycle: { type: String, enum: ['monthly', 'annual'], default: 'monthly' },
+    amount: { type: Number, required: true, default: 950 }, // Valor en RD$
     paymentMethod: { type: String, enum: ['transferencia', 'paypal'], required: true },
     reference: { type: String, unique: true, sparse: true }, // LEX-XXXX para que el cliente ponga en la transferencia
     comprobanteImage: { type: String }, // base64 data URL del comprobante (obligatorio para transferencia)

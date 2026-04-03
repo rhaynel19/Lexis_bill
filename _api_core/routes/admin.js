@@ -16,6 +16,12 @@ router.post('/users/:id/unblock', adminController.unblockUser);
 router.put('/users/:id/notes', adminController.updateUserNotes);
 router.delete('/users/:id', adminController.deleteUser);
 
+// Gestión Fiscal de Soporte (NCF)
+const adminNcfController = require('../controllers/admin-ncf');
+router.get('/users/:id/ncf', adminNcfController.getUserNCFSettings);
+router.patch('/ncf/:ncfId/status', adminNcfController.toggleNCFStatus);
+router.patch('/ncf/:ncfId/value', adminNcfController.updateNCFValue);
+
 // Gestión de Pagos (Admin)
 const billingController = require('../controllers/billing');
 router.get('/pending-payments', billingController.getPendingPayments);
@@ -37,6 +43,8 @@ const reconciler = require('../services/reconciler');
 router.post('/reconcile', async (req, res) => {
     try {
         const results = await reconciler.reconcileSystem(true);
+        const { logAdminAction } = require('../models');
+        await logAdminAction(req.userId, 'system_reconcile_manual', 'system', 'all', { results });
         res.json(results);
     } catch (e) {
         res.status(500).json({ message: 'Error en la reconciliación manual', error: e.message });

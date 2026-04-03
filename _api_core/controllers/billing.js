@@ -173,10 +173,13 @@ exports.requestPayment = async (req, res) => {
         const refValid = refTrim && /^LEX-/.test(refTrim);
         let reference = refValid ? refTrim : await generateUniquePaymentReference();
 
+        const amount = cycle === 'annual' ? 9500 : 950;
+        
         const pr = new PaymentRequest({
             userId: req.userId,
             plan,
             billingCycle: cycle,
+            amount,
             paymentMethod,
             reference,
             comprobanteImage: paymentMethod === 'transferencia' ? comprobanteImage : undefined,
@@ -436,7 +439,7 @@ exports.getMetrics = async (req, res) => {
     try {
         const proUsers = await User.countDocuments({ role: { $ne: 'admin' }, $or: [{ 'subscription.plan': 'pro' }, { membershipLevel: 'pro' }] });
         const approved = await PaymentRequest.find({ status: 'approved' }).lean();
-        const revenue = approved.reduce((s, p) => s + (p.billingCycle === 'annual' ? 9500 : 950), 0);
+        const revenue = approved.reduce((s, p) => s + (p.amount || (p.billingCycle === 'annual' ? 9500 : 950)), 0);
         res.json({ mrr: proUsers * 950, activeUsers: proUsers, revenueTotal: revenue });
     } catch (e) {
         res.status(500).json({ message: safeErrorMessage(e) });
