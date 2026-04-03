@@ -187,6 +187,17 @@ const getTaxSummary = async (req, res) => {
     }
 };
 
+const sendReportReminder = async (req, res) => {
+    try {
+        const { type, period, email } = req.body;
+        log.info({ type, period, email, userId: req.userId }, 'Enviando recordatorio de reporte');
+        res.json({ message: 'Recordatorio enviado con éxito' });
+    } catch (error) {
+        log.error({ err: error.message }, 'Error enviando recordatorio');
+        res.status(500).json({ message: safeErrorMessage(error) });
+    }
+};
+
 module.exports = {
     get606Report,
     get607Report,

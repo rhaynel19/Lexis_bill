@@ -10,7 +10,7 @@ import { AuthProvider } from "@/components/providers/AuthContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Factura Fácil | Facturación Profesional Dominicana",
+  title: "Factura Directa | Facturación Profesional Dominicana",
   description: "Plataforma moderna de facturación y cumplimiento fiscal en República Dominicana.",
 };
 

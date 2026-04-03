@@ -201,7 +201,7 @@ function LoginForm() {
                 </div>
                 <CardHeader className="text-center pb-6 pt-10">
                     <CardTitle className="text-3xl font-bold tracking-tight flex items-center justify-center gap-2">
-                        <LexisWord className="text-3xl" showBill={true} />
+                        <LexisWord className="text-3xl" showBill={false} />
                     </CardTitle>
                     <CardDescription className="text-slate-500 font-medium mt-2 text-sm">Gestión Fiscal de Alto Nivel</CardDescription>
                 </CardHeader>
