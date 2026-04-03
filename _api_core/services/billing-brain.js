@@ -81,7 +81,8 @@ class BillingBrain {
     getBiSummary() {
         return {
             cashFlowProjection: this._calculateProjectedCashFlow(),
-            vipClients: this._getVIPClients().slice(0, 3)
+            vipClients: this._getVIPClients().slice(0, 3),
+            agingBuckets: this._calculateAgingBuckets()
         };
     }
 
@@ -103,26 +104,31 @@ class BillingBrain {
             const bal = (inv.balancePendiente != null && inv.balancePendiente > 0)
                 ? inv.balancePendiente
                 : (inv.total || 0);
-            return sum + bal;
+            return sum + (Number(bal) || 0);
         }, 0);
+
+        // Agrupar por cliente para ser más proactivos (4 clientes tienen facturas pendientes)
+        const clientsWithUnpaid = new Set(unpaid.map(inv => inv.clientRnc || inv.clientName));
+        const clientCount = clientsWithUnpaid.size;
 
         if (totalUnpaid > 0) {
             this.insights.push({
                 id: 'unpaid_invoices',
                 priority: INSIGHT_PRIORITY.CRITICAL,
                 type: 'unpaid_invoices',
-                title: 'Facturas sin cobrar',
-                message: `Detecté RD$${this._formatCurrency(totalUnpaid)} en facturas pendientes.`,
-                humanMessage: `Detecté RD$${this._formatCurrency(totalUnpaid)} en facturas pendientes. ¿Quieres gestionar estos cobros ahora?`,
+                title: 'Cobros Pendientes',
+                message: `Tienes ${unpaid.length} facturas de ${clientCount} clientes sin cobrar (RD$${this._formatCurrency(totalUnpaid)}).`,
+                humanMessage: `Detecté ${clientCount} clientes con balances pendientes por un total de RD$${this._formatCurrency(totalUnpaid)}. ¿Quieres gestionar estos cobros ahora?`,
                 action: {
-                    label: 'Gestionar',
-                    url: '/dashboard',
+                    label: 'Gestionar Cobros',
+                    url: '#',
                     type: 'open_collections_manager',
-                    data: { unpaidCount: unpaid.length, totalUnpaid }
+                    data: { unpaidCount: unpaid.length, totalUnpaid, clientCount }
                 },
                 metadata: {
                     count: unpaid.length,
                     total: totalUnpaid,
+                    clientCount: clientCount,
                     oldestDays: this._getOldestUnpaidDays(unpaid)
                 }
             });
@@ -659,6 +665,50 @@ class BillingBrain {
             log.error(e, 'Error in _getVIPClients');
             return [];
         }
+    }
+
+    /**
+     * Calcula la antigüedad de los saldos (Aging buckets)
+     */
+    _calculateAgingBuckets() {
+        const buckets = { 
+            current: { label: '0-30 días', amount: 0, count: 0 },
+            overdue30: { label: '31-60 días', amount: 0, count: 0 },
+            overdue60: { label: '61-90 días', amount: 0, count: 0 },
+            overdue90: { label: '90+ días', amount: 0, count: 0 }
+        };
+
+        try {
+            this.invoices.forEach(inv => {
+                const balance = Number(inv.balancePendiente) || 
+                              ((inv.estadoPago === 'pendiente' || inv.status === 'pending') ? (Number(inv.total) || 0) : 0);
+                
+                if (balance <= 0) return;
+
+                const invDate = new Date(inv.date);
+                if (isNaN(invDate.getTime())) return;
+
+                const diffDays = Math.floor((this.now - invDate) / (1000 * 60 * 60 * 24));
+
+                if (diffDays <= 30) {
+                    buckets.current.amount += balance;
+                    buckets.current.count++;
+                } else if (diffDays <= 60) {
+                    buckets.overdue30.amount += balance;
+                    buckets.overdue30.count++;
+                } else if (diffDays <= 90) {
+                    buckets.overdue60.amount += balance;
+                    buckets.overdue60.count++;
+                } else {
+                    buckets.overdue90.amount += balance;
+                    buckets.overdue90.count++;
+                }
+            });
+        } catch (e) {
+            log.error(e, 'Error in _calculateAgingBuckets');
+        }
+
+        return Object.values(buckets);
     }
 }
 

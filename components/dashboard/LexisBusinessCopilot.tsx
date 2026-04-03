@@ -619,6 +619,71 @@ function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData }: 
                         </p>
                     </div>
 
+                    {/* NUEVA SECCIÓN: Antigüedad de Saldo (CxC) */}
+                    {businessData?.biSummary?.agingBuckets && (
+                        <section className="space-y-4">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2 px-1">
+                                <DollarSign className="w-4 h-4 text-amber-600" />
+                                Antigüedad de Saldo (CxC)
+                                <span className="ml-auto text-[10px] font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 px-2.5 py-1 rounded-lg border border-amber-100 dark:border-amber-900/30">
+                                    Cartera Pendiente
+                                </span>
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                {businessData.biSummary.agingBuckets.map((bucket: any, idx: number) => (
+                                    <div key={idx} className="p-5 rounded-2xl border bg-slate-50/50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800 transition-all hover:shadow-md hover:border-amber-200 dark:hover:border-amber-900 group">
+                                        <p className="text-[10px] font-black text-slate-400 group-hover:text-amber-600 uppercase tracking-tight transition-colors">{bucket.label}</p>
+                                        <p className={cn(
+                                            "text-2xl font-black mt-1 tabular-nums transition-transform group-hover:scale-105",
+                                            idx === 0 ? "text-slate-900 dark:text-slate-100" : "text-amber-600 dark:text-amber-500"
+                                        )}>
+                                            {formatCurrency(bucket.amount)}
+                                        </p>
+                                        <div className="mt-3 flex items-center gap-2 grayscale group-hover:grayscale-0 opacity-70 group-hover:opacity-100 transition-all">
+                                            <FileText className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                                            <span className="text-[10px] font-bold text-slate-500 tracking-wide">{bucket.count} documentos</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
+                    {/* NUEVA SECCIÓN: Clientes VIP */}
+                    {businessData?.biSummary?.vipClients && (
+                        <section className="space-y-4">
+                            <div className="flex items-center justify-between px-1">
+                                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                                    <Users className="w-4 h-4 text-blue-600" />
+                                    Clientes Premium (VIP)
+                                </h3>
+                                <span className="text-[10px] text-blue-600 font-bold uppercase tracking-widest border-b border-blue-200">Top 3</span>
+                            </div>
+                            <div className="grid gap-3">
+                                {businessData.biSummary.vipClients.map((client: any, idx: number) => (
+                                    <div key={idx} className="group flex items-center justify-between p-4 rounded-2xl border bg-white dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:bg-slate-50/50 dark:hover:bg-slate-800/80">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-blue-700 dark:text-blue-400 flex items-center justify-center text-sm font-black shadow-inner group-hover:scale-110 transition-transform">
+                                                {idx + 1}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">{client.name}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 mt-0.5 flex items-center gap-1.5 uppercase tracking-tighter">
+                                                    <Activity className="w-3 h-3 text-emerald-500" />
+                                                    {client.invoiceCount} Transacciones
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-black text-slate-900 dark:text-slate-100 tabular-nums italic text-lg">{formatCurrency(client.totalRevenue)}</p>
+                                            <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest mt-0.5">Captación total</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
                     {/* Alerta Específica (Caída de Ingresos) */}
                     {insightData && insightData.insightId === 'revenue_drop' && (
                         <div className="bg-amber-50 dark:bg-amber-950/20 p-6 rounded-2xl border border-amber-200 dark:border-amber-800">
