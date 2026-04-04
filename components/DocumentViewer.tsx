@@ -274,7 +274,7 @@ export function DocumentViewer({
                                         </div>
                                         <hr className="border-t border-[#D4AF37] w-64 my-2" />
                                         <div className="flex justify-between w-64 items-center">
-                                            <span className="font-bold text-[#000] uppercase">Total factura:</span>
+                                            <span className="font-bold text-[#000] uppercase">{type === "quote" ? "Total cotización:" : "Total factura:"}</span>
                                             <span className="text-xl font-bold text-[#D4AF37]">{formatCurrency(total)}</span>
                                         </div>
                                     </div>

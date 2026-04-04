@@ -52,13 +52,15 @@
   --color-danger-foreground: var(--destructive-foreground);
   --color-danger: var(--danger);
   /* Trinalyze Billing marca (landing y páginas públicas) */
+  --color-trinalyze-gold: var(--trinalyze-gold);
+  --color-trinalyze-gold-hover: var(--trinalyze-gold-hover);
   --color-trinalyze-bg-deep: var(--trinalyze-bg-deep);
   --color-trinalyze-bg-mid: var(--trinalyze-bg-mid);
-  --color-trinalyze-primary: var(--trinalyze-gold);
-  --color-trinalyze-secondary: var(--trinalyze-gold-hover);
+  --color-trinalyze-bg-darker: var(--trinalyze-bg-darker);
   --color-trinalyze-text-light: var(--trinalyze-text-light);
   --color-trinalyze-brand-blue: var(--trinalyze-brand-blue);
-  --color-trinalyze-bg-darker: var(--trinalyze-bg-darker);
+  --color-trinalyze-primary: var(--trinalyze-gold);
+  --color-trinalyze-secondary: var(--trinalyze-gold-hover);
 }
 
 :root {

@@ -350,7 +350,7 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     doc.setFont("helvetica", "bold");
     doc.setFontSize(APP_CONFIG.pdf.fontSize.subtitle);
     doc.setTextColor(...blueColor);
-    const totalLabel = kind === "proforma" ? "TOTAL PROFORMA:" : "TOTAL FACTURA:";
+    const totalLabel = kind === "quote" ? "TOTAL COTIZACIÓN:" : kind === "proforma" ? "TOTAL PROFORMA:" : "TOTAL FACTURA:";
     doc.text(totalLabel, summaryLabelX - 15, yPosition);
     doc.text(formatCurrency(invoiceData.total), summaryX, yPosition, { align: "right" });
     yPosition += 8;
@@ -549,20 +549,11 @@ export async function generateQuotePDF(quoteData: QuoteData): Promise<jsPDF> {
         isrRetention: 0,
         itbisRetention: 0,
         total: quoteData.total,
-    };
+        validUntil: quoteData.validUntil,
+    } as any;
 
-    // Generar PDF y agregar fecha de validez si existe
+    // Generar PDF (el manejo de validUntil ya está en generateInvoicePDF)
     const pdf = await generateInvoicePDF(invoiceData);
-
-    // Si hay fecha de validez, agregarla al PDF
-    if (quoteData.validUntil) {
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const margin = APP_CONFIG.pdf.margins;
-        const formattedDate = formatDateDominican(new Date(quoteData.validUntil));
-        pdf.setFontSize(10);
-        pdf.setTextColor(100, 100, 100);
-        pdf.text(`Válida hasta: ${formattedDate}`, pageWidth - margin.right, margin.top + 32, { align: "right" });
-    }
 
     return pdf;
 }
