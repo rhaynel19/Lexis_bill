@@ -151,7 +151,7 @@ const get608Report = async (req, res) => {
             status: 'cancelled'
         }).lean();
 
-        let report = `${rncEmisor}|${period}|${cancelledInvoices.length}\n`;
+        let report = `608|${rncEmisor}|${period}|${cancelledInvoices.length}\n`;
         cancelledInvoices.forEach(inv => {
             const rncCliente = (inv.clientRnc || '').replace(/[^\d]/g, '');
             const ncf = inv.ncf || '';
