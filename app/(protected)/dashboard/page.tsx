@@ -38,7 +38,7 @@ import { FiscalNamePrompt } from "@/components/FiscalNamePrompt";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { FirstTimeGuide } from "@/components/onboarding/FirstTimeGuide";
 import { EmotionalStatusWidget } from "@/components/dashboard/EmotionalStatusWidget";
-import { LexisBusinessCopilot } from "@/components/dashboard/LexisBusinessCopilot";
+import { TrinalyzeBusinessCopilot } from "@/components/dashboard/TrinalyzeBusinessCopilot";
 import { AlertsBanner } from "@/components/AlertsBanner";
 import { NewInvoiceButton } from "@/components/NewInvoiceButton";
 
@@ -393,7 +393,7 @@ export default function Dashboard() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `607_LEXIS_${new Date().toISOString().slice(0, 7)}.csv`);
+    link.setAttribute("download", `607_TRINALYZE_${new Date().toISOString().slice(0, 7)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -424,7 +424,7 @@ export default function Dashboard() {
         <TrialBanner />
         <SubscriptionAlert />
         {/* Trinalyze Business Copilot: observa tu negocio, alertas, scoring, predicción */}
-        {!isLoading && <LexisBusinessCopilot />}
+        {!isLoading && <TrinalyzeBusinessCopilot />}
 
         {/* Alertas proactivas: NCF bajo, secuencias por vencer, suscripción */}
         <AlertsBanner />

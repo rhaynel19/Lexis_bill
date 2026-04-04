@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Handshake, LogOut, LayoutDashboard, Users, DollarSign, CreditCard, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { LexisWord } from "@/components/LexisWord";
+import { TrinalyzeWord } from "@/components/TrinalyzeWord";
 import { useAuth } from "@/components/providers/AuthContext";
 import { toast } from "sonner";
 
@@ -68,7 +68,7 @@ export default function PartnerLayout({
             <header className="shrink-0 border-b border-amber-500/20 bg-gradient-to-r from-amber-50/80 to-background dark:from-amber-950/20 dark:to-background sticky top-0 z-50">
                 <div className="container mx-auto px-4 py-4 flex justify-between items-center">
                     <Link href="/partner-dashboard" className="flex items-baseline gap-2">
-                        <LexisWord className="text-2xl text-accent" />
+                        <TrinalyzeWord className="text-2xl text-accent" />
                         <span className="text-foreground font-light font-serif">BILL</span>
                         <span className="ml-2 text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider border-l border-amber-500/50 pl-2">
                             Partner

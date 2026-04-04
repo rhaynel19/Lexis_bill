@@ -9,7 +9,7 @@ import { AIService } from "@/lib/ai-service-mock";
 import { usePreferences } from "@/components/providers/PreferencesContext";
 import { useEffect, useState } from "react";
 
-const LEXIS_ASSISTANT_COLLAPSED_KEY = "lexis-assistant-collapsed";
+const LEXIS_ASSISTANT_COLLAPSED_KEY = "trinalyze-assistant-collapsed";
 
 /** Saludos tipo SaaS: inteligentes, no robóticos */
 function getSaaSGreeting(userName: string, hasInvoices: boolean): { title: string; sub?: string } {
@@ -82,7 +82,7 @@ function formatLastInvoiceAgo(dateStr: string): string {
     return date.toLocaleDateString("es-DO", { day: "numeric", month: "short" });
 }
 
-interface LexisMessageWidgetProps {
+interface TrinalyzeMessageWidgetProps {
     userName: string;
     contextualMessage?: string;
     monthlySummary?: { revenue: number; invoiceCount: number; clientCount: number };
@@ -98,7 +98,7 @@ interface LexisMessageWidgetProps {
     className?: string;
 }
 
-export function LexisMessageWidget({
+export function TrinalyzeMessageWidget({
     userName,
     contextualMessage,
     monthlySummary,
@@ -109,7 +109,7 @@ export function LexisMessageWidget({
     lastInvoiceDate,
     targetInvoices,
     className,
-}: LexisMessageWidgetProps) {
+}: TrinalyzeMessageWidgetProps) {
     const { mode } = usePreferences();
     const [task, setTask] = useState<{ task: string; urgency: string } | null>(null);
     const [collapsed, setCollapsed] = useState(false);
@@ -174,20 +174,20 @@ export function LexisMessageWidget({
             )}
         >
             {/* Barra lateral: gradiente navy → azul eléctrico → violeta */}
-            <div className="absolute top-0 left-0 w-1 sm:w-1.5 h-full rounded-l-[16px] opacity-95 lexis-assistant-bar" />
+            <div className="absolute top-0 left-0 w-1 sm:w-1.5 h-full rounded-l-[16px] opacity-95 trinalyze-assistant-bar" />
             {/* Glow sutil esquina superior derecha */}
-            <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full opacity-30 dark:opacity-20 pointer-events-none lexis-assistant-glow" />
+            <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full opacity-30 dark:opacity-20 pointer-events-none trinalyze-assistant-glow" />
 
             <CardContent className="relative p-5 sm:p-6 flex flex-col gap-5">
                 {/* Header: icono + etiqueta + título (si colapsado) + botón colapsar */}
                 <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                     <div className="flex gap-4 flex-1 min-w-0">
                         <div className="relative shrink-0">
-                            <div className="lexis-assistant-icon flex items-center justify-center w-12 h-12 rounded-[14px] border border-white/30 dark:border-slate-500/30 shadow-lg transition-transform duration-200 hover:scale-105">
+                            <div className="trinalyze-assistant-icon flex items-center justify-center w-12 h-12 rounded-[14px] border border-white/30 dark:border-slate-500/30 shadow-lg transition-transform duration-200 hover:scale-105">
                                 <Sparkles className="w-5 h-5 text-white" strokeWidth={2} />
                             </div>
                             <span
-                                className="lexis-assistant-dot absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white dark:border-slate-900 animate-pulse"
+                                className="trinalyze-assistant-dot absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white dark:border-slate-900 animate-pulse"
                                 aria-hidden
                             />
                         </div>
@@ -210,7 +210,7 @@ export function LexisMessageWidget({
                             <Link href="/nueva-factura" className="sm:order-2">
                                 <Button
                                     size="sm"
-                                    className="lexis-assistant-cta rounded-[12px] font-semibold text-white border-0 text-xs px-4 py-2 h-9"
+                                    className="trinalyze-assistant-cta rounded-[12px] font-semibold text-white border-0 text-xs px-4 py-2 h-9"
                                 >
                                     <Plus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2.5} />
                                     Nueva Factura
@@ -240,10 +240,10 @@ export function LexisMessageWidget({
                         {targetInvoices != null && targetInvoices > 0 && monthlySummary && (() => {
                             const pct = Math.min(100, (monthlySummary.invoiceCount / targetInvoices) * 100);
                             return (
-                                <div className="lexis-meta-wrapper space-y-1.5">
+                                <div className="trinalyze-meta-wrapper space-y-1.5">
                                     <style
                                         dangerouslySetInnerHTML={{
-                                            __html: `.lexis-meta-wrapper { --lexis-meta-pct: ${pct}% }`,
+                                            __html: `.trinalyze-meta-wrapper { --trinalyze-meta-pct: ${pct}% }`,
                                         }}
                                     />
                                     <div className="flex items-center justify-between text-xs">
@@ -253,7 +253,7 @@ export function LexisMessageWidget({
                                         </span>
                                     </div>
                                     <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                                        <div className="lexis-meta-progress h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500 transition-all duration-500 ease-out" />
+                                        <div className="trinalyze-meta-progress h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500 transition-all duration-500 ease-out" />
                                     </div>
                                 </div>
                             );
@@ -321,7 +321,7 @@ export function LexisMessageWidget({
                                         <Button
                                             size="default"
                                             className={cn(
-                                                "lexis-assistant-cta w-full sm:w-auto rounded-[14px] font-semibold transition-all duration-200 ease-out",
+                                                "trinalyze-assistant-cta w-full sm:w-auto rounded-[14px] font-semibold transition-all duration-200 ease-out",
                                                 "hover:scale-[1.02] active:scale-[0.98] hover:opacity-95 text-white border-0"
                                             )}
                                         >
@@ -362,3 +362,4 @@ export function LexisMessageWidget({
         </Card>
     );
 }
+

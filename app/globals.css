@@ -52,34 +52,26 @@
   --color-danger-foreground: var(--destructive-foreground);
   --color-danger: var(--danger);
   /* Trinalyze Billing marca (landing y páginas públicas) */
-  --color-trinalyze-bg-deep: var(--lexis-bg-deep);
-  --color-trinalyze-bg-mid: var(--lexis-bg-mid);
-  --color-trinalyze-primary: var(--lexis-gold);
-  --color-trinalyze-secondary: var(--lexis-gold-hover);
-  --color-trinalyze-text-light: var(--lexis-text-light);
-  --color-trinalyze-brand-blue: var(--lexis-brand-blue);
-  --color-trinalyze-bg-darker: var(--lexis-bg-darker);
-  
-  --color-lexis-bg-deep: var(--lexis-bg-deep);
-  --color-lexis-bg-mid: var(--lexis-bg-mid);
-  --color-lexis-gold: var(--lexis-gold);
-  --color-lexis-gold-hover: var(--lexis-gold-hover);
-  --color-lexis-text-light: var(--lexis-text-light);
-  --color-lexis-brand-blue: var(--lexis-brand-blue);
-  --color-lexis-bg-darker: var(--lexis-bg-darker);
+  --color-trinalyze-bg-deep: var(--trinalyze-bg-deep);
+  --color-trinalyze-bg-mid: var(--trinalyze-bg-mid);
+  --color-trinalyze-primary: var(--trinalyze-gold);
+  --color-trinalyze-secondary: var(--trinalyze-gold-hover);
+  --color-trinalyze-text-light: var(--trinalyze-text-light);
+  --color-trinalyze-brand-blue: var(--trinalyze-brand-blue);
+  --color-trinalyze-bg-darker: var(--trinalyze-bg-darker);
 }
 
 :root {
   --radius: 0.75rem;
 
   /* --- Trinalyze Billing marca (colores originales landing) --- */
-  --lexis-bg-deep: #0B0F1A;
-  --lexis-bg-mid: #121A2F;
-  --lexis-bg-darker: #06080E;
-  --lexis-gold: #DEB23E;
-  --lexis-gold-hover: #C79A30;
-  --lexis-text-light: #ffffff;
-  --lexis-brand-blue: #DEB23E;
+  --trinalyze-bg-deep: #0B0F1A;
+  --trinalyze-bg-mid: #121A2F;
+  --trinalyze-bg-darker: #06080E;
+  --trinalyze-gold: #DEB23E;
+  --trinalyze-gold-hover: #C79A30;
+  --trinalyze-text-light: #ffffff;
+  --trinalyze-brand-blue: #DEB23E;
 
   /* --- LIGHT THEME (Default) --- */
   --bg-primary: #F5F7FA;
@@ -346,38 +338,38 @@
 .animate-shimmer {
   background-image: linear-gradient(90deg,
       transparent 0%,
-      color-mix(in srgb, var(--lexis-gold) 10%, transparent) 45%,
-      color-mix(in srgb, var(--lexis-gold) 40%, transparent) 50%,
-      color-mix(in srgb, var(--lexis-gold) 10%, transparent) 55%,
+      color-mix(in srgb, var(--trinalyze-gold) 10%, transparent) 45%,
+      color-mix(in srgb, var(--trinalyze-gold) 40%, transparent) 50%,
+      color-mix(in srgb, var(--trinalyze-gold) 10%, transparent) 55%,
       transparent 100%) !important;
   background-size: 200% 100% !important;
   animation: shimmer 3s infinite linear !important;
 }
 
 /* Trinalyze Assistant premium: gradiente */
-.lexis-assistant-bar {
+.trinalyze-assistant-bar {
   background: linear-gradient(135deg, #C79A30 0%, #DEB23E 100%);
   box-shadow: 0 0 20px rgba(222, 178, 62, 0.35);
 }
-.lexis-assistant-glow {
+.trinalyze-assistant-glow {
   background: radial-gradient(circle, rgba(222, 178, 62, 0.4) 0%, transparent 70%);
   filter: blur(32px);
 }
-.lexis-assistant-icon {
+.trinalyze-assistant-icon {
   background: linear-gradient(135deg, #C79A30 0%, #DEB23E 100%);
   box-shadow: 0 4px 14px rgba(222, 178, 62, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
-.lexis-assistant-cta {
+.trinalyze-assistant-cta {
   background: linear-gradient(135deg, #C79A30, #DEB23E);
   box-shadow: 0 4px 14px rgba(222, 178, 62, 0.4);
 }
-.lexis-assistant-cta:hover {
+.trinalyze-assistant-cta:hover {
   box-shadow: 0 6px 20px rgba(199, 154, 48, 0.5);
 }
-.lexis-assistant-dot {
+.trinalyze-assistant-dot {
   box-shadow: 0 0 8px rgba(222, 178, 62, 0.7);
 }
 
-.lexis-meta-progress {
-  width: var(--lexis-meta-pct, 0%);
+.trinalyze-meta-progress {
+  width: var(--trinalyze-meta-pct, 0%);
 }

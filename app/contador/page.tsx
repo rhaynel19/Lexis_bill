@@ -8,7 +8,7 @@ import { useState } from "react";
 
 export default function AccountantModule() {
     const [linkGenerated, setLinkGenerated] = useState(false);
-    const inviteLink = "https://lexis-bill.app/invite/c7f8a9... (Simulado)";
+    const inviteLink = "https://trinalyze-bill.app/invite/c7f8a9... (Simulado)";
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -100,3 +100,4 @@ export default function AccountantModule() {
         </div>
     );
 }
+

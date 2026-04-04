@@ -35,7 +35,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
     );
 }
 
-export function LexisHelpPanel() {
+export function TrinalyzeHelpPanel() {
     return (
         <Sheet>
             <SheetTrigger asChild>

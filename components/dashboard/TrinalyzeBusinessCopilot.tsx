@@ -19,7 +19,7 @@ import {
     RefreshCw,
     ArrowRight,
 } from "lucide-react";
-import { LexisMessageWidget } from "./LexisMessageWidget";
+import { TrinalyzeMessageWidget } from "./TrinalyzeMessageWidget";
 import { CollectionsManager } from "./CollectionsManager";
 import { api } from "@/lib/api-service";
 import Link from "next/link";
@@ -37,8 +37,8 @@ import {
     SheetDescription 
 } from "@/components/ui/sheet";
 
-const LEXIS_COPILOT_COLLAPSED_KEY = "lexis-copilot-collapsed";
-const LEXIS_COPILOT_CACHE_KEY = "lexis-copilot-cache";
+const LEXIS_COPILOT_COLLAPSED_KEY = "trinalyze-copilot-collapsed";
+const LEXIS_COPILOT_CACHE_KEY = "trinalyze-copilot-cache";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
 const MIN_LOADING_MS = 2000; // Reducido para mayor agilidad (era 6000)
 const REQUEST_TIMEOUT_MS = 10000;
@@ -142,7 +142,7 @@ function getSmartSubtitle(data: BusinessCopilotData): string {
     return "Análisis automático de tu facturación y clientes.";
 }
 
-export function LexisBusinessCopilot() {
+export function TrinalyzeBusinessCopilot() {
     const router = useRouter();
     const [data, setData] = useState<BusinessCopilotData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -835,4 +835,5 @@ function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData, ha
         </Sheet>
     );
 }
+
 

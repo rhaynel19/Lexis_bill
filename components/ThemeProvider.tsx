@@ -25,7 +25,7 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 export function ThemeProvider({
     children,
     defaultTheme = "light",
-    storageKey = "lexis-theme",
+    storageKey = "trinalyze-theme",
     ...props
 }: ThemeProviderProps) {
     const [theme, setTheme] = useState<Theme>(() => {
@@ -78,3 +78,4 @@ export const useTheme = () => {
 
     return context;
 };
+

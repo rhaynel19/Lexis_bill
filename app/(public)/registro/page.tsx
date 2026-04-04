@@ -194,7 +194,7 @@ function RegisterForm() {
     if (checkingAuth) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#0F172A]">
-                <Loader2 className="w-10 h-10 animate-spin text-lexis-gold" />
+                <Loader2 className="w-10 h-10 animate-spin text-trinalyze-gold" />
             </div>
         );
     }
@@ -211,7 +211,7 @@ function RegisterForm() {
                 {/* Back Button */}
                 <button
                     onClick={() => router.back()}
-                    className="flex items-center gap-2 text-slate-400 hover:text-lexis-gold transition-colors mb-6 text-sm font-medium group"
+                    className="flex items-center gap-2 text-slate-400 hover:text-trinalyze-gold transition-colors mb-6 text-sm font-medium group"
                     type="button"
                 >
                     <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Volver atrás
@@ -219,7 +219,7 @@ function RegisterForm() {
 
                 <Card className={`w-full bg-white/95 backdrop-blur border-none shadow-2xl overflow-hidden rounded-2xl ${isPartnerFlow ? "ring-2 ring-amber-200 dark:ring-amber-800" : ""}`}>
                     {/* Barra superior: partner (ámbar) cuando es flujo partner, sino azul */}
-                    <div className={`h-2 w-full ${isPartnerFlow ? "bg-gradient-to-r from-amber-500 via-lexis-gold to-amber-700" : "bg-gradient-to-r from-blue-600 via-lexis-gold to-blue-950"}`} />
+                    <div className={`h-2 w-full ${isPartnerFlow ? "bg-gradient-to-r from-amber-500 via-trinalyze-gold to-amber-700" : "bg-gradient-to-r from-blue-600 via-trinalyze-gold to-blue-950"}`} />
                     <CardHeader className="text-center pb-2 pt-8">
                         {isPartnerFlow ? (
                             <>
@@ -488,3 +488,4 @@ export default function RegisterPage() {
         </Suspense>
     );
 }
+

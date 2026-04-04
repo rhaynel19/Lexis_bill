@@ -1,6 +1,6 @@
 /**
- * Genera y descarga el Manual de Uso de Lexis Bill en PDF (cliente).
- * Usa jsPDF; el contenido está alineado con docs/MANUAL_USO_LEXIS_BILL.md.
+ * Genera y descarga el Manual de Uso de Trinalyze Billing en PDF (cliente).
+ * Usa jsPDF; el contenido está alineado con docs/MANUAL_USO_TRINALYZE.md.
  */
 
 import jsPDF from "jspdf";
@@ -82,7 +82,7 @@ export async function generateManualPdf(): Promise<void> {
     doc.text("Manual de Uso Oficial", pageWidth / 2, y + 20, { align: "center" });
     doc.setFontSize(14);
     doc.setFont("helvetica", "normal");
-    doc.text("Lexis Bill", pageWidth / 2, y + 32, { align: "center" });
+    doc.text("Trinalyze Billing", pageWidth / 2, y + 32, { align: "center" });
     doc.text("República Dominicana · Versión 1", pageWidth / 2, y + 40, { align: "center" });
     doc.setFontSize(10);
     doc.text(FOOTER_TEXT, pageWidth / 2, getPageHeight(doc) - 15, { align: "center" });

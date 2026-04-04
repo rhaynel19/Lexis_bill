@@ -12,8 +12,8 @@ import { SupportChat } from "@/components/support-chat";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { LexisWord } from "@/components/LexisWord";
-import { LexisHelpPanel } from "@/components/LexisHelpPanel";
+import { TrinalyzeWord } from "@/components/TrinalyzeWord";
+import { TrinalyzeHelpPanel } from "@/components/TrinalyzeHelpPanel";
 import { useAuth } from "@/components/providers/AuthContext";
 import { NewInvoiceButton } from "@/components/NewInvoiceButton";
 import { cn } from "@/lib/utils";
@@ -92,7 +92,7 @@ export default function ProtectedLayout({
                 <header className="border-b border-border/20 bg-card sticky top-0 z-40">
                     <div className="container mx-auto px-4 py-4">
                         <Link href="/dashboard" className="flex items-baseline gap-1">
-                            <LexisWord className="text-xl text-accent" /> <span className="text-foreground font-light font-serif">BILL</span>
+                            <TrinalyzeWord className="text-xl text-accent" /> <span className="text-foreground font-light font-serif">BILL</span>
                         </Link>
                     </div>
                 </header>
@@ -108,7 +108,7 @@ export default function ProtectedLayout({
                     <Link href="/dashboard">
                         <div className="group">
                             <h1 className="text-2xl font-extrabold tracking-tight cursor-pointer transition-transform group-hover:scale-105 flex items-baseline gap-1">
-                                <LexisWord className="text-2xl text-accent" />
+                                <TrinalyzeWord className="text-xl text-accent" />
                             </h1>
                             <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-medium group-hover:text-accent transition-colors">
                                 El orden que te deja tranquilo
@@ -127,7 +127,7 @@ export default function ProtectedLayout({
                         )}
                         <TrialHeaderBadge />
                         <div className="hidden sm:block">
-                            <LexisHelpPanel />
+                            <TrinalyzeHelpPanel />
                         </div>
                         <ThemeToggle />
 

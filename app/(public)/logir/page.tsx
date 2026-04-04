@@ -16,8 +16,9 @@ export default function LogirRedirectPage() {
     }, [router]);
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-lexis-bg-deep">
+        <div className="min-h-screen flex items-center justify-center bg-trinalyze-bg-deep">
             <p className="text-slate-500">Redirigiendo a inicio de sesión...</p>
         </div>
     );
 }
+

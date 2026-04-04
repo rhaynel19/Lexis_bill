@@ -8,11 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Fingerprint, Lock, Mail, MessageCircle, AlertCircle, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { LexisWord } from "@/components/LexisWord";
+import { TrinalyzeWord } from "@/components/TrinalyzeWord";
 import { useAuth } from "@/components/providers/AuthContext";
 import { toast } from "sonner";
 
-const LAST_EMAIL_KEY = "lexis_last_email";
+const LAST_EMAIL_KEY = "trinalyze_last_email";
 
 /** Rutas internas permitidas para redirect post-login (evita open redirect). */
 const ALLOWED_REDIRECT_PREFIXES = ["/dashboard", "/nueva-factura", "/nueva-cotizacion", "/cotizaciones", "/reportes", "/configuracion", "/clientes", "/gastos", "/pagos", "/documentos", "/partners", "/partner-dashboard", "/onboarding", "/ayuda"];
@@ -187,12 +187,12 @@ function LoginForm() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-lexis-bg-deep px-4 relative overflow-hidden">
+        <div className="min-h-screen flex items-center justify-center bg-trinalyze-bg-deep px-4 relative overflow-hidden">
             {/* Background Luxury Effects */}
             <div className="absolute inset-0">
                 <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5" />
                 <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-[#DEB23E]/20 rounded-full blur-[120px]" />
-                <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] bg-lexis-gold/10 rounded-full blur-[100px]" />
+                <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] bg-trinalyze-gold/10 rounded-full blur-[100px]" />
             </div>
 
             <Card className="w-full max-w-md bg-white/95 backdrop-blur border-none shadow-2xl relative z-10 overflow-hidden">
@@ -201,7 +201,7 @@ function LoginForm() {
                 </div>
                 <CardHeader className="text-center pb-6 pt-10">
                     <CardTitle className="text-3xl font-bold tracking-tight flex items-center justify-center gap-2">
-                        <LexisWord className="text-3xl" showBill={false} />
+                        <TrinalyzeWord className="text-3xl" showBill={false} />
                     </CardTitle>
                     <CardDescription className="text-slate-500 font-medium mt-2 text-sm">Gestión Fiscal de Alto Nivel</CardDescription>
                 </CardHeader>
@@ -225,7 +225,7 @@ function LoginForm() {
                                 placeholder="ejemplo@correo.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="bg-slate-50 border-slate-200 h-12 focus:ring-lexis-gold"
+                                className="bg-slate-50 border-slate-200 h-12 focus:ring-trinalyze-gold"
                                 required
                                 aria-describedby={error ? "login-error" : undefined}
                             />
@@ -239,13 +239,13 @@ function LoginForm() {
                                     placeholder="Contraseña"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="bg-slate-50 border-slate-200 h-12 focus:ring-lexis-gold pr-11"
+                                    className="bg-slate-50 border-slate-200 h-12 focus:ring-trinalyze-gold pr-11"
                                     aria-describedby={error ? "login-error" : undefined}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword((v) => !v)}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-500 hover:text-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-lexis-gold/50"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-500 hover:text-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-trinalyze-gold/50"
                                     aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
                                     tabIndex={0}
                                 >
@@ -349,10 +349,10 @@ function LoginForm() {
 export default function LoginPage() {
     return (
         <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-lexis-bg-deep px-4">
+            <div className="min-h-screen flex items-center justify-center bg-trinalyze-bg-deep px-4">
                 <Card className="w-full max-w-md bg-white/95 backdrop-blur border-none shadow-2xl p-8">
                     <div className="flex flex-col items-center gap-4">
-                        <div className="w-12 h-12 border-4 border-lexis-gold border-t-transparent rounded-full animate-spin" />
+                        <div className="w-12 h-12 border-4 border-trinalyze-gold border-t-transparent rounded-full animate-spin" />
                         <p className="text-slate-500 text-sm">Cargando...</p>
                     </div>
                 </Card>
@@ -362,3 +362,4 @@ export default function LoginPage() {
         </Suspense>
     );
 }
+

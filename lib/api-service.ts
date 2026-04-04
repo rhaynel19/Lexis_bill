@@ -653,7 +653,7 @@ export const api = {
         return secureFetch<{ alerts: Array<{ type: string; message: string; severity: string }> }>(`${API_URL}/alerts`);
     },
 
-    /** Lexis Business Copilot: analytics, alertas, scoring, predicción, morosidad */
+    /** Trinalyze Business Copilot: analytics, alertas, scoring, predicción, morosidad */
     async getBusinessCopilot() {
         return secureFetch<{
             insufficientData?: boolean;

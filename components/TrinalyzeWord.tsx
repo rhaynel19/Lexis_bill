@@ -4,7 +4,7 @@
  * Trinalyze Logo
  * Triángulo con nodos y texto TRINALYZE (TRINA en blanco/claro, LYZE en azul)
  */
-export function LexisWord({ 
+export function TrinalyzeWord({ 
   className = "", 
   showBill = false,
   variant = "auto"
