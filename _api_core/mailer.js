@@ -137,4 +137,34 @@ async function send606607Reminder(email, period) {
     log.info({ email, period }, 'Recordatorio 606/607 (sin SMTP)');
 }
 
-module.exports = { sendVerificationEmail, sendPasswordReset, sendPaymentApproved, sendInvoiceCreated, send606607Reminder, getTransporter };
+/**
+ * Envía email con archivos adjuntos (ej. reportes 606/607).
+ */
+async function sendMailWithAttachments(email, subject, text, html, attachments = []) {
+    const transport = getTransporter();
+    const appName = process.env.APP_NAME || 'Trinalyze';
+    if (transport) {
+        await transport.sendMail({
+            from: process.env.SMTP_FROM || process.env.SMTP_USER,
+            to: email,
+            subject: `${subject} - ${appName}`,
+            text,
+            html,
+            attachments // Array de { filename, content }
+        });
+        log.info({ email, subject }, 'Email con adjuntos enviado');
+        return true;
+    }
+    log.info({ email, subject }, 'Simulación envío email con adjuntos (sin SMTP)');
+    return false;
+}
+
+module.exports = { 
+    sendVerificationEmail, 
+    sendPasswordReset, 
+    sendPaymentApproved, 
+    sendInvoiceCreated, 
+    send606607Reminder, 
+    sendMailWithAttachments,
+    getTransporter 
+};

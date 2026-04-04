@@ -173,7 +173,7 @@ export default function AyudaPage() {
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground mb-4">
-                            En <strong>Configuración</strong> puedes enviar un ticket de soporte. También puedes contactarnos por WhatsApp o correo (info@lexisbill.do).
+                            En <strong>Configuración</strong> puedes enviar un ticket de soporte. También puedes contactarnos por WhatsApp o correo (soporte@trinalyze.pro).
                         </p>
                         <Link href="/configuracion">
                             <Button variant="outline" className="gap-2">

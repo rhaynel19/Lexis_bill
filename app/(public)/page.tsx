@@ -449,7 +449,7 @@ export default function LandingPage() {
             <div>
               <h5 className="font-bold mb-6 text-sm uppercase tracking-widest text-lexis-gold">Contacto</h5>
               <ul className="space-y-4 text-sm text-slate-400">
-                <li>info@lexisbill.do</li>
+                <li>soporte@trinalyze.pro</li>
                 <li>Santo Domingo, RD</li>
                 <li>
                   <a href="https://wa.me/18495890656" target="_blank" rel="noopener noreferrer" className="hover:text-lexis-gold transition-colors">

@@ -49,6 +49,19 @@ export default function ReportsPage() {
     const [isViewerOpen, setIsViewerOpen] = useState(false);
     const [selectedExpense, setSelectedExpense] = useState<any | null>(null);
     const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+    
+    // Accountant Share
+    const [accountantEmail, setAccountantEmail] = useState("");
+    const [accountantModalOpen, setAccountantModalOpen] = useState(false);
+    const [isSendingToAccountant, setIsSendingToAccountant] = useState(false);
+
+    useEffect(() => {
+        if (authUser?.email) {
+            // Predeterminar el correo guardado o el del usuario si no hay otro
+            const saved = localStorage.getItem(`accountant_email_${authUser.id}`);
+            if (saved) setAccountantEmail(saved);
+        }
+    }, [authUser]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat("es-DO", {
@@ -183,6 +196,25 @@ export default function ReportsPage() {
     const handleViewExpense = (exp: any) => {
         setSelectedExpense(exp);
         setIsExpenseModalOpen(true);
+    };
+
+    const handleSendToAccountant = async () => {
+        if (!accountantEmail || !accountantEmail.includes("@")) {
+            toast.error("Por favor ingresa un correo válido");
+            return;
+        }
+
+        setIsSendingToAccountant(true);
+        try {
+            await api.sendToAccountant(selectedMonth, selectedYear, accountantEmail);
+            toast.success("Reportes enviados correctamente al contable");
+            localStorage.setItem(`accountant_email_${authUser?.id}`, accountantEmail);
+            setAccountantModalOpen(false);
+        } catch (error: any) {
+            toast.error(error.message || "Error al enviar los reportes");
+        } finally {
+            setIsSendingToAccountant(false);
+        }
     };
 
     return (
@@ -472,19 +504,56 @@ export default function ReportsPage() {
                         <Button
                             size="lg"
                             className="h-14 px-8 text-lg bg-foreground text-background hover:bg-foreground/90 font-bold shadow-xl transition-all hover:scale-105"
-                            onClick={() => {
-                                const subject = `Reportes Fiscales - ${months[selectedMonth - 1]} ${selectedYear}`;
-                                const body = `Hola,\n\nAdjunto el resumen fiscal del periodo ${months[selectedMonth - 1]} ${selectedYear}:\n\n- Resumen ITBIS: RD$ ${(summary?.itbis || 0).toLocaleString()}\n- Subtotal Neto: RD$ ${(summary?.subtotal || 0).toLocaleString()}\n- Comprobantes: ${summary?.count || 0}\n\nLos reportes 606 y 607 deben descargarse desde tu cuenta de Facturación (Reportes Fiscales).\n\nGenerado automáticamente por la plataforma.`;
-                                window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
-                            }}
+                            onClick={() => setAccountantModalOpen(true)}
                         >
                             <TrendingUp className="w-5 h-5 mr-2 text-accent" />
                             Enviar a Contador
                         </Button>
-                        <p className="text-center text-xs text-muted-foreground uppercase tracking-widest">Vía Email pre-redactado</p>
+                        <p className="text-center text-xs text-muted-foreground uppercase tracking-widest font-black">Email con adjuntos automáticos</p>
                     </div>
                 </div>
             </div>
+
+            {/* Modal Enviar a Contador */}
+            <Dialog open={accountantModalOpen} onOpenChange={setAccountantModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FileText className="w-5 h-5 text-accent" />
+                            Enviar al Contable
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <p className="text-sm text-muted-foreground">
+                            Se enviarán los reportes <strong>606 y 607</strong> del periodo <strong>{months[selectedMonth - 1]} {selectedYear}</strong> como archivos adjuntos oficiales (.txt).
+                        </p>
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase text-slate-500">Correo del Contable</label>
+                            <input 
+                                type="email"
+                                value={accountantEmail}
+                                onChange={(e) => setAccountantEmail(e.target.value)}
+                                placeholder="contable@ejemplo.com"
+                                className="w-full h-12 px-4 rounded-xl border border-border bg-muted/30 focus:outline-none focus:ring-2 focus:ring-accent/20 font-medium"
+                            />
+                        </div>
+                        <Button 
+                            className="w-full h-12 font-bold text-base"
+                            disabled={isSendingToAccountant || !accountantEmail}
+                            onClick={handleSendToAccountant}
+                        >
+                            {isSendingToAccountant ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Generando y enviando...
+                                </>
+                            ) : (
+                                "Enviar Reportes Ahora"
+                            )}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* Modal Resumen ITBIS */}
             <Dialog open={itbisSummaryOpen} onOpenChange={setItbisSummaryOpen}>

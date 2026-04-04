@@ -506,9 +506,9 @@ export default function Dashboard() {
                   if (c.phone) q.set("phone", c.phone);
                   return (
                     <Link key={c.rnc} href={`/nueva-factura?${q.toString()}`}>
-                      <Button variant="outline" size="sm" className="gap-2 border-emerald-200 text-emerald-800 hover:bg-emerald-100">
+                      <Button variant="outline" size="sm" className="gap-2 border-emerald-200 text-emerald-800 hover:bg-emerald-100 max-w-[200px]">
                         <Receipt className="w-4 h-4" />
-                        {c.name}
+                        <span className="truncate">{c.name}</span>
                       </Button>
                     </Link>
                   );

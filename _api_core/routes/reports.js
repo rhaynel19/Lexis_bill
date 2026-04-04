@@ -24,4 +24,7 @@ router.get('/summary', reportController.getTaxSummary);
 // Reminders
 router.post('/reminder', reportController.sendReportReminder);
 
+// Send to Accountant
+router.post('/send-to-accountant', reportController.sendToAccountant);
+
 module.exports = router;

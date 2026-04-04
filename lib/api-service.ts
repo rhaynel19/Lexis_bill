@@ -369,6 +369,18 @@ export const api = {
         return data as { sent: boolean; period?: string; reason?: string };
     },
 
+    async sendToAccountant(month: number, year: number, email: string): Promise<{ success: boolean; message: string }> {
+        const res = await fetch(`${API_URL}/reports/send-to-accountant`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ month, year, email }),
+            credentials: "include"
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error((data as { message?: string }).message || "Error al enviar al contador");
+        return data as { success: boolean; message: string };
+    },
+
     async getQuotes(page = 1, limit = 500) {
         const res = await secureFetch<any>(`${API_URL}/quotes?page=${page}&limit=${limit}`, { cacheKey: "quotes_list" });
         return Array.isArray(res) ? res : (res.data ?? []);
