@@ -290,6 +290,12 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
             3: { cellWidth: 35, halign: "right" }, // Subtotal
         },
         margin: { left: margin.left, right: margin.right },
+        // Enforce header alignment for numeric columns
+        didParseCell: (data) => {
+            if (data.section === 'head' && (data.column.index === 2 || data.column.index === 3)) {
+                data.cell.styles.halign = 'right';
+            }
+        }
     });
 
     // Obtener la posición Y después de la tabla
@@ -351,7 +357,7 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     doc.setFontSize(APP_CONFIG.pdf.fontSize.subtitle);
     doc.setTextColor(...blueColor);
     const totalLabel = kind === "quote" ? "TOTAL COTIZACIÓN:" : kind === "proforma" ? "TOTAL PROFORMA:" : "TOTAL FACTURA:";
-    doc.text(totalLabel, summaryLabelX - 25, yPosition);
+    doc.text(totalLabel, summaryX - 45, yPosition, { align: "right" });
     doc.text(formatCurrency(invoiceData.total), summaryX, yPosition, { align: "right" });
     yPosition += 8;
 
