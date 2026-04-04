@@ -2,19 +2,23 @@ const { z } = require('zod');
 
 /**
  * Middleware de validación con Zod
- * @param {z.ZodSchema} schema - El esquema de Zod para validar req.body
+ * @param {z.ZodSchema} schema - El esquema de Zod para validar
+ * @param {string} target - El origen de los datos ('body', 'query', 'params')
  * @returns {Function} Middleware de Express
  */
-const validate = (schema) => (req, res, next) => {
+const validate = (schema, target = 'body') => (req, res, next) => {
     try {
-        // Validar y transformar (parse aplica las transformaciones y sanitizaciones de Zod)
-        const validatedData = schema.parse(req.body);
+        const sourceData = req[target];
         
-        // Reemplazar body con los datos validados/sanitizados
-        req.body = validatedData;
+        // Validar y transformar
+        const validatedData = schema.parse(sourceData);
+        
+        // Reemplazar el origen con los datos validados/sanitizados
+        req[target] = validatedData;
         next();
     } catch (error) {
-        if (error instanceof z.ZodError) {
+        // Log error status if it's not a standard Zod error (helps debugging 500s)
+        if (error.name === 'ZodError' || error instanceof z.ZodError) {
             const errors = error.errors.map(err => ({
                 field: err.path.join('.'),
                 message: err.message
@@ -26,6 +30,8 @@ const validate = (schema) => (req, res, next) => {
                 code: 'VALIDATION_ERROR'
             });
         }
+        
+        console.error(`[Validation Middleware Error] [${target}]:`, error);
         next(error);
     }
 };
