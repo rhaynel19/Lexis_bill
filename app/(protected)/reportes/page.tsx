@@ -527,6 +527,32 @@ export default function ReportsPage() {
                         <p className="text-sm text-muted-foreground">
                             Se enviarán los reportes <strong>606 y 607</strong> del periodo <strong>{months[selectedMonth - 1]} {selectedYear}</strong> como archivos adjuntos oficiales (.txt).
                         </p>
+
+                        {/* Resumen de datos para validación visual */}
+                        <div className="bg-muted/50 rounded-2xl p-4 border border-border/50 space-y-3">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Resumen del Periodo</h4>
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-muted-foreground font-medium">ITBIS Cobrado (607)</span>
+                                <span className="font-bold text-foreground">{formatCurrency(summary?.itbis || 0)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-muted-foreground font-medium">Ventas Netas</span>
+                                <span className="font-bold text-foreground">{formatCurrency(summary?.subtotal || 0)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-muted-foreground font-medium">Gastos Registrados (606)</span>
+                                <span className="font-bold text-rose-600">
+                                    {formatCurrency(summary?.documents?.expenses?.reduce((acc: number, e: any) => acc + (e.amount || 0), 0) || 0)}
+                                </span>
+                            </div>
+                            <div className="pt-2 border-t border-border/20 flex justify-between items-center text-xs">
+                                <span className="text-muted-foreground">Total Documentos</span>
+                                <span className="font-black text-accent">
+                                    {(summary?.documents?.invoices?.length || 0) + (summary?.documents?.expenses?.length || 0)}
+                                </span>
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <label className="text-xs font-black uppercase text-slate-500">Correo del Contable</label>
                             <input 

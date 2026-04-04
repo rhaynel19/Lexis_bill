@@ -299,21 +299,34 @@ export const api = {
     },
 
     async validateReport607(month: number, year: number): Promise<{ valid: boolean; errors?: string[] }> {
-        const res = await fetch(`${API_URL}/reports/607/validate?month=${month}&year=${year}`, { credentials: "include" });
+        const periodo = `${year}${String(month).padStart(2, "0")}`;
+        const res = await fetch(`${API_URL}/reports/607/validate`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ periodo }),
+        });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) return { valid: false, errors: [(data as { message?: string }).message || "Error de validación"] };
         return data;
     },
 
     async validateReport606(month: number, year: number): Promise<{ valid: boolean; errors?: string[] }> {
-        const res = await fetch(`${API_URL}/reports/606/validate?month=${month}&year=${year}`, { credentials: "include" });
+        const periodo = `${year}${String(month).padStart(2, "0")}`;
+        const res = await fetch(`${API_URL}/reports/606/validate`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ periodo }),
+        });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) return { valid: false, errors: [(data as { message?: string }).message || "Error de validación"] };
         return data;
     },
 
     async downloadReport607(month: number, year: number): Promise<Blob> {
-        const res = await fetch(`${API_URL}/reports/607?month=${month}&year=${year}`, {
+        const period = `${year}${String(month).padStart(2, "0")}`;
+        const res = await fetch(`${API_URL}/reports/607?period=${period}`, {
             credentials: "include",
             headers: {
                 "Accept": "text/plain, application/octet-stream"
@@ -327,7 +340,8 @@ export const api = {
     },
 
     async downloadReport606(month: number, year: number): Promise<Blob> {
-        const res = await fetch(`${API_URL}/reports/606?month=${month}&year=${year}`, {
+        const period = `${year}${String(month).padStart(2, "0")}`;
+        const res = await fetch(`${API_URL}/reports/606?period=${period}`, {
             credentials: "include",
             headers: {
                 "Accept": "text/plain, application/octet-stream"
@@ -341,14 +355,21 @@ export const api = {
     },
 
     async validateReport608(month: number, year: number): Promise<{ valid: boolean; errors?: string[] }> {
-        const res = await fetch(`${API_URL}/reports/608/validate?month=${month}&year=${year}`, { credentials: "include" });
+        const periodo = `${year}${String(month).padStart(2, "0")}`;
+        const res = await fetch(`${API_URL}/reports/608/validate`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ periodo }),
+        });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) return { valid: false, errors: [(data as { message?: string }).message || "Error de validación"] };
         return data as { valid: boolean; errors?: string[] };
     },
 
     async downloadReport608(month: number, year: number): Promise<Blob> {
-        const res = await fetch(`${API_URL}/reports/608?month=${month}&year=${year}`, {
+        const period = `${year}${String(month).padStart(2, "0")}`;
+        const res = await fetch(`${API_URL}/reports/608?period=${period}`, {
             credentials: "include",
             headers: {
                 "Accept": "text/plain, application/octet-stream"
