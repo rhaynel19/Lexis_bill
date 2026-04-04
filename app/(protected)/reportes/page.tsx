@@ -154,9 +154,10 @@ export default function ReportsPage() {
             toast.success(`Reporte ${reportToDownload} descargado correctamente`);
             setDisclaimerOpen(false);
             setReportToDownload(null);
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            toast.error("Error al descargar el reporte. Intenta de nuevo.");
+            const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : "Error al descargar el reporte");
+            toast.error(errorMessage);
         } finally {
             setIsDownloading(false);
         }
