@@ -351,7 +351,7 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
     doc.setFontSize(APP_CONFIG.pdf.fontSize.subtitle);
     doc.setTextColor(...blueColor);
     const totalLabel = kind === "quote" ? "TOTAL COTIZACIÓN:" : kind === "proforma" ? "TOTAL PROFORMA:" : "TOTAL FACTURA:";
-    doc.text(totalLabel, summaryLabelX - 15, yPosition);
+    doc.text(totalLabel, summaryLabelX - 25, yPosition);
     doc.text(formatCurrency(invoiceData.total), summaryX, yPosition, { align: "right" });
     yPosition += 8;
 
