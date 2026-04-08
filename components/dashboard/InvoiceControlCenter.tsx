@@ -246,6 +246,14 @@ export function InvoiceControlCenter({
         else if (quickFilter === "pendientes") list = list.filter((i) => getInvoiceStatus(i) === "pendiente");
         else if (quickFilter === "pagadas") list = list.filter((i) => getInvoiceStatus(i) === "pagada");
         else if (quickFilter === "balance") list = list.filter((i) => (i.balancePendiente ?? 0) > 0);
+        else if (quickFilter === "notas_credito") {
+            list = list.filter((i) => 
+                i.ncfType === '04' || 
+                i.ncfType === '34' || 
+                (i.ncf || i.ncfSequence || "").startsWith("B04") || 
+                (i.ncf || i.ncfSequence || "").startsWith("E34")
+            );
+        }
 
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
@@ -545,6 +553,7 @@ export function InvoiceControlCenter({
                                         { id: "pendientes", label: "Pendientes" },
                                         { id: "pagadas", label: "Pagadas" },
                                         { id: "balance", label: "Con balance" },
+                                        { id: "notas_credito", label: "Notas de Crédito" },
                                     ].map((f) => (
                                         <button
                                             key={f.id}
@@ -711,8 +720,11 @@ export function InvoiceControlCenter({
                                                         onMouseEnter={() => setHoveredRow(invId)}
                                                         onMouseLeave={() => setHoveredRow(null)}
                                                     >
-                                                        <TableCell className="font-mono text-sm">
+                                                        <TableCell className="font-mono text-sm relative">
                                                             {(inv.ncf || inv.ncfSequence) ? (inv.ncf || inv.ncfSequence) : invId.slice(-11)}
+                                                            {(inv.ncfType === '04' || inv.ncfType === '34' || (inv.ncf || "").startsWith("B04") || (inv.ncf || "").startsWith("E34")) && (
+                                                                <span className="ml-1.5 px-1 py-0.5 rounded bg-blue-100 text-blue-700 text-[9px] font-bold uppercase tracking-tight">NC</span>
+                                                            )}
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className="font-medium">{inv.clientName}</div>
@@ -754,7 +766,7 @@ export function InvoiceControlCenter({
                                                                 )}
                                                                 {inv.status !== "cancelled" && !inv.annulledBy && (
                                                                      <>
-                                                                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50" onClick={() => handleAnnulClick(inv)} title="Anular Factura (608)">
+                                                                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50" onClick={() => handleAnnulClick(inv)} title="Anular por Error (Reporte 608)">
                                                                              <Ban className="w-4 h-4" />
                                                                          </Button>
                                                                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleDuplicate(inv)} title="Facturar de nuevo" disabled={!!duplicatingId}>

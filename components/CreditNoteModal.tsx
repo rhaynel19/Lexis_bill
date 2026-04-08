@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api-service";
-import { FileText, AlertCircle, Loader2, CheckCircle, Calculator } from "lucide-react";
+import { FileText, AlertCircle, Loader2, CheckCircle, Calculator, Download } from "lucide-react";
 import { toast } from "sonner";
+import { downloadInvoicePDF, InvoiceData } from "@/lib/pdf-generator";
 
 interface CreditNoteModalProps {
     isOpen: boolean;
@@ -25,6 +26,7 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
     const [amount, setAmount] = useState<number>(0);
     const [reason, setReason] = useState("devolucion");
     const [otherReason, setOtherReason] = useState("");
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const router = useRouter();
 
@@ -76,6 +78,35 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
             });
         } finally {
             setIsProcessing(false);
+        }
+    };
+
+    const handleDownload = async () => {
+        if (!newNcf || !invoice) return;
+        setIsDownloading(true);
+        try {
+            const data: InvoiceData = {
+                id: `nc_${Date.now()}`,
+                sequenceNumber: newNcf,
+                type: (invoice.ncfType && String(invoice.ncfType).startsWith('3')) ? '34' : '04',
+                clientName: invoice.clientName,
+                rnc: invoice.rnc || invoice.clientRnc || "",
+                date: new Date().toISOString(),
+                items: invoice.items || [],
+                subtotal: invoice.subtotal ?? (invoice.total - (invoice.itbis || 0)),
+                itbis: invoice.itbis || 0,
+                isrRetention: invoice.isrRetention || 0,
+                itbisRetention: invoice.itbisRetention || 0,
+                total: amount,
+                paymentMethod: 'efectivo',
+                modifiedNcf: invoice.ncf || invoice.ncfSequence,
+            };
+            await downloadInvoicePDF(data);
+            toast.success("Comprobante B04 descargado");
+        } catch (e) {
+            toast.error("Error al generar PDF");
+        } finally {
+            setIsDownloading(false);
         }
     };
 
@@ -203,9 +234,19 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
                         <div className="px-6 py-3 bg-slate-900 text-white rounded-xl font-mono text-xl tracking-widest shadow-lg border-2 border-slate-700">
                             {newNcf}
                         </div>
-                        <Button className="w-full h-12 text-lg font-bold shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]" onClick={onClose}>
-                            Regresar al Listado
-                        </Button>
+                        <div className="flex flex-col w-full gap-2">
+                            <Button 
+                                className="w-full h-12 text-lg font-bold shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] gap-2" 
+                                onClick={handleDownload}
+                                disabled={isDownloading}
+                            >
+                                {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+                                Descargar Comprobante
+                            </Button>
+                            <Button variant="ghost" className="w-full h-10 text-slate-500 font-medium" onClick={onClose}>
+                                Regresar al Listado
+                            </Button>
+                        </div>
                     </div>
                 )}
             </DialogContent>
