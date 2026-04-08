@@ -13,35 +13,49 @@ const POLICIES = {
         slug: 'terms',
         effectiveAt: EFFECTIVE_DATE,
         content: `
-## 1. Aceptación
+## 1. Aceptación de los Términos
 
-Al acceder y utilizar esta aplicación ("el Servicio"), usted acepta quedar vinculado por estos Términos y Condiciones, en línea con la Ley 07-23 y normativa de la DGII de la República Dominicana.
+Al acceder y utilizar la plataforma **Trinalyze Billing** ("el Servicio"), usted declara ser mayor de edad y poseer la capacidad legal necesaria para contratar. Su acceso y uso del Servicio constituye su aceptación total y sin reservas de estos Términos y Condiciones, los cuales se rigen por las leyes de la República Dominicana, específicamente la Ley 07-23 sobre Facturación Electrónica y el Código de Comercio.
 
-## 2. Naturaleza del Servicio
+## 2. Descripción del Servicio
 
-La Plataforma es una **herramienta de apoyo** para la emisión de comprobantes fiscales, gestión de clientes, reportes 606/607 y suscripciones. **No constituye asesoría contable, tributaria ni legal.** El usuario es el único responsable de la veracidad de la información que ingresa y del uso correcto de los NCF asignados por la DGII.
+Trinalyze Billing es una solución de Software como Servicio (SaaS) diseñada para facilitar la gestión comercial, incluyendo:
+- Emisión de facturas y comprobantes fiscales (tradicionales y electrónicos).
+- Gestión de clientes, productos y servicios.
+- Generación de reportes fiscales (606, 607, 608) conforme a los requerimientos de la DGII.
+- Gestión de cotizaciones y flujo de cobranzas.
 
-## 3. Responsabilidad del Usuario
+**IMPORTANTE:** Trinalyze Billing es una herramienta tecnológica de apoyo. No sustituye la labor de un profesional de la contabilidad ni constituye asesoría legal o tributaria.
 
-- Usted es responsable de **verificar y validar** toda la información fiscal antes de emitir facturas, notas de crédito o reportes.
-- El uso indebido de secuencias NCF o el incumplimiento de obligaciones ante la DGII es responsabilidad exclusiva del titular de la cuenta.
-- El Servicio no garantiza la aprobación automática de documentos ante la DGII; el cumplimiento final depende de sus datos y de la normativa vigente.
+## 3. Responsabilidades del Usuario
 
-## 4. Uso Aceptable
+Como usuario, usted se compromete a:
+- Proporcionar información veraz y actualizada (RNC, nombre fiscal, dirección).
+- Custodiar sus credenciales de acceso; cualquier acción realizada desde su cuenta se le atribuirá a usted.
+- **Validar la exactitud de cada comprobante emitido.** La Plataforma no es responsable por multas, recargos o sanciones fiscales derivadas de errores en la información ingresada por el usuario.
+- Cumplir con los plazos de reporte establecidos por la DGII.
 
-El uso del Servicio debe ser lícito y conforme a la normativa dominicana. No está permitido falsificar datos, suplantar identidad o utilizar el Servicio para actividades fraudulentas. Nos reservamos el derecho de suspender o dar de baja cuentas que violen estos términos.
+## 4. Propiedad Intelectual
+
+Todo el contenido, diseño, logotipos, código fuente y tecnología de Trinalyze Billing son propiedad exclusiva de sus creadores y están protegidos por las leyes de propiedad intelectual en República Dominicana (Ley 65-00). Se prohíbe la reproducción total o parcial, ingeniería inversa o cualquier uso no autorizado del software.
 
 ## 5. Limitación de Responsabilidad
 
-En la máxima medida permitida por la ley, la Plataforma no será responsable por daños indirectos, lucro cesante o consecuencias derivadas de errores introducidos por el usuario, fallos de conectividad con la DGII, o uso incorrecto del Servicio. La responsabilidad por el contenido y validez fiscal de los comprobantes emitidos recae en el usuario.
+En la medida permitida por la ley, la Plataforma no será responsable por:
+- Interrupciones del servicio debidas a fallos en la infraestructura de internet o servicios de terceros (incluyendo plataformas de la DGII).
+- Pérdida de datos por causas de fuerza mayor.
+- Daños derivados de un uso negligente del sistema por parte del usuario.
 
-## 6. Modificaciones
+## 6. Suspensión y Terminación
 
-Se pueden actualizar estas políticas. En caso de cambios sustanciales, se le notificará y se le solicitará su nueva aceptación para continuar usando el Servicio. Las versiones anteriores permanecen archivadas para referencia.
+Nos reservamos el derecho de suspender o cancelar el acceso al Servicio, previo aviso, en caso de detectar:
+- Incumplimiento de estos términos.
+- Uso del sistema para actividades fraudulentas o ilícitas.
+- Falta de pago de la suscripción correspondiente al plan elegido.
 
-## 7. Contacto
+## 7. Ley Aplicable y Jurisdicción
 
-Para dudas sobre estos términos, favor contactar al administrador del sistema o a soporte técnico.
+Para cualquier controversia derivada de estos términos, las partes se someten a la jurisdicción de los tribunales correspondientes en el Distrito Nacional, República Dominicana.
 
 Última actualización: ${EFFECTIVE_DATE}. Versión 1.
 `.trim()
@@ -52,35 +66,39 @@ Para dudas sobre estos términos, favor contactar al administrador del sistema o
         slug: 'privacy',
         effectiveAt: EFFECTIVE_DATE,
         content: `
-## 1. Responsable del Tratamiento
+## 1. Recolección de Información
 
-El proveedor del Servicio es el responsable del tratamiento de los datos personales que usted facilita al utilizar el software, en cumplimiento de la normativa aplicable en República Dominicana.
+Recopilamos información necesaria para la prestación del Servicio, que incluye:
+- **Datos de Identidad:** Nombre completo, RNC, Cédula de Identidad.
+- **Datos de Contacto:** Correo electrónico, número de teléfono, dirección fiscal.
+- **Datos de Facturación:** Información de sus clientes y transacciones comerciales.
 
-## 2. Datos que Recolectamos
+## 2. Uso de la Información
 
-- **Datos de cuenta:** nombre, correo electrónico, contraseña (encriptada), RNC/cédula, profesión, dirección y teléfono.
-- **Datos fiscales:** información de clientes (nombre, RNC, contacto) que usted ingresa para facturación.
-- **Datos de uso:** actividad en la plataforma (facturas, reportes 606/607, NCF, pagos y suscripciones) necesarios para operar el Servicio y cumplir obligaciones legales.
+Sus datos son utilizados exclusivamente para:
+- Proveer y mantener las funcionalidades de facturación y reportes.
+- Procesar sus suscripciones y pagos.
+- Cumplir con requerimientos legales de las autoridades tributarias (DGII).
+- Enviar notificaciones críticas sobre su cuenta y actualizaciones del sistema.
 
-## 3. Finalidad y Base Legal
+## 3. Protección y Almacenamiento
 
-Utilizamos sus datos para: (a) prestar el Servicio de facturación y reportes fiscales; (b) gestionar suscripciones y pagos; (c) cumplir obligaciones ante la DGII cuando la ley lo exija; (d) mejorar la seguridad y el producto. La base es la ejecución del contrato y el consentimiento cuando lo requiera la ley.
+Implementamos medidas de seguridad técnicas y organizativas para proteger su información contra acceso no autorizado, alteración o destrucción. Esto incluye cifrado de datos y protocolos de seguridad en la nube. **Nunca compartimos su información fiscal con terceros para fines publicitarios.**
 
-## 4. Almacenamiento y Seguridad
+## 4. Compartición de Datos con Terceros
 
-Los datos se almacenan en infraestructura segura con cifrado en tránsito y en reposo. Las contraseñas se guardan con hash seguro. No compartimos sus datos fiscales ni personales con terceros para fines de marketing sin su consentimiento explícito.
+Solo compartiremos su información en los siguientes casos:
+- Con proveedores de servicios tecnológicos necesarios para operar la plataforma (almacenamiento en la nube, pasarelas de pago).
+- Con la DGII, cuando usted utilice las funciones de Facturación Electrónica.
+- Por requerimiento de una autoridad judicial competente.
 
-## 5. Compartir Datos
+## 5. Sus Derechos (ARCO)
 
-Solo compartimos datos cuando sea necesario: (a) con autoridades (ej. DGII) cuando la ley lo exija; (b) con proveedores de pago para procesar suscripciones; (c) con su consentimiento en otros casos.
+Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse al tratamiento de sus datos personales. Puede ejercer estos derechos enviando una solicitud a soporte técnico o a través de la configuración de su perfil.
 
-## 6. Sus Derechos
+## 6. Uso de Cookies
 
-Usted puede acceder, rectificar o solicitar la eliminación de sus datos personales, en la medida permitida por la ley y por la necesidad de conservar información fiscal.
-
-## 7. Cambios
-
-Cualquier cambio relevante en esta política será comunicado y, cuando corresponda, se le pedirá su aceptación de la nueva versión.
+Utilizamos cookies técnicas y de sesión para garantizar que la plataforma funcione correctamente, recordar sus preferencias y mejorar la seguridad del acceso.
 
 Última actualización: ${EFFECTIVE_DATE}. Versión 1.
 `.trim()
@@ -197,12 +215,6 @@ function getRequiredVersions() {
 }
 
 module.exports = {
-    POLICIES,
-    REQUIRED_POLICY_SLUGS,
-    getCurrentPolicies,
-    getPolicy,
-    getRequiredVersions
-}; {
     POLICIES,
     REQUIRED_POLICY_SLUGS,
     getCurrentPolicies,

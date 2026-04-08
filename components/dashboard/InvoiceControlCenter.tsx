@@ -759,11 +759,15 @@ export function InvoiceControlCenter({
                                                                         <DollarSign className="w-4 h-4" />
                                                                     </Button>
                                                                 )}
-                                                                {inv.status !== "cancelled" && (
+                                                                {inv.status !== "cancelled" && 
+                                                                  inv.status !== "fully_credited" && 
+                                                                  !inv.annulledBy && 
+                                                                  inv.ncfType !== '04' && 
+                                                                  inv.ncfType !== '34' && (
                                                                     <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleCreditNote(inv)} title="Emitir nota de crédito">
                                                                         <FileText className="w-4 h-4" />
                                                                     </Button>
-                                                                )}
+                                                                 )}
                                                                 {inv.status !== "cancelled" && !inv.annulledBy && (
                                                                      <>
                                                                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50" onClick={() => handleAnnulClick(inv)} title="Anular por Error (Reporte 608)">
@@ -820,6 +824,15 @@ export function InvoiceControlCenter({
                                                     {status !== "pagada" && (
                                                         <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleRegisterPayment(inv); }}>
                                                             <DollarSign className="w-3.5 h-3.5 mr-1" /> Registrar pago
+                                                        </Button>
+                                                    )}
+                                                    {inv.status !== "cancelled" && 
+                                                     inv.status !== "fully_credited" && 
+                                                     !inv.annulledBy && 
+                                                     inv.ncfType !== '04' && 
+                                                     inv.ncfType !== '34' && (
+                                                        <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleCreditNote(inv); }}>
+                                                            <FileText className="w-3.5 h-3.5 mr-1" /> NC
                                                         </Button>
                                                     )}
                                                     <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleDuplicate(inv); }} disabled={!!duplicatingId}>

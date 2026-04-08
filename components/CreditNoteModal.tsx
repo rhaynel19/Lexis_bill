@@ -33,12 +33,20 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
     // Hydration-safe initial amount
     useEffect(() => {
         if (isOpen && invoice) {
+            // Defensive: if somehow opened for a Credit Note or restricted invoice, close it.
+            const isCreditNote = invoice.ncfType === '04' || invoice.ncfType === '34' || (invoice.ncf || "").startsWith("B04");
+            if (isCreditNote || invoice.status === 'fully_credited' || invoice.annulledBy) {
+                toast.error("Este documento no es elegible para Nota de Crédito.");
+                onClose();
+                return;
+            }
+
             const initial = (invoice.balancePendiente != null && invoice.balancePendiente > 0) 
                 ? invoice.balancePendiente 
                 : (invoice.total || 0);
             setAmount(initial);
         }
-    }, [isOpen, invoice]);
+    }, [isOpen, invoice, onClose]);
 
     const handleConfirm = async () => {
         const actualMax = (invoice.balancePendiente != null && invoice.balancePendiente > 0) 

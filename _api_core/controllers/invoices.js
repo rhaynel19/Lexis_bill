@@ -261,6 +261,26 @@ const createCreditNote = async (req, res) => {
             session.endSession();
             return res.status(404).json({ message: 'Factura no encontrada' });
         }
+
+        // Restricciones de Nota de Crédito
+        const isAlreadyCreditNote = original.ncfType === '04' || original.ncfType === '34' || (original.ncf && original.ncf.startsWith('B04'));
+        if (isAlreadyCreditNote) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: 'No se puede emitir una Nota de Crédito sobre otra Nota de Crédito.' });
+        }
+
+        if (original.status === 'fully_credited' || original.annulledBy) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: 'Esta factura ya posee una Nota de Crédito completa o está anulada.' });
+        }
+
+        if (original.status === 'cancelled') {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: 'No se puede emitir una Nota de Crédito sobre una factura ya anulada por error (608).' });
+        }
         
         const data = req.validatedBody || req.body;
         const creditNoteType = (original.ncfType && String(original.ncfType).startsWith('3')) ? '34' : '04';
