@@ -193,33 +193,33 @@ function RegisterForm() {
 
     if (checkingAuth) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#0F172A]">
-                <Loader2 className="w-10 h-10 animate-spin text-trinalyze-gold" />
+            <div className="min-h-screen flex items-center justify-center bg-trinalyze-bg-deep">
+                <Loader2 className="w-10 h-10 animate-spin text-trinalyze-brand-blue" />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#0F172A] px-4 py-8 relative overflow-hidden">
+        <div className="min-h-screen flex items-center justify-center bg-trinalyze-bg-deep px-4 py-8 relative overflow-hidden">
             {/* Background Luxury Effects */}
             <div className="absolute inset-0">
-                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-[#DEB23E]/20 rounded-full blur-[120px]"></div>
-                <div className="absolute bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-[#DEB23E]/10 rounded-full blur-[100px]"></div>
+                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-trinalyze-brand-blue/20 rounded-full blur-[120px]"></div>
+                <div className="absolute bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-trinalyze-brand-blue/10 rounded-full blur-[100px]"></div>
             </div>
 
             <div className="w-full max-w-lg relative z-10">
                 {/* Back Button */}
                 <button
                     onClick={() => router.back()}
-                    className="flex items-center gap-2 text-slate-400 hover:text-trinalyze-gold transition-colors mb-6 text-sm font-medium group"
+                    className="flex items-center gap-2 text-slate-400 hover:text-trinalyze-brand-blue transition-colors mb-6 text-sm font-medium group"
                     type="button"
                 >
                     <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Volver atrás
                 </button>
 
-                <Card className={`w-full bg-trinalyze-bg-darker/80 backdrop-blur-xl border border-white/5 shadow-[0_0_40px_rgba(222,178,62,0.1)] overflow-hidden rounded-2xl ${isPartnerFlow ? "ring-2 ring-amber-500" : ""}`}>
+                <Card className={`w-full bg-trinalyze-bg-darker/80 backdrop-blur-xl border border-white/5 shadow-[0_0_40px_rgba(59,130,246,0.1)] overflow-hidden rounded-2xl ${isPartnerFlow ? "ring-2 ring-amber-500" : ""}`}>
                     {/* Barra superior: partner (ámbar) cuando es flujo partner, sino azul */}
-                    <div className={`h-2 w-full ${isPartnerFlow ? "bg-gradient-to-r from-amber-500 via-trinalyze-gold to-amber-700" : "bg-gradient-to-r from-blue-600 via-trinalyze-gold to-blue-950"}`} />
+                    <div className={`h-2 w-full ${isPartnerFlow ? "bg-gradient-to-r from-amber-500 via-trinalyze-brand-blue to-amber-700" : "bg-gradient-to-r from-[#1e3a8a] via-trinalyze-brand-blue to-[#3B82F6]"}`} />
                     <CardHeader className="text-center pb-2 pt-8">
                         {isPartnerFlow ? (
                             <>
@@ -290,20 +290,20 @@ function RegisterForm() {
                             </div>
 
                             {/* Question Filter */}
-                            <div className="p-4 rounded-xl bg-trinalyze-gold/5 border border-trinalyze-gold/10 space-y-3">
-                                <label className="text-[11px] font-bold text-trinalyze-gold uppercase tracking-tight">¿Tienes RNC activo en República Dominicana?</label>
+                            <div className="p-4 rounded-xl bg-trinalyze-brand-blue/5 border border-trinalyze-brand-blue/10 space-y-3">
+                                <label className="text-[11px] font-bold text-trinalyze-brand-blue uppercase tracking-tight">¿Tienes RNC activo en República Dominicana?</label>
                                 <div className="flex gap-4">
                                     <button
                                         type="button"
                                         onClick={() => setForm({ ...form, hasRnc: "yes" })}
-                                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${form.hasRnc === "yes" ? "bg-trinalyze-gold text-trinalyze-bg-deep border-trinalyze-gold shadow-md" : "bg-white/5 text-slate-400 border-white/10 hover:border-trinalyze-gold/50"}`}
+                                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${form.hasRnc === "yes" ? "bg-trinalyze-brand-blue text-trinalyze-bg-deep border-trinalyze-brand-blue shadow-md" : "bg-white/5 text-slate-400 border-white/10 hover:border-trinalyze-brand-blue/50"}`}
                                     >
                                         Sí, lo tengo
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setForm({ ...form, hasRnc: "no" })}
-                                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${form.hasRnc === "no" ? "bg-trinalyze-gold text-trinalyze-bg-deep border-trinalyze-gold shadow-md" : "bg-white/5 text-slate-400 border-white/10 hover:border-trinalyze-gold/50"}`}
+                                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${form.hasRnc === "no" ? "bg-trinalyze-brand-blue text-trinalyze-bg-deep border-trinalyze-brand-blue shadow-md" : "bg-white/5 text-slate-400 border-white/10 hover:border-trinalyze-brand-blue/50"}`}
                                     >
                                         No, todavía no
                                     </button>
@@ -322,7 +322,7 @@ function RegisterForm() {
                                         required
                                     />
                                     {rncStatus.loading && (
-                                        <div className="mt-1 text-[10px] text-trinalyze-gold font-medium pl-1 animate-pulse">
+                                        <div className="mt-1 text-[10px] text-trinalyze-brand-blue font-medium pl-1 animate-pulse">
                                             Estamos verificando tu RNC...
                                         </div>
                                     )}
@@ -357,7 +357,7 @@ function RegisterForm() {
                                         value={form.profession}
                                         onValueChange={(val) => setForm({ ...form, profession: val })}
                                     >
-                                        <SelectTrigger className="w-full pl-11 h-12 bg-white/5 border-white/10 text-trinalyze-text-light text-base focus:ring-trinalyze-gold transition-shadow">
+                                        <SelectTrigger className="w-full pl-11 h-12 bg-white/5 border-white/10 text-trinalyze-text-light text-base focus:ring-trinalyze-brand-blue transition-shadow">
                                             <SelectValue placeholder="Selecciona tu área" />
                                         </SelectTrigger>
                                         <SelectContent position="popper" className="bg-slate-900 border-white/10 shadow-xl z-[100] min-w-[var(--radix-select-trigger-width)]">
@@ -386,7 +386,7 @@ function RegisterForm() {
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword((v) => !v)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-trinalyze-gold/50"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-trinalyze-brand-blue/50"
                                         aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
                                     >
                                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -409,7 +409,7 @@ function RegisterForm() {
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword((v) => !v)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-trinalyze-gold/50"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-trinalyze-brand-blue/50"
                                         aria-label={showConfirmPassword ? "Ocultar contraseña" : "Ver contraseña"}
                                     >
                                         {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -441,8 +441,8 @@ function RegisterForm() {
                             <Button
                                 type="submit"
                                 className={isPartnerFlow
-                                    ? "w-full bg-[#DEB23E] hover:bg-[#C79A30] text-blue-950 font-bold py-7 px-4 text-base sm:text-lg shadow-xl shadow-[#DEB23E]/20 transition-all active:scale-[0.98] rounded-xl whitespace-normal text-center leading-snug"
-                                    : "w-full bg-gradient-to-r from-[#C79A30] to-[#DEB23E] text-white font-bold py-7 px-4 text-base sm:text-lg shadow-xl shadow-[#DEB23E]/20 transition-all active:scale-[0.98] rounded-xl whitespace-normal text-center leading-snug"}
+                                    ? "w-full bg-trinalyze-brand-blue hover:bg-trinalyze-brand-blue-hover text-blue-950 font-bold py-7 px-4 text-base sm:text-lg shadow-xl shadow-trinalyze-brand-blue/20 transition-all active:scale-[0.98] rounded-xl whitespace-normal text-center leading-snug"
+                                    : "w-full bg-gradient-to-r from-[#1e3a8a] to-[#3B82F6] text-white font-bold py-7 px-4 text-base sm:text-lg shadow-xl shadow-trinalyze-brand-blue/20 transition-all active:scale-[0.98] rounded-xl whitespace-normal text-center leading-snug"}
                                 disabled={isLoading || !acceptedTerms}
                                 aria-busy={isLoading}
                             >

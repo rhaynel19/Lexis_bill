@@ -191,19 +191,19 @@ function LoginForm() {
             {/* Background Luxury Effects */}
             <div className="absolute inset-0">
                 <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5" />
-                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-[#DEB23E]/20 rounded-full blur-[120px]" />
-                <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] bg-trinalyze-gold/10 rounded-full blur-[100px]" />
+                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-trinalyze-brand-blue/20 rounded-full blur-[120px]" />
+                <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] bg-trinalyze-brand-blue/10 rounded-full blur-[100px]" />
             </div>
 
-            <Card className="w-full max-w-md bg-trinalyze-bg-darker/80 backdrop-blur-xl border border-white/5 shadow-[0_0_40px_rgba(222,178,62,0.1)] relative z-10 overflow-hidden">
+            <Card className="w-full max-w-md bg-trinalyze-bg-darker/80 backdrop-blur-xl border border-white/5 shadow-[0_0_40px_rgba(59,130,246,0.1)] relative z-10 overflow-hidden">
                 <div className="w-full">
-                    <div className="h-1.5 w-full bg-gradient-to-r from-[#C79A30] to-[#DEB23E]" />
+                    <div className="h-1.5 w-full bg-gradient-to-r from-[#1e3a8a] to-[#3B82F6]" />
                 </div>
                 <CardHeader className="text-center pb-6 pt-10">
                     <CardTitle className="text-3xl font-bold tracking-tight flex items-center justify-center gap-2">
                         <TrinalyzeWord className="text-3xl" showBill={false} variant="light" />
                     </CardTitle>
-                    <CardDescription className="text-trinalyze-gold/80 font-medium mt-2 text-sm uppercase tracking-widest">Gestión Fiscal de Alto Nivel</CardDescription>
+                    <CardDescription className="text-trinalyze-brand-blue/80 font-medium mt-2 text-sm uppercase tracking-widest">Gestión Fiscal de Alto Nivel</CardDescription>
                 </CardHeader>
                 <CardContent className="px-6 sm:px-8 pb-8">
                     {apiUnavailable && (
@@ -225,7 +225,7 @@ function LoginForm() {
                                 placeholder="ejemplo@correo.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="bg-white/5 border-white/10 text-trinalyze-text-light placeholder:text-slate-600 h-12 focus:ring-trinalyze-gold"
+                                className="bg-white/5 border-white/10 text-trinalyze-text-light placeholder:text-slate-600 h-12 focus:ring-trinalyze-brand-blue"
                                 required
                                 aria-describedby={error ? "login-error" : undefined}
                             />
@@ -239,13 +239,13 @@ function LoginForm() {
                                     placeholder="Contraseña"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="bg-white/5 border-white/10 text-trinalyze-text-light placeholder:text-slate-600 h-12 focus:ring-trinalyze-gold pr-11"
+                                    className="bg-white/5 border-white/10 text-trinalyze-text-light placeholder:text-slate-600 h-12 focus:ring-trinalyze-brand-blue pr-11"
                                     aria-describedby={error ? "login-error" : undefined}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword((v) => !v)}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-trinalyze-gold/50"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-trinalyze-brand-blue/50"
                                     aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
                                     tabIndex={0}
                                 >
@@ -272,14 +272,14 @@ function LoginForm() {
                         )}
 
                         <div className="flex justify-end">
-                            <Link href="/recuperar-contrasena" className="text-sm text-trinalyze-gold/80 hover:text-trinalyze-gold font-medium transition-colors">
+                            <Link href="/recuperar-contrasena" className="text-sm text-trinalyze-brand-blue/80 hover:text-trinalyze-brand-blue font-medium transition-colors">
                                 ¿Olvidó su contraseña?
                             </Link>
                         </div>
 
                         <Button
                             type="submit"
-                            className="w-full bg-gradient-to-r from-[#C79A30] to-[#DEB23E] text-white font-bold py-6 text-base tracking-wide shadow-lg shadow-[#DEB23E]/20 transition-all hover:scale-[1.01] hover:shadow-[#DEB23E]/30 rounded-xl"
+                            className="w-full bg-gradient-to-r from-[#1e3a8a] to-[#3B82F6] text-white font-bold py-6 text-base tracking-wide shadow-lg shadow-trinalyze-brand-blue/20 transition-all hover:scale-[1.01] hover:shadow-trinalyze-brand-blue/30 rounded-xl"
                             disabled={isLoading}
                             aria-busy={isLoading}
                         >
@@ -350,9 +350,9 @@ export default function LoginPage() {
     return (
         <Suspense fallback={
             <div className="min-h-screen flex items-center justify-center bg-trinalyze-bg-deep px-4 relative overflow-hidden">
-                <Card className="w-full max-w-md bg-trinalyze-bg-darker/80 backdrop-blur-xl border border-white/5 shadow-[0_0_40px_rgba(222,178,62,0.1)] p-8">
+                <Card className="w-full max-w-md bg-trinalyze-bg-darker/80 backdrop-blur-xl border border-white/5 shadow-[0_0_40px_rgba(59,130,246,0.1)] p-8">
                     <div className="flex flex-col items-center gap-4">
-                        <div className="w-12 h-12 border-4 border-trinalyze-gold border-t-transparent rounded-full animate-spin" />
+                        <div className="w-12 h-12 border-4 border-trinalyze-brand-blue border-t-transparent rounded-full animate-spin" />
                         <p className="text-slate-500 text-sm">Cargando...</p>
                     </div>
                 </Card>
