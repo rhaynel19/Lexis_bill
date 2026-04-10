@@ -32,6 +32,47 @@ const fadeInUp = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
 };
 
+function ROICalculator() {
+  const [invoices, setInvoices] = useState<number>(30);
+  const totalMinutesSaved = invoices * 15;
+  const hoursSaved = Math.floor(totalMinutesSaved / 60);
+
+  return (
+    <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} className="w-full max-w-xl mx-auto mt-16 p-8 rounded-3xl bg-gradient-to-br from-white/[0.05] to-transparent border border-white/10 shadow-2xl relative overflow-hidden group">
+      <div className="absolute top-0 right-0 w-32 h-32 bg-trinalyze-gold/10 rounded-full blur-3xl -mr-10 -mt-10 transition-all group-hover:bg-trinalyze-gold/20" />
+      <h4 className="font-serif text-2xl font-bold text-center mb-6">Calculadora de Impacto ⏱️</h4>
+      <div className="space-y-8 relative z-10 text-left">
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-sm text-slate-400 font-medium tracking-wide uppercase">Facturas al mes</span>
+            <span className="text-xl font-bold text-trinalyze-gold gap-1 flex items-baseline">{invoices}</span>
+          </div>
+          <input 
+            type="range" 
+            min="5" 
+            max="300" 
+            step="5" 
+            value={invoices} 
+            onChange={(e) => setInvoices(parseInt(e.target.value))}
+            className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-trinalyze-gold hover:accent-amber-400 border border-white/5"
+          />
+        </div>
+        <div className="pt-6 border-t border-white/5 flex gap-5 sm:gap-6 items-center">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
+             <span className="text-2xl">⏳</span>
+          </div>
+          <div>
+            <p className="text-sm text-slate-400">Tiempo de vida recuperado</p>
+            <p className="text-2xl sm:text-3xl font-black text-trinalyze-text-light flex items-baseline gap-2">
+              +{hoursSaved} <span className="text-sm sm:text-lg font-medium text-emerald-500">hrs al mes</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function LandingPage() {
   const { user, refresh } = useAuth();
   const isLoggedIn = !!user;
@@ -161,6 +202,61 @@ export default function LandingPage() {
               </div>
             </div>
           </motion.div>
+
+          {/* Premium UI Mockup Floating Window */}
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
+            className="mt-20 sm:mt-24 w-full max-w-5xl mx-auto relative px-4 hidden sm:block"
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-trinalyze-bg-darker via-transparent to-transparent z-20 bottom-0 h-1/2 pointer-events-none" />
+            <div className="relative rounded-t-xl bg-slate-950 border border-white/10 border-b-0 shadow-2xl overflow-hidden aspect-[16/10] md:aspect-[16/9]">
+              {/* Fake Mac Header */}
+              <div className="h-10 bg-[#0B0F1A]/80 border-b border-white/5 flex items-center px-4 gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                <div className="w-3 h-3 rounded-full bg-amber-500/80" />
+                <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
+                <div className="w-full text-center text-xs text-slate-500 font-mono tracking-widest bg-white/[0.02] py-1 mx-16 rounded opacity-50">trinalyze.pro/dashboard</div>
+              </div>
+              {/* Fake UI */}
+              <div className="p-4 md:p-6 grid grid-cols-4 gap-4 md:gap-6 h-full bg-[#0B0F1A] pb-20">
+                {/* Sidebar */}
+                <div className="col-span-1 flex flex-col gap-5 border-r border-white/5 pr-6 opacity-30">
+                  <div className="h-8 w-32 bg-trinalyze-gold rounded mb-2" />
+                  <div className="h-6 w-full bg-white/20 rounded" />
+                  <div className="h-6 w-5/6 bg-white/10 rounded" />
+                  <div className="h-6 w-4/6 bg-white/10 rounded" />
+                </div>
+                {/* Main Content */}
+                <div className="col-span-3 flex flex-col gap-6 pt-2">
+                  <div className="h-8 w-48 bg-white/20 rounded" />
+                  {/* Stats Cards */}
+                  <div className="grid grid-cols-3 gap-6">
+                    <div className="h-28 bg-white/[0.02] rounded-xl border border-white/5 p-5 flex flex-col justify-between">
+                      <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center"><CheckCircle2 className="w-5 h-5 text-emerald-500"/></div>
+                      <div className="h-4 w-20 bg-white/20 rounded" />
+                    </div>
+                    <div className="h-28 bg-white/[0.02] rounded-xl border border-white/5 p-5 flex flex-col justify-between">
+                      <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center"><FileCheck className="w-5 h-5 text-blue-500"/></div>
+                      <div className="h-4 w-20 bg-white/20 rounded" />
+                    </div>
+                    <div className="h-28 bg-white/[0.02] rounded-xl border border-white/5 p-5 flex flex-col justify-between">
+                      <div className="w-10 h-10 rounded-full bg-trinalyze-gold/10 flex items-center justify-center"><BarChart3 className="w-5 h-5 text-trinalyze-gold"/></div>
+                      <div className="h-4 w-20 bg-white/20 rounded" />
+                    </div>
+                  </div>
+                  {/* Table/List Area */}
+                  <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-xl p-5 flex flex-col gap-4">
+                    <div className="h-5 w-40 bg-white/20 rounded mb-2" />
+                    <div className="h-12 w-full bg-white/10 rounded" />
+                    <div className="h-12 w-full bg-white/5 rounded" />
+                    <div className="h-12 w-full bg-white/5 rounded" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
       </header>
 
@@ -231,6 +327,8 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+
+            <ROICalculator />
           </div>
         </div>
       </section>

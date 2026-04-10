@@ -217,7 +217,7 @@ function RegisterForm() {
                     <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Volver atrás
                 </button>
 
-                <Card className={`w-full bg-white/95 backdrop-blur border-none shadow-2xl overflow-hidden rounded-2xl ${isPartnerFlow ? "ring-2 ring-amber-200 dark:ring-amber-800" : ""}`}>
+                <Card className={`w-full bg-trinalyze-bg-darker/80 backdrop-blur-xl border border-white/5 shadow-[0_0_40px_rgba(222,178,62,0.1)] overflow-hidden rounded-2xl ${isPartnerFlow ? "ring-2 ring-amber-500" : ""}`}>
                     {/* Barra superior: partner (ámbar) cuando es flujo partner, sino azul */}
                     <div className={`h-2 w-full ${isPartnerFlow ? "bg-gradient-to-r from-amber-500 via-trinalyze-gold to-amber-700" : "bg-gradient-to-r from-blue-600 via-trinalyze-gold to-blue-950"}`} />
                     <CardHeader className="text-center pb-2 pt-8">
@@ -241,7 +241,7 @@ function RegisterForm() {
                             </>
                         ) : (
                             <>
-                                <CardTitle className="text-2xl font-black text-blue-950 tracking-tight uppercase">
+                                <CardTitle className="text-2xl font-black text-trinalyze-text-light tracking-tight uppercase">
                                     {plan === 'pro' ? 'ACTIVA TU PLAN PRO' : 'COMIENZA TU PRUEBA'}
                                 </CardTitle>
                                 <CardDescription className="text-slate-500 font-medium pt-1">
@@ -261,12 +261,12 @@ function RegisterForm() {
                     <CardContent className="px-6 md:px-10 pb-10">
                         <form onSubmit={handleRegister} className="space-y-5">
                             <div className="space-y-1.5 transition-all">
-                                <label className="text-[10px] font-black text-blue-900 uppercase tracking-widest pl-1">Nombre Completo</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nombre Completo</label>
                                 <div className="relative">
                                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                     <Input
                                         placeholder="Tu nombre y apellido"
-                                        className="pl-11 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors text-base"
+                                        className="pl-11 h-12 bg-white/5 border-white/10 focus:bg-white/10 transition-colors text-base text-trinalyze-text-light"
                                         value={form.name}
                                         onChange={(e) => setForm({ ...form, name: e.target.value })}
                                         required
@@ -275,13 +275,13 @@ function RegisterForm() {
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-blue-900 uppercase tracking-widest pl-1">Correo Profesional</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Correo Profesional</label>
                                 <div className="relative">
                                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                     <Input
                                         type="email"
                                         placeholder="ejemplo@correo.com"
-                                        className="pl-11 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors text-base"
+                                        className="pl-11 h-12 bg-white/5 border-white/10 focus:bg-white/10 transition-colors text-base text-trinalyze-text-light"
                                         value={form.email}
                                         onChange={(e) => setForm({ ...form, email: e.target.value })}
                                         required
@@ -290,20 +290,20 @@ function RegisterForm() {
                             </div>
 
                             {/* Question Filter */}
-                            <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100/50 space-y-3">
-                                <label className="text-[11px] font-bold text-blue-800 uppercase tracking-tight">¿Tienes RNC activo en República Dominicana?</label>
+                            <div className="p-4 rounded-xl bg-trinalyze-gold/5 border border-trinalyze-gold/10 space-y-3">
+                                <label className="text-[11px] font-bold text-trinalyze-gold uppercase tracking-tight">¿Tienes RNC activo en República Dominicana?</label>
                                 <div className="flex gap-4">
                                     <button
                                         type="button"
                                         onClick={() => setForm({ ...form, hasRnc: "yes" })}
-                                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${form.hasRnc === "yes" ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white text-slate-500 border-slate-200 hover:border-blue-300"}`}
+                                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${form.hasRnc === "yes" ? "bg-trinalyze-gold text-trinalyze-bg-deep border-trinalyze-gold shadow-md" : "bg-white/5 text-slate-400 border-white/10 hover:border-trinalyze-gold/50"}`}
                                     >
                                         Sí, lo tengo
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setForm({ ...form, hasRnc: "no" })}
-                                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${form.hasRnc === "no" ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white text-slate-500 border-slate-200 hover:border-blue-300"}`}
+                                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${form.hasRnc === "no" ? "bg-trinalyze-gold text-trinalyze-bg-deep border-trinalyze-gold shadow-md" : "bg-white/5 text-slate-400 border-white/10 hover:border-trinalyze-gold/50"}`}
                                     >
                                         No, todavía no
                                     </button>
@@ -311,74 +311,74 @@ function RegisterForm() {
                             </div>
 
                             <div className="space-y-1.5 relative">
-                                <label className="text-[10px] font-black text-blue-900 uppercase tracking-widest pl-1">RNC / Cédula</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">RNC / Cédula</label>
                                 <div className="relative">
                                     <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                     <Input
                                         placeholder="Sin guiones (9 o 11 dígitos)"
-                                        className={`pl-11 h-12 bg-slate-50 transition-all text-base ${rncStatus.valid === true ? 'border-emerald-300 bg-emerald-50/10' : 'border-slate-200'}`}
+                                        className={`pl-11 h-12 bg-white/5 transition-all text-base text-trinalyze-text-light ${rncStatus.valid === true ? 'border-emerald-500 bg-emerald-500/10' : 'border-white/10'}`}
                                         value={form.rnc}
                                         onChange={(e) => setForm({ ...form, rnc: e.target.value.replace(/\D/g, '').slice(0, 11) })}
                                         required
                                     />
                                     {rncStatus.loading && (
-                                        <div className="mt-1 text-[10px] text-blue-600 font-medium pl-1 animate-pulse">
+                                        <div className="mt-1 text-[10px] text-trinalyze-gold font-medium pl-1 animate-pulse">
                                             Estamos verificando tu RNC...
                                         </div>
                                     )}
                                     {rncStatus.valid === true && (
-                                        <div className="mt-1 text-[10px] text-emerald-600 font-medium pl-1 animate-in fade-in slide-in-from-left-1">
+                                        <div className="mt-1 text-[10px] text-emerald-400 font-medium pl-1 animate-in fade-in slide-in-from-left-1">
                                             ✔ RNC válido <br />
-                                            <span className="text-slate-500 font-normal">Nombre registrado: {rncStatus.name}</span>
+                                            <span className="text-slate-400 font-normal">Nombre registrado: {rncStatus.name}</span>
                                         </div>
                                     )}
                                     {rncStatus.valid === false && !rncStatus.loading && (
-                                        <div className="mt-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 flex items-start gap-2 animate-in fade-in slide-in-from-top-1" role="alert">
-                                            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                                        <div className="mt-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-2 animate-in fade-in slide-in-from-top-1" role="alert">
+                                            <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                                             <div>
-                                                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{rncStatus.error || "No pudimos validar este RNC. Revísalo con calma."}</p>
-                                                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">Trinalyze Billing valida RNCs usando fuentes públicas de la República Dominicana.</p>
+                                                <p className="text-sm font-medium text-amber-200">{rncStatus.error || "No pudimos validar este RNC. Revísalo con calma."}</p>
+                                                <p className="text-xs text-amber-500 shrink-0 mt-0.5">Trinalyze Billing valida RNCs usando fuentes públicas de la República Dominicana.</p>
                                             </div>
                                         </div>
                                     )}
                                 </div>
                                 {!(rncStatus.valid === false && !rncStatus.loading) && (
-                                    <p className="text-[9px] text-slate-400 pt-1 pl-1 italic">
+                                    <p className="text-[9px] text-slate-500 pt-1 pl-1 italic">
                                         Trinalyze Billing valida RNCs usando fuentes públicas de la República Dominicana.
                                     </p>
                                 )}
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-blue-900 uppercase tracking-widest pl-1">Profesión</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Profesión</label>
                                 <div className="relative">
                                     <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
                                     <Select
                                         value={form.profession}
                                         onValueChange={(val) => setForm({ ...form, profession: val })}
                                     >
-                                        <SelectTrigger className="w-full pl-11 h-12 bg-slate-50 border-slate-200 text-base focus:ring-blue-500 transition-shadow">
+                                        <SelectTrigger className="w-full pl-11 h-12 bg-white/5 border-white/10 text-trinalyze-text-light text-base focus:ring-trinalyze-gold transition-shadow">
                                             <SelectValue placeholder="Selecciona tu área" />
                                         </SelectTrigger>
-                                        <SelectContent position="popper" className="bg-white border-slate-200 shadow-xl z-[100] min-w-[var(--radix-select-trigger-width)]">
-                                            <SelectItem value="medico" className="text-blue-950 font-medium py-3">Médico / Salud</SelectItem>
-                                            <SelectItem value="abogado" className="text-blue-950 font-medium py-3">Abogado / Legal</SelectItem>
-                                            <SelectItem value="ingeniero" className="text-blue-950 font-medium py-3">Ingeniero / Arquitecto</SelectItem>
-                                            <SelectItem value="tecnico" className="text-blue-950 font-medium py-3">Técnico / Especialista</SelectItem>
-                                            <SelectItem value="general" className="text-blue-950 font-medium py-3">Freelancer / General</SelectItem>
+                                        <SelectContent position="popper" className="bg-slate-900 border-white/10 shadow-xl z-[100] min-w-[var(--radix-select-trigger-width)]">
+                                            <SelectItem value="medico" className="text-slate-300 font-medium py-3">Médico / Salud</SelectItem>
+                                            <SelectItem value="abogado" className="text-slate-300 font-medium py-3">Abogado / Legal</SelectItem>
+                                            <SelectItem value="ingeniero" className="text-slate-300 font-medium py-3">Ingeniero / Arquitecto</SelectItem>
+                                            <SelectItem value="tecnico" className="text-slate-300 font-medium py-3">Técnico / Especialista</SelectItem>
+                                            <SelectItem value="general" className="text-slate-300 font-medium py-3">Freelancer / General</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-blue-900 uppercase tracking-widest pl-1">Crea una Contraseña</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Crea una Contraseña</label>
                                 <div className="relative">
                                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
                                     <Input
                                         type={showPassword ? "text" : "password"}
                                         placeholder="Tu clave segura"
-                                        className="pl-11 pr-12 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors text-base"
+                                        className="pl-11 pr-12 h-12 bg-white/5 border-white/10 focus:bg-white/10 transition-colors text-base text-trinalyze-text-light"
                                         value={form.password}
                                         onChange={(e) => setForm({ ...form, password: e.target.value })}
                                         required
@@ -386,7 +386,7 @@ function RegisterForm() {
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword((v) => !v)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-trinalyze-gold/50"
                                         aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
                                     >
                                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -395,13 +395,13 @@ function RegisterForm() {
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-blue-900 uppercase tracking-widest pl-1">Confirmar Contraseña</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Confirmar Contraseña</label>
                                 <div className="relative">
                                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
                                     <Input
                                         type={showConfirmPassword ? "text" : "password"}
                                         placeholder="Repite tu clave segura"
-                                        className="pl-11 pr-12 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors text-base"
+                                        className="pl-11 pr-12 h-12 bg-white/5 border-white/10 focus:bg-white/10 transition-colors text-base text-trinalyze-text-light"
                                         value={form.confirmPassword}
                                         onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
                                         required
@@ -409,7 +409,7 @@ function RegisterForm() {
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword((v) => !v)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-trinalyze-gold/50"
                                         aria-label={showConfirmPassword ? "Ocultar contraseña" : "Ver contraseña"}
                                     >
                                         {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}

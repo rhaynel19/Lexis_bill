@@ -195,7 +195,7 @@ function LoginForm() {
                 <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] bg-trinalyze-gold/10 rounded-full blur-[100px]" />
             </div>
 
-            <Card className="w-full max-w-md bg-white/95 backdrop-blur border-none shadow-2xl relative z-10 overflow-hidden">
+            <Card className="w-full max-w-md bg-trinalyze-bg-darker/80 backdrop-blur-xl border border-white/5 shadow-[0_0_40px_rgba(222,178,62,0.1)] relative z-10 overflow-hidden">
                 <div className="w-full">
                     <div className="h-1.5 w-full bg-gradient-to-r from-[#C79A30] to-[#DEB23E]" />
                 </div>
@@ -203,7 +203,7 @@ function LoginForm() {
                     <CardTitle className="text-3xl font-bold tracking-tight flex items-center justify-center gap-2">
                         <TrinalyzeWord className="text-3xl" showBill={false} />
                     </CardTitle>
-                    <CardDescription className="text-slate-500 font-medium mt-2 text-sm">Gestión Fiscal de Alto Nivel</CardDescription>
+                    <CardDescription className="text-trinalyze-gold/80 font-medium mt-2 text-sm uppercase tracking-widest">Gestión Fiscal de Alto Nivel</CardDescription>
                 </CardHeader>
                 <CardContent className="px-6 sm:px-8 pb-8">
                     {apiUnavailable && (
@@ -216,7 +216,7 @@ function LoginForm() {
                     )}
                     <form onSubmit={handleLogin} className="space-y-5" autoComplete="on">
                         <div className="space-y-2">
-                            <label htmlFor="login-email" className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Correo electrónico</label>
+                            <label htmlFor="login-email" className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Correo electrónico</label>
                             <Input
                                 id="login-email"
                                 name="email"
@@ -225,11 +225,11 @@ function LoginForm() {
                                 placeholder="ejemplo@correo.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="bg-slate-50 border-slate-200 h-12 focus:ring-trinalyze-gold"
+                                className="bg-white/5 border-white/10 text-trinalyze-text-light placeholder:text-slate-600 h-12 focus:ring-trinalyze-gold"
                                 required
                                 aria-describedby={error ? "login-error" : undefined}
                             />
-                            <label htmlFor="login-password" className="text-xs font-semibold text-slate-600 uppercase tracking-wider sr-only">Contraseña</label>
+                            <label htmlFor="login-password" className="text-xs font-semibold text-slate-400 uppercase tracking-wider sr-only">Contraseña</label>
                             <div className="relative">
                                 <Input
                                     id="login-password"
@@ -239,13 +239,13 @@ function LoginForm() {
                                     placeholder="Contraseña"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="bg-slate-50 border-slate-200 h-12 focus:ring-trinalyze-gold pr-11"
+                                    className="bg-white/5 border-white/10 text-trinalyze-text-light placeholder:text-slate-600 h-12 focus:ring-trinalyze-gold pr-11"
                                     aria-describedby={error ? "login-error" : undefined}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword((v) => !v)}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-500 hover:text-slate-700 rounded-md focus:outline-none focus:ring-2 focus:ring-trinalyze-gold/50"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-trinalyze-gold/50"
                                     aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
                                     tabIndex={0}
                                 >
@@ -272,7 +272,7 @@ function LoginForm() {
                         )}
 
                         <div className="flex justify-end">
-                            <Link href="/recuperar-contrasena" className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                            <Link href="/recuperar-contrasena" className="text-sm text-trinalyze-gold/80 hover:text-trinalyze-gold font-medium transition-colors">
                                 ¿Olvidó su contraseña?
                             </Link>
                         </div>
@@ -349,8 +349,8 @@ function LoginForm() {
 export default function LoginPage() {
     return (
         <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-trinalyze-bg-deep px-4">
-                <Card className="w-full max-w-md bg-white/95 backdrop-blur border-none shadow-2xl p-8">
+            <div className="min-h-screen flex items-center justify-center bg-trinalyze-bg-deep px-4 relative overflow-hidden">
+                <Card className="w-full max-w-md bg-trinalyze-bg-darker/80 backdrop-blur-xl border border-white/5 shadow-[0_0_40px_rgba(222,178,62,0.1)] p-8">
                     <div className="flex flex-col items-center gap-4">
                         <div className="w-12 h-12 border-4 border-trinalyze-gold border-t-transparent rounded-full animate-spin" />
                         <p className="text-slate-500 text-sm">Cargando...</p>
