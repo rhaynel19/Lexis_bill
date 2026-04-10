@@ -97,7 +97,7 @@ const createInvoice = async (req, res) => {
             return res.status(400).json({ message: isPlaceholderName ? 'Indica el nombre real del cliente (no el placeholder).' : 'Cliente, RNC e items son requeridos' });
         }
 
-        const fullNcf = await getNextNcf(req.userId, data.ncfType, session, data.clientRnc);
+        const { fullNcf, warning } = await getNextNcf(req.userId, data.ncfType, session, data.clientRnc);
         if (!fullNcf) throw new Error("No hay secuencias NCF disponibles.");
 
         let invoiceDate = new Date();
@@ -146,6 +146,7 @@ const createInvoice = async (req, res) => {
             ncf: fullNcf,
             ncfSequence: fullNcf,
             requestId: data.requestId,
+            createdByIp: (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim(),
             items,
             subtotal,
             itbis,
@@ -182,7 +183,7 @@ const createInvoice = async (req, res) => {
             }
         } catch (err) { log.warn({ err: err.message }, 'Email factura emitida no enviado'); }
 
-        res.status(201).json({ message: 'Factura creada exitosamente', ncf: fullNcf, invoice: newInvoice });
+        res.status(201).json({ message: 'Factura creada exitosamente', ncf: fullNcf, invoice: newInvoice, warning });
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
@@ -242,6 +243,7 @@ const annulInvoice = async (req, res) => {
         invoice.status = 'cancelled';
         invoice.cancellationReason = reason;
         invoice.cancelledAt = new Date();
+        invoice.annulledByIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
         await invoice.save();
 
         res.json({ success: true, message: 'Factura anulada exitosamente.' });
@@ -284,7 +286,7 @@ const createCreditNote = async (req, res) => {
         
         const data = req.validatedBody || req.body;
         const creditNoteType = (original.ncfType && String(original.ncfType).startsWith('3')) ? '34' : '04';
-        const fullNcf = await getNextNcf(req.userId, creditNoteType, session, original.clientRnc);
+        const { fullNcf, warning } = await getNextNcf(req.userId, creditNoteType, session, original.clientRnc);
         if (!fullNcf) throw new Error("No hay secuencias NCF disponibles para Notas de Crédito.");
 
         const creditAmount = Math.min(data.amount || original.total, original.balancePendiente || original.total);
@@ -310,7 +312,8 @@ const createCreditNote = async (req, res) => {
             estadoPago: 'pagado',
             fechaPago: new Date(),
             modifiedNcf: original.ncfSequence || original.ncf,
-            reason: reason
+            reason: reason,
+            createdByIp: (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim()
         });
         await creditNote.save({ session });
 
@@ -325,7 +328,7 @@ const createCreditNote = async (req, res) => {
 
         await session.commitTransaction();
         session.endSession();
-        res.status(201).json({ ncf: fullNcf, message: 'Nota de Crédito emitida exitosamente' });
+        res.status(201).json({ ncf: fullNcf, message: 'Nota de Crédito emitida exitosamente', warning });
     } catch (err) {
         await session.abortTransaction();
         session.endSession();

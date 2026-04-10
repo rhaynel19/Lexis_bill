@@ -93,7 +93,7 @@ export default function AdminCEODashboard() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `lexisbill-ceo-stats-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = `trinalyze-ceo-stats-${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
         URL.revokeObjectURL(url);
         toast.success("CSV descargado.");
@@ -114,7 +114,7 @@ export default function AdminCEODashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">Estadísticas CEO</h1>
-                    <p className="text-muted-foreground text-sm">Métricas clave del negocio TrinalyzeBilling</p>
+                    <p className="text-muted-foreground text-sm">Métricas clave del negocio Trinalyze Billing</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Select value={period} onValueChange={(v: PeriodFilter) => setPeriod(v)}>

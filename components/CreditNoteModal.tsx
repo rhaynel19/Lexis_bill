@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api-service";
-import { FileText, AlertCircle, Loader2, CheckCircle, Calculator, Download } from "lucide-react";
+import { FileText, AlertCircle, AlertTriangle, Loader2, CheckCircle, Calculator, Download } from "lucide-react";
 import { toast } from "sonner";
 import { downloadInvoicePDF, InvoiceData } from "@/lib/pdf-generator";
 
@@ -219,6 +219,13 @@ export function CreditNoteModal({ isOpen, onClose, invoice, onSuccess }: CreditN
                                         />
                                     </div>
                                 )}
+                            </div>
+
+                            <div className="flex gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50">
+                                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                <p className="text-[11px] leading-tight text-amber-800 dark:text-amber-200">
+                                    <b>Responsabilidad Fiscal:</b> Usted declara que esta Nota de Crédito corresponde a una transacción real y cumple con la normativa de la DGII. Trinalyze actúa como procesador técnico delegado.
+                                </p>
                             </div>
                         </div>
 

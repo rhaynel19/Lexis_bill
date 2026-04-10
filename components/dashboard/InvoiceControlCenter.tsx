@@ -981,6 +981,13 @@ export function InvoiceControlCenter({
                                 <option value="05">05 - Otros</option>
                             </select>
                         </div>
+
+                        <div className="flex gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50">
+                            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                            <p className="text-[11px] leading-tight text-amber-800 dark:text-amber-200">
+                                <b>Advertencia Legal:</b> Usted es el responsable final de la veracidad y legalidad de esta anulación ante la DGII. Trinalyze actúa únicamente como herramienta de procesamiento delegado.
+                            </p>
+                        </div>
                     </div>
 
                     <DialogFooter>

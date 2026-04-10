@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, ShieldCheck, Zap, Smartphone, Menu, FileCheck, BarChart3, ClipboardList, Share2 } from "lucide-react";
+import { CheckCircle2, ShieldCheck, Zap, Smartphone, Menu, FileCheck, BarChart3, ClipboardList, Share2, ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -11,9 +12,22 @@ import { TrinalyzeWord } from "@/components/TrinalyzeWord";
 import { useAuth } from "@/components/providers/AuthContext";
 import WhatsAppWidget from "@/components/WhatsAppWidget";
 
+const faqs = [
+  { question: "¿Trinalyze Billing emite mis comprobantes?", answer: "No. Tú mantienes el control total de tus rangos autorizados por la DGII. Nosotros somos el puente que los organiza para que los uses sin errores." },
+  { question: "¿Sustituye a mi contador?", answer: "Al contrario, lo harás muy feliz. Le entregas todo organizado en TXT listo para subir a la oficina virtual." },
+  { question: "¿Puedo usar mi rango de NCF actual?", answer: "Sí, el sistema está diseñado para que cargues tus comprobantes vigentes y continúes tu secuencia sin fricción." },
+  { question: "¿Es difícil de usar?", answer: "Está hecho para que lo uses desde el celular mientras te mueves. Si sabes enviar un WhatsApp, sabes usar Trinalyze Billing." }
+];
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
+};
+
 export default function LandingPage() {
   const { user, refresh } = useAuth();
   const isLoggedIn = !!user;
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
     refresh();
@@ -99,32 +113,43 @@ export default function LandingPage() {
           <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#DEB23E]/20 rounded-full blur-[120px]"></div>
         </div>
 
-        <div className="container mx-auto px-4 sm:px-6 text-center max-w-6xl">
-          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 md:mb-8 max-w-4xl mx-auto tracking-tight text-trinalyze-text-light">
+        <motion.div 
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: { opacity: 1, transition: { staggerChildren: 0.2 } }
+          }}
+          className="container mx-auto px-4 sm:px-6 text-center max-w-6xl"
+        >
+          <motion.h1 variants={fadeInUp} className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 md:mb-8 max-w-4xl mx-auto tracking-tight text-trinalyze-text-light">
             El sistema de gestión creado para el profesional independiente dominicano.
-          </h1>
-          <p className="text-xl md:text-2xl lg:text-3xl text-trinalyze-gold font-semibold mb-6 md:mb-8 max-w-2xl mx-auto">
+          </motion.h1>
+          <motion.p variants={fadeInUp} className="text-xl md:text-2xl lg:text-3xl text-trinalyze-gold font-semibold mb-6 md:mb-8 max-w-2xl mx-auto">
             El único sistema que habla dominicano.
-          </p>
-          <p className="text-base md:text-lg text-slate-400 max-w-2xl mx-auto mb-10 md:mb-12 font-light">
+          </motion.p>
+          <motion.p variants={fadeInUp} className="text-base md:text-lg text-slate-400 max-w-2xl mx-auto mb-10 md:mb-12 font-light">
             Sin tecnicismos. Sin procesos complicados. Sin parecer una empresa gigante.
-          </p>
-          <div className="flex flex-col items-center gap-6">
+          </motion.p>
+          <motion.div variants={fadeInUp} className="flex flex-col items-center gap-6">
             <Link href="/registro">
-              <Button size="lg" className="h-16 sm:h-20 px-10 sm:px-12 text-lg sm:text-xl bg-trinalyze-gold hover:bg-trinalyze-gold-hover text-trinalyze-bg-deep font-bold rounded-lg shadow-2xl shadow-trinalyze-gold/20 transition-all hover:scale-105">
+              <Button size="lg" className="animate-shimmer h-16 sm:h-20 px-10 sm:px-12 text-lg sm:text-xl bg-trinalyze-gold hover:bg-trinalyze-gold-hover text-trinalyze-bg-deep font-bold rounded-lg shadow-2xl shadow-trinalyze-gold/20 transition-all hover:scale-105">
                 Empieza gratis — 15 días sin tarjeta
               </Button>
             </Link>
             <p className="text-sm text-slate-500 font-light">
               Sin tarjeta. Sin compromiso. Cancela cuando quieras.
             </p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </header>
 
       {/* Sección diferenciadora — "Habla dominicano" como argumento emocional */}
       <section className="py-24 sm:py-32 bg-trinalyze-bg-darker border-y border-trinalyze-gold/5">
-        <div className="container mx-auto px-4 sm:px-6">
+        <motion.div 
+          initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={fadeInUp}
+          className="container mx-auto px-4 sm:px-6"
+        >
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold leading-tight mb-8 text-trinalyze-text-light">
               No eres una empresa gigante.<br />
@@ -156,7 +181,7 @@ export default function LandingPage() {
               Hecho para independientes, no para corporaciones.
             </p>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* Section: Dolor (La Realidad) */}
@@ -325,23 +350,40 @@ export default function LandingPage() {
       <section className="py-32 bg-trinalyze-bg-deep">
         <div className="container mx-auto px-4 sm:px-6 max-w-4xl">
           <h2 className="font-serif text-3xl md:text-5xl font-bold mb-16 text-center text-trinalyze-gold">Preguntas Frecuentes</h2>
-          <div className="space-y-8">
-            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
-              <h4 className="font-bold text-lg mb-2">¿Trinalyze Billing emite mis comprobantes?</h4>
-              <p className="text-slate-400 text-sm">No. Tú mantienes el control total de tus rangos autorizados por la DGII. Nosotros somos el puente que los organiza para que los uses sin errores.</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
-              <h4 className="font-bold text-lg mb-2">¿Sustituye a mi contador?</h4>
-              <p className="text-slate-400 text-sm">Al contrario, lo harás muy feliz. Le entregas todo organizado en TXT listo para subir a la oficina virtual.</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
-              <h4 className="font-bold text-lg mb-2">¿Puedo usar mi rango de NCF actual?</h4>
-              <p className="text-slate-400 text-sm">Sí, el sistema está diseñado para que cargues tus comprobantes vigentes y continúes tu secuencia sin fricción.</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
-              <h4 className="font-bold text-lg mb-2">¿Es difícil de usar?</h4>
-              <p className="text-slate-400 text-sm">Está hecho para que lo uses desde el celular mientras te mueves. Si sabes enviar un WhatsApp, sabes usar Trinalyze Billing.</p>
-            </div>
+          <div className="space-y-4">
+            {faqs.map((faq, idx) => (
+              <div 
+                key={idx} 
+                className="rounded-2xl bg-white/[0.02] border border-white/5 overflow-hidden transition-colors hover:bg-white/[0.04]"
+              >
+                <button
+                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                  className="w-full flex items-center justify-between p-6 text-left cursor-pointer focus:outline-none"
+                >
+                  <h4 className="font-bold text-lg text-trinalyze-text-light">{faq.question}</h4>
+                  <motion.div
+                    animate={{ rotate: openFaq === idx ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChevronDown className="w-5 h-5 text-trinalyze-gold" />
+                  </motion.div>
+                </button>
+                <AnimatePresence>
+                  {openFaq === idx && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="px-6 pb-6 text-slate-400 text-sm leading-relaxed border-t border-white/5 pt-4">
+                        {faq.answer}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -355,7 +397,8 @@ export default function LandingPage() {
           </h2>
           <div className="max-w-lg sm:max-w-xl mx-auto relative group w-full min-w-0 px-1">
             <div className="absolute -inset-1 bg-gradient-to-r from-trinalyze-gold to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-            <Card className="relative bg-trinalyze-bg-deep border-trinalyze-gold/20 p-6 sm:p-10 pt-14 sm:pt-16 rounded-3xl overflow-hidden">
+            <motion.div whileHover={{ y: -8 }} transition={{ duration: 0.3 }} className="h-full">
+              <Card className="relative bg-trinalyze-bg-deep border-trinalyze-gold/20 p-6 sm:p-10 pt-14 sm:pt-16 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(222,178,62,0.1)]">
               <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20">
                 <span className="bg-trinalyze-gold text-white text-[12px] font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap tracking-wider">
                   MEMBRESÍA PROFESIONAL
@@ -423,13 +466,14 @@ export default function LandingPage() {
                 </ul>
                 <p className="text-trinalyze-gold font-semibold text-center pt-4">El único sistema que habla dominicano.</p>
                 <Link href="/registro" className="block pt-6 w-full min-w-0">
-                  <Button className="w-full min-h-[4rem] px-4 sm:px-6 md:px-8 py-4 text-sm sm:text-base md:text-lg bg-trinalyze-gold hover:bg-trinalyze-gold-hover text-trinalyze-bg-deep font-bold rounded-xl transition-all shadow-xl shadow-trinalyze-gold/10 flex items-center justify-center text-center whitespace-normal leading-tight">
+                  <Button className="animate-shimmer w-full min-h-[4rem] px-4 sm:px-6 md:px-8 py-4 text-sm sm:text-base md:text-lg bg-trinalyze-gold hover:bg-trinalyze-gold-hover text-trinalyze-bg-deep font-bold rounded-xl transition-all shadow-xl shadow-trinalyze-gold/10 flex items-center justify-center text-center whitespace-normal leading-tight">
                     Empieza gratis — 15 días sin tarjeta
                   </Button>
                 </Link>
                 <p className="text-xs text-slate-400 mt-6 uppercase tracking-[0.15em] font-medium text-center leading-relaxed break-words">Sin tarjeta. Sin compromiso. Cancela cuando quieras.</p>
               </CardContent>
-            </Card>
+              </Card>
+            </motion.div>
           </div>
         </div>
       </section>

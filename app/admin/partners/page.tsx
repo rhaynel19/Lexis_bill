@@ -174,7 +174,7 @@ export default function AdminPartnersPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `partners-lexisbill-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = `partners-trinalyze-${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
         URL.revokeObjectURL(url);
         toast.success("CSV descargado");
@@ -345,7 +345,7 @@ export default function AdminPartnersPage() {
             <div className="space-y-8">
                 <div>
                     <h1 className="text-2xl font-bold">Programa Partners</h1>
-                    <p className="text-muted-foreground text-sm">Estadísticas y gestión de partners Trinalyze Billing</p>
+                    <p className="text-muted-foreground text-sm">Estadísticas y gestión de partners Trinalyze</p>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}

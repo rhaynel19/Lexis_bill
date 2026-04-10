@@ -1,15 +1,15 @@
-# Manual de Uso Oficial — Lexis Bill
+# Manual de Uso Oficial — Trinalyze
 
-**Lexis Bill Solutions · República Dominicana**  
+**Trinalyze · República Dominicana**  
 Versión 1 · © 2026
 
 ---
 
-## Introducción a Lexis Bill
+## Introducción a Trinalyze
 
-Lexis Bill es una plataforma SaaS de facturación y cumplimiento fiscal para profesionales y empresas en República Dominicana. Permite emitir comprobantes fiscales (e-CF y Serie B), gestionar clientes, generar reportes 606 y 607, y administrar suscripciones.
+Trinalyze es una plataforma SaaS de facturación y cumplimiento fiscal para profesionales y empresas en República Dominicana. Permite emitir comprobantes fiscales (e-CF y Serie B), gestionar clientes, generar reportes 606 y 607, y administrar suscripciones.
 
-**Importante:** Lexis Bill es una herramienta de apoyo. No sustituye la asesoría contable o tributaria. El usuario es responsable de la veracidad de los datos y del uso correcto de los NCF.
+**Importante:** Trinalyze es una herramienta de apoyo. No sustituye la asesoría contable o tributaria. El usuario es responsable de la veracidad de los datos y del uso correcto de los NCF.
 
 ---
 
@@ -98,14 +98,14 @@ En **Reportes** encontrará un **Resumen ITBIS** que agrupa por período:
 
 - **Trial:** Acceso por 15 días sin tarjeta. Luego puede activar plan Pro o Premium.
 - **Planes:** Pro (mensual/anual), Premium (según disponibilidad). Pago por **transferencia** o **PayPal**.
-- **Pagos:** En **Pagos** puede solicitar activación con transferencia (referencia LEX-XXXX) o PayPal. Suba comprobante si aplica.
+- **Pagos:** En **Pagos** puede solicitar activación con transferencia (referencia TRI-XXXX) o PayPal. Suba comprobante si aplica.
 - Renovación según ciclo; puede cancelar cuando lo desee (Política de Reembolsos aplica).
 
 ---
 
 ## Preguntas frecuentes
 
-**¿Lexis Bill envía los comprobantes a la DGII?**  
+**¿Trinalyze envía los comprobantes a la DGII?**  
 La plataforma genera los comprobantes y puede validar NCF. La declaración y envío oficial 606/607 lo realiza el contribuyente según los procesos de la DGII.
 
 **¿Puedo emitir nota de crédito después de 30 días?**  
@@ -127,4 +127,4 @@ Configuración → Comprobantes fiscales → Agregar lote, tipo **34** (e-CF) o 
 
 ---
 
-*Lexis Bill © 2026 · República Dominicana*
+*Trinalyze © 2026 · República Dominicana*

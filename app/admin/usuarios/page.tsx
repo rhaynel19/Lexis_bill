@@ -251,7 +251,7 @@ export default function AdminUsuariosPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `usuarios-lexisbill-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = `usuarios-trinalyze-${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
         URL.revokeObjectURL(url);
         toast.success("CSV descargado");
@@ -314,7 +314,7 @@ export default function AdminUsuariosPage() {
                     <UserCircle className="w-7 h-7 text-amber-500" />
                     Usuarios registrados
                 </h1>
-                <p className="text-muted-foreground text-sm mt-1">Listado de personas registradas en Trinalyze Billing. Busca por nombre, email o RNC.</p>
+                <p className="text-muted-foreground text-sm mt-1">Listado de personas registradas en Trinalyze. Busca por nombre, email o RNC.</p>
             </div>
 
             {/* KPIs resumen (página actual) */}

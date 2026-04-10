@@ -75,7 +75,10 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
                         : `Server Error: ${response.status}`;
                 }
                 if (response.status >= 500) {
-                    errorMessage = "Error temporal del servidor.\\nEstamos trabajando para solucionarlo. Intenta nuevamente en unos minutos.";
+                    // Solo sobrescribir si el backend no envió un mensaje específico
+                    if (!errorData.message && !errorData.error) {
+                        errorMessage = "Error temporal del servidor.\\nEstamos trabajando para solucionarlo. Intenta nuevamente en unos minutos.";
+                    }
                 }
                 const errPayload = { status: response.status, message: errorMessage, data: errorData };
 

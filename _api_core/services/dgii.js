@@ -60,7 +60,15 @@ async function getNextNcf(userId, type, session, clientRnc) {
     const exists = await Invoice.findOne({ userId, ncfSequence: fullNcf }).session(session);
     if (exists) throw new Error('NCF duplicado detectado. Contacte soporte.');
 
-    return fullNcf;
+    // Alerta de agotamiento: si queda menos del 10% del rango total, avisar
+    const totalPossible = activeBatch.finalNumber - activeBatch.initialNumber + 1;
+    const remaining = activeBatch.finalNumber - activeBatch.currentValue;
+    let warning = null;
+    if (remaining < (totalPossible * 0.10)) {
+        warning = `Atención: Quedan pocos NCF del tipo ${type} (${remaining} restantes). Solicite un nuevo lote pronto.`;
+    }
+
+    return { fullNcf, warning };
 }
 
 module.exports = {

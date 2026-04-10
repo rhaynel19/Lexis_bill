@@ -81,7 +81,7 @@ export default function AdminAuditPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `audit-log-lexisbill-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = `audit-log-trinalyze-${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
         URL.revokeObjectURL(url);
         toast.success("CSV descargado");

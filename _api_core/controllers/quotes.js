@@ -69,7 +69,7 @@ const convertToInvoice = async (req, res) => {
         if (!quote) throw new Error("Cotización no encontrada");
         if (quote.status === 'converted') throw new Error("Esta cotización ya fue facturada");
 
-        const fullNcf = await getNextNcf(req.userId, config.ncfType, session, quote.clientRnc);
+        const { fullNcf, warning } = await getNextNcf(req.userId, config.ncfType, session, quote.clientRnc);
         if (!fullNcf) throw new Error("No hay secuencias NCF disponibles.");
 
         const newInvoice = new Invoice({
@@ -103,7 +103,7 @@ const convertToInvoice = async (req, res) => {
         await session.commitTransaction();
         session.endSession();
 
-        res.status(201).json({ message: 'Factura creada exitosamente', ncf: fullNcf, invoice: newInvoice });
+        res.status(201).json({ message: 'Factura creada exitosamente', ncf: fullNcf, invoice: newInvoice, warning });
     } catch (error) {
         await session.abortTransaction();
         session.endSession();

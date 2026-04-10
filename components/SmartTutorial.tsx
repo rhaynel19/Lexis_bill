@@ -368,7 +368,7 @@ export function SmartTutorial() {
                                         ¡Excelente progreso!
                                     </p>
                                     <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                                        En menos de 5 minutos ya diste un paso que muchos profesionales tardan años en organizar. Trinalyze Billing ahora trabaja por ti.
+                                        En menos de 5 minutos ya diste un paso que muchos profesionales tardan años en organizar. Trinalyze ahora trabaja por ti.
                                     </p>
                                     <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-800">
                                         <p className="text-xs font-medium text-green-800 dark:text-green-200 mb-2">

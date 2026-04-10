@@ -474,14 +474,14 @@ export const api = {
     /** Políticas legales: listado actual (versiones y títulos) */
     async getPoliciesCurrent() {
         return secureFetch<{ policies: Array<{ slug: string; version: number; title: string; effectiveAt: string }>; requiredSlugs: string[] }>(
-            `${API_URL}/policies/current`,
+            `${API_URL}/auth/policies/current`,
             { cacheKey: "policies_current" }
         );
     },
     /** Una política por slug (contenido completo) */
     async getPolicy(slug: string) {
         return secureFetch<{ slug: string; version: number; title: string; content: string; effectiveAt: string }>(
-            `${API_URL}/policies/${encodeURIComponent(slug)}`
+            `${API_URL}/auth/policies/${encodeURIComponent(slug)}`
         );
     },
     /** Registrar aceptación de políticas (requiere auth) */

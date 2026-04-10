@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const invoiceController = require('../controllers/invoices');
 const { verifyToken, verifyClient } = require('../middleware/auth');
+const { requirePolicyAcceptance } = require('../middleware/policies');
 const validate = require('../middleware/validate');
 const { 
     createInvoiceSchema, 
@@ -18,13 +19,13 @@ router.use(verifyClient);
 
 // Invoice CRUD & Search
 router.get('/', invoiceController.getInvoices);
-router.post('/', validate(createInvoiceSchema), invoiceController.createInvoice);
+router.post('/', requirePolicyAcceptance, validate(createInvoiceSchema), invoiceController.createInvoice);
 router.post('/:id/duplicate', invoiceController.duplicateInvoice);
 
 // Payments & Credits
 router.post('/:invoiceId/payments', validate(paymentSchema), invoiceController.registerPayment);
-router.post('/:invoiceId/credit-note', validate(creditNoteSchema), invoiceController.createCreditNote);
-router.post('/:id/annul', validate(annulSchema), invoiceController.annulInvoice);
+router.post('/:invoiceId/credit-note', requirePolicyAcceptance, validate(creditNoteSchema), invoiceController.createCreditNote);
+router.post('/:id/annul', requirePolicyAcceptance, validate(annulSchema), invoiceController.annulInvoice);
 
 // Drafts
 router.get('/draft', invoiceController.getDraft);

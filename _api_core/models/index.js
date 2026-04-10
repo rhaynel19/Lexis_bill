@@ -127,6 +127,8 @@ const invoiceSchema = new mongoose.Schema({
     cancellationReason: { type: String }, // DGII 608: 01-05
     cancelledAt: { type: Date },
     modifiedNcf: { type: String },
+    createdByIp: { type: String },
+    annulledByIp: { type: String },
 });
 invoiceSchema.index({ userId: 1, date: -1 });
 invoiceSchema.index({ userId: 1, ncf: 1 }, { unique: true }); // Unique index for NCF per user
