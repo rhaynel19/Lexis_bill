@@ -108,9 +108,9 @@ export default function ProtectedLayout({
                     <Link href="/dashboard">
                         <div className="group">
                             <h1 className="text-2xl font-extrabold tracking-tight cursor-pointer transition-transform group-hover:scale-105 flex items-baseline gap-1">
-                                <TrinalyzeWord className="text-xl text-accent" />
+                                <TrinalyzeWord className="text-xl" variant="light" />
                             </h1>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-medium group-hover:text-accent transition-colors">
+                            <p className="text-[10px] text-white/70 uppercase tracking-[0.2em] font-medium group-hover:text-white transition-colors">
                                 El orden que te deja tranquilo
                             </p>
                         </div>
@@ -134,7 +134,7 @@ export default function ProtectedLayout({
                         {/* Mobile Menu Trigger */}
                         <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
                             <SheetTrigger asChild>
-                                <Button variant="ghost" size="icon" className="md:hidden text-foreground hover:bg-foreground/10" aria-label="Abrir menú de navegación">
+                                <Button variant="ghost" size="icon" className="md:hidden text-white hover:bg-white/10" aria-label="Abrir menú de navegación">
                                     <Menu className="w-6 h-6" />
                                 </Button>
                             </SheetTrigger>
@@ -192,33 +192,33 @@ export default function ProtectedLayout({
             )}
 
             {/* Mobile Bottom Navigation Bar */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-secondary border-t border-border/20 px-2 py-2 flex justify-around items-center z-40 shadow-[0_-2px_15px_rgba(0,0,0,0.3)]">
-                <Link href="/dashboard" className={cn("flex flex-col items-center gap-0.5 min-w-0 flex-1 transition-colors", pathname === "/dashboard" ? "text-accent font-medium" : "text-muted-foreground hover:text-accent")}>
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-secondary border-t border-white/10 px-2 py-2 flex justify-around items-center z-40 shadow-[0_-2px_15px_rgba(0,0,0,0.3)]">
+                <Link href="/dashboard" className={cn("flex flex-col items-center gap-0.5 min-w-0 flex-1 transition-colors", pathname === "/dashboard" ? "text-white font-bold" : "text-white/60 hover:text-white")}>
                     <LayoutDashboard className="w-5 h-5 shrink-0" />
                     <span className="text-[9px] font-medium uppercase truncate w-full text-center">Inicio</span>
                 </Link>
-                <Link href="/cotizaciones" className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-accent min-w-0 flex-1">
+                <Link href="/cotizaciones" className={cn("flex flex-col items-center gap-0.5 min-w-0 flex-1 transition-colors", pathname === "/cotizaciones" ? "text-white font-bold" : "text-white/60 hover:text-white")}>
                     <FileText className="w-5 h-5 shrink-0" />
                     <span className="text-[9px] font-medium uppercase truncate w-full text-center">Cotiza</span>
                 </Link>
-                <Link href="/clientes" className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-accent min-w-0 flex-1">
+                <Link href="/clientes" className={cn("flex flex-col items-center gap-0.5 min-w-0 flex-1 transition-colors", pathname === "/clientes" ? "text-white font-bold" : "text-white/60 hover:text-white")}>
                     <Users className="w-5 h-5 shrink-0" />
                     <span className="text-[9px] font-medium uppercase truncate w-full text-center">Clientes</span>
                 </Link>
                 <div className="w-10 shrink-0"></div> {/* Space for FAB */}
-                <Link href="/reportes" className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-accent min-w-0 flex-1">
+                <Link href="/reportes" className={cn("flex flex-col items-center gap-0.5 min-w-0 flex-1 transition-colors", pathname === "/reportes" ? "text-white font-bold" : "text-white/60 hover:text-white")}>
                     <Download className="w-5 h-5 shrink-0" />
                     <span className="text-[9px] font-medium uppercase truncate w-full text-center">Fiscal</span>
                 </Link>
-                <Link href="/pagos" className="flex flex-col items-center gap-0.5 text-amber-600 hover:text-amber-500 font-medium min-w-0 flex-1">
+                <Link href="/pagos" className={cn("flex flex-col items-center gap-0.5 min-w-0 flex-1 transition-colors", pathname === "/pagos" ? "text-white font-bold" : "text-white/80 hover:text-white font-medium")}>
                     <CreditCard className="w-5 h-5 shrink-0" />
                     <span className="text-[9px] font-medium uppercase truncate w-full text-center">Pagar</span>
                 </Link>
-                <Link href="/ayuda" className={cn("flex flex-col items-center gap-0.5 min-w-0 flex-1 transition-colors", pathname === "/ayuda" ? "text-accent font-medium" : "text-muted-foreground hover:text-accent")}>
+                <Link href="/ayuda" className={cn("flex flex-col items-center gap-0.5 min-w-0 flex-1 transition-colors", pathname === "/ayuda" ? "text-white font-bold" : "text-white/60 hover:text-white")}>
                     <HelpCircle className="w-5 h-5 shrink-0" />
                     <span className="text-[9px] font-medium uppercase truncate w-full text-center">Ayuda</span>
                 </Link>
-                <Link href="/configuracion" className={cn("flex flex-col items-center gap-0.5 min-w-0 flex-1 transition-colors", pathname === "/configuracion" ? "text-accent font-medium" : "text-muted-foreground hover:text-accent")}>
+                <Link href="/configuracion" className={cn("flex flex-col items-center gap-0.5 min-w-0 flex-1 transition-colors", pathname === "/configuracion" ? "text-white font-bold" : "text-white/60 hover:text-white")}>
                     <Settings className="w-5 h-5 shrink-0" />
                     <span className="text-[9px] font-medium uppercase truncate w-full text-center">Perfil</span>
                 </Link>
