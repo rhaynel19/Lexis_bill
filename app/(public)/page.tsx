@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, ShieldCheck, Zap, Smartphone, Menu, FileCheck, BarChart3, ClipboardList, Share2, ChevronDown } from "lucide-react";
+import { CheckCircle2, ShieldCheck, Zap, Smartphone, Menu, FileCheck, BarChart3, ClipboardList, Share2, ChevronDown, Activity, CreditCard, DollarSign, Download, FileText, LayoutDashboard, MessageCircle, Plus, Shield, Sun, Target, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
@@ -219,40 +219,121 @@ export default function LandingPage() {
                 <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
                 <div className="w-full text-center text-xs text-slate-500 font-mono tracking-widest bg-white/[0.02] py-1 mx-16 rounded opacity-50">trinalyze.pro/dashboard</div>
               </div>
-              {/* Fake UI */}
-              <div className="p-4 md:p-6 grid grid-cols-4 gap-4 md:gap-6 h-full bg-[#0B0F1A] pb-20">
+              {/* Fake UI: Real Dashboard Replica */}
+              <div className="flex w-full h-[600px] bg-slate-50 relative pointer-events-none select-none overflow-hidden">
                 {/* Sidebar */}
-                <div className="col-span-1 flex flex-col gap-5 border-r border-white/5 pr-6 opacity-30">
-                  <div className="h-8 w-32 bg-trinalyze-gold rounded mb-2" />
-                  <div className="h-6 w-full bg-white/20 rounded" />
-                  <div className="h-6 w-5/6 bg-white/10 rounded" />
-                  <div className="h-6 w-4/6 bg-white/10 rounded" />
+                <div className="w-[200px] sm:w-[240px] bg-[#1a2332] h-full hidden sm:flex flex-col shrink-0">
+                    <div className="h-16 px-4 flex flex-col justify-center bg-[#ddb13f] relative z-10 w-full shadow-sm">
+                        <TrinalyzeWord showBill={false} variant="dark" className="text-lg" />
+                        <span className="text-[6.5px] text-blue-950 font-black tracking-widest uppercase">El orden que te deja tranquilo</span>
+                    </div>
+                    {/* Navigation Items */}
+                    <div className="p-4 space-y-6 overflow-hidden">
+                       <div className="space-y-3">
+                           <div className="flex items-center gap-3 text-slate-100 text-sm font-semibold pl-2">
+                              <LayoutDashboard className="w-4 h-4 text-trinalyze-gold" /> Dashboard
+                           </div>
+                           <div className="bg-trinalyze-gold/90 text-[#1a2332] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 mt-2 w-full shadow-md">
+                              <Plus className="w-3 h-3" /> Nueva Factura
+                           </div>
+                       </div>
+                       
+                       <div className="space-y-3">
+                           <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-2">Documentos</p>
+                           <div className="flex items-center gap-3 text-slate-300 text-xs pl-2">
+                              <FileText className="w-4 h-4" /> Nueva Cotización
+                           </div>
+                           <div className="flex items-center gap-3 text-slate-300 text-xs pl-2">
+                              <FileCheck className="w-4 h-4" /> Ver Cotizaciones
+                           </div>
+                       </div>
+
+                       <div className="space-y-3">
+                           <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-2">Gestión</p>
+                           <div className="flex items-center gap-3 text-slate-300 text-xs pl-2">
+                              <Users className="w-4 h-4" /> Clientes / Migrar
+                           </div>
+                           <div className="flex items-center gap-3 text-slate-300 text-xs pl-2">
+                              <DollarSign className="w-4 h-4" /> Gastos (606)
+                           </div>
+                           <div className="flex items-center gap-3 text-slate-300 text-xs pl-2">
+                              <Download className="w-4 h-4" /> Reportes Fiscales
+                           </div>
+                           <div className="flex items-center gap-3 text-trinalyze-gold bg-white/5 py-1.5 rounded-md text-xs pl-2 font-medium border border-white/5">
+                              <CreditCard className="w-4 h-4" /> Pagar
+                           </div>
+                       </div>
+                    </div>
                 </div>
-                {/* Main Content */}
-                <div className="col-span-3 flex flex-col gap-6 pt-2">
-                  <div className="h-8 w-48 bg-white/20 rounded" />
-                  {/* Stats Cards */}
-                  <div className="grid grid-cols-3 gap-6">
-                    <div className="h-28 bg-white/[0.02] rounded-xl border border-white/5 p-5 flex flex-col justify-between">
-                      <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center"><CheckCircle2 className="w-5 h-5 text-emerald-500"/></div>
-                      <div className="h-4 w-20 bg-white/20 rounded" />
+                
+                {/* Right Area */}
+                <div className="flex-1 flex flex-col h-full bg-slate-50">
+                    {/* Topbar */}
+                    <div className="h-16 bg-[#ddb13f] flex items-center justify-end px-4 sm:px-6 gap-3 shrink-0 shadow-sm border-b border-white/20">
+                        <div className="flex bg-white/30 text-amber-950 px-3 py-1.5 rounded-md text-[11px] font-bold items-center gap-1.5"><Shield className="w-3.5 h-3.5" /> Admin</div>
+                        <div className="flex bg-white text-blue-900 px-3 py-1.5 rounded-md text-[11px] font-bold items-center gap-1.5 shadow-sm"><MessageCircle className="w-3.5 h-3.5 text-blue-900/60" /> Pregúntale a Trinalyze</div>
+                        <Sun className="w-4 h-4 text-blue-950/40 hidden sm:block" />
+                        <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded bg-white/20 text-[10px] text-amber-950/80 font-mono font-medium"><span>Ctrl</span><span>+</span><span>K</span></div>
                     </div>
-                    <div className="h-28 bg-white/[0.02] rounded-xl border border-white/5 p-5 flex flex-col justify-between">
-                      <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center"><FileCheck className="w-5 h-5 text-blue-500"/></div>
-                      <div className="h-4 w-20 bg-white/20 rounded" />
+                    
+                    {/* Main Content Area */}
+                    <div className="p-4 sm:p-6 h-full">
+                        <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] border border-slate-200 p-5 sm:p-6 w-full max-w-4xl mx-auto">
+                            <div className="flex flex-col sm:flex-row sm:items-start gap-4 border-b border-slate-100 pb-5">
+                                <div className="w-12 h-12 bg-blue-600 rounded-xl shadow-md flex items-center justify-center shrink-0">
+                                    <Activity className="w-6 h-6 text-white" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-lg sm:text-xl font-bold text-slate-800 italic pr-4">Análisis de Trinalyze</h3>
+                                    <p className="text-slate-500 text-xs sm:text-sm">Hoy tu negocio muestra un comportamiento estable.</p>
+                                    <div className="mt-4 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 inline-flex items-center gap-3">
+                                        <Target className="w-5 h-5 text-blue-500" />
+                                        <div>
+                                            <p className="text-[9px] sm:text-[10px] text-slate-500 font-semibold uppercase tracking-widest mb-0.5">Salud de tu negocio</p>
+                                            <p className="text-sm sm:text-base font-black text-slate-800">85 — Estable</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="hidden sm:flex items-center gap-2 bg-[#f8fafc] px-3 py-1.5 rounded-lg border border-slate-200 self-start">
+                                    <Activity className="w-3.5 h-3.5 text-blue-500" /> <span className="text-[11px] font-semibold text-slate-600 italic">Análisis Global</span> <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                                </div>
+                            </div>
+                            
+                            <div className="mt-5 space-y-3">
+                                {/* Red Alert */}
+                                <div className="bg-red-50 rounded-xl p-4 border border-red-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div>
+                                        <p className="text-[13px] font-bold text-red-700">Caída de ingresos</p>
+                                        <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">Tu facturación bajó 44% respecto al mes pasado. ¿Quieres ver qué clientes dejaron de comprar?</p>
+                                    </div>
+                                    <div className="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap shadow-sm">Analizar Caída →</div>
+                                </div>
+                                {/* Blue Alert */}
+                                <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div>
+                                        <p className="text-[13px] font-bold text-blue-800">Alta dependencia de un cliente</p>
+                                        <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">El 94% de tus ingresos provienen de un solo cliente. Esto puede ser un riesgo financiero. ¿Quieres diversificar tu cartera?</p>
+                                    </div>
+                                    <div className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap shadow-sm">Ver clientes →</div>
+                                </div>
+                                {/* Gray Info */}
+                                <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-100">
+                                    <p className="text-[13px] font-bold text-blue-900">Patrón de Servicio Identificado</p>
+                                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">El servicio "luz electrica" es tu producto estrella con 6 transacciones recientes. Esta recurrencia sugiere una base de clientes fidelizada en este segmento.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div className="h-28 bg-white/[0.02] rounded-xl border border-white/5 p-5 flex flex-col justify-between">
-                      <div className="w-10 h-10 rounded-full bg-trinalyze-gold/10 flex items-center justify-center"><BarChart3 className="w-5 h-5 text-trinalyze-gold"/></div>
-                      <div className="h-4 w-20 bg-white/20 rounded" />
+                </div>
+                
+                {/* Floating Action Buttons */}
+                <div className="absolute bottom-6 right-6 flex items-center gap-3">
+                    <div className="w-12 h-12 bg-emerald-500 rounded-full shadow-[0_4px_20px_rgba(16,185,129,0.4)] flex items-center justify-center">
+                        <MessageCircle className="w-6 h-6 text-white" />
                     </div>
-                  </div>
-                  {/* Table/List Area */}
-                  <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-xl p-5 flex flex-col gap-4">
-                    <div className="h-5 w-40 bg-white/20 rounded mb-2" />
-                    <div className="h-12 w-full bg-white/10 rounded" />
-                    <div className="h-12 w-full bg-white/5 rounded" />
-                    <div className="h-12 w-full bg-white/5 rounded" />
-                  </div>
+                    <div className="bg-[#0B0F1A] text-trinalyze-gold px-5 py-3 rounded-full font-bold text-[13px] shadow-[0_4px_20px_rgba(0,0,0,0.3)] flex items-center gap-2">
+                        <Plus className="w-4 h-4" /> Nueva Factura
+                    </div>
                 </div>
               </div>
             </div>
