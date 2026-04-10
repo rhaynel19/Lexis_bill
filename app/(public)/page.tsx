@@ -39,13 +39,13 @@ function ROICalculator() {
 
   return (
     <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} className="w-full max-w-xl mx-auto mt-16 p-8 rounded-3xl bg-gradient-to-br from-white/[0.05] to-transparent border border-white/10 shadow-2xl relative overflow-hidden group">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-trinalyze-gold/10 rounded-full blur-3xl -mr-10 -mt-10 transition-all group-hover:bg-trinalyze-gold/20" />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-trinalyze-brand-blue/10 rounded-full blur-3xl -mr-10 -mt-10 transition-all group-hover:bg-trinalyze-brand-blue/20" />
       <h4 className="font-serif text-2xl font-bold text-center mb-6">Calculadora de Impacto ⏱️</h4>
       <div className="space-y-8 relative z-10 text-left">
         <div>
           <div className="flex justify-between items-center mb-4">
             <span className="text-sm text-slate-400 font-medium tracking-wide uppercase">Facturas al mes</span>
-            <span className="text-xl font-bold text-trinalyze-gold gap-1 flex items-baseline">{invoices}</span>
+            <span className="text-xl font-bold text-trinalyze-brand-blue gap-1 flex items-baseline">{invoices}</span>
           </div>
           <input 
             type="range" 
@@ -83,32 +83,32 @@ export default function LandingPage() {
   }, [refresh]);
 
   return (
-    <div className="min-h-screen bg-trinalyze-bg-deep text-trinalyze-text-light font-sans selection:bg-trinalyze-gold/30">
+    <div className="min-h-screen bg-trinalyze-bg-deep text-trinalyze-text-light font-sans selection:bg-trinalyze-brand-blue/30">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-trinalyze-bg-deep/80 backdrop-blur-md border-b-2 border-trinalyze-gold/40">
+      <nav className="fixed top-0 w-full z-50 bg-trinalyze-bg-deep/80 backdrop-blur-md border-b-2 border-trinalyze-brand-blue/40">
         <div className="container mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
           <Link href="/" className="text-2xl font-serif font-bold tracking-tighter flex items-baseline gap-1">
             <TrinalyzeWord className="text-2xl" showBill={true} variant="light" />
           </Link>
           <div className="hidden md:flex items-center gap-8">
-            <Link href="#beneficios" className="text-sm font-medium hover:text-trinalyze-gold transition-colors">Beneficios</Link>
-            <Link href="#precio" className="text-sm font-medium hover:text-trinalyze-gold transition-colors">Precio</Link>
-            <Link href="/unirse-como-partner" className="text-sm font-medium hover:text-trinalyze-gold transition-colors">Ser Partner</Link>
+                <Link href="/registro" className="text-sm font-medium hover:text-trinalyze-brand-blue transition-colors">Beneficios</Link>
+            <Link href="#precio" className="text-sm font-medium hover:text-trinalyze-brand-blue transition-colors">Precio</Link>
+            <Link href="/unirse-como-partner" className="text-sm font-medium hover:text-trinalyze-brand-blue transition-colors">Ser Partner</Link>
             {isLoggedIn ? (
               <Link href="/dashboard">
-                <Button className="bg-trinalyze-gold text-trinalyze-bg-deep hover:bg-trinalyze-gold-hover transition-all text-sm font-bold uppercase tracking-widest px-8 rounded-md shadow-lg shadow-trinalyze-gold/20">
+                <Button className="bg-trinalyze-brand-blue text-trinalyze-bg-deep hover:bg-trinalyze-brand-blue-hover transition-all text-sm font-bold uppercase tracking-widest px-8 rounded-md shadow-lg shadow-trinalyze-brand-blue/20">
                   Dashboard
                 </Button>
               </Link>
             ) : (
               <div className="flex items-center gap-4">
                 <Link href="/login">
-                  <Button variant="outline" className="text-trinalyze-gold border-trinalyze-gold hover:bg-trinalyze-gold hover:text-trinalyze-bg-deep transition-all text-xs font-bold uppercase tracking-widest px-6 rounded-md shadow-none bg-transparent">
+                  <Button variant="outline" className="text-trinalyze-brand-blue border-trinalyze-brand-blue hover:bg-trinalyze-brand-blue hover:text-trinalyze-bg-deep transition-all text-xs font-bold uppercase tracking-widest px-6 rounded-md shadow-none bg-transparent">
                     Entrar
                   </Button>
                 </Link>
                 <Link href="/registro">
-                  <Button className="bg-trinalyze-gold text-trinalyze-bg-deep hover:bg-trinalyze-gold-hover transition-all text-sm font-bold uppercase tracking-widest px-6 rounded-md shadow-lg shadow-trinalyze-gold/20">
+                  <Button className="bg-trinalyze-brand-blue text-trinalyze-bg-deep hover:bg-trinalyze-brand-blue-hover transition-all text-sm font-bold uppercase tracking-widest px-6 rounded-md shadow-lg shadow-trinalyze-brand-blue/20">
                     Crear cuenta gratis
                   </Button>
                 </Link>
@@ -119,30 +119,30 @@ export default function LandingPage() {
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-trinalyze-text-light hover:bg-trinalyze-gold/10" aria-label="Abrir menú de navegación">
+                <Button variant="ghost" size="icon" className="text-trinalyze-text-light hover:bg-trinalyze-brand-blue/10" aria-label="Abrir menú de navegación">
                   <Menu className="w-6 h-6" aria-hidden />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="bg-trinalyze-bg-deep border-trinalyze-gold/20 text-trinalyze-text-light pt-20">
+              <SheetContent side="right" className="bg-trinalyze-bg-deep border-trinalyze-brand-blue/20 text-trinalyze-text-light pt-20">
                 <div className="flex flex-col gap-8 text-center">
-                  <Link href="#beneficios" className="text-xl font-serif hover:text-trinalyze-gold">Beneficios</Link>
-                  <Link href="#precio" className="text-xl font-serif hover:text-trinalyze-gold">Precio</Link>
-                  <Link href="/unirse-como-partner" className="text-xl font-serif hover:text-trinalyze-gold">Ser Partner</Link>
+                  <Link href="#beneficios" className="text-xl font-serif hover:text-trinalyze-brand-blue">Beneficios</Link>
+                  <Link href="#precio" className="text-xl font-serif hover:text-trinalyze-brand-blue">Precio</Link>
+                  <Link href="/unirse-como-partner" className="text-xl font-serif hover:text-trinalyze-brand-blue">Ser Partner</Link>
                   {isLoggedIn ? (
                     <Link href="/dashboard">
-                      <Button className="w-full bg-trinalyze-gold text-trinalyze-bg-deep font-bold py-6 rounded-xl shadow-lg shadow-trinalyze-gold/20 text-xl">
+                      <Button className="w-full bg-trinalyze-brand-blue text-trinalyze-bg-deep font-bold py-6 rounded-xl shadow-lg shadow-trinalyze-brand-blue/20 text-xl">
                         Ir al Dashboard
                       </Button>
                     </Link>
                   ) : (
                     <>
                       <Link href="/login">
-                        <Button variant="outline" className="w-full text-trinalyze-gold border-trinalyze-gold py-6 rounded-xl">
+                        <Button variant="outline" className="w-full text-trinalyze-brand-blue border-trinalyze-brand-blue py-6 rounded-xl">
                           Entrar
                         </Button>
                       </Link>
                       <Link href="/registro">
-                        <Button className="w-full bg-trinalyze-gold text-trinalyze-bg-deep font-bold py-6 rounded-xl shadow-lg shadow-trinalyze-gold/20">
+                        <Button className="w-full bg-trinalyze-brand-blue text-trinalyze-bg-deep font-bold py-6 rounded-xl shadow-lg shadow-trinalyze-brand-blue/20">
                           Crear Cuenta Gratis
                         </Button>
                       </Link>
@@ -158,7 +158,7 @@ export default function LandingPage() {
       {/* Hero Section — Posicionamiento: "habla dominicano" como argumento de venta */}
       <header className="relative pt-32 pb-20 sm:pt-40 sm:pb-24 md:pt-56 md:pb-40 overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 opacity-20">
-          <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-trinalyze-gold rounded-full blur-[140px]"></div>
+          <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-trinalyze-brand-blue rounded-full blur-[140px]"></div>
           <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#DEB23E]/20 rounded-full blur-[120px]"></div>
         </div>
 
@@ -174,7 +174,7 @@ export default function LandingPage() {
           <motion.h1 variants={fadeInUp} className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 md:mb-8 max-w-4xl mx-auto tracking-tight text-trinalyze-text-light">
             El sistema de gestión creado para el profesional independiente dominicano.
           </motion.h1>
-          <motion.p variants={fadeInUp} className="text-xl md:text-2xl lg:text-3xl text-trinalyze-gold font-semibold mb-6 md:mb-8 max-w-2xl mx-auto">
+          <motion.p variants={fadeInUp} className="text-xl md:text-2xl lg:text-3xl text-trinalyze-brand-blue font-semibold mb-6 md:mb-8 max-w-2xl mx-auto">
             El único sistema que habla dominicano.
           </motion.p>
           <motion.p variants={fadeInUp} className="text-base md:text-lg text-slate-400 max-w-2xl mx-auto mb-10 md:mb-12 font-light">
@@ -182,7 +182,7 @@ export default function LandingPage() {
           </motion.p>
           <motion.div variants={fadeInUp} className="flex flex-col items-center gap-6">
             <Link href="/registro">
-              <Button size="lg" className="animate-shimmer h-16 sm:h-20 px-10 sm:px-12 text-lg sm:text-xl bg-trinalyze-gold hover:bg-trinalyze-gold-hover text-trinalyze-bg-deep font-bold rounded-lg shadow-2xl shadow-trinalyze-gold/20 transition-all hover:scale-105">
+              <Button size="lg" className="animate-shimmer h-16 sm:h-20 px-10 sm:px-12 text-lg sm:text-xl bg-trinalyze-brand-blue hover:bg-trinalyze-brand-blue-hover text-trinalyze-bg-deep font-bold rounded-lg shadow-2xl shadow-trinalyze-brand-blue/20 transition-all hover:scale-105">
                 Empieza gratis — 15 días sin tarjeta
               </Button>
             </Link>
@@ -190,7 +190,7 @@ export default function LandingPage() {
               <p className="text-sm text-slate-500 font-light">
                 Sin tarjeta. Sin compromiso. Cancela cuando quieras.
               </p>
-              <div className="flex items-center gap-2 mt-4 px-4 py-2 rounded-full bg-trinalyze-gold/5 border border-trinalyze-gold/10">
+              <div className="flex items-center gap-2 mt-4 px-4 py-2 rounded-full bg-trinalyze-brand-blue/5 border border-trinalyze-brand-blue/10">
                 <div className="flex -space-x-2">
                   <div className="w-6 h-6 rounded-full bg-slate-800 border border-trinalyze-bg-deep flex items-center justify-center text-[10px]">👷‍♂️</div>
                   <div className="w-6 h-6 rounded-full bg-slate-800 border border-trinalyze-bg-deep flex items-center justify-center text-[10px]">👩‍⚕️</div>
@@ -231,9 +231,9 @@ export default function LandingPage() {
                     <div className="p-4 space-y-6 overflow-hidden">
                        <div className="space-y-3">
                            <div className="flex items-center gap-3 text-slate-100 text-sm font-semibold pl-2">
-                              <LayoutDashboard className="w-4 h-4 text-trinalyze-gold" /> Dashboard
+                              <LayoutDashboard className="w-4 h-4 text-trinalyze-brand-blue" /> Dashboard
                            </div>
-                           <div className="bg-trinalyze-gold/90 text-[#1a2332] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 mt-2 w-full shadow-md">
+                           <div className="bg-trinalyze-brand-blue/90 text-[#1a2332] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 mt-2 w-full shadow-md">
                               <Plus className="w-3 h-3" /> Nueva Factura
                            </div>
                        </div>
@@ -259,7 +259,7 @@ export default function LandingPage() {
                            <div className="flex items-center gap-3 text-slate-300 text-xs pl-2">
                               <Download className="w-4 h-4" /> Reportes Fiscales
                            </div>
-                           <div className="flex items-center gap-3 text-trinalyze-gold bg-white/5 py-1.5 rounded-md text-xs pl-2 font-medium border border-white/5">
+                           <div className="flex items-center gap-3 text-trinalyze-brand-blue bg-white/5 py-1.5 rounded-md text-xs pl-2 font-medium border border-white/5">
                               <CreditCard className="w-4 h-4" /> Pagar
                            </div>
                        </div>
@@ -331,7 +331,7 @@ export default function LandingPage() {
                     <div className="w-12 h-12 bg-emerald-500 rounded-full shadow-[0_4px_20px_rgba(16,185,129,0.4)] flex items-center justify-center">
                         <MessageCircle className="w-6 h-6 text-white" />
                     </div>
-                    <div className="bg-[#0B0F1A] text-trinalyze-gold px-5 py-3 rounded-full font-bold text-[13px] shadow-[0_4px_20px_rgba(0,0,0,0.3)] flex items-center gap-2">
+                    <div className="bg-[#0B0F1A] text-trinalyze-brand-blue px-5 py-3 rounded-full font-bold text-[13px] shadow-[0_4px_20px_rgba(0,0,0,0.3)] flex items-center gap-2">
                         <Plus className="w-4 h-4" /> Nueva Factura
                     </div>
                 </div>
@@ -342,7 +342,7 @@ export default function LandingPage() {
       </header>
 
       {/* Sección diferenciadora — "Habla dominicano" como argumento emocional */}
-      <section className="py-24 sm:py-32 bg-trinalyze-bg-darker border-y border-trinalyze-gold/5">
+      <section className="py-24 sm:py-32 bg-trinalyze-bg-darker border-y border-trinalyze-brand-blue/5">
         <motion.div 
           initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={fadeInUp}
           className="container mx-auto px-4 sm:px-6"
@@ -351,26 +351,26 @@ export default function LandingPage() {
             <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold leading-tight mb-8 text-trinalyze-text-light">
               No eres una empresa gigante.<br />
               Eres un profesional independiente.<br />
-              <span className="text-trinalyze-gold">Y tu sistema debe hablar tu mismo idioma.</span>
+              <span className="text-trinalyze-brand-blue">Y tu sistema debe hablar tu mismo idioma.</span>
             </h2>
-            <p className="text-xl md:text-2xl text-trinalyze-gold font-semibold mb-12">
+            <p className="text-xl md:text-2xl text-trinalyze-brand-blue font-semibold mb-12">
               Trinalyze Billing — El único sistema que habla dominicano.
             </p>
             <ul className="space-y-4 text-left max-w-md mx-auto">
               <li className="flex items-center gap-3 text-slate-300">
-                <CheckCircle2 className="w-6 h-6 text-trinalyze-gold shrink-0" />
+                <CheckCircle2 className="w-6 h-6 text-trinalyze-brand-blue shrink-0" />
                 Hecho para cómo trabajas realmente
               </li>
               <li className="flex items-center gap-3 text-slate-300">
-                <CheckCircle2 className="w-6 h-6 text-trinalyze-gold shrink-0" />
+                <CheckCircle2 className="w-6 h-6 text-trinalyze-brand-blue shrink-0" />
                 Pensado para la DGII
               </li>
               <li className="flex items-center gap-3 text-slate-300">
-                <CheckCircle2 className="w-6 h-6 text-trinalyze-gold shrink-0" />
+                <CheckCircle2 className="w-6 h-6 text-trinalyze-brand-blue shrink-0" />
                 Sin palabras técnicas innecesarias
               </li>
               <li className="flex items-center gap-3 text-slate-300">
-                <CheckCircle2 className="w-6 h-6 text-trinalyze-gold shrink-0" />
+                <CheckCircle2 className="w-6 h-6 text-trinalyze-brand-blue shrink-0" />
                 Fácil desde el primer minuto
               </li>
             </ul>
@@ -382,26 +382,26 @@ export default function LandingPage() {
       </section>
 
       {/* Section: Dolor (La Realidad) */}
-      <section className="py-32 bg-trinalyze-bg-darker border-y border-trinalyze-gold/5">
+      <section className="py-32 bg-trinalyze-bg-darker border-y border-trinalyze-brand-blue/5">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="font-serif text-4xl md:text-5xl font-bold mb-8 text-trinalyze-text-light">
-              Recupera tus noches y tus <span className="text-trinalyze-gold">fines de semana.</span>
+              Recupera tus noches y tus <span className="text-trinalyze-brand-blue">fines de semana.</span>
             </h2>
             <p className="text-xl text-slate-400 leading-relaxed mb-8 font-light">
               Mientras otros se pierden en formularios de la DGII y cálculos manuales, tú ya terminaste. Trinalyze Billing automatiza la burocracia para que tu única preocupación sea la excelencia en tu servicio.
             </p>
-            <p className="text-trinalyze-gold/90 font-medium mb-16">Facturar no debería ser complicado.</p>
+            <p className="text-trinalyze-brand-blue/90 font-medium mb-16">Facturar no debería ser complicado.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 text-left">
               <div className="flex items-start gap-6 p-8 rounded-2xl bg-white/[0.02] border border-white/5">
-                <Zap className="w-7 h-7 text-trinalyze-gold stroke-[1px]" />
+                <Zap className="w-7 h-7 text-trinalyze-brand-blue stroke-[1px]" />
                 <div>
                   <h4 className="font-serif text-xl font-bold mb-3">Tú mantienes el control</h4>
                   <p className="text-slate-400">Tus comprobantes siguen siendo tuyos; nosotros te ayudamos a usarlos sin errores ni olvidos.</p>
                 </div>
               </div>
               <div className="flex items-start gap-6 p-8 rounded-2xl bg-white/[0.02] border border-white/5">
-                <ShieldCheck className="w-7 h-7 text-trinalyze-gold stroke-[1px]" />
+                <ShieldCheck className="w-7 h-7 text-trinalyze-brand-blue stroke-[1px]" />
                 <div>
                   <h4 className="font-serif text-xl font-bold mb-3">Previsión Inteligente</h4>
                   <p className="text-slate-400">Preparamos todo para que cumplas con la DGII, sin que tengas que convertirte en contable.</p>
@@ -419,7 +419,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-center">
             <div>
-              <h2 className="font-serif text-4xl font-bold mb-8">¿Es Trinalyze Billing <br /><span className="text-trinalyze-gold">para mí?</span></h2>
+              <h2 className="font-serif text-4xl font-bold mb-8">¿Es Trinalyze Billing <br /><span className="text-trinalyze-brand-blue">para mí?</span></h2>
               <div className="space-y-6">
                 <div className="flex gap-4">
                   <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 mt-1">
@@ -442,42 +442,42 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="p-8 rounded-3xl bg-gradient-to-br from-white/5 to-transparent border border-white/10">
-              <h4 className="font-serif text-xl font-bold mb-4 text-trinalyze-gold">La realidad local</h4>
+              <h4 className="font-serif text-xl font-bold mb-4 text-trinalyze-brand-blue">La realidad local</h4>
               <p className="text-slate-400 leading-relaxed font-light mb-4">
                 Mientras otros sistemas usan lenguaje extraño, Trinalyze Billing entiende que tu prioridad es servir a tu cliente, no pelear con formularios electrónicos.
               </p>
-              <p className="text-trinalyze-gold/90 font-medium">Tu negocio es serio — tu sistema también debe serlo. Profesional por fuera. Simple por dentro.</p>
+              <p className="text-trinalyze-brand-blue/90 font-medium">Tu negocio es serio — tu sistema también debe serlo. Profesional por fuera. Simple por dentro.</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* New Section: Cómo Funciona */}
-      <section className="py-32 bg-trinalyze-bg-darker border-y border-trinalyze-gold/5">
+      <section className="py-32 bg-trinalyze-bg-darker border-y border-trinalyze-brand-blue/5">
         <div className="container mx-auto px-4 sm:px-6 text-center">
-          <h2 className="font-serif text-4xl md:text-5xl font-bold mb-20 text-trinalyze-text-light">Tu facturación bajo control en <span className="text-trinalyze-gold">3 pasos.</span></h2>
+          <h2 className="font-serif text-4xl md:text-5xl font-bold mb-20 text-trinalyze-text-light">Tu facturación bajo control en <span className="text-trinalyze-brand-blue">3 pasos.</span></h2>
           <div className="grid md:grid-cols-3 gap-12">
             <div className="space-y-6 group cursor-default">
-              <div className="w-16 h-16 bg-trinalyze-gold/5 rounded-full flex items-center justify-center mx-auto border border-trinalyze-gold/10 group-hover:bg-trinalyze-gold/20 transition-all duration-300">
-                <ClipboardList className="w-8 h-8 text-trinalyze-gold stroke-[1px]" />
+              <div className="w-16 h-16 bg-trinalyze-brand-blue/5 rounded-full flex items-center justify-center mx-auto border border-trinalyze-brand-blue/10 group-hover:bg-trinalyze-brand-blue/20 transition-all duration-300">
+                <ClipboardList className="w-8 h-8 text-trinalyze-brand-blue stroke-[1px]" />
               </div>
-              <div className="text-5xl font-serif text-trinalyze-gold/20 font-bold italic">01</div>
+              <div className="text-5xl font-serif text-trinalyze-brand-blue/20 font-bold italic">01</div>
               <h3 className="text-xl font-bold">Organiza tus comprobantes desde el inicio</h3>
               <p className="text-slate-400 font-light px-4">Registra tus rangos de NCF y mantén el control de tu numeración. Trinalyze Billing te alerta cuando necesites nuevos.</p>
             </div>
             <div className="space-y-6 group cursor-default">
-              <div className="w-16 h-16 bg-trinalyze-gold/5 rounded-full flex items-center justify-center mx-auto border border-trinalyze-gold/10 group-hover:bg-trinalyze-gold/20 transition-all duration-300">
-                <ShieldCheck className="w-8 h-8 text-trinalyze-gold stroke-[1px]" />
+              <div className="w-16 h-16 bg-trinalyze-brand-blue/5 rounded-full flex items-center justify-center mx-auto border border-trinalyze-brand-blue/10 group-hover:bg-trinalyze-brand-blue/20 transition-all duration-300">
+                <ShieldCheck className="w-8 h-8 text-trinalyze-brand-blue stroke-[1px]" />
               </div>
-              <div className="text-5xl font-serif text-trinalyze-gold/20 font-bold italic">02</div>
+              <div className="text-5xl font-serif text-trinalyze-brand-blue/20 font-bold italic">02</div>
               <h3 className="text-xl font-bold">Menos errores, más confianza al facturar</h3>
               <p className="text-slate-400 font-light px-4">Centraliza los datos de tus clientes y evita inconsistencias antes de emitir cualquier documento.</p>
             </div>
             <div className="space-y-6 group cursor-default">
-              <div className="w-16 h-16 bg-trinalyze-gold/5 rounded-full flex items-center justify-center mx-auto border border-trinalyze-gold/10 group-hover:bg-trinalyze-gold/20 transition-all duration-300">
-                <Share2 className="w-8 h-8 text-trinalyze-gold stroke-[1px]" />
+              <div className="w-16 h-16 bg-trinalyze-brand-blue/5 rounded-full flex items-center justify-center mx-auto border border-trinalyze-brand-blue/10 group-hover:bg-trinalyze-brand-blue/20 transition-all duration-300">
+                <Share2 className="w-8 h-8 text-trinalyze-brand-blue stroke-[1px]" />
               </div>
-              <div className="text-5xl font-serif text-trinalyze-gold/20 font-bold italic">03</div>
+              <div className="text-5xl font-serif text-trinalyze-brand-blue/20 font-bold italic">03</div>
               <h3 className="text-xl font-bold">Factura hoy. Reporta sin estrés.</h3>
               <p className="text-slate-400 font-light px-4">Comparte tus documentos fácilmente y mantén tus reportes listos para tu contador.</p>
             </div>
@@ -491,7 +491,7 @@ export default function LandingPage() {
           <div className="text-center mb-24">
             <h2 className="font-serif text-4xl md:text-6xl font-bold mb-6">
               Más que facturas, <br />
-              <span className="text-trinalyze-gold">inteligencia fiscal.</span>
+              <span className="text-trinalyze-brand-blue">inteligencia fiscal.</span>
             </h2>
             <p className="text-slate-400 max-w-2xl mx-auto font-light">
               Pensado para la DGII y la realidad dominicana. Sin términos confusos: facturación, reportes y cobros en un solo lugar.
@@ -499,8 +499,8 @@ export default function LandingPage() {
           </div>
           <div className="grid md:grid-cols-3 gap-12 lg:gap-16">
             <div className="text-center space-y-6 group cursor-default">
-              <div className="w-20 h-20 bg-trinalyze-gold/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-trinalyze-gold/10 group-hover:bg-trinalyze-gold/20 group-hover:-translate-y-2 transition-all duration-500">
-                <FileCheck className="w-10 h-10 text-trinalyze-gold stroke-[1px] group-hover:opacity-80" />
+              <div className="w-20 h-20 bg-trinalyze-brand-blue/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-trinalyze-brand-blue/10 group-hover:bg-trinalyze-brand-blue/20 group-hover:-translate-y-2 transition-all duration-500">
+                <FileCheck className="w-10 h-10 text-trinalyze-brand-blue stroke-[1px] group-hover:opacity-80" />
               </div>
               <h3 className="font-serif text-2xl font-bold">Datos fiscales más ordenados, menos errores</h3>
               <p className="text-slate-400 leading-relaxed text-lg">
@@ -508,8 +508,8 @@ export default function LandingPage() {
               </p>
             </div>
             <div className="text-center space-y-6 group cursor-default">
-              <div className="w-20 h-20 bg-trinalyze-gold/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-trinalyze-gold/10 group-hover:bg-trinalyze-gold/20 group-hover:-translate-y-2 transition-all duration-500">
-                <BarChart3 className="w-10 h-10 text-trinalyze-gold stroke-[1px] group-hover:opacity-80" />
+              <div className="w-20 h-20 bg-trinalyze-brand-blue/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-trinalyze-brand-blue/10 group-hover:bg-trinalyze-brand-blue/20 group-hover:-translate-y-2 transition-all duration-500">
+                <BarChart3 className="w-10 h-10 text-trinalyze-brand-blue stroke-[1px] group-hover:opacity-80" />
               </div>
               <h3 className="font-serif text-2xl font-bold">Reportes organizados para tu gestión contable</h3>
               <p className="text-slate-400 leading-relaxed text-lg">
@@ -517,8 +517,8 @@ export default function LandingPage() {
               </p>
             </div>
             <div className="text-center space-y-6 group cursor-default">
-              <div className="w-20 h-20 bg-trinalyze-gold/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-trinalyze-gold/10 group-hover:bg-trinalyze-gold/20 group-hover:-translate-y-2 transition-all duration-500">
-                <Smartphone className="w-10 h-10 text-trinalyze-gold stroke-[1px] group-hover:opacity-80" />
+              <div className="w-20 h-20 bg-trinalyze-brand-blue/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-trinalyze-brand-blue/10 group-hover:bg-trinalyze-brand-blue/20 group-hover:-translate-y-2 transition-all duration-500">
+                <Smartphone className="w-10 h-10 text-trinalyze-brand-blue stroke-[1px] group-hover:opacity-80" />
               </div>
               <h3 className="font-serif text-2xl font-bold">Factura sin atarte a una oficina</h3>
               <p className="text-slate-400 leading-relaxed text-lg">
@@ -533,10 +533,10 @@ export default function LandingPage() {
       <section className="py-24 bg-trinalyze-bg-darker">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-4xl mx-auto text-center space-y-8">
-            <span className="text-trinalyze-gold text-xs font-bold tracking-[0.4em] uppercase">El Porqué de Trinalyze Billing</span>
+            <span className="text-trinalyze-brand-blue text-xs font-bold tracking-[0.4em] uppercase">El Porqué de Trinalyze Billing</span>
             <h2 className="font-serif text-3xl md:text-5xl font-bold leading-tight">
               Mientras otros miran a las corporaciones, <br />
-              <span className="text-trinalyze-gold">nosotros te miramos a ti.</span>
+              <span className="text-trinalyze-brand-blue">nosotros te miramos a ti.</span>
             </h2>
             <p className="text-xl text-slate-400 leading-relaxed font-light">
               La mayoría de los sistemas fueron hechos para grandes empresas con ejércitos de contadores. Trinalyze Billing nace para el profesional autónomo, el técnico independiente y el profesional que realmente mueve la economía dominicana. Somos el aliado que te da el estatus de una multinacional, sin importar el tamaño de tu oficina hoy.
@@ -546,14 +546,14 @@ export default function LandingPage() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-24 bg-trinalyze-bg-darker overflow-hidden border-y border-trinalyze-gold/5">
+      <section className="py-24 bg-trinalyze-bg-darker overflow-hidden border-y border-trinalyze-brand-blue/5">
         <div className="container mx-auto px-4 sm:px-6">
           <motion.div 
             initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={fadeInUp}
             className="text-center mb-16"
           >
             <h2 className="font-serif text-3xl md:text-5xl font-bold mb-4 text-trinalyze-text-light">
-              Respaldado por la <br className="md:hidden" /><span className="text-trinalyze-gold">fuerza independiente.</span>
+              Respaldado por la <br className="md:hidden" /><span className="text-trinalyze-brand-blue">fuerza independiente.</span>
             </h2>
             <p className="text-slate-400 font-light max-w-2xl mx-auto">Mira lo que dicen técnicos y profesionales como tú.</p>
           </motion.div>
@@ -564,14 +564,14 @@ export default function LandingPage() {
               transition={{ ease: "linear", duration: 40, repeat: Infinity }}
             >
               {[...testimonials, ...testimonials].map((test, i) => (
-                <div key={i} className="shrink-0 w-[300px] md:w-[350px] p-8 rounded-3xl bg-white/[0.02] border border-white/5 hover:border-trinalyze-gold/20 hover:bg-white/[0.04] transition-all flex flex-col justify-between">
+                <div key={i} className="shrink-0 w-[300px] md:w-[350px] p-8 rounded-3xl bg-white/[0.02] border border-white/5 hover:border-trinalyze-brand-blue/20 hover:bg-white/[0.04] transition-all flex flex-col justify-between">
                   <p className="text-slate-300 italic mb-6 leading-relaxed">"{test.text}"</p>
                   <div>
                     <p className="font-bold text-trinalyze-text-light flex items-center gap-2">
                       {test.name}
                       <ShieldCheck className="w-4 h-4 text-emerald-500" />
                     </p>
-                    <p className="text-xs text-trinalyze-gold uppercase tracking-wider mt-1">{test.role}</p>
+                    <p className="text-xs text-trinalyze-brand-blue uppercase tracking-wider mt-1">{test.role}</p>
                   </div>
                 </div>
               ))}
@@ -583,7 +583,7 @@ export default function LandingPage() {
       {/* FAQ Section */}
       <section className="py-32 bg-trinalyze-bg-deep">
         <div className="container mx-auto px-4 sm:px-6 max-w-4xl">
-          <h2 className="font-serif text-3xl md:text-5xl font-bold mb-16 text-center text-trinalyze-gold">Preguntas Frecuentes</h2>
+          <h2 className="font-serif text-3xl md:text-5xl font-bold mb-16 text-center text-trinalyze-brand-blue">Preguntas Frecuentes</h2>
           <div className="space-y-4">
             {faqs.map((faq, idx) => (
               <div 
@@ -599,7 +599,7 @@ export default function LandingPage() {
                     animate={{ rotate: openFaq === idx ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <ChevronDown className="w-5 h-5 text-trinalyze-gold" />
+                    <ChevronDown className="w-5 h-5 text-trinalyze-brand-blue" />
                   </motion.div>
                 </button>
                 <AnimatePresence>
@@ -627,35 +627,35 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 sm:px-6 text-center">
           <h2 className="font-serif text-4xl md:text-5xl font-bold mb-16 sm:mb-24 underline decoration-trinalyze-gold/30 underline-offset-8 italic">
             15 días para recuperar tu <br className="hidden md:block" />
-            <span className="text-trinalyze-gold">tranquilidad fiscal.</span>
+            <span className="text-trinalyze-brand-blue">tranquilidad fiscal.</span>
           </h2>
           <div className="max-w-lg sm:max-w-xl mx-auto relative group w-full min-w-0 px-1">
             <div className="absolute -inset-1 bg-gradient-to-r from-trinalyze-gold to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
             <motion.div whileHover={{ y: -8 }} transition={{ duration: 0.3 }} className="h-full">
-              <Card className="relative bg-trinalyze-bg-deep border-trinalyze-gold/20 p-6 sm:p-10 pt-14 sm:pt-16 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(222,178,62,0.1)]">
+              <Card className="relative bg-trinalyze-bg-deep border-trinalyze-brand-blue/20 p-6 sm:p-10 pt-14 sm:pt-16 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(222,178,62,0.1)]">
               <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20">
-                <span className="bg-trinalyze-gold text-white text-[12px] font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap tracking-wider">
+                <span className="bg-trinalyze-brand-blue text-white text-[12px] font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap tracking-wider">
                   MEMBRESÍA PROFESIONAL
                 </span>
               </div>
-              <CardHeader className="text-center pb-8 sm:pb-10 border-b border-trinalyze-gold/10 overflow-visible">
-                <CardTitle className="font-serif text-trinalyze-gold text-2xl sm:text-3xl mb-6 break-words">Plan Élite</CardTitle>
+              <CardHeader className="text-center pb-8 sm:pb-10 border-b border-trinalyze-brand-blue/10 overflow-visible">
+                <CardTitle className="font-serif text-trinalyze-brand-blue text-2xl sm:text-3xl mb-6 break-words">Plan Élite</CardTitle>
                 <div className="flex flex-col items-center gap-6 w-full min-w-0">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full">
-                    <div className="w-full min-w-0 py-4 px-4 sm:px-5 rounded-xl bg-trinalyze-bg-deep/80 border border-trinalyze-gold/10 flex flex-col items-center justify-center">
+                    <div className="w-full min-w-0 py-4 px-4 sm:px-5 rounded-xl bg-trinalyze-bg-deep/80 border border-trinalyze-brand-blue/10 flex flex-col items-center justify-center">
                       <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Mensual</p>
                       <div className="flex items-baseline justify-center gap-1 flex-wrap text-center">
                         <span className="text-xl sm:text-2xl md:text-3xl font-bold text-trinalyze-text-light tabular-nums">RD$950</span>
-                        <span className="text-trinalyze-gold text-sm sm:text-base font-semibold">/mes</span>
+                        <span className="text-trinalyze-brand-blue text-sm sm:text-base font-semibold">/mes</span>
                       </div>
                     </div>
-                    <div className="w-full min-w-0 py-4 px-4 sm:px-5 rounded-xl bg-trinalyze-gold/10 border-2 border-trinalyze-gold/30 relative flex flex-col items-center justify-center">
-                      <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-xs font-bold text-trinalyze-gold bg-trinalyze-bg-deep px-3 py-1 rounded-full whitespace-nowrap">⭐ Más popular</span>
+                    <div className="w-full min-w-0 py-4 px-4 sm:px-5 rounded-xl bg-trinalyze-brand-blue/10 border-2 border-trinalyze-brand-blue/30 relative flex flex-col items-center justify-center">
+                      <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-xs font-bold text-trinalyze-brand-blue bg-trinalyze-bg-deep px-3 py-1 rounded-full whitespace-nowrap">⭐ Más popular</span>
                       <p className="text-xs text-slate-400 uppercase tracking-wider mb-2 mt-2">Anual</p>
                       <div className="flex items-baseline justify-center gap-1 flex-wrap text-center">
                         <span className="text-xl sm:text-2xl md:text-3xl font-bold text-trinalyze-text-light tabular-nums">RD$9,500</span>
                       </div>
-                      <p className="text-trinalyze-gold text-xs sm:text-sm font-semibold mt-2 text-center">🎁 Paga 10 meses y usa 12</p>
+                      <p className="text-trinalyze-brand-blue text-xs sm:text-sm font-semibold mt-2 text-center">🎁 Paga 10 meses y usa 12</p>
                     </div>
                   </div>
                   <p className="text-sm md:text-base text-trinalyze-text-light italic break-words w-full">Si no simplifica tu vida, no pagas nada.</p>
@@ -664,43 +664,43 @@ export default function LandingPage() {
               <CardContent className="pt-8 sm:pt-10 space-y-8 overflow-visible">
                 <ul className="space-y-8 text-left w-full min-w-0">
                   <li className="flex items-start gap-4">
-                    <ShieldCheck className="w-6 h-6 text-trinalyze-gold mt-1 shrink-0 stroke-[1px]" />
+                    <ShieldCheck className="w-6 h-6 text-trinalyze-brand-blue mt-1 shrink-0 stroke-[1px]" />
                     <div className="min-w-0">
                       <p className="font-bold text-trinalyze-text-light">Validación Instantánea de RNC</p>
                       <p className="text-sm text-slate-400 mt-1 leading-relaxed">Valida a tus clientes en segundos como una multinacional.</p>
                     </div>
                   </li>
                   <li className="flex items-start gap-4">
-                    <ShieldCheck className="w-6 h-6 text-trinalyze-gold mt-1 shrink-0 stroke-[1px]" />
+                    <ShieldCheck className="w-6 h-6 text-trinalyze-brand-blue mt-1 shrink-0 stroke-[1px]" />
                     <div className="min-w-0">
                       <p className="font-bold text-trinalyze-text-light">Multiperfil de Oficios</p>
                       <p className="text-sm text-slate-400 mt-1 leading-relaxed">Ya seas abogado, plomero o médico, adaptamos tus NCF a tu necesidad.</p>
                     </div>
                   </li>
                   <li className="flex items-start gap-4">
-                    <ShieldCheck className="w-6 h-6 text-trinalyze-gold mt-1 shrink-0 stroke-[1px]" />
+                    <ShieldCheck className="w-6 h-6 text-trinalyze-brand-blue mt-1 shrink-0 stroke-[1px]" />
                     <div className="min-w-0">
                       <p className="font-bold text-trinalyze-text-light">Acceso Mobile-First + WhatsApp</p>
                       <p className="text-sm text-slate-400 mt-1 leading-relaxed">Factura bajo el sol o en el consultorio y envíala al instante.</p>
                     </div>
                   </li>
                   <li className="flex items-start gap-4">
-                    <ShieldCheck className="w-6 h-6 text-trinalyze-gold mt-1 shrink-0 stroke-[1px]" />
+                    <ShieldCheck className="w-6 h-6 text-trinalyze-brand-blue mt-1 shrink-0 stroke-[1px]" />
                     <div className="min-w-0">
                       <p className="font-bold text-trinalyze-text-light">Cero Contabilidad Compleja</p>
                       <p className="text-sm text-slate-400 mt-1 leading-relaxed">Nosotros hacemos el trabajo sucio de la DGII por ti.</p>
                     </div>
                   </li>
                   <li className="flex items-start gap-4">
-                    <ShieldCheck className="w-6 h-6 text-trinalyze-gold mt-1 shrink-0 stroke-[1px]" />
+                    <ShieldCheck className="w-6 h-6 text-trinalyze-brand-blue mt-1 shrink-0 stroke-[1px]" />
                     <div className="min-w-0">
                       <p className="font-bold text-trinalyze-text-light">Soporte Prioritario Anacaona</p>
                     </div>
                   </li>
                 </ul>
-                <p className="text-trinalyze-gold font-semibold text-center pt-4">El único sistema que habla dominicano.</p>
+                <p className="text-trinalyze-brand-blue font-semibold text-center pt-4">El único sistema que habla dominicano.</p>
                 <Link href="/registro" className="block pt-6 w-full min-w-0">
-                  <Button className="animate-shimmer w-full min-h-[4rem] px-4 sm:px-6 md:px-8 py-4 text-sm sm:text-base md:text-lg bg-trinalyze-gold hover:bg-trinalyze-gold-hover text-trinalyze-bg-deep font-bold rounded-xl transition-all shadow-xl shadow-trinalyze-gold/10 flex items-center justify-center text-center whitespace-normal leading-tight">
+                  <Button className="animate-shimmer w-full min-h-[4rem] px-4 sm:px-6 md:px-8 py-4 text-sm sm:text-base md:text-lg bg-trinalyze-brand-blue hover:bg-trinalyze-brand-blue-hover text-trinalyze-bg-deep font-bold rounded-xl transition-all shadow-xl shadow-trinalyze-brand-blue/10 flex items-center justify-center text-center whitespace-normal leading-tight">
                     Empieza gratis — 15 días sin tarjeta
                   </Button>
                 </Link>
@@ -713,7 +713,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-20 border-t border-trinalyze-gold/10 bg-trinalyze-bg-darker">
+      <footer className="py-20 border-t border-trinalyze-brand-blue/10 bg-trinalyze-bg-darker">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-2">
@@ -725,34 +725,34 @@ export default function LandingPage() {
               </p>
             </div>
             <div>
-              <h5 className="font-bold mb-6 text-sm uppercase tracking-widest text-trinalyze-gold">Contacto</h5>
+              <h5 className="font-bold mb-6 text-sm uppercase tracking-widest text-trinalyze-brand-blue">Contacto</h5>
               <ul className="space-y-4 text-sm text-slate-400">
                 <li>soporte@trinalyze.pro</li>
                 <li>Santo Domingo, RD</li>
                 <li>
-                  <a href="https://wa.me/18495890656" target="_blank" rel="noopener noreferrer" className="hover:text-trinalyze-gold transition-colors">
+                  <a href="https://wa.me/18495890656" target="_blank" rel="noopener noreferrer" className="hover:text-trinalyze-brand-blue transition-colors">
                     WhatsApp: (849) 589-0656
                   </a>
                 </li>
               </ul>
             </div>
             <div>
-              <h5 className="font-bold mb-6 text-sm uppercase tracking-widest text-trinalyze-gold">Síguenos</h5>
+              <h5 className="font-bold mb-6 text-sm uppercase tracking-widest text-trinalyze-brand-blue">Síguenos</h5>
               <div className="flex gap-4">
-                <Link href="#" className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:border-trinalyze-gold hover:text-trinalyze-gold transition-all">FB</Link>
-                <Link href="#" className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:border-trinalyze-gold hover:text-trinalyze-gold transition-all">IG</Link>
-                <Link href="#" className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:border-trinalyze-gold hover:text-trinalyze-gold transition-all">LN</Link>
+                <Link href="#" className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:border-trinalyze-brand-blue hover:text-trinalyze-brand-blue transition-all">FB</Link>
+                <Link href="#" className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:border-trinalyze-brand-blue hover:text-trinalyze-brand-blue transition-all">IG</Link>
+                <Link href="#" className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:border-trinalyze-brand-blue hover:text-trinalyze-brand-blue transition-all">LN</Link>
               </div>
             </div>
           </div>
           <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-slate-500 uppercase tracking-widest">
             <p>© {new Date().getFullYear()} Trinalyze Billing. Todos los derechos reservados.</p>
             <div className="flex flex-wrap justify-center gap-6 md:gap-8">
-              <Link href="/terminos" className="hover:text-trinalyze-gold">Términos y Condiciones</Link>
-              <Link href="/privacidad" className="hover:text-trinalyze-gold">Privacidad</Link>
-              <Link href="/uso-aceptable" className="hover:text-trinalyze-gold">Uso Aceptable</Link>
-              <Link href="/limitacion-responsabilidad" className="hover:text-trinalyze-gold">Limitación de Responsabilidad</Link>
-              <Link href="/reembolsos" className="hover:text-trinalyze-gold">Reembolsos</Link>
+              <Link href="/terminos" className="hover:text-trinalyze-brand-blue">Términos y Condiciones</Link>
+              <Link href="/privacidad" className="hover:text-trinalyze-brand-blue">Privacidad</Link>
+              <Link href="/uso-aceptable" className="hover:text-trinalyze-brand-blue">Uso Aceptable</Link>
+              <Link href="/limitacion-responsabilidad" className="hover:text-trinalyze-brand-blue">Limitación de Responsabilidad</Link>
+              <Link href="/reembolsos" className="hover:text-trinalyze-brand-blue">Reembolsos</Link>
             </div>
           </div>
         </div>
