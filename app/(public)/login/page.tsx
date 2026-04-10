@@ -201,7 +201,7 @@ function LoginForm() {
                 </div>
                 <CardHeader className="text-center pb-6 pt-10">
                     <CardTitle className="text-3xl font-bold tracking-tight flex items-center justify-center gap-2">
-                        <TrinalyzeWord className="text-3xl" showBill={false} />
+                        <TrinalyzeWord className="text-3xl" showBill={false} variant="light" />
                     </CardTitle>
                     <CardDescription className="text-trinalyze-gold/80 font-medium mt-2 text-sm uppercase tracking-widest">Gestión Fiscal de Alto Nivel</CardDescription>
                 </CardHeader>
