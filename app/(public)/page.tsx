@@ -156,7 +156,7 @@ export default function LandingPage() {
                   <div className="w-6 h-6 rounded-full bg-slate-800 border border-trinalyze-bg-deep flex items-center justify-center text-[10px]">👨‍💼</div>
                 </div>
                 <p className="text-[11px] sm:text-xs text-trinalyze-text-light/80">
-                  Confiado por médicos, abogados, técnicos independientes y consultores en la RD.
+                  Confiado por médicos, abogados, ingenieros, arquitectos, técnicos independientes y consultores en la RD.
                 </p>
               </div>
             </div>
@@ -246,7 +246,7 @@ export default function LandingPage() {
                   <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 mt-1">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                   </div>
-                  <p className="text-slate-300"><strong>SÍ</strong>, si eres médico, abogado, ingeniero o técnico que factura servicios y ya tiene su RNC.</p>
+                  <p className="text-slate-300"><strong>SÍ</strong>, si eres médico, abogado, ingeniero, arquitecto o técnico que factura servicios y ya tiene su RNC.</p>
                 </div>
                 <div className="flex gap-4">
                   <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 mt-1">
@@ -378,19 +378,25 @@ export default function LandingPage() {
             </h2>
             <p className="text-slate-400 font-light max-w-2xl mx-auto">Mira lo que dicen técnicos y profesionales como tú.</p>
           </motion.div>
-          <div className="flex overflow-x-auto pb-8 snap-x snap-mandatory justify-start md:justify-center gap-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-            {testimonials.map((test, i) => (
-              <div key={i} className="snap-center shrink-0 w-[300px] md:w-[350px] p-8 rounded-3xl bg-white/[0.02] border border-white/5 hover:border-trinalyze-gold/20 hover:bg-white/[0.04] transition-all flex flex-col justify-between">
-                <p className="text-slate-300 italic mb-6 leading-relaxed">"{test.text}"</p>
-                <div>
-                  <p className="font-bold text-trinalyze-text-light flex items-center gap-2">
-                    {test.name}
-                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                  </p>
-                  <p className="text-xs text-trinalyze-gold uppercase tracking-wider mt-1">{test.role}</p>
+          <div className="relative flex overflow-hidden w-full pb-8" style={{ maskImage: "linear-gradient(to right, transparent, black 10%, black 90%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 10%, black 90%, transparent)" }}>
+            <motion.div 
+              className="flex gap-6 w-max"
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{ ease: "linear", duration: 40, repeat: Infinity }}
+            >
+              {[...testimonials, ...testimonials].map((test, i) => (
+                <div key={i} className="shrink-0 w-[300px] md:w-[350px] p-8 rounded-3xl bg-white/[0.02] border border-white/5 hover:border-trinalyze-gold/20 hover:bg-white/[0.04] transition-all flex flex-col justify-between">
+                  <p className="text-slate-300 italic mb-6 leading-relaxed">"{test.text}"</p>
+                  <div>
+                    <p className="font-bold text-trinalyze-text-light flex items-center gap-2">
+                      {test.name}
+                      <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                    </p>
+                    <p className="text-xs text-trinalyze-gold uppercase tracking-wider mt-1">{test.role}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </motion.div>
           </div>
         </div>
       </section>
