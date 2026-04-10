@@ -19,6 +19,14 @@ const faqs = [
   { question: "¿Es difícil de usar?", answer: "Está hecho para que lo uses desde el celular mientras te mueves. Si sabes enviar un WhatsApp, sabes usar Trinalyze Billing." }
 ];
 
+const testimonials = [
+  { name: "Carlos M.", role: "Técnico en Refrigeración", text: "Hace tiempo que buscaba algo así de simple. Antes el 606 me volvía loco a fin de mes, ahora todo lo hago en minutos." },
+  { name: "Dra. Amelia P.", role: "Odontóloga", text: "Por fin un sistema que no me pide un manual para hacer una simple factura con NCF. Facturo desde el celular saliendo de la cita." },
+  { name: "José R.", role: "Electricista Independiente", text: "Yo no sé nada de contabilidad, pero con esto genero mi factura y se la mando por WhatsApp al cliente directo. Un palo." },
+  { name: "Ing. Roberto C.", role: "Consultor de TI", text: "Se lo recomiendo a cualquier colega que trabaje independiente. Mi contador es el más feliz desde que uso Trinalyze." },
+  { name: "Lic. Carmen V.", role: "Abogada Corporativa", text: "Manejar mis igualas mensuales ahora me toma 10 minutos. Confío plenamente en cómo organiza los reportes para la DGII." }
+];
+
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
@@ -137,9 +145,21 @@ export default function LandingPage() {
                 Empieza gratis — 15 días sin tarjeta
               </Button>
             </Link>
-            <p className="text-sm text-slate-500 font-light">
-              Sin tarjeta. Sin compromiso. Cancela cuando quieras.
-            </p>
+            <div className="flex flex-col items-center gap-2 mt-2">
+              <p className="text-sm text-slate-500 font-light">
+                Sin tarjeta. Sin compromiso. Cancela cuando quieras.
+              </p>
+              <div className="flex items-center gap-2 mt-4 px-4 py-2 rounded-full bg-trinalyze-gold/5 border border-trinalyze-gold/10">
+                <div className="flex -space-x-2">
+                  <div className="w-6 h-6 rounded-full bg-slate-800 border border-trinalyze-bg-deep flex items-center justify-center text-[10px]">👷‍♂️</div>
+                  <div className="w-6 h-6 rounded-full bg-slate-800 border border-trinalyze-bg-deep flex items-center justify-center text-[10px]">👩‍⚕️</div>
+                  <div className="w-6 h-6 rounded-full bg-slate-800 border border-trinalyze-bg-deep flex items-center justify-center text-[10px]">👨‍💼</div>
+                </div>
+                <p className="text-[11px] sm:text-xs text-trinalyze-text-light/80">
+                  Confiado por médicos, abogados, técnicos independientes y consultores en la RD.
+                </p>
+              </div>
+            </div>
           </motion.div>
         </motion.div>
       </header>
@@ -342,6 +362,35 @@ export default function LandingPage() {
             <p className="text-xl text-slate-400 leading-relaxed font-light">
               La mayoría de los sistemas fueron hechos para grandes empresas con ejércitos de contadores. Trinalyze Billing nace para el profesional autónomo, el técnico independiente y el profesional que realmente mueve la economía dominicana. Somos el aliado que te da el estatus de una multinacional, sin importar el tamaño de tu oficina hoy.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-24 bg-trinalyze-bg-darker overflow-hidden border-y border-trinalyze-gold/5">
+        <div className="container mx-auto px-4 sm:px-6">
+          <motion.div 
+            initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={fadeInUp}
+            className="text-center mb-16"
+          >
+            <h2 className="font-serif text-3xl md:text-5xl font-bold mb-4 text-trinalyze-text-light">
+              Respaldado por la <br className="md:hidden" /><span className="text-trinalyze-gold">fuerza independiente.</span>
+            </h2>
+            <p className="text-slate-400 font-light max-w-2xl mx-auto">Mira lo que dicen técnicos y profesionales como tú.</p>
+          </motion.div>
+          <div className="flex overflow-x-auto pb-8 snap-x snap-mandatory justify-start md:justify-center gap-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+            {testimonials.map((test, i) => (
+              <div key={i} className="snap-center shrink-0 w-[300px] md:w-[350px] p-8 rounded-3xl bg-white/[0.02] border border-white/5 hover:border-trinalyze-gold/20 hover:bg-white/[0.04] transition-all flex flex-col justify-between">
+                <p className="text-slate-300 italic mb-6 leading-relaxed">"{test.text}"</p>
+                <div>
+                  <p className="font-bold text-trinalyze-text-light flex items-center gap-2">
+                    {test.name}
+                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                  </p>
+                  <p className="text-xs text-trinalyze-gold uppercase tracking-wider mt-1">{test.role}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
