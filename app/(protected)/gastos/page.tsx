@@ -49,7 +49,8 @@ import { ContextualHelp } from "@/components/ui/contextual-help";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import jsQR from "jsqr";
-import { ZoomIn, ZoomOut, Maximize2, Layers, Keyboard, Upload, Pencil } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize2, Layers, Keyboard, Upload, Pencil, PieChart as PieIcon } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import styles from "./gastos.module.css";
 
 const EXPENSE_CATEGORIES = [
@@ -94,10 +95,13 @@ export default function GastosPage() {
         ncf: "",
         amount: "",
         itbis: "",
+        itbisRetained: "",
+        isrRetention: "",
         category: "02",
         paymentMethod: "01",
         date: new Date().toISOString().split('T')[0]
     });
+    const [isValidatingRnc, setIsValidatingRnc] = useState(false);
     const [formErrors, setFormErrors] = useState<{ supplierRnc?: string; ncf?: string; amount?: string }>({});
 
     const [scannedImage, setScannedImage] = useState<string | null>(null);
@@ -148,6 +152,39 @@ export default function GastosPage() {
         return Object.keys(err).length === 0;
     };
 
+    const handleRncBlur = async () => {
+        const rnc = formData.supplierRnc.replace(/[^0-9]/g, "");
+        if ((rnc.length === 9 || rnc.length === 11) && !formData.supplierName) {
+            setIsValidatingRnc(true);
+            try {
+                const data = await api.validateRnc(rnc);
+                if (data && data.nombre) {
+                    setFormData(prev => ({ ...prev, supplierName: data.nombre, supplierRnc: rnc }));
+                    toast.success(`Suplidor detectado: ${data.nombre}`);
+                }
+            } catch (err) {
+                console.warn("No se pudo validar el RNC automáticamente");
+            } finally {
+                setIsValidatingRnc(false);
+            }
+        }
+    };
+
+    const handleAmountChange = (val: string) => {
+        const amt = parseFloat(val);
+        const newFormData = { ...formData, amount: val };
+        
+        // Auto-calcular ITBIS (18%) si el campo ITBIS está vacío o era el 18% del monto anterior
+        if (!isNaN(amt) && amt > 0) {
+            if (!formData.itbis || formData.itbis === String(Math.round(parseFloat(formData.amount || "0") * 0.18 * 100) / 100)) {
+                newFormData.itbis = String(Math.round(amt * 0.18 * 100) / 100);
+            }
+        }
+        
+        setFormData(newFormData);
+        if (formErrors.amount) setFormErrors({ ...formErrors, amount: undefined });
+    };
+
     const handleSaveExpense = async (andAddAnother = false) => {
         if (!formData.supplierName || !formData.supplierRnc || !formData.ncf || !formData.amount) {
             toast.error("Por favor completa los campos requeridos");
@@ -164,6 +201,8 @@ export default function GastosPage() {
                 ...formData,
                 amount: parseFloat(formData.amount),
                 itbis: parseFloat(formData.itbis) || 0,
+                itbisRetained: parseFloat(formData.itbisRetained) || 0,
+                isrRetention: parseFloat(formData.isrRetention) || 0,
                 paymentMethod: formData.paymentMethod || "01",
             };
             if (editingExpense?._id) {
@@ -222,6 +261,8 @@ export default function GastosPage() {
                         ncf: parsed.ncf,
                         amount: parsed.amount ?? "",
                         itbis: parsed.itbis ?? "",
+                        itbisRetained: "",
+                        isrRetention: "",
                         category: "02",
                         paymentMethod: "01",
                         date: parsed.date ? parsed.date.split("-").reverse().join("-") : new Date().toISOString().split("T")[0],
@@ -255,6 +296,8 @@ export default function GastosPage() {
                         ncf: parsed.ncf,
                         amount: parsed.amount.toString(),
                         itbis: parsed.itbis.toString(),
+                        itbisRetained: "",
+                        isrRetention: "",
                         category: parsed.category,
                         paymentMethod: "01",
                         date: parsed.date || new Date().toISOString().split("T")[0],
@@ -279,6 +322,8 @@ export default function GastosPage() {
             ncf: "",
             amount: "",
             itbis: "",
+            itbisRetained: "",
+            isrRetention: "",
             category: "02",
             paymentMethod: "01",
             date: new Date().toISOString().split("T")[0],
@@ -333,13 +378,16 @@ export default function GastosPage() {
             ncf: "",
             amount: "",
             itbis: "",
+            itbisRetained: "",
+            isrRetention: "",
             category: "02",
             paymentMethod: "01",
-            date: new Date().toISOString().split("T")[0],
+            date: new Date().toISOString().split('T')[0],
         });
         setFormErrors({});
         setDataFromScan(false);
         setEditingExpense(null);
+        setIsValidatingRnc(false);
         if (scannedImage) {
             URL.revokeObjectURL(scannedImage);
             setScannedImage(null);
@@ -358,13 +406,16 @@ export default function GastosPage() {
             ncf: exp.ncf || "",
             amount: String(exp.amount ?? ""),
             itbis: String(exp.itbis ?? ""),
+            itbisRetained: String(exp.itbisRetained ?? ""),
+            isrRetention: String(exp.isrRetention ?? ""),
             category: exp.category || "02",
             paymentMethod: exp.paymentMethod || "01",
-            date: exp.date ? new Date(exp.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+            date: exp.date ? new Date(exp.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         });
         setEditingExpense(exp);
         setFormErrors({});
         setIsAddOpen(true);
+        setIsValidatingRnc(false);
     };
 
     const openManualForm = () => {
@@ -384,6 +435,13 @@ export default function GastosPage() {
     });
 
     const totalGastos = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+    const categoryData = EXPENSE_CATEGORIES.map(cat => {
+        const total = expenses.filter(e => e.category === cat.id).reduce((sum, e) => sum + e.amount, 0);
+        return { name: cat.name, value: total, id: cat.id };
+    }).filter(c => c.value > 0).sort((a, b) => b.value - a.value);
+
+    const COLORS = ['#0f172a', '#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#f97316', '#64748b', '#2dd4bf', '#84cc16'];
 
     const frequentSuppliers = Array.from(
         new Map(expenses.map(e => [e.supplierRnc?.replace(/[^0-9]/g, "") || "", { name: e.supplierName, rnc: e.supplierRnc }])).values()
@@ -552,16 +610,20 @@ export default function GastosPage() {
                                         />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">RNC Suplidor</label>
-                                            <Input
-                                                placeholder="RNC / Cédula"
-                                                value={formData.supplierRnc}
-                                                onChange={e => { setFormData({ ...formData, supplierRnc: e.target.value }); if (formErrors.supplierRnc) setFormErrors({ ...formErrors, supplierRnc: undefined }); }}
-                                                className={formErrors.supplierRnc ? "border-destructive" : ""}
-                                            />
-                                            {formErrors.supplierRnc && <p className="text-xs text-destructive">{formErrors.supplierRnc}</p>}
-                                        </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
+                                            RNC Suplidor
+                                            {isValidatingRnc && <Loader2 className="w-3 h-3 animate-spin text-accent" />}
+                                        </label>
+                                        <Input
+                                            placeholder="RNC / Cédula"
+                                            value={formData.supplierRnc}
+                                            onChange={e => { setFormData({ ...formData, supplierRnc: e.target.value }); if (formErrors.supplierRnc) setFormErrors({ ...formErrors, supplierRnc: undefined }); }}
+                                            onBlur={handleRncBlur}
+                                            className={formErrors.supplierRnc ? "border-destructive" : ""}
+                                        />
+                                        {formErrors.supplierRnc && <p className="text-xs text-destructive">{formErrors.supplierRnc}</p>}
+                                    </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">NCF</label>
                                             <Input
@@ -582,7 +644,7 @@ export default function GastosPage() {
                                                     type="number"
                                                     className={cn("pl-9", formErrors.amount && "border-destructive")}
                                                     value={formData.amount}
-                                                    onChange={e => { setFormData({ ...formData, amount: e.target.value }); if (formErrors.amount) setFormErrors({ ...formErrors, amount: undefined }); }}
+                                                    onChange={e => handleAmountChange(e.target.value)}
                                                 />
                                             </div>
                                             {formErrors.amount && <p className="text-xs text-destructive">{formErrors.amount}</p>}
@@ -593,6 +655,26 @@ export default function GastosPage() {
                                                 type="number"
                                                 value={formData.itbis}
                                                 onChange={e => setFormData({ ...formData, itbis: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">ITBIS Retenido</label>
+                                            <Input
+                                                type="number"
+                                                value={formData.itbisRetained}
+                                                onChange={e => setFormData({ ...formData, itbisRetained: e.target.value })}
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Retención ISR</label>
+                                            <Input
+                                                type="number"
+                                                value={formData.isrRetention}
+                                                onChange={e => setFormData({ ...formData, isrRetention: e.target.value })}
+                                                placeholder="0.00"
                                             />
                                         </div>
                                     </div>
@@ -705,6 +787,69 @@ export default function GastosPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Analytics & Charts */}
+            {categoryData.length > 0 && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <Card className="lg:col-span-2 border-border/10 bg-card/30">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                <PieIcon className="w-4 h-4" /> Distribución por categoría
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="h-[300px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={categoryData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {categoryData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <RechartsTooltip 
+                                        formatter={(value: any) => `RD$ ${Number(value || 0).toLocaleString()}`}
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                    />
+                                    <Legend 
+                                        verticalAlign="middle" 
+                                        align="right" 
+                                        layout="vertical"
+                                        formatter={(value) => <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">{value}</span>}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-border/10 bg-card/30">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Top Categorías</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {categoryData.slice(0, 5).map((cat, idx) => (
+                                <div key={cat.id} className="space-y-1">
+                                    <div className="flex justify-between text-xs font-bold">
+                                        <span className="truncate max-w-[150px]">{cat.id} - {cat.name}</span>
+                                        <span>{Math.round((cat.value / totalGastos) * 100)}%</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full rounded-full transition-all duration-1000" 
+                                            style={{ width: `${(cat.value / totalGastos) * 100}%`, backgroundColor: COLORS[idx % COLORS.length] }} 
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
 
             {/* Filters & Search */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
