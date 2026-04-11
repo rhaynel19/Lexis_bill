@@ -35,17 +35,17 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
             try {
                 const { api } = await import("@/lib/api-service");
                 const [plansRes, infoRes, statusRes, meRes] = await Promise.all([
-                    api.getMembershipPlans(),
-                    api.getMembershipPaymentInfo(),
+                    api.getMembershipPlans().catch(() => null),
+                    api.getMembershipPaymentInfo().catch(() => null),
                     api.getSubscriptionStatus().catch(() => null),
                     api.getMe().catch(() => null),
                 ]);
-                setPlans(plansRes?.plans || []);
+                if (plansRes?.plans) setPlans(plansRes.plans);
                 setPaymentInfo(infoRes || null);
                 setSubscription(statusRes || null);
                 setUserEmail(meRes?.email || "");
             } catch {
-                toast.error("Error al cargar planes.");
+                console.error("Error cargando componentes de membresía");
             } finally {
                 setIsLoading(false);
             }
@@ -130,9 +130,9 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
 
     if (isLoading) {
         return (
-            <Card className="border-none shadow-lg bg-amber-50/50 backdrop-blur-sm border-amber-100">
+            <Card className="shadow-xl bg-card border-border">
                 <CardContent className="py-12 flex justify-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </CardContent>
             </Card>
         );
@@ -166,12 +166,13 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                 </div>
 
                 {hasPending && (
-                    <div className="p-4 bg-amber-100/80 rounded-xl border border-amber-200">
-                        <p className="text-sm font-medium text-amber-900">
-                            Estamos validando tu pago manualmente para mayor seguridad.
+                    <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20">
+                        <p className="text-sm font-semibold text-primary">
+                            <Loader2 className="w-4 h-4 inline-block animate-spin mr-1 mb-0.5" />
+                            Estamos validando tu pago para activar la suscripción.
                         </p>
-                        <p className="text-sm text-amber-800 mt-1">
-                            Validamos en 24-48 horas. Te notificaremos cuando esté activa.
+                        <p className="text-sm text-muted-foreground mt-1 ml-5">
+                            Este proceso tarda entre 2 a 24 horas laborables. Te notificaremos al finalizar.
                         </p>
                     </div>
                 )}
@@ -182,10 +183,10 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                             <Label className="text-foreground text-sm font-bold uppercase tracking-wide">Elige tu plan</Label>
                             <div className="space-y-4 mt-3">
                                 {/* Plan Profesional: Mensual + Anual */}
-                                <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden transition-all hover:shadow-md">
-                                    <div className="p-5 bg-muted/40 border-b border-border flex justify-between items-center">
+                                <div className="rounded-2xl border border-primary/20 bg-card shadow-sm overflow-hidden transition-all hover:shadow-md ring-1 ring-primary/5">
+                                    <div className="p-5 bg-primary/5 border-b border-primary/10 flex justify-between items-center">
                                         <div>
-                                            <p className="font-extrabold text-lg text-foreground">{proPlan?.name || "Profesional"}</p>
+                                            <p className="font-extrabold text-lg text-primary">{proPlan?.name || "Profesional"}</p>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-border">
@@ -200,7 +201,7 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                         >
                                             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-2">Mensual</p>
                                             <p className="text-3xl font-black text-foreground">RD$ {proPlan?.priceMonthly ?? 950}</p>
-                                            <p className="text-sm text-muted-foreground">/mes</p>
+                                            <p className="text-sm text-muted-foreground mt-1">/mes</p>
                                         </button>
                                         <button
                                             type="button"
@@ -214,8 +215,8 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-2 flex justify-between">
                                                 Anual
                                                 {proPlan?.annualPopular && (
-                                                    <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase">
-                                                        ⭐ Popular
+                                                    <span className="text-[10px] font-black text-white bg-primary px-2.5 py-0.5 rounded-full uppercase shadow-sm">
+                                                        ⭐ Ahorra 16%
                                                     </span>
                                                 )}
                                             </p>
@@ -242,7 +243,7 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                         <div>
                             <Label className="text-foreground text-sm font-bold uppercase tracking-wide">Método de pago</Label>
                             <div className="flex flex-col sm:flex-row gap-4 mt-3">
-                                <label className="flex items-center gap-3 p-4 border border-border rounded-xl cursor-pointer hover:bg-muted/50 transition-colors w-full sm:w-1/2">
+                                <label className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all w-full sm:w-1/2 ${selectedMethod === 'transferencia' ? 'border-primary ring-1 ring-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
                                     <input
                                         type="radio"
                                         name="method"
@@ -250,9 +251,11 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                         onChange={() => { setSelectedMethod("transferencia"); setComprobante(null); setPaypalConfirmed(false); }}
                                         className="w-5 h-5 accent-primary"
                                     />
-                                    <span className="font-semibold whitespace-nowrap text-foreground">🏦 Transferencia</span>
+                                    <span className="font-semibold whitespace-nowrap text-foreground flex items-center gap-2">
+                                        <Building2 className="w-4 h-4 text-primary" /> Transferencia
+                                    </span>
                                 </label>
-                                <label className="flex items-center gap-3 p-4 border border-border rounded-xl cursor-pointer hover:bg-muted/50 transition-colors w-full sm:w-1/2">
+                                <label className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all w-full sm:w-1/2 ${selectedMethod === 'paypal' ? 'border-primary ring-1 ring-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
                                     <input
                                         type="radio"
                                         name="method"
@@ -329,7 +332,7 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                     <Label className="text-slate-700">Comprobante de pago *</Label>
                                     <p className="text-xs text-muted-foreground">Sube una captura de pantalla o foto del comprobante.</p>
                                     {!comprobante ? (
-                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-amber-300 rounded-xl cursor-pointer bg-amber-50/50 hover:bg-amber-50 transition-colors">
+                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-primary/40 rounded-xl cursor-pointer bg-primary/5 hover:bg-primary/10 transition-colors">
                                             <input
                                                 type="file"
                                                 accept="image/*"
@@ -345,8 +348,8 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                                     }
                                                 }}
                                             />
-                                            <Upload className="w-8 h-8 text-amber-600 mb-2" />
-                                            <span className="text-sm font-medium text-amber-700">Haz clic para subir</span>
+                                            <Upload className="w-8 h-8 text-primary mb-2" />
+                                            <span className="text-sm font-medium text-primary">Haz clic para subir comprobante</span>
                                             <span className="text-xs text-slate-500">PNG, JPG (máx. 5 MB)</span>
                                         </label>
                                     ) : (
@@ -381,9 +384,9 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                     <CreditCard className="w-4 h-4" /> Paga con PayPal
                                 </p>
 
-                                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-                                    <p className="text-sm text-amber-900 dark:text-amber-200 font-semibold">Monto a enviar</p>
-                                    <p className="text-2xl font-bold text-amber-700 dark:text-amber-400 mt-0.5">
+                                <div className="p-4 bg-muted/40 rounded-xl border border-border">
+                                    <p className="text-sm text-foreground font-semibold">Monto a enviar</p>
+                                    <p className="text-3xl font-black text-foreground mt-0.5">
                                         RD$ {selectedPrice}
                                     </p>
                                 </div>
@@ -466,35 +469,35 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                     </div>
                                 </div>
 
-                                <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors">
+                                <label className="flex items-start gap-3 cursor-pointer p-4 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors shadow-sm">
                                     <input
                                         type="checkbox"
                                         checked={paypalConfirmed}
                                         onChange={(e) => setPaypalConfirmed(e.target.checked)}
-                                        className="mt-0.5 accent-amber-600"
+                                        className="mt-0.5 w-5 h-5 accent-primary shrink-0"
                                     />
-                                    <span className="text-sm text-slate-700 dark:text-slate-300">
+                                    <span className="text-sm text-foreground font-medium">
                                         Confirmo que envié el pago por <strong>RD$ {selectedPrice}</strong>{" "}
                                         {paymentInfo.paypalMeUrl ? "mediante el enlace PayPal.Me" : `a ${paymentInfo.paypalEmail}`} e incluí la nota indicada arriba.
                                     </span>
                                 </label>
 
                                 {!paypalConfirmed && (
-                                    <p className="text-xs text-muted-foreground">
-                                        Debes confirmar antes de continuar.
+                                    <p className="text-xs font-semibold text-primary">
+                                        Debes confirmar la transacción antes de continuar.
                                     </p>
                                 )}
-                                <p className="text-xs text-slate-500 italic border-l-2 border-amber-300 pl-3">
-                                    Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).
+                                <p className="text-xs text-muted-foreground pl-3 border-l-2 border-primary/30">
+                                    Tu plan se activará de forma automática tras nuestra validación.
                                 </p>
                             </div>
                         )}
 
                         {canSubmit && !paymentReportedState && !hasPending && (
-                            <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/50 space-y-1 text-sm">
-                                <p className="font-medium text-slate-700">Resumen de tu solicitud</p>
-                                <p className="text-slate-600">Plan Profesional • {selectedBilling === "annual" ? "Anual" : "Mensual"} • RD$ {selectedPrice.toLocaleString()} • {selectedMethod === "transferencia" ? "Transferencia" : "PayPal"}</p>
-                                <p className="text-xs text-amber-700 mt-1">Tu plan se activa automáticamente una vez validemos el pago (puede tardar hasta 24 horas).</p>
+                            <div className="p-5 rounded-2xl border border-primary/20 bg-primary/5 space-y-1 text-sm shadow-sm">
+                                <p className="font-extrabold text-primary mb-2 flex items-center gap-2"><CheckCircle2 className="w-4 h-4"/> Resumen listo para enviar</p>
+                                <p className="text-foreground font-medium">Plan Profesional • {selectedBilling === "annual" ? "Anual" : "Mensual"} • RD$ {selectedPrice.toLocaleString()} • {selectedMethod === "transferencia" ? "Transferencia" : "PayPal"}</p>
+                                <p className="text-xs text-muted-foreground mt-2">Envía la confirmación y en minutos serás parte integral de la plataforma.</p>
                             </div>
                         )}
 
@@ -502,7 +505,7 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                         {!paymentReportedState && !hasPending && (
                             <div className="space-y-2">
                                 {!canSubmit && selectedPlan !== "free" && (
-                                    <p className="text-sm text-amber-700 font-medium">
+                                    <p className="text-sm text-muted-foreground font-medium mb-3">
                                         {selectedMethod === "transferencia"
                                             ? "Sube el comprobante de transferencia arriba para continuar."
                                             : "Marca la casilla de confirmación de PayPal para continuar."}
@@ -511,12 +514,12 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                                 <Button
                                     onClick={handleRequestPayment}
                                     disabled={isSubmitting || !canSubmit}
-                                    className="w-full h-12 text-base font-semibold bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150"
+                                    className="w-full h-14 text-base font-bold text-white shadow-lg shadow-primary/20 transition-all duration-200 rounded-xl"
                                 >
                                     {isSubmitting ? (
-                                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
+                                        <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Enviando confirmación...</>
                                     ) : (
-                                        <><CheckCircle2 className="w-4 h-4 mr-2" /> He realizado el pago</>
+                                        <><CheckCircle2 className="w-5 h-5 mr-2" /> Reportar Pago a Soporte</>
                                     )}
                                 </Button>
                             </div>
