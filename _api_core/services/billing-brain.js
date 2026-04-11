@@ -577,28 +577,79 @@ class BillingBrain {
 
         if (soonToExpire.length === 0) return;
 
+        // Group invoices by client to avoid duplicate reminders for the same client
+        const clientGroups = new Map();
+        
         soonToExpire.forEach(inv => {
+            const clientName = inv.clientName || 'Cliente';
+            // Fallback for missing NCFs to prevent 'undefined' in the UI
+            const invoiceRef = inv.ncf || inv.ncfSequence || inv.invoiceNumber || 'Sin número';
+            
+            if (!clientGroups.has(clientName)) {
+                clientGroups.set(clientName, {
+                    clientName,
+                    invoices: [],
+                    totalAmount: 0,
+                    phone: inv.clientPhone || ''
+                });
+            }
+            
+            const group = clientGroups.get(clientName);
+            const amount = Number(inv.balancePendiente) || Number(inv.total) || 0;
+            
+            group.invoices.push({
+                id: inv._id,
+                ncf: invoiceRef,
+                amount
+            });
+            group.totalAmount += amount;
+            
+            if (!group.phone && inv.clientPhone) {
+                group.phone = inv.clientPhone;
+            }
+        });
+
+        clientGroups.forEach(group => {
+            const count = group.invoices.length;
+            let message, humanMessage;
+            
+            if (count === 1) {
+                const invNcf = group.invoices[0].ncf;
+                message = `La factura ${invNcf} vence pronto (RD$${this._formatCurrency(group.totalAmount)}).`;
+                humanMessage = `La factura ${invNcf} está por cumplir 30 días. ¿Quieres que prepare un recordatorio de WhatsApp para ${group.clientName}?`;
+            } else {
+                message = `Tienes ${count} facturas de ${group.clientName} por vencer (RD$${this._formatCurrency(group.totalAmount)}).`;
+                humanMessage = `Tengo ${count} facturas de ${group.clientName} próximas a cumplir 30 días. ¿Quieres enviar un recordatorio conjunto de cobro por WhatsApp?`;
+            }
+
+            // Create a deterministic short ID
+            const safeIds = group.invoices.map(i => i.id || i.ncf).join('_').replace(/[^a-zA-Z0-9_]/g, '');
+            const combinedId = safeIds.substring(0, 30);
+
             this.insights.push({
-                id: `soft_collection_${inv._id || inv.ncf}`,
+                id: `soft_collection_${combinedId}`,
                 priority: INSIGHT_PRIORITY.IMPORTANT,
                 type: 'soft_collection',
                 title: 'Recordatorio Amable de Cobro',
-                message: `La factura ${inv.ncf} vence pronto (RD$${this._formatCurrency(inv.balancePendiente || inv.total)}).`,
-                humanMessage: `La factura ${inv.ncf} está por cumplir 30 días. ¿Quieres que prepare un recordatorio de WhatsApp para ${inv.clientName}?`,
+                message,
+                humanMessage,
                 action: {
                     label: 'Preparar Mensaje',
-                    url: 'https://wa.me/', // El frontend debe completar con el número y texto
+                    url: 'https://wa.me/', // Frontend will handle population
                     type: 'whatsapp_prefill',
                     data: {
-                        ncf: inv.ncf,
-                        clientName: inv.clientName,
-                        amount: inv.balancePendiente || inv.total,
-                        phone: inv.clientPhone || ''
+                        isMultiple: count > 1,
+                        invoiceCount: count,
+                        ncf: count === 1 ? group.invoices[0].ncf : group.invoices.map(i => i.ncf).join(', '),
+                        clientName: group.clientName,
+                        amount: group.totalAmount,
+                        phone: group.phone
                     }
                 },
                 metadata: {
-                    ncf: inv.ncf,
-                    clientName: inv.clientName
+                    isMultiple: count > 1,
+                    invoiceCount: count,
+                    clientName: group.clientName
                 }
             });
         });

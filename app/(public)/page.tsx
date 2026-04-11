@@ -159,7 +159,7 @@ export default function LandingPage() {
       <header className="relative pt-32 pb-20 sm:pt-40 sm:pb-24 md:pt-56 md:pb-40 overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 opacity-20">
           <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-trinalyze-brand-blue rounded-full blur-[140px]"></div>
-          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#DEB23E]/20 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#1e3a8a]/40 rounded-full blur-[120px]"></div>
         </div>
 
         <motion.div 
@@ -223,9 +223,9 @@ export default function LandingPage() {
               <div className="flex w-full h-[600px] bg-slate-50 relative pointer-events-none select-none overflow-hidden">
                 {/* Sidebar */}
                 <div className="w-[200px] sm:w-[240px] bg-[#1a2332] h-full hidden sm:flex flex-col shrink-0">
-                    <div className="h-16 px-4 flex flex-col justify-center bg-[#ddb13f] relative z-10 w-full shadow-sm">
-                        <TrinalyzeWord showBill={false} variant="dark" className="text-lg" />
-                        <span className="text-[6.5px] text-blue-950 font-black tracking-widest uppercase">El orden que te deja tranquilo</span>
+                    <div className="h-16 px-4 flex flex-col justify-center bg-[#1e3a8a] relative z-10 w-full shadow-sm">
+                        <TrinalyzeWord showBill={false} variant="light" className="text-lg" />
+                        <span className="text-[6.5px] text-white/80 font-black tracking-widest uppercase">El orden que te deja tranquilo</span>
                     </div>
                     {/* Navigation Items */}
                     <div className="p-4 space-y-6 overflow-hidden">
@@ -233,7 +233,7 @@ export default function LandingPage() {
                            <div className="flex items-center gap-3 text-slate-100 text-sm font-semibold pl-2">
                               <LayoutDashboard className="w-4 h-4 text-trinalyze-brand-blue" /> Dashboard
                            </div>
-                           <div className="bg-trinalyze-brand-blue/90 text-[#1a2332] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 mt-2 w-full shadow-md">
+                           <div className="bg-[#3B82F6] text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 mt-2 w-full shadow-[0_4px_15px_transparent] border border-transparent">
                               <Plus className="w-3 h-3" /> Nueva Factura
                            </div>
                        </div>
@@ -269,11 +269,11 @@ export default function LandingPage() {
                 {/* Right Area */}
                 <div className="flex-1 flex flex-col h-full bg-slate-50">
                     {/* Topbar */}
-                    <div className="h-16 bg-[#ddb13f] flex items-center justify-end px-4 sm:px-6 gap-3 shrink-0 shadow-sm border-b border-white/20">
-                        <div className="flex bg-white/30 text-amber-950 px-3 py-1.5 rounded-md text-[11px] font-bold items-center gap-1.5"><Shield className="w-3.5 h-3.5" /> Admin</div>
-                        <div className="flex bg-white text-blue-900 px-3 py-1.5 rounded-md text-[11px] font-bold items-center gap-1.5 shadow-sm"><MessageCircle className="w-3.5 h-3.5 text-blue-900/60" /> Pregúntale a Trinalyze</div>
-                        <Sun className="w-4 h-4 text-blue-950/40 hidden sm:block" />
-                        <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded bg-white/20 text-[10px] text-amber-950/80 font-mono font-medium"><span>Ctrl</span><span>+</span><span>K</span></div>
+                    <div className="h-16 bg-[#1e3a8a] flex items-center justify-end px-4 sm:px-6 gap-3 shrink-0 shadow-sm border-b border-white/10">
+                        <div className="flex bg-white/10 text-white px-3 py-1.5 rounded-md text-[11px] font-bold items-center gap-1.5"><Shield className="w-3.5 h-3.5" /> Admin</div>
+                        <div className="flex bg-white text-[#1e3a8a] px-3 py-1.5 rounded-md text-[11px] font-bold items-center gap-1.5 shadow-sm"><MessageCircle className="w-3.5 h-3.5 text-blue-900/60" /> Pregúntale a Trinalyze</div>
+                        <Sun className="w-4 h-4 text-white/50 hidden sm:block" />
+                        <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded bg-white/10 text-[10px] text-white/70 font-mono font-medium"><span>Ctrl</span><span>+</span><span>K</span></div>
                     </div>
                     
                     {/* Main Content Area */}
