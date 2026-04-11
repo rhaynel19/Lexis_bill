@@ -25,6 +25,7 @@ export default function Configuration() {
         profession: "general", // general, medic, lawyer, technical, other
         bankName: "",
         bankAccount: "",
+        paypalLink: "",
         hasElectronicBilling: false,
         isTaxExemptCompany: false,
     });
@@ -194,12 +195,12 @@ export default function Configuration() {
             </div>
 
             {configLocked && (
-                <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-4">
+                <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-200 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-4">
                     <div className="flex items-start sm:items-center gap-3 min-w-0">
-                        <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
-                        <p className="text-amber-900 font-medium text-sm sm:text-base">La configuración está bloqueada. Pulse <strong>Modificar</strong> para editar.</p>
+                        <Lock className="w-5 h-5 text-blue-600 shrink-0 mt-0.5 sm:mt-0" />
+                        <p className="text-blue-900 font-medium text-sm sm:text-base">La configuración está bloqueada. Pulse <strong>Modificar</strong> para editar.</p>
                     </div>
-                    <Button type="button" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100 gap-2 shrink-0 self-start sm:self-center" onClick={() => { setConfigLocked(false); localStorage.setItem("configLocked", "false"); }}>
+                    <Button type="button" variant="outline" className="border-blue-300 text-blue-800 hover:bg-blue-100 gap-2 shrink-0 self-start sm:self-center" onClick={() => { setConfigLocked(false); localStorage.setItem("configLocked", "false"); }}>
                         <Pencil className="w-4 h-4" /> Modificar
                     </Button>
                 </div>
@@ -279,7 +280,7 @@ export default function Configuration() {
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 mb-3">
+                                                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-3">
                                                             <Upload className="w-6 h-6" />
                                                         </div>
                                                         <h3 className="font-medium text-slate-900">Subir Sello</h3>
@@ -316,7 +317,7 @@ export default function Configuration() {
                                             </div>
                                         </div>
                                         <div className="mt-8 border-t-2 border-slate-100 pt-4 text-center">
-                                            <div className="inline-block p-1 bg-amber-50 text-amber-800 text-xs font-bold rounded">CONTENIDO DE FACTURA</div>
+                                            <div className="inline-block p-1 bg-blue-50 text-blue-800 text-xs font-bold rounded">CONTENIDO DE FACTURA</div>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -377,19 +378,24 @@ export default function Configuration() {
                                     </div>
 
                                     {/* Bank Info */}
-                                    <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2 mt-2">
-                                        <div className="md:col-span-2 flex items-center gap-2 text-blue-900 font-bold text-sm mb-1">
-                                            <span className="text-lg">🏦</span> Información Bancaria (Para transferencias)
+                                        <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2 mt-2">
+                                            <div className="md:col-span-2 flex items-center gap-2 text-blue-900 font-bold text-sm mb-1">
+                                                <span className="text-lg">🏦</span> Información de Pago (Para sus clientes)
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="bankName">Banco</Label>
+                                                <Input id="bankName" value={config.bankName} onChange={handleChange} placeholder="Ej: Banco Popular..." className="bg-white border-blue-100" disabled={configLocked} />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="bankAccount">Número de Cuenta</Label>
+                                                <Input id="bankAccount" value={config.bankAccount} onChange={handleChange} placeholder="Ej: 771234567" className="bg-white border-blue-100" disabled={configLocked} />
+                                            </div>
+                                            <div className="space-y-2 md:col-span-2">
+                                                <Label htmlFor="paypalLink">Link de PayPal (Opcional)</Label>
+                                                <Input id="paypalLink" value={config.paypalLink} onChange={handleChange} placeholder="Ej: https://paypal.me/usuario" className="bg-white border-blue-100" disabled={configLocked} />
+                                                <p className="text-[10px] text-blue-600 font-medium italic">Este link se mostrará en sus facturas para cobros rápidos.</p>
+                                            </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="bankName">Banco</Label>
-                                            <Input id="bankName" value={config.bankName} onChange={handleChange} placeholder="Ej: Banco Popular..." className="bg-white border-blue-100" disabled={configLocked} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="bankAccount">Número de Cuenta</Label>
-                                            <Input id="bankAccount" value={config.bankAccount} onChange={handleChange} placeholder="Ej: 771234567" className="bg-white border-blue-100" disabled={configLocked} />
-                                        </div>
-                                    </div>
 
                                     <div className="space-y-2 md:col-span-2">
                                         <Label htmlFor="email">Correo Electrónico (Visible en Factura)</Label>
@@ -412,19 +418,19 @@ export default function Configuration() {
                                     <CardDescription>Ajustes de cálculo de impuestos y normativas.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="flex items-start gap-4 p-5 rounded-xl bg-amber-50/70 border border-amber-200">
+                                    <div className="flex items-start gap-4 p-5 rounded-xl bg-blue-50/70 border border-blue-200">
                                         <input
                                             type="checkbox"
                                             id="isTaxExemptCompany"
                                             checked={config.isTaxExemptCompany}
                                             onChange={(e) => !configLocked && setConfig({ ...config, isTaxExemptCompany: e.target.checked })}
-                                            className="mt-1 h-5 w-5 rounded border-amber-500 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                                            className="mt-1 h-5 w-5 rounded border-blue-500 text-blue-600 focus:ring-blue-500 cursor-pointer"
                                             disabled={configLocked}
                                             title="Empresa exenta de ITBIS"
                                         />
                                         <div>
-                                            <Label htmlFor="isTaxExemptCompany" className="text-lg font-bold text-amber-900 cursor-pointer">Empresa Exenta de ITBIS (Régimen Especial)</Label>
-                                            <p className="text-sm text-amber-800 mt-1 leading-relaxed">
+                                            <Label htmlFor="isTaxExemptCompany" className="text-lg font-bold text-blue-900 cursor-pointer">Empresa Exenta de ITBIS (Régimen Especial)</Label>
+                                            <p className="text-sm text-blue-800 mt-1 leading-relaxed">
                                                 Active esta opción si su empresa se encuentra bajo un régimen sin obligación de cobrar o tributar ITBIS (Ej: Zonas Francas, Sector Salud específico). Al activarlo, el sistema <strong>suprimirá</strong> por completo el desglose y cálculo de ITBIS de todas sus facturas.
                                             </p>
                                         </div>

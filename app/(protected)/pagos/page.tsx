@@ -113,7 +113,7 @@ export default function PaymentsPage() {
                     </div>
                     <div class="row">
                         <span class="label">Estado</span>
-                        <span class="value" style="color: ${statusLabel === 'COMPLETADO' ? '#10b981' : '#f59e0b'};">${statusLabel}</span>
+                        <span class="value" style="color: ${statusLabel === 'COMPLETADO' ? '#10b981' : '#3b82f6'};">${statusLabel}</span>
                     </div>
                     <div class="divider"></div>
                     <div class="footer">
@@ -137,11 +137,11 @@ export default function PaymentsPage() {
                         <ArrowLeft className="w-4 h-4" /> Volver al Dashboard
                     </Link>
                     <h1 className="text-2xl md:text-3xl font-bold text-primary tracking-tight flex items-center gap-3">
-                        <Wallet className="w-7 h-7 text-amber-600" /> Mi Plan y Pagos
+                        <Wallet className="w-7 h-7 text-primary" /> Mi Plan y Pagos
                     </h1>
                 </div>
                 {status && (
-                    <Badge variant="outline" className={`px-3 py-1 font-bold ${status.plan === "pro" || status.plan === "premium" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}>
+                    <Badge variant="outline" className={`px-3 py-1 font-bold ${status.plan === "pro" || status.plan === "premium" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-primary/10 text-primary border-primary/20"}`}>
                         {status.plan?.toUpperCase() || "FREE"}
                     </Badge>
                 )}
@@ -181,7 +181,7 @@ export default function PaymentsPage() {
                                     <div 
                                         className={`h-full rounded-full transition-all duration-1000 ${
                                             status.daysRemaining > 15 ? "bg-emerald-500" :
-                                            status.daysRemaining > 5 ? "bg-amber-500" : "bg-red-500"
+                                            status.daysRemaining > 5 ? "bg-primary" : "bg-red-500"
                                         }`} 
                                         style={{ width: `${Math.min(100, Math.max(0, (status.daysRemaining / 30) * 100))}%` }}
                                     />
@@ -253,8 +253,8 @@ export default function PaymentsPage() {
                                             </TableCell>
                                             <TableCell>
                                                 {isPending ? (
-                                                    <Badge className="bg-amber-50 text-amber-700 border-amber-200 font-bold text-[10px]">
-                                                        Pendiente de validación
+                                                    <Badge className="bg-primary/5 text-primary border-primary/20 font-bold text-[10px]">
+                                                        Validando
                                                     </Badge>
                                                 ) : (
                                                     <Badge className="bg-emerald-50 text-emerald-700 border-none shadow-none font-bold text-[10px]">

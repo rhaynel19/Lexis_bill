@@ -119,8 +119,8 @@ export default function ProtectedLayout({
                     <div className="flex items-center gap-2 sm:gap-4">
                         {userFromApi?.role === "admin" && (
                             <Link href="/admin">
-                                <Button variant="outline" size="sm" className="gap-2 border-amber-500/50 text-amber-600 hover:bg-amber-500/20 hover:text-amber-500 font-semibold">
-                                    <ShieldAlert className="w-4 h-4" />
+                                <Button variant="outline" size="sm" className="gap-2 border-primary/50 text-primary hover:bg-primary/20 hover:text-primary font-semibold">
+                                    <Settings className="w-3.5 h-3.5" />
                                     <span className="hidden sm:inline">Admin</span>
                                 </Button>
                             </Link>
@@ -230,7 +230,7 @@ export default function ProtectedLayout({
 function AdminNavLink({ isAdmin }: { isAdmin: boolean }) {
     if (!isAdmin) return null;
     return (
-        <Link href="/admin" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-amber-500/20 transition-colors text-amber-600 border-l-2 border-amber-500/50 mt-2">
+        <Link href="/admin" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-primary/20 transition-colors text-primary border-l-2 border-primary/50 mt-2">
             <ShieldAlert className="w-5 h-5" />
             <span className="text-sm font-medium">Panel Admin</span>
         </Link>
@@ -271,8 +271,8 @@ function SidebarLinks({ isMobile = false, isAdmin = false, isPartner = false, on
                     <Download className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Reportes Fiscales</span>
                 </Link>
-                <Link href="/pagos" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 transition-colors text-amber-600 border-l-2 border-amber-500/40")}>
-                    <CreditCard className="w-5 h-5 text-amber-600" />
+                <Link href="/pagos" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors text-primary border-l-2 border-primary/40")}>
+                    <CreditCard className="w-5 h-5 text-primary" />
                     <span className="text-sm font-semibold">Pagar</span>
                 </Link>
                 <Link href="/documentos" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors")}>

@@ -33,14 +33,14 @@ export function SubscriptionAlert() {
         },
         VencePronto: {
             icon: AlertTriangle,
-            color: "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-200",
+            color: "bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-200",
             msg: `Tu suscripción vence en ${daysRemaining} días.`,
             action: "Renovar Ahora",
             allowAccess: true
         },
         Gracia: {
             icon: Clock,
-            color: "bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-950/30 dark:border-orange-800 dark:text-orange-200",
+            color: "bg-indigo-50 border-indigo-200 text-indigo-800 dark:bg-indigo-950/30 dark:border-indigo-800 dark:text-indigo-200",
             msg: `Suscripción vencida. Tienes ${graceDaysRemaining ?? 0} días de gracia antes del bloqueo. Tienes acceso limitado hasta completar el pago.`,
             action: "Pagar Ahora",
             allowAccess: true

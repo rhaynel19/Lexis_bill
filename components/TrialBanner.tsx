@@ -28,7 +28,7 @@ export function TrialBanner() {
                     </div>
                     <div>
                         <h4 className="font-black text-slate-900 leading-tight flex items-center gap-2 justify-center md:justify-start">
-                            CONVIÉRTETE EN PRO <Sparkles className="w-4 h-4 text-amber-500" />
+                            CONVIÉRTETE EN PRO <Sparkles className="w-4 h-4 text-blue-500" />
                         </h4>
                         <p className="text-sm text-slate-500 font-medium mt-1">
                             Tu prueba gratuita vence en <span className="text-blue-600 font-black">{daysRemaining} días</span>. Activa tu suscripción para seguir facturando sin límites.

@@ -3,17 +3,51 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { CreditCard, Building2, Loader2, CheckCircle2, Upload, X, Copy } from "lucide-react";
+import { CreditCard, Building2, Loader2, CheckCircle2, Upload, X, Copy, Sparkles, Trophy, Wallet } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-const STATUS_LABELS: Record<string, { label: string; color: string; dot: string }> = {
-    active: { label: "Activo", color: "text-green-600", dot: "🟢" },
-    Activo: { label: "Activo", color: "text-green-600", dot: "🟢" },
-    pending: { label: "Pendiente de pago", color: "text-amber-600", dot: "🟡" },
-    PendienteValidacion: { label: "Pendiente de validación", color: "text-amber-600", dot: "🟡" },
-    expired: { label: "Expirado", color: "text-red-600", dot: "🔴" },
+const STATUS_LABELS: Record<string, { label: string; color: string; dot: string; icon: any }> = {
+    active: { label: "Activo", color: "text-emerald-600 bg-emerald-50 border-emerald-100", dot: "🟢", icon: CheckCircle2 },
+    Activo: { label: "Activo", color: "text-emerald-600 bg-emerald-50 border-emerald-100", dot: "🟢", icon: CheckCircle2 },
+    pending: { label: "Pendiente", color: "text-primary bg-primary/5 border-primary/20", dot: "🔵", icon: Loader2 },
+    PendienteValidacion: { label: "Validando", color: "text-primary bg-primary/5 border-primary/20", dot: "🔵", icon: Loader2 },
+    expired: { label: "Expirado", color: "text-red-600 bg-red-50 border-red-100", dot: "🔴", icon: X },
 };
+
+function ProgressStatus({ subscription }: { subscription: any }) {
+    if (!subscription || subscription.daysRemaining == null) return null;
+    const days = subscription.daysRemaining;
+    const pct = Math.min(100, Math.max(0, (days / 30) * 100));
+    let colorClass = "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]";
+    if (days <= 5) colorClass = "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]";
+    else if (days <= 10) colorClass = "bg-primary shadow-[0_0_10px_rgba(59,130,246,0.5)]";
+
+    return (
+        <div className="space-y-3 p-6 bg-white dark:bg-slate-900 rounded-2xl border border-border shadow-sm">
+            <div className="flex justify-between items-center mb-1">
+                <span className="text-sm font-bold text-foreground">Tu Membresía</span>
+                <span className={cn("text-xs font-black px-2 py-0.5 rounded-full uppercase tracking-tighter", 
+                    days > 10 ? "text-emerald-700 bg-emerald-50" : days > 5 ? "text-primary bg-primary/5" : "text-red-700 bg-red-50"
+                )}>
+                    {days <= 0 ? "Expirada" : `${days} días`}
+                </span>
+            </div>
+            <div className="h-4 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 relative">
+                <div 
+                    className={cn("h-full transition-all duration-1000 ease-out animate-shimmer", colorClass)}
+                    style={{ width: `${pct}%` }}
+                />
+            </div>
+            {days <= 10 && (
+                <p className="text-[11px] font-medium text-muted-foreground italic flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3 text-primary" /> Sugerencia: Renueva hoy para mantener tus facturas ilimitadas.
+                </p>
+            )}
+        </div>
+    );
+}
 
 export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: () => void } = {}) {
     const [plans, setPlans] = useState<any[]>([]);
@@ -113,7 +147,7 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
             }
             setComprobante(null);
             setPaypalConfirmed(false);
-            toast.success("Solicitud registrada. Validamos tu pago en 24-48 horas laborables; te notificaremos cuando esté activo.");
+            toast.success("Solicitud registrada. Validamos tu pago en 24-48 horas laborables.");
             onPaymentReported?.();
         } catch (e: unknown) {
             const msg = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "Error al registrar solicitud.";
@@ -130,434 +164,251 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
 
     if (isLoading) {
         return (
-            <Card className="shadow-xl bg-card border-border">
-                <CardContent className="py-12 flex justify-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </CardContent>
-            </Card>
+            <div className="flex justify-center py-20">
+                <Loader2 className="w-10 h-10 animate-spin text-primary" />
+            </div>
         );
     }
 
     return (
-        <Card id="membresia" className="shadow-xl bg-card border-border scroll-mt-24">
-            <CardHeader className="border-b border-border/50 pb-4">
-                <CardTitle className="text-2xl flex items-center gap-3 text-foreground">
-                    <CreditCard className="w-6 h-6 text-primary" /> Membresía
-                </CardTitle>
-                <CardDescription className="text-base text-muted-foreground">
-                    Actualiza tu plan para facturas ilimitadas. Pagos por transferencia o PayPal.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8 pt-6">
-                {/* Estado actual */}
-                <div className="p-5 bg-muted/30 rounded-2xl border border-border">
-                    <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Estado actual</p>
-                    <p className={`text-xl font-bold flex items-center gap-2 ${statusInfo.color}`}>
-                        {statusInfo.dot} {statusInfo.label}
+        <div id="membresia" className="space-y-8 scroll-mt-24">
+            {/* Header Moderno con Barra de Progreso Integrada */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div className="lg:col-span-3 space-y-4">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-primary/10 text-primary rounded-2xl flex items-center justify-center shadow-inner">
+                            <Wallet className="w-7 h-7" />
+                        </div>
+                        <div>
+                            <h2 className="text-3xl font-black text-foreground tracking-tighter">Plan y Facturación</h2>
+                            <p className="text-muted-foreground font-medium italic">Acceso ilimitado a herramientas inteligentes</p>
+                        </div>
+                    </div>
+                    {/* Badge de Estado Actual */}
+                    <div className={cn("inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-bold shadow-sm transition-all", statusInfo.color)}>
+                        <div className={cn("w-2 h-2 rounded-full animate-pulse bg-current")} />
+                        {statusInfo.label.toUpperCase()}
                         {subscription?.plan && (
-                            <span className="ml-2 text-foreground font-medium text-lg">— Plan {subscription.plan === "pro" ? "Profesional" : subscription.plan}</span>
+                            <span className="ml-2 border-l border-current/20 pl-2 opacity-80">PLAN {subscription.plan.toUpperCase()}</span>
                         )}
-                    </p>
-                    {subscription?.daysRemaining != null && subscription.daysRemaining < 999 && (
-                        <p className="text-sm text-muted-foreground mt-2 font-medium">
-                            {subscription.daysRemaining} días restantes
-                        </p>
-                    )}
+                    </div>
+                </div>
+                <div className="lg:col-span-2">
+                    <ProgressStatus subscription={subscription} />
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                {/* Selección de Plan */}
+                <div className="space-y-6">
+                    <div className="space-y-2">
+                        <h3 className="text-lg font-black text-foreground flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-primary" /> Elige tu Plan Trinalyze
+                        </h3>
+                        <p className="text-sm text-muted-foreground">Obtén todas las funciones sin límites anuales.</p>
+                    </div>
+
+                    <div className="grid gap-4">
+                        {/* Profesional Anual (Recomendado) */}
+                        <button
+                            onClick={() => { setSelectedPlan("pro"); setSelectedBilling("annual"); }}
+                            className={cn(
+                                "relative p-6 text-left rounded-3xl border-2 transition-all group overflow-hidden",
+                                selectedPlan === "pro" && selectedBilling === "annual" 
+                                    ? "border-primary bg-primary/5 shadow-xl shadow-primary/10 ring-1 ring-primary/20" 
+                                    : "border-border bg-card hover:border-primary/40 hover:bg-primary/5"
+                            )}
+                        >
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h4 className="text-xl font-black text-foreground">Profesional Anual</h4>
+                                    <p className="text-xs text-primary font-bold uppercase tracking-widest mt-1">El más popular</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-3xl font-black text-foreground">RD$ 9,500</span>
+                                    <p className="text-[10px] text-muted-foreground font-medium">un solo pago anual</p>
+                                </div>
+                            </div>
+                            <div className="space-y-2 mt-4">
+                                <p className="text-sm font-bold text-emerald-600 flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4" /> 🎁 2 meses gratis (RD$ 1,900 ahorro)
+                                </p>
+                                <p className="text-sm font-medium text-muted-foreground">Facturación electrónica ilimitada y Business Copilot</p>
+                            </div>
+                            {selectedPlan === "pro" && selectedBilling === "annual" && (
+                                <div className="absolute top-0 right-0 p-2 bg-primary text-white rounded-bl-xl">
+                                    <CheckCircle2 className="w-4 h-4" />
+                                </div>
+                            )}
+                        </button>
+
+                        {/* Profesional Mensual */}
+                        <button
+                            onClick={() => { setSelectedPlan("pro"); setSelectedBilling("monthly"); }}
+                            className={cn(
+                                "p-6 text-left rounded-3xl border-2 transition-all group",
+                                selectedPlan === "pro" && selectedBilling === "monthly" 
+                                    ? "border-primary bg-primary/5 shadow-xl shadow-primary/10" 
+                                    : "border-border bg-card hover:border-primary/40"
+                            )}
+                        >
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h4 className="text-lg font-bold text-foreground">Profesional Mensual</h4>
+                                    <p className="text-xs text-muted-foreground">Sin compromisos</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-2xl font-black text-foreground">RD$ 950</span>
+                                    <p className="text-[10px] text-muted-foreground font-medium">por mes</p>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
                 </div>
 
-                {hasPending && (
-                    <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20">
-                        <p className="text-sm font-semibold text-primary">
-                            <Loader2 className="w-4 h-4 inline-block animate-spin mr-1 mb-0.5" />
-                            Estamos validando tu pago para activar la suscripción.
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1 ml-5">
-                            Este proceso tarda entre 2 a 24 horas laborables. Te notificaremos al finalizar.
-                        </p>
-                    </div>
-                )}
-
-                {hasPro && (
-                    <>
-                        <div>
-                            <Label className="text-foreground text-sm font-bold uppercase tracking-wide">Elige tu plan</Label>
-                            <div className="space-y-4 mt-3">
-                                {/* Plan Profesional: Mensual + Anual */}
-                                <div className="rounded-2xl border border-primary/20 bg-card shadow-sm overflow-hidden transition-all hover:shadow-md ring-1 ring-primary/5">
-                                    <div className="p-5 bg-primary/5 border-b border-primary/10 flex justify-between items-center">
-                                        <div>
-                                            <p className="font-extrabold text-lg text-primary">{proPlan?.name || "Profesional"}</p>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-border">
-                                        <button
-                                            type="button"
-                                            onClick={() => setSelectedBilling("monthly")}
-                                            className={`p-6 text-left transition-all ${
-                                                selectedBilling === "monthly"
-                                                    ? "bg-primary/5 border-b-4 sm:border-b-0 sm:border-r-4 border-primary ring-inset"
-                                                    : "hover:bg-muted/30"
-                                            }`}
-                                        >
-                                            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-2">Mensual</p>
-                                            <p className="text-3xl font-black text-foreground">RD$ {proPlan?.priceMonthly ?? 950}</p>
-                                            <p className="text-sm text-muted-foreground mt-1">/mes</p>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setSelectedBilling("annual")}
-                                            className={`p-6 text-left transition-all relative ${
-                                                selectedBilling === "annual"
-                                                    ? "bg-primary/5 border-b-4 sm:border-b-0 border-primary ring-inset"
-                                                    : "hover:bg-muted/30"
-                                            }`}
-                                        >
-                                            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-2 flex justify-between">
-                                                Anual
-                                                {proPlan?.annualPopular && (
-                                                    <span className="text-[10px] font-black text-white bg-primary px-2.5 py-0.5 rounded-full uppercase shadow-sm">
-                                                        ⭐ Ahorra 16%
-                                                    </span>
-                                                )}
-                                            </p>
-                                            <p className="text-3xl font-black text-foreground">RD$ {proPlan?.priceAnnual ?? 9500}</p>
-                                            <p className="text-sm text-primary font-bold mt-1">
-                                                🎁 {proPlan?.annualNote || "Paga 10 meses, usa 12"}
-                                            </p>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Premium: Próximamente */}
-                                {premiumPlan && (
-                                    <div className="rounded-2xl border-2 border-dashed border-border bg-muted/20 p-5 opacity-75 cursor-not-allowed">
-                                        <p className="font-bold text-muted-foreground">{premiumPlan.name}</p>
-                                        <p className="text-sm text-primary font-medium mt-1">
-                                            {premiumPlan.comingSoonNote || "Próximamente"}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div>
-                            <Label className="text-foreground text-sm font-bold uppercase tracking-wide">Método de pago</Label>
-                            <div className="flex flex-col sm:flex-row gap-4 mt-3">
-                                <label className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all w-full sm:w-1/2 ${selectedMethod === 'transferencia' ? 'border-primary ring-1 ring-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
-                                    <input
-                                        type="radio"
-                                        name="method"
-                                        checked={selectedMethod === "transferencia"}
-                                        onChange={() => { setSelectedMethod("transferencia"); setComprobante(null); setPaypalConfirmed(false); }}
-                                        className="w-5 h-5 accent-primary"
-                                    />
-                                    <span className="font-semibold whitespace-nowrap text-foreground flex items-center gap-2">
-                                        <Building2 className="w-4 h-4 text-primary" /> Transferencia
-                                    </span>
-                                </label>
-                                <label className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all w-full sm:w-1/2 ${selectedMethod === 'paypal' ? 'border-primary ring-1 ring-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
-                                    <input
-                                        type="radio"
-                                        name="method"
-                                        checked={selectedMethod === "paypal"}
-                                        onChange={() => { setSelectedMethod("paypal"); setComprobante(null); setPaypalConfirmed(false); }}
-                                        className="w-5 h-5 accent-primary"
-                                    />
-                                    <span className="font-semibold whitespace-nowrap text-foreground">💲 PayPal</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        {selectedMethod === "transferencia" && paymentInfo && (
-                            <div className="p-5 bg-card rounded-2xl border border-border space-y-5 animate-in fade-in zoom-in-95 duration-200">
-                                <h4 className="font-extrabold text-foreground flex items-center gap-2 text-lg">
-                                    <Building2 className="w-5 h-5 text-primary" /> Datos bancarios
-                                </h4>
-                                <div className="p-4 bg-muted/40 rounded-xl border border-border">
-                                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Monto a transferir</p>
-                                    <p className="text-3xl font-black text-foreground mt-1">RD$ {selectedPrice}</p>
-                                </div>
-                                {transferReference && (
-                                    <div className="p-4 bg-muted/80 rounded-xl border border-border space-y-2">
-                                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Referencia única</p>
-                                        <p className="text-xs text-foreground font-medium">Debes colocar esta referencia en el concepto de la transferencia.</p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <code className="flex-1 px-4 py-3 bg-card border border-border rounded-lg text-lg font-black text-primary font-mono tracking-widest text-center">
-                                                {transferReference.reference}
-                                            </code>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="icon"
-                                                className="shrink-0 border-slate-600 text-slate-300 hover:bg-slate-700"
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(transferReference.reference);
-                                                    toast.success("Referencia copiada");
-                                                }}
-                                            >
-                                                <Copy className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-                                <div className="grid gap-2 rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-800/50">
-                                    <p className="text-sm"><span className="text-muted-foreground">Banco:</span> <strong>{paymentInfo.bankName}</strong></p>
-                                    {paymentInfo.bankHolder && (
-                                        <p className="text-sm"><span className="text-muted-foreground">Titular:</span> <strong>{paymentInfo.bankHolder}</strong></p>
+                {/* Métodos de Pago y Acción */}
+                <div className="space-y-6">
+                    <div className="bg-card border border-border rounded-3xl p-6 shadow-sm space-y-6">
+                        <div className="space-y-2">
+                            <h3 className="text-lg font-bold text-foreground">Selecciona Método de Pago</h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => setSelectedMethod("transferencia")}
+                                    className={cn(
+                                        "flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all",
+                                        selectedMethod === "transferencia" 
+                                            ? "border-primary bg-primary/5 text-primary" 
+                                            : "border-border hover:bg-muted/50 text-muted-foreground"
                                     )}
-                                    {paymentInfo.bankHolderDoc && (
-                                        <p className="text-sm"><span className="text-muted-foreground">Documento (RNC/Cédula):</span> <strong className="font-mono">{paymentInfo.bankHolderDoc}</strong></p>
-                                    )}
-                                    <p className="text-sm"><span className="text-muted-foreground">Cuenta:</span> <strong className="font-mono">{paymentInfo.bankAccount}</strong></p>
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="w-full gap-2"
-                                    onClick={() => {
-                                        const lines = [
-                                            `Banco: ${paymentInfo.bankName}`,
-                                            paymentInfo.bankHolder ? `Titular: ${paymentInfo.bankHolder}` : "",
-                                            paymentInfo.bankHolderDoc ? `Documento: ${paymentInfo.bankHolderDoc}` : "",
-                                            `Cuenta: ${paymentInfo.bankAccount}`,
-                                            transferReference ? `Referencia: ${transferReference.reference}` : ""
-                                        ].filter(Boolean);
-                                        navigator.clipboard.writeText(lines.join("\n"));
-                                        toast.success("Datos copiados al portapapeles");
-                                    }}
                                 >
-                                    <Copy className="w-4 h-4" /> Copiar datos
-                                </Button>
-                                <div className="space-y-2">
-                                    <Label className="text-slate-700">Comprobante de pago *</Label>
-                                    <p className="text-xs text-muted-foreground">Sube una captura de pantalla o foto del comprobante.</p>
+                                    <Building2 className="w-6 h-6" />
+                                    <span className="text-xs font-black uppercase tracking-tighter">Transferencia</span>
+                                </button>
+                                <button
+                                    onClick={() => setSelectedMethod("paypal")}
+                                    className={cn(
+                                        "flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all",
+                                        selectedMethod === "paypal" 
+                                            ? "border-primary bg-primary/5 text-primary" 
+                                            : "border-border hover:bg-muted/50 text-muted-foreground"
+                                    )}
+                                >
+                                    <CreditCard className="w-6 h-6" />
+                                    <span className="text-xs font-black uppercase tracking-tighter">PayPal</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Contenido dinámico según el método */}
+                        {selectedMethod === "transferencia" && paymentInfo && (
+                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
+                                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 space-y-2">
+                                    <p className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Instrucciones</p>
+                                    <p className="text-xs text-slate-600 mb-4 italic">Realiza transferencia por <strong>RD$ {selectedPrice.toLocaleString()}</strong> y sube el comprobante.</p>
+                                    
+                                    <div className="space-y-1.5 font-mono text-xs">
+                                        <div className="flex justify-between border-b pb-1">
+                                            <span>Banco:</span> <span className="font-bold">{paymentInfo.bankName}</span>
+                                        </div>
+                                        <div className="flex justify-between border-b pb-1">
+                                            <span>Cuenta:</span> <span className="font-bold">{paymentInfo.bankAccount}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Nombre:</span> <span className="font-bold truncate max-w-[150px]">{paymentInfo.bankHolder}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    {transferReference && (
+                                        <div className="mt-4 p-3 bg-primary text-white rounded-xl text-center space-y-1">
+                                            <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">Concepto / Referencia</p>
+                                            <p className="text-xl font-black tracking-widest">{transferReference.reference}</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="space-y-3">
                                     {!comprobante ? (
-                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-primary/40 rounded-xl cursor-pointer bg-primary/5 hover:bg-primary/10 transition-colors">
+                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-primary/20 rounded-2xl cursor-pointer bg-primary/5 hover:bg-primary/10 transition-colors">
                                             <input
                                                 type="file"
                                                 accept="image/*"
                                                 className="hidden"
                                                 onChange={(e) => {
                                                     const file = e.target.files?.[0];
-                                                    if (file && file.size <= 5 * 1024 * 1024) {
+                                                    if (file) {
                                                         const reader = new FileReader();
                                                         reader.onload = () => setComprobante(reader.result as string);
                                                         reader.readAsDataURL(file);
-                                                    } else if (file) {
-                                                        toast.error("La imagen no debe superar 5 MB.");
                                                     }
                                                 }}
                                             />
-                                            <Upload className="w-8 h-8 text-primary mb-2" />
-                                            <span className="text-sm font-medium text-primary">Haz clic para subir comprobante</span>
-                                            <span className="text-xs text-slate-500">PNG, JPG (máx. 5 MB)</span>
+                                            <Upload className="w-10 h-10 text-primary/40 mb-2" />
+                                            <span className="text-xs font-black text-primary uppercase">Subir Comprobante</span>
                                         </label>
                                     ) : (
-                                        <div className="relative inline-block">
-                                            <img src={comprobante} alt="Comprobante" className="max-h-40 rounded-lg border border-slate-200 object-contain" />
-                                            <button
-                                                type="button"
+                                        <div className="relative group">
+                                            <img src={comprobante} alt="Pago" className="w-full h-32 object-cover rounded-2xl border border-border" />
+                                            <button 
                                                 onClick={() => setComprobante(null)}
-                                                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                                                aria-label="Quitar comprobante"
+                                                className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-full shadow-lg"
                                             >
                                                 <X className="w-4 h-4" />
                                             </button>
-                                            <p className="text-xs text-green-600 mt-1 font-medium">✓ Comprobante cargado</p>
                                         </div>
                                     )}
                                 </div>
-                                {!comprobante && (
-                                    <p className="text-xs text-muted-foreground">
-                                        Debes subir el comprobante antes de continuar.
-                                    </p>
-                                )}
-                                <p className="text-xs text-slate-500 dark:text-slate-400 border-l-2 border-accent/50 pl-3">
-                                    Tu pago será validado por nuestro equipo financiero. La activación del plan puede tardar hasta 24 horas.
-                                </p>
                             </div>
                         )}
 
                         {selectedMethod === "paypal" && paymentInfo && (
-                            <div className="p-4 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4">
-                                <p className="font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2">
-                                    <CreditCard className="w-4 h-4" /> Paga con PayPal
-                                </p>
+                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
+                                <div className="bg-[#0070ba]/5 rounded-2xl p-4 border border-[#0070ba]/20 space-y-4">
+                                    <p className="text-xs font-black text-[#0070ba] uppercase tracking-widest">Instrucciones PayPal</p>
+                                    <p className="text-sm font-medium text-slate-700 italic">Paga <strong>RD$ {selectedPrice.toLocaleString()}</strong> via PayPal.Me</p>
+                                    
+                                    <a 
+                                        href={paymentInfo.paypalMeUrl} 
+                                        target="_blank" 
+                                        className="flex items-center justify-center gap-2 w-full py-3 bg-[#0070ba] text-white rounded-xl font-black text-sm shadow-md"
+                                    >
+                                        <CreditCard className="w-4 h-4" /> BOTÓN DE PAGO PAYPAL
+                                    </a>
 
-                                <div className="p-4 bg-muted/40 rounded-xl border border-border">
-                                    <p className="text-sm text-foreground font-semibold">Monto a enviar</p>
-                                    <p className="text-3xl font-black text-foreground mt-0.5">
-                                        RD$ {selectedPrice}
-                                    </p>
+                                    <label className="flex items-start gap-2 cursor-pointer pt-2">
+                                        <input 
+                                            type="checkbox" 
+                                            className="mt-1 accent-[#0070ba]" 
+                                            checked={paypalConfirmed} 
+                                            onChange={(e) => setPaypalConfirmed(e.target.checked)} 
+                                        />
+                                        <span className="text-xs font-bold text-slate-600">Confirmo que completé el envío del monto acordado</span>
+                                    </label>
                                 </div>
-
-                                {paymentInfo.paypalMeUrl && (
-                                    <div className="space-y-2">
-                                        <Label className="text-slate-600 dark:text-slate-300 text-sm">Enlace de pago (PayPal.Me)</Label>
-                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                                            <a
-                                                href={paymentInfo.paypalMeUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[#0070ba] hover:bg-[#005ea6] text-white font-semibold transition-colors"
-                                            >
-                                                <CreditCard className="w-5 h-5" />
-                                                Abrir PayPal.Me para pagar
-                                            </a>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="shrink-0"
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(paymentInfo.paypalMeUrl!);
-                                                    toast.success("Enlace copiado");
-                                                }}
-                                            >
-                                                <Copy className="w-4 h-4 mr-1" /> Copiar enlace
-                                            </Button>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            {paymentInfo.paypalMeUrl}
-                                        </p>
-                                    </div>
-                                )}
-
-                                <div className="space-y-1">
-                                    <Label className="text-slate-600 dark:text-slate-300 text-sm">Email de PayPal</Label>
-                                    <div className="flex items-center gap-2">
-                                        <code className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-sm font-mono truncate">
-                                            {paymentInfo.paypalEmail}
-                                        </code>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="icon"
-                                            className="shrink-0"
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(paymentInfo.paypalEmail);
-                                                toast.success("Email copiado");
-                                            }}
-                                        >
-                                            <Copy className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <Label className="text-slate-600 dark:text-slate-300 text-sm">Incluye en la nota del pago</Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Para identificar tu solicitud, incluye esto en la nota del pago en PayPal:
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                        <code className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-sm font-mono truncate">
-                                            TrinalyzeBilling {selectedPlan} {userEmail ? `- ${userEmail}` : ""}
-                                        </code>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="icon"
-                                            className="shrink-0"
-                                            onClick={() => {
-                                                const note = `TrinalyzeBilling ${selectedPlan}${userEmail ? ` - ${userEmail}` : ""}`;
-                                                navigator.clipboard.writeText(note);
-                                                toast.success("Nota copiada");
-                                            }}
-                                        >
-                                            <Copy className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                <label className="flex items-start gap-3 cursor-pointer p-4 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors shadow-sm">
-                                    <input
-                                        type="checkbox"
-                                        checked={paypalConfirmed}
-                                        onChange={(e) => setPaypalConfirmed(e.target.checked)}
-                                        className="mt-0.5 w-5 h-5 accent-primary shrink-0"
-                                    />
-                                    <span className="text-sm text-foreground font-medium">
-                                        Confirmo que envié el pago por <strong>RD$ {selectedPrice}</strong>{" "}
-                                        {paymentInfo.paypalMeUrl ? "mediante el enlace PayPal.Me" : `a ${paymentInfo.paypalEmail}`} e incluí la nota indicada arriba.
-                                    </span>
-                                </label>
-
-                                {!paypalConfirmed && (
-                                    <p className="text-xs font-semibold text-primary">
-                                        Debes confirmar la transacción antes de continuar.
-                                    </p>
-                                )}
-                                <p className="text-xs text-muted-foreground pl-3 border-l-2 border-primary/30">
-                                    Tu plan se activará de forma automática tras nuestra validación.
-                                </p>
                             </div>
                         )}
 
-                        {canSubmit && !paymentReportedState && !hasPending && (
-                            <div className="p-5 rounded-2xl border border-primary/20 bg-primary/5 space-y-1 text-sm shadow-sm">
-                                <p className="font-extrabold text-primary mb-2 flex items-center gap-2"><CheckCircle2 className="w-4 h-4"/> Resumen listo para enviar</p>
-                                <p className="text-foreground font-medium">Plan Profesional • {selectedBilling === "annual" ? "Anual" : "Mensual"} • RD$ {selectedPrice.toLocaleString()} • {selectedMethod === "transferencia" ? "Transferencia" : "PayPal"}</p>
-                                <p className="text-xs text-muted-foreground mt-2">Envía la confirmación y en minutos serás parte integral de la plataforma.</p>
+                        <Button
+                            onClick={handleRequestPayment}
+                            disabled={isSubmitting || !canSubmit || hasPending}
+                            className="w-full h-14 bg-primary hover:bg-primary/90 text-white font-black text-lg transition-transform active:scale-95 shadow-xl shadow-primary/20 rounded-2xl"
+                        >
+                            {isSubmitting ? <Loader2 className="animate-spin" /> : <><CheckCircle2 className="w-5 h-5 mr-2" /> REPORTAR PAGO</>}
+                        </Button>
+                        
+                        {!canSubmit && !hasPending && (
+                            <p className="text-center text-[10px] text-muted-foreground font-medium uppercase tracking-widest mt-2 animate-pulse">
+                                Complete los requerimientos arriba para habilitar el botón
+                            </p>
+                        )}
+                        
+                        {hasPending && (
+                            <div className="text-center p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
+                                <p className="text-[11px] font-black text-emerald-800 uppercase tracking-tighter">Estamos validando tu última solicitud</p>
                             </div>
                         )}
-
-                        {/* CTA siempre visible: botón principal con mensaje cuando está deshabilitado */}
-                        {!paymentReportedState && !hasPending && (
-                            <div className="space-y-2">
-                                {!canSubmit && selectedPlan !== "free" && (
-                                    <p className="text-sm text-muted-foreground font-medium mb-3">
-                                        {selectedMethod === "transferencia"
-                                            ? "Sube el comprobante de transferencia arriba para continuar."
-                                            : "Marca la casilla de confirmación de PayPal para continuar."}
-                                    </p>
-                                )}
-                                <Button
-                                    onClick={handleRequestPayment}
-                                    disabled={isSubmitting || !canSubmit}
-                                    className="w-full h-14 text-base font-bold text-white shadow-lg shadow-primary/20 transition-all duration-200 rounded-xl"
-                                >
-                                    {isSubmitting ? (
-                                        <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Enviando confirmación...</>
-                                    ) : (
-                                        <><CheckCircle2 className="w-5 h-5 mr-2" /> Reportar Pago a Soporte</>
-                                    )}
-                                </Button>
-                            </div>
-                        )}
-
-                        {/* Pantalla de tranquilidad: se muestra inmediatamente después de reportar */}
-                        {(paymentReportedState || hasPending) && (
-                            <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50/80 p-5 space-y-3 animate-in fade-in duration-200">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-white">
-                                        <CheckCircle2 className="h-5 w-5" />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-emerald-900">Pago reportado correctamente</p>
-                                        <p className="text-sm text-emerald-800">
-                                            Nuestro equipo lo validará en menos de 24 horas. Te notificaremos cuando tu plan esté activo.
-                                        </p>
-                                    </div>
-                                </div>
-                                {paymentReportedState?.reference && (
-                                    <p className="text-xs text-emerald-700 font-mono">Referencia: {paymentReportedState.reference}</p>
-                                )}
-                            </div>
-                        )}
-
-                        {(paymentReportedState || hasPending) && (
-                            <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-sm font-medium">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                                Pago reportado • En validación
-                            </div>
-                        )}
-                    </>
-                )}
-
-                {!hasPending && !hasPro && (
-                    <p className="text-sm text-muted-foreground">No hay planes disponibles en este momento.</p>
-                )}
-            </CardContent>
-        </Card>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 }
