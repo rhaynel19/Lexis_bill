@@ -149,9 +149,9 @@ export default function AdminPagosPendientes() {
                         const isWarning = a.severity === "warning";
                         return (
                             <Link key={a.type} href={href}>
-                                <div className={`p-4 rounded-lg border ${isWarning ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800" : "bg-muted/50 border-border"} hover:opacity-90 transition-opacity flex items-center gap-3`}>
-                                    <div className={`p-2 rounded-full ${isWarning ? "bg-amber-100 dark:bg-amber-900/40" : "bg-muted"}`}>
-                                        <Icon className={`w-5 h-5 ${isWarning ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`} />
+                                <div className={`p-4 rounded-lg border ${isWarning ? "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800" : "bg-muted/50 border-border"} hover:opacity-90 transition-opacity flex items-center gap-3`}>
+                                    <div className={`p-2 rounded-full ${isWarning ? "bg-blue-100 dark:bg-blue-900/40" : "bg-muted"}`}>
+                                        <Icon className={`w-5 h-5 ${isWarning ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground"}`} />
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <p className="font-medium text-sm text-foreground">{a.message}</p>

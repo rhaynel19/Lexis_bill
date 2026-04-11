@@ -134,10 +134,10 @@ export default function AdminCEODashboard() {
 
             {/* Alertas */}
             {alerts.length > 0 && (
-                <Card className="border-amber-200 dark:border-amber-900/50 bg-amber-50/30 dark:bg-amber-950/20">
+                <Card className="border-blue-200 dark:border-blue-900/50 bg-blue-50/30 dark:bg-blue-950/20">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4 text-amber-600" />
+                            <AlertCircle className="w-4 h-4 text-blue-600" />
                             {alerts.length} alerta{alerts.length !== 1 ? "s" : ""} en el panel
                         </CardTitle>
                     </CardHeader>
@@ -145,7 +145,7 @@ export default function AdminCEODashboard() {
                         <ul className="space-y-1.5 text-sm">
                             {alerts.slice(0, 5).map((a, i) => (
                                 <li key={i} className="flex items-start gap-2">
-                                    <span className={a.severity === "critical" ? "text-red-600" : a.severity === "warning" ? "text-amber-600" : "text-muted-foreground"}>•</span>
+                                    <span className={a.severity === "critical" ? "text-red-600" : a.severity === "warning" ? "text-blue-600" : "text-muted-foreground"}>•</span>
                                     <span>{a.message}</span>
                                 </li>
                             ))}
@@ -450,10 +450,10 @@ export default function AdminCEODashboard() {
             {partnerStats && (
                 <div>
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <Handshake className="w-5 h-5 text-amber-500" /> Programa Partners
+                        <Handshake className="w-5 h-5 text-emerald-500" /> Programa Partners
                     </h2>
                     <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
-                        <Card className="border-amber-200/50 dark:border-amber-900/30">
+                        <Card className="border-blue-200/50 dark:border-blue-900/30">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-xs font-medium text-muted-foreground">Partners activos</CardTitle>
                             </CardHeader>
@@ -461,12 +461,12 @@ export default function AdminCEODashboard() {
                                 <span className="text-2xl font-bold">{partnerStats.totalPartners ?? 0}</span>
                             </CardContent>
                         </Card>
-                        <Card className="border-amber-200/50 dark:border-amber-900/30">
+                        <Card className="border-blue-200/50 dark:border-blue-900/30">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-xs font-medium text-muted-foreground">Cartera activa</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <span className="text-2xl font-bold text-amber-600">{partnerStats.activeReferrals ?? 0}</span>
+                                <span className="text-2xl font-bold text-emerald-600">{partnerStats.activeReferrals ?? 0}</span>
                                 <p className="text-xs text-muted-foreground mt-1">
                                     {partnerStats.trialReferrals ?? 0} en prueba · {partnerStats.churnedReferrals ?? 0} churned
                                 </p>
@@ -490,7 +490,7 @@ export default function AdminCEODashboard() {
                                 <span className="text-2xl font-bold text-green-600">{formatCurrency(partnerStats.commissionsPaid ?? 0)}</span>
                             </CardContent>
                         </Card>
-                        <Card className="border-amber-200/50 dark:border-amber-900/30">
+                        <Card className="border-blue-200/50 dark:border-blue-900/30">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-xs font-medium text-muted-foreground">Comisiones este mes</CardTitle>
                             </CardHeader>
@@ -499,12 +499,12 @@ export default function AdminCEODashboard() {
                                 <p className="text-xs text-muted-foreground mt-1">Generadas en el mes actual</p>
                             </CardContent>
                         </Card>
-                        <Card className="border-amber-200/50 dark:border-amber-900/30 border-2 border-amber-400/50">
+                        <Card className="border-emerald-200/50 dark:border-emerald-900/30 border-2 border-emerald-400/50">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-xs font-medium text-muted-foreground">Total a pagar (pendiente)</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <span className="text-2xl font-bold text-amber-600">{formatCurrency(partnerStats.commissionsPending ?? 0)}</span>
+                                <span className="text-2xl font-bold text-emerald-600">{formatCurrency(partnerStats.commissionsPending ?? 0)}</span>
                                 {(partnerStats.commissionsPending ?? 0) > 0 && (
                                     <Link href="/admin/partners" className="block text-xs text-primary mt-1 hover:underline font-medium">
                                         Ver resumen por partner →
@@ -527,7 +527,7 @@ export default function AdminCEODashboard() {
                         </Card>
                     </div>
                     <Link href="/admin/partners">
-                        <span className="text-sm text-amber-600 hover:text-amber-500 font-medium mt-2 inline-block">Ver dashboard de partners →</span>
+                        <span className="text-sm text-emerald-600 hover:text-emerald-500 font-medium mt-2 inline-block">Ver dashboard de partners →</span>
                     </Link>
                 </div>
             )}

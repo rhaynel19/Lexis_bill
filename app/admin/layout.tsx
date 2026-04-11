@@ -55,14 +55,19 @@ export default function AdminLayout({
                     <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
                         <Link href="/admin" className="shrink-0">
                             <h1 className="text-xl font-bold flex items-center gap-2">
-                                <ShieldAlert className="w-6 h-6 text-amber-500" />
+                                <ShieldAlert className="w-6 h-6 text-primary" />
                                 Panel Admin
                             </h1>
                         </Link>
                         <nav className="flex gap-2 overflow-x-auto overflow-y-hidden min-w-0 flex-1 md:flex-initial md:overflow-visible pb-1 -mb-1 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 [&::-webkit-scrollbar-thumb]:rounded-full">
                             <Link href="/admin" className="shrink-0">
                                 <Button variant="outline" size="sm" className="gap-2 whitespace-nowrap">
-                                    <CreditCard className="w-4 h-4 shrink-0" /> Pagos Pendientes
+                                    <CreditCard className="w-4 h-4 shrink-0" /> Gestión de Pagos
+                                </Button>
+                            </Link>
+                            <Link href="/pagos" className="shrink-0">
+                                <Button variant="default" size="sm" className="gap-2 whitespace-nowrap bg-primary/10 text-primary hover:bg-primary/20 border-primary/30">
+                                    <CreditCard className="w-4 h-4 shrink-0" /> Mi Plan / Pagar
                                 </Button>
                             </Link>
                             <Link href="/admin/historial-pagos" className="shrink-0">
