@@ -65,30 +65,68 @@ export default function PaymentsPage() {
         const timeStr = d.toLocaleTimeString("es-DO", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
         const concept = payment.plan ? `Plan ${String(payment.plan).toUpperCase()} - Trinalyze Billing` : "Suscripción Trinalyze Billing";
         const statusLabel = (payment.status === "pending" || payment.status === "under_review") ? "Pendiente de validación" : "COMPLETADO";
-        const receiptText = [
-            "",
-            "  TRINALYZE BILLING — RECIBO DE PAGO",
-            "  ─────────────────────────────────",
-            "",
-            `  Referencia:    ${payment.reference || "—"}`,
-            `  Fecha:         ${dateStr} ${timeStr}`,
-            `  Concepto:      ${concept}`,
-            `  Monto:         RD$ ${Number(payment.amount || 0).toLocaleString("es-DO")}`,
-            `  Estado:        ${statusLabel}`,
-            "",
-            "  ─────────────────────────────────",
-            "  Conserve este comprobante para sus registros.",
-            "",
-            "  Gracias por confiar en Trinalyze Billing.",
-            ""
-        ].join("\n");
-        const blob = new Blob([receiptText], { type: "text/plain;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `Recibo_${payment.reference || "LEX"}.txt`;
-        link.click();
-        URL.revokeObjectURL(url);
+        
+        const win = window.open('', '_blank');
+        if (!win) {
+            toast.error("Por favor permite popups para imprimir tu recibo.");
+            return;
+        }
+
+        win.document.write(`
+            <html>
+            <head>
+                <title>Recibo de Pago - Trinalyze</title>
+                <style>
+                    body { font-family: 'Inter', system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background-color: #f1f5f9; }
+                    .ticket { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); max-width: 500px; width: 100%; border: 1px solid #e2e8f0; }
+                    .header { text-align: center; margin-bottom: 30px; }
+                    .header h1 { margin: 0; color: #1e293b; font-size: 24px; font-weight: 900; letter-spacing: -0.5px; }
+                    .header p { margin: 5px 0 0; color: #64748b; font-size: 14px; }
+                    .divider { height: 1px; background: #e2e8f0; margin: 20px 0; border-top: 1px dashed #cbd5e1; }
+                    .row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
+                    .label { color: #64748b; font-weight: 500; }
+                    .value { color: #0f172a; font-weight: 700; text-align: right; }
+                    .amount { font-size: 24px; font-weight: 900; color: #10b981; margin: 20px 0; text-align: center; }
+                    .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #94a3b8; }
+                    @media print { body { background: white; } .ticket { box-shadow: none; border: none; } }
+                </style>
+            </head>
+            <body>
+                <div class="ticket">
+                    <div class="header">
+                        <h1>TRINALYZE BILLING</h1>
+                        <p>Recibo de Pago Oficial</p>
+                    </div>
+                    <div class="amount">RD$ ${Number(payment.amount || 0).toLocaleString("es-DO")}</div>
+                    <div class="divider"></div>
+                    <div class="row">
+                        <span class="label">Referencia</span>
+                        <span class="value">${payment.reference || "—"}</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Fecha y Hora</span>
+                        <span class="value">${dateStr} ${timeStr}</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Concepto</span>
+                        <span class="value">${concept}</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">Estado</span>
+                        <span class="value" style="color: ${statusLabel === 'COMPLETADO' ? '#10b981' : '#f59e0b'};">${statusLabel}</span>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="footer">
+                        Este comprobante es para sus registros internos.<br>Gracias por confiar en el sistema contable Trinalyze.
+                    </div>
+                </div>
+                <script>
+                    window.onload = function() { window.print(); }
+                </script>
+            </body>
+            </html>
+        `);
+        win.document.close();
     };
 
     return (
@@ -135,6 +173,27 @@ export default function PaymentsPage() {
                     </CardHeader>
                     <CardContent>
                         <p className="text-xs text-muted-foreground">{status?.daysRemaining != null && status.daysRemaining < 999 ? `${status.daysRemaining} días restantes` : "Plan activo"}</p>
+                        
+                        {/* Barra de Progreso Visual */}
+                        {status?.daysRemaining != null && status.daysRemaining < 999 && (
+                            <div className="mt-4 space-y-1.5">
+                                <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                    <div 
+                                        className={`h-full rounded-full transition-all duration-1000 ${
+                                            status.daysRemaining > 15 ? "bg-emerald-500" :
+                                            status.daysRemaining > 5 ? "bg-amber-500" : "bg-red-500"
+                                        }`} 
+                                        style={{ width: `${Math.min(100, Math.max(0, (status.daysRemaining / 30) * 100))}%` }}
+                                    />
+                                </div>
+                                <div className="flex justify-between text-[10px] font-bold text-muted-foreground">
+                                    <span>Renovación</span>
+                                    <span className={status.daysRemaining <= 5 ? "text-red-500 font-black animate-pulse" : ""}>
+                                        {status.daysRemaining} días
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
