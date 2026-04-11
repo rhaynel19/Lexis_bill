@@ -37,20 +37,23 @@ export default function PaymentsPage() {
 
     const loadData = async () => {
         setIsLoading(true);
-        setLoadError(null);
         try {
             api.invalidateSubscriptionCache();
-            const [historyData, statusData] = await Promise.all([
-                api.getPaymentHistory(),
-                api.getSubscriptionStatus(true)
-            ]);
-            setHistory(historyData);
+            const historyData = await api.getPaymentHistory().catch((e) => {
+                console.error("History fetch error:", e);
+                return [];
+            });
+            const statusData = await api.getSubscriptionStatus(true).catch((e) => {
+                console.error("Status fetch error:", e);
+                return null;
+            });
+            setHistory(historyData || []);
             setStatus(statusData);
             if (typeof window !== "undefined") window.dispatchEvent(new Event("subscription-updated"));
         } catch (error: unknown) {
             const msg = error instanceof Error ? error.message : "Error de conexión";
             setLoadError(msg);
-            toast.error("No pudimos cargar los datos de pagos. Revisa tu conexión e intenta de nuevo.");
+            toast.error("Hubo un problema de conexión al verificar el estado del pago.");
         } finally {
             setIsLoading(false);
         }
@@ -121,24 +124,24 @@ export default function PaymentsPage() {
                 <MembershipConfig onPaymentReported={loadData} />
             </div>
 
-            <h2 className="text-lg font-semibold mb-4">Historial y Estado</h2>
+            <h2 className="text-lg font-semibold mb-4 text-foreground">Historial y Estado</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <Card className="border-none shadow-lg bg-white">
+                <Card className="border-none shadow-lg bg-card">
                     <CardHeader className="pb-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vencimiento</span>
-                        <CardTitle className="text-xl font-bold">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Vencimiento</span>
+                        <CardTitle className="text-xl font-bold text-foreground">
                             {status?.expiryDate ? new Date(status.expiryDate).toLocaleDateString() : '—'}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-xs text-slate-500">{status?.daysRemaining != null && status.daysRemaining < 999 ? `${status.daysRemaining} días restantes` : "Plan activo"}</p>
+                        <p className="text-xs text-muted-foreground">{status?.daysRemaining != null && status.daysRemaining < 999 ? `${status.daysRemaining} días restantes` : "Plan activo"}</p>
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-lg bg-white">
+                <Card className="border-none shadow-lg bg-card">
                     <CardHeader className="pb-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Acumulado</span>
-                        <CardTitle className="text-2xl font-black text-slate-900">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Acumulado</span>
+                        <CardTitle className="text-xl font-black text-foreground">
                             RD$ {(history.reduce((acc, p) => acc + p.amount, 0)).toLocaleString()}
                         </CardTitle>
                     </CardHeader>
@@ -148,19 +151,19 @@ export default function PaymentsPage() {
                 </Card>
             </div>
 
-            <Card className="border-none shadow-2xl bg-white overflow-hidden">
-                <CardHeader className="border-b border-slate-50 bg-slate-50/50">
-                    <CardTitle className="text-lg font-black text-slate-800">Historial de Transacciones</CardTitle>
-                    <CardDescription>Consulta tus facturas y recibos de Trinalyze Billing</CardDescription>
+            <Card className="border-border shadow-2xl bg-card overflow-hidden">
+                <CardHeader className="border-b border-border bg-muted/20">
+                    <CardTitle className="text-lg font-black text-foreground">Historial de Transacciones</CardTitle>
+                    <CardDescription className="text-muted-foreground">Consulta tus facturas y recibos de Trinalyze Billing</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-slate-50 hover:bg-slate-50 border-none">
-                                <TableHead className="font-black text-slate-500 text-[10px] uppercase tracking-wider">Fecha</TableHead>
-                                <TableHead className="font-black text-slate-500 text-[10px] uppercase tracking-wider">Referencia</TableHead>
-                                <TableHead className="font-black text-slate-500 text-[10px] uppercase tracking-wider">Monto</TableHead>
-                                <TableHead className="font-black text-slate-500 text-[10px] uppercase tracking-wider">Estado</TableHead>
+                            <TableRow className="bg-muted hover:bg-muted border-none">
+                                <TableHead className="font-black text-muted-foreground text-[10px] uppercase tracking-wider">Fecha</TableHead>
+                                <TableHead className="font-black text-muted-foreground text-[10px] uppercase tracking-wider">Referencia</TableHead>
+                                <TableHead className="font-black text-muted-foreground text-[10px] uppercase tracking-wider">Monto</TableHead>
+                                <TableHead className="font-black text-muted-foreground text-[10px] uppercase tracking-wider">Estado</TableHead>
                                 <TableHead className="text-right"></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -179,14 +182,14 @@ export default function PaymentsPage() {
                                 history.map((payment, i) => {
                                     const isPending = payment.status === "pending" || payment.status === "under_review";
                                     return (
-                                        <TableRow key={payment.id || i} className="hover:bg-slate-50 transition-colors border-slate-50">
-                                            <TableCell className="font-medium text-slate-600">
+                                        <TableRow key={payment.id || i} className="hover:bg-muted/50 transition-colors border-border">
+                                            <TableCell className="font-medium text-foreground">
                                                 {payment.date ? new Date(payment.date).toLocaleDateString() : "—"}
                                             </TableCell>
-                                            <TableCell className="font-mono text-xs text-slate-400">
+                                            <TableCell className="font-mono text-xs text-muted-foreground">
                                                 {payment.reference}
                                             </TableCell>
-                                            <TableCell className="font-bold text-slate-900">
+                                            <TableCell className="font-bold text-foreground">
                                                 RD$ {Number(payment.amount || 0).toLocaleString()}
                                             </TableCell>
                                             <TableCell>

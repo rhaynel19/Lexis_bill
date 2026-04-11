@@ -191,7 +191,7 @@ export default function Configuration() {
 
             <div className="grid gap-8">
                 {/* Identidad Visual Section */}
-                <Card className="border-none shadow-lg bg-white/50 backdrop-blur-sm overflow-hidden">
+                <Card className="border-border shadow-xl bg-card overflow-hidden">
                     <CardHeader>
                         <CardTitle className="text-xl">Identidad Visual</CardTitle>
                         <CardDescription>Estos elementos aparecerán en el encabezado de sus facturas.</CardDescription>
@@ -253,7 +253,7 @@ export default function Configuration() {
                 <ComprobantesConfig locked={configLocked} />
 
                 {/* Preferencias de Facturación */}
-                <Card className="border-none shadow-lg bg-indigo-50/50 backdrop-blur-sm border-indigo-100 italic">
+                <Card className="border-border shadow-xl bg-muted/20">
                     <CardHeader>
                         <CardTitle className="text-xl text-indigo-900 flex items-center gap-2">
                             <Settings className="w-5 h-5" /> Preferencias de Facturación
@@ -277,7 +277,7 @@ export default function Configuration() {
                 </Card>
 
                 {/* Fiscal & Contact Info Section */}
-                <Card className="border-none shadow-lg bg-white/50 backdrop-blur-sm">
+                <Card className="border-border shadow-xl bg-card">
                     <CardHeader>
                         <CardTitle className="text-xl">Datos Fiscales y de Contacto</CardTitle>
                         <CardDescription>Información legal que aparecerá en sus comprobantes.</CardDescription>
@@ -363,15 +363,15 @@ export default function Configuration() {
                 </Card>
 
                 {/* Save Button Container */}
-                <div className="flex justify-end pt-4 pb-6">
-                    <Button size="lg" onClick={handleSave} disabled={configLocked} className="bg-[#D4AF37] hover:bg-amber-600 text-white gap-2 px-8 h-12 rounded-xl shadow-lg transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
+                <div className="flex justify-end pt-4 pb-6 sticky bottom-4 z-10">
+                    <Button size="lg" onClick={handleSave} disabled={configLocked} className="gap-2 px-8 h-14 rounded-full shadow-lg font-bold text-[16px] transition-all transform hover:-translate-y-1 active:translate-y-0 active:scale-95">
                         <Save className="w-5 h-5" /> Guardar Cambios
                     </Button>
                 </div>
             </div>
 
             {/* Documentos legales */}
-            <Card className="border-none shadow-lg bg-white/50 backdrop-blur-sm">
+            <Card className="border-border shadow-xl bg-card mt-8">
                 <CardHeader>
                     <CardTitle className="text-xl">Documentos legales</CardTitle>
                     <CardDescription>Políticas y condiciones de Trinalyze Billing. Consulte y descargue cuando lo necesite.</CardDescription>

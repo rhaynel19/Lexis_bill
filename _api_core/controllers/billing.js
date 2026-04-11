@@ -134,7 +134,7 @@ exports.getPaymentInfo = (req, res) => {
         bankName: process.env.TRINALYZE_BANK_NAME || 'Banco Popular Dominicano',
         bankAccount: process.env.TRINALYZE_BANK_ACCOUNT || '789042660',
         bankHolder: process.env.TRINALYZE_BANK_HOLDER || 'Fraimel Trinidad',
-        bankHolderDoc: process.env.TRINALYZE_BANK_HOLDER_DOC || '22301660929',
+        bankHolderDoc: process.env.TRINALYZE_BANK_HOLDER_DOC || '22301650929',
         paypalEmail: process.env.TRINALYZE_PAYPAL_EMAIL || 'pagos@trinalyze.do',
         paypalMeUrl: process.env.TRINALYZE_PAYPAL_ME_URL || 'https://paypal.me/frameltrinidad'
     });

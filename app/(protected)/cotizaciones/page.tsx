@@ -200,7 +200,7 @@ export default function Quotes() {
                     <p className="text-slate-500 dark:text-muted-foreground font-medium">Gestione sus propuestas comerciales</p>
                 </div>
                 <Link href="/nueva-cotizacion">
-                    <Button className="bg-[#D4AF37] hover:bg-amber-600 text-white gap-2 font-bold shadow-lg shadow-amber-100">
+                    <Button className="gap-2 font-bold shadow-lg">
                         <Plus className="w-4 h-4" /> Nueva Cotización
                     </Button>
                 </Link>

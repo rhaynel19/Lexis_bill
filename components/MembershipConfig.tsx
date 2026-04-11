@@ -139,27 +139,27 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
     }
 
     return (
-        <Card id="membresia" className="border-none shadow-lg bg-amber-50/50 backdrop-blur-sm border-amber-100 scroll-mt-24">
-            <CardHeader>
-                <CardTitle className="text-xl flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-amber-600" /> Membresía
+        <Card id="membresia" className="shadow-xl bg-card border-border scroll-mt-24">
+            <CardHeader className="border-b border-border/50 pb-4">
+                <CardTitle className="text-2xl flex items-center gap-3 text-foreground">
+                    <CreditCard className="w-6 h-6 text-primary" /> Membresía
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-base text-muted-foreground">
                     Actualiza tu plan para facturas ilimitadas. Pagos por transferencia o PayPal.
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-8 pt-6">
                 {/* Estado actual */}
-                <div className="p-4 bg-white rounded-xl border border-amber-100">
-                    <p className="text-sm font-medium text-slate-600">Estado actual</p>
-                    <p className={`text-lg font-bold ${statusInfo.color}`}>
+                <div className="p-5 bg-muted/30 rounded-2xl border border-border">
+                    <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Estado actual</p>
+                    <p className={`text-xl font-bold flex items-center gap-2 ${statusInfo.color}`}>
                         {statusInfo.dot} {statusInfo.label}
                         {subscription?.plan && (
-                            <span className="ml-2 text-slate-700 font-normal">— Plan {subscription.plan === "pro" ? "Profesional" : subscription.plan}</span>
+                            <span className="ml-2 text-foreground font-medium text-lg">— Plan {subscription.plan === "pro" ? "Profesional" : subscription.plan}</span>
                         )}
                     </p>
                     {subscription?.daysRemaining != null && subscription.daysRemaining < 999 && (
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-sm text-muted-foreground mt-2 font-medium">
                             {subscription.daysRemaining} días restantes
                         </p>
                     )}
@@ -179,50 +179,49 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                 {hasPro && (
                     <>
                         <div>
-                            <Label className="text-slate-700">Elige tu plan</Label>
-                            <div className="space-y-3 mt-2">
+                            <Label className="text-foreground text-sm font-bold uppercase tracking-wide">Elige tu plan</Label>
+                            <div className="space-y-4 mt-3">
                                 {/* Plan Profesional: Mensual + Anual */}
-                                <div className="rounded-xl border-2 border-amber-200 bg-white overflow-hidden">
-                                    <div className="p-4 bg-amber-50/50 border-b border-amber-100">
-                                        <p className="font-bold text-slate-800">{proPlan?.name || "Profesional"}</p>
-                                        <ul className="text-xs text-slate-600 mt-1 space-y-0.5">
-                                            {(proPlan?.features || []).slice(0, 3).map((f: string, i: number) => (
-                                                <li key={i}>• {f}</li>
-                                            ))}
-                                        </ul>
+                                <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden transition-all hover:shadow-md">
+                                    <div className="p-5 bg-muted/40 border-b border-border flex justify-between items-center">
+                                        <div>
+                                            <p className="font-extrabold text-lg text-foreground">{proPlan?.name || "Profesional"}</p>
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-0">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-border">
                                         <button
                                             type="button"
                                             onClick={() => setSelectedBilling("monthly")}
-                                            className={`p-4 text-left transition-all border-r border-slate-200 ${
+                                            className={`p-6 text-left transition-all ${
                                                 selectedBilling === "monthly"
-                                                    ? "bg-amber-50 border-amber-500 ring-2 ring-amber-500 ring-inset"
-                                                    : "hover:bg-slate-50"
+                                                    ? "bg-primary/5 border-b-4 sm:border-b-0 sm:border-r-4 border-primary ring-inset"
+                                                    : "hover:bg-muted/30"
                                             }`}
                                         >
-                                            <p className="text-sm font-medium text-slate-600">Mensual</p>
-                                            <p className="text-xl font-bold text-amber-600">RD$ {proPlan?.priceMonthly ?? 950}</p>
-                                            <p className="text-xs text-muted-foreground">/mes</p>
+                                            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-2">Mensual</p>
+                                            <p className="text-3xl font-black text-foreground">RD$ {proPlan?.priceMonthly ?? 950}</p>
+                                            <p className="text-sm text-muted-foreground">/mes</p>
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setSelectedBilling("annual")}
-                                            className={`p-4 text-left transition-all relative ${
+                                            className={`p-6 text-left transition-all relative ${
                                                 selectedBilling === "annual"
-                                                    ? "bg-amber-50 ring-2 ring-amber-500 ring-inset"
-                                                    : "hover:bg-slate-50"
+                                                    ? "bg-primary/5 border-b-4 sm:border-b-0 border-primary ring-inset"
+                                                    : "hover:bg-muted/30"
                                             }`}
                                         >
-                                            {proPlan?.annualPopular && (
-                                                <span className="absolute top-2 right-2 text-xs font-semibold text-amber-700 bg-amber-200/80 px-2 py-0.5 rounded">
-                                                    ⭐ Más popular
-                                                </span>
-                                            )}
-                                            <p className="text-sm font-medium text-slate-600">Anual</p>
-                                            <p className="text-xl font-bold text-amber-600">RD$ {proPlan?.priceAnnual ?? 9500}</p>
-                                            <p className="text-xs text-amber-700 font-medium">
-                                                🎁 {proPlan?.annualNote || "Paga 10 meses y usa 12"}
+                                            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-2 flex justify-between">
+                                                Anual
+                                                {proPlan?.annualPopular && (
+                                                    <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase">
+                                                        ⭐ Popular
+                                                    </span>
+                                                )}
+                                            </p>
+                                            <p className="text-3xl font-black text-foreground">RD$ {proPlan?.priceAnnual ?? 9500}</p>
+                                            <p className="text-sm text-primary font-bold mt-1">
+                                                🎁 {proPlan?.annualNote || "Paga 10 meses, usa 12"}
                                             </p>
                                         </button>
                                     </div>
@@ -230,13 +229,10 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
 
                                 {/* Premium: Próximamente */}
                                 {premiumPlan && (
-                                    <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-4 opacity-75 cursor-not-allowed">
-                                        <p className="font-bold text-slate-600">{premiumPlan.name}</p>
-                                        <p className="text-sm text-amber-700 font-medium mt-1">
+                                    <div className="rounded-2xl border-2 border-dashed border-border bg-muted/20 p-5 opacity-75 cursor-not-allowed">
+                                        <p className="font-bold text-muted-foreground">{premiumPlan.name}</p>
+                                        <p className="text-sm text-primary font-medium mt-1">
                                             {premiumPlan.comingSoonNote || "Próximamente"}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            Más opciones de pago (tarjeta, etc.) cuando el negocio crezca.
                                         </p>
                                     </div>
                                 )}
@@ -244,46 +240,46 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                         </div>
 
                         <div>
-                            <Label className="text-slate-700">Método de pago</Label>
-                            <div className="flex gap-4 mt-2">
-                                <label className="flex items-center gap-2 cursor-pointer">
+                            <Label className="text-foreground text-sm font-bold uppercase tracking-wide">Método de pago</Label>
+                            <div className="flex flex-col sm:flex-row gap-4 mt-3">
+                                <label className="flex items-center gap-3 p-4 border border-border rounded-xl cursor-pointer hover:bg-muted/50 transition-colors w-full sm:w-1/2">
                                     <input
                                         type="radio"
                                         name="method"
                                         checked={selectedMethod === "transferencia"}
                                         onChange={() => { setSelectedMethod("transferencia"); setComprobante(null); setPaypalConfirmed(false); }}
-                                        className="accent-amber-600"
+                                        className="w-5 h-5 accent-primary"
                                     />
-                                    <span>🏦 Transferencia bancaria</span>
+                                    <span className="font-semibold whitespace-nowrap text-foreground">🏦 Transferencia</span>
                                 </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
+                                <label className="flex items-center gap-3 p-4 border border-border rounded-xl cursor-pointer hover:bg-muted/50 transition-colors w-full sm:w-1/2">
                                     <input
                                         type="radio"
                                         name="method"
                                         checked={selectedMethod === "paypal"}
                                         onChange={() => { setSelectedMethod("paypal"); setComprobante(null); setPaypalConfirmed(false); }}
-                                        className="accent-amber-600"
+                                        className="w-5 h-5 accent-primary"
                                     />
-                                    <span>💲 PayPal</span>
+                                    <span className="font-semibold whitespace-nowrap text-foreground">💲 PayPal</span>
                                 </label>
                             </div>
                         </div>
 
                         {selectedMethod === "transferencia" && paymentInfo && (
-                            <div className="p-4 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4">
-                                <h4 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                    <Building2 className="w-4 h-4 text-accent" /> Datos bancarios para tu pago
+                            <div className="p-5 bg-card rounded-2xl border border-border space-y-5 animate-in fade-in zoom-in-95 duration-200">
+                                <h4 className="font-extrabold text-foreground flex items-center gap-2 text-lg">
+                                    <Building2 className="w-5 h-5 text-primary" /> Datos bancarios
                                 </h4>
-                                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-                                    <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 uppercase tracking-wider">Monto a transferir</p>
-                                    <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">RD$ {selectedPrice}</p>
+                                <div className="p-4 bg-muted/40 rounded-xl border border-border">
+                                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Monto a transferir</p>
+                                    <p className="text-3xl font-black text-foreground mt-1">RD$ {selectedPrice}</p>
                                 </div>
                                 {transferReference && (
-                                    <div className="p-4 bg-slate-900 dark:bg-slate-800 rounded-xl border border-slate-700 space-y-2">
-                                        <p className="text-xs text-slate-300 uppercase tracking-wider font-semibold">Referencia única</p>
-                                        <p className="text-xs text-amber-300/90">Debes colocar esta referencia en el concepto de la transferencia.</p>
-                                        <div className="flex items-center gap-2">
-                                            <code className="flex-1 px-3 py-2.5 bg-slate-800 rounded-lg text-lg font-bold text-amber-400 font-mono tracking-wider">
+                                    <div className="p-4 bg-muted/80 rounded-xl border border-border space-y-2">
+                                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Referencia única</p>
+                                        <p className="text-xs text-foreground font-medium">Debes colocar esta referencia en el concepto de la transferencia.</p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <code className="flex-1 px-4 py-3 bg-card border border-border rounded-lg text-lg font-black text-primary font-mono tracking-widest text-center">
                                                 {transferReference.reference}
                                             </code>
                                             <Button

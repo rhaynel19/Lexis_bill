@@ -230,11 +230,11 @@ export default function ReportsPage() {
                         Gestión fiscal inteligente y transparente
                     </p>
                 </div>
-                <div className="flex gap-3 bg-secondary p-2 rounded-2xl shadow-sm border border-border/10 transition-colors">
+                <div className="flex gap-3 bg-secondary text-white p-2 rounded-2xl shadow-sm border border-border/10 transition-colors">
                     <label htmlFor="year-select" className="sr-only">Año fiscal</label>
                     <select
                         id="year-select"
-                        className="bg-transparent border-none text-sm font-bold text-foreground outline-none focus:ring-0 cursor-pointer px-2"
+                        className="bg-transparent border-none text-sm font-bold text-white outline-none focus:ring-0 cursor-pointer px-2"
                         value={selectedYear}
                         onChange={(e) => setSelectedYear(parseInt(e.target.value))}
                         aria-label="Seleccionar año fiscal"
@@ -256,13 +256,13 @@ export default function ReportsPage() {
 
             {/* Tax Dashboard Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                <Card className="border-none shadow-2xl bg-secondary text-secondary-foreground overflow-hidden relative group transition-colors">
-                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform text-accent">
+                <Card className="border-none shadow-2xl bg-secondary text-white overflow-hidden relative group transition-colors">
+                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform text-white">
                         <DollarSign className="w-24 h-24" />
                     </div>
                     <CardHeader className="pb-2">
                         <div className="flex items-center gap-2 mb-2">
-                            <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center text-accent">
+                            <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white">
                                 <PieChart className="w-4 h-4" />
                             </div>
                             <span className="text-xs font-black uppercase tracking-widest opacity-80">ITBIS Cobrado</span>
@@ -272,7 +272,7 @@ export default function ReportsPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-xs font-medium text-muted-foreground">
+                        <p className="text-xs font-medium text-white/80">
                             Total para presentar en el IT-1 de {months[selectedMonth - 1]}
                         </p>
                     </CardContent>
@@ -489,28 +489,28 @@ export default function ReportsPage() {
             )}
 
             {/* Accountant Share Section */}
-            <div className="mt-12 bg-secondary rounded-3xl p-8 md:p-12 relative overflow-hidden border border-accent/20 transition-colors">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-accent blur-[120px] opacity-10 rounded-full pointer-events-none"></div>
-                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="mt-12 bg-secondary rounded-3xl p-8 md:p-12 relative overflow-hidden border border-white/20 transition-colors">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white blur-[120px] opacity-10 rounded-full pointer-events-none"></div>
+                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 text-white">
                     <div className="space-y-4 max-w-xl">
-                        <Badge className="bg-accent text-accent-foreground hover:bg-accent/90">NUEVO</Badge>
-                        <h3 className="text-3xl font-serif font-bold text-foreground">
+                        <Badge className="bg-white text-secondary hover:bg-white/90">NUEVO</Badge>
+                        <h3 className="text-3xl font-serif font-bold text-white">
                             Tu Contador, Feliz.
                         </h3>
-                        <p className="text-muted-foreground text-lg leading-relaxed">
-                            Envía los reportes 606 y 607 del mes de <span className="text-accent font-bold">{months[selectedMonth - 1]}</span> directamente a tu contable con un solo clic. Incluye resumen de ITBIS y Retenciones.
+                        <p className="text-white/80 text-lg leading-relaxed">
+                            Envía los reportes 606 y 607 del mes de <span className="text-white font-bold">{months[selectedMonth - 1]}</span> directamente a tu contable con un solo clic. Incluye resumen de ITBIS y Retenciones.
                         </p>
                     </div>
                     <div className="flex flex-col gap-3 w-full md:w-auto">
                         <Button
                             size="lg"
-                            className="h-14 px-8 text-lg bg-foreground text-background hover:bg-foreground/90 font-bold shadow-xl transition-all hover:scale-105"
+                            className="h-14 px-8 text-lg bg-white text-secondary hover:bg-white/90 font-bold shadow-xl transition-all hover:scale-105"
                             onClick={() => setAccountantModalOpen(true)}
                         >
-                            <TrendingUp className="w-5 h-5 mr-2 text-accent" />
+                            <TrendingUp className="w-5 h-5 mr-2" />
                             Enviar a Contador
                         </Button>
-                        <p className="text-center text-xs text-muted-foreground uppercase tracking-widest font-black">Email con adjuntos automáticos</p>
+                        <p className="text-center text-xs text-white/60 uppercase tracking-widest font-black">Email con adjuntos automáticos</p>
                     </div>
                 </div>
             </div>
