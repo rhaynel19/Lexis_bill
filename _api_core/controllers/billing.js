@@ -449,16 +449,17 @@ exports.getMetrics = async (req, res) => {
 exports.getBusinessCopilot = async (req, res) => {
     try {
         const userId = req.userId;
-        const { Invoice, Customer, NCFSettings } = require('../models');
+        const { Invoice, Customer, NCFSettings, Expense } = require('../models');
         const { BillingBrain } = require('../services/billing-brain');
 
-        const [invoices, customers, ncfSettings] = await Promise.all([
+        const [invoices, customers, ncfSettings, expenses] = await Promise.all([
             Invoice.find({ userId }).lean(),
             Customer.find({ userId }).lean(),
-            NCFSettings.find({ userId, isActive: true }).lean()
+            NCFSettings.find({ userId, isActive: true }).lean(),
+            Expense.find({ userId }).lean()
         ]);
 
-        const brain = new BillingBrain(userId, invoices, customers, ncfSettings);
+        const brain = new BillingBrain(userId, invoices, customers, ncfSettings, expenses);
         const biResult = await brain.analyze();
         const biSummary = biResult.summary || {};
 

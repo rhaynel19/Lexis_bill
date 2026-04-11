@@ -22,11 +22,12 @@ const INSIGHT_PRIORITY = {
  * Motor de análisis financiero
  */
 class BillingBrain {
-    constructor(userId, invoices, customers, ncfSettings) {
+    constructor(userId, invoices, customers, ncfSettings, expenses) {
         this.userId = userId;
         this.invoices = invoices || [];
         this.customers = customers || [];
         this.ncfSettings = ncfSettings || [];
+        this.expenses = expenses || [];
         this.now = new Date();
         this.insights = [];
     }
@@ -45,6 +46,10 @@ class BillingBrain {
             const invDate = new Date(inv.date);
             return !isNaN(invDate.getTime()) && invDate >= sixMonthsAgo;
         });
+
+        // Análisis preventivo
+        try { this._analyzeFiscalWarnings(); } catch (e) { log.error(e, 'Error in _analyzeFiscalWarnings'); }
+        try { this._analyzeMilestones(); } catch (e) { log.error(e, 'Error in _analyzeMilestones'); }
 
         // Análisis críticos (dinero en riesgo)
         try { this._analyzeUnpaidInvoices(); } catch (e) { log.error(e, 'Error in _analyzeUnpaidInvoices'); }
@@ -256,11 +261,15 @@ class BillingBrain {
                 clientMap.set(key, {
                     rnc: key,
                     name: inv.clientName || 'Sin nombre',
+                    phone: inv.clientPhone || '',
                     lastInvoiceDate: new Date(inv.date),
                     totalRevenue: 0
                 });
             }
             const client = clientMap.get(key);
+            if (!client.phone && inv.clientPhone) {
+                client.phone = inv.clientPhone;
+            }
             const invDate = new Date(inv.date);
             if (invDate > client.lastInvoiceDate) {
                 client.lastInvoiceDate = invDate;
@@ -285,11 +294,17 @@ class BillingBrain {
                 type: 'inactive_clients',
                 title: 'Cliente inactivo',
                 message: `El cliente "${topInactive.name}" no recibe facturas desde hace ${daysSince} días.`,
-                humanMessage: `El cliente "${topInactive.name}" no recibe facturas desde hace ${daysSince} días. Antes facturaba regularmente. ¿Quieres contactarlo?`,
+                humanMessage: `El cliente "${topInactive.name}" no recibe facturas desde hace ${daysSince} días. Antes facturaba regularmente. ¿Quieres contactarlo para saludar?`,
                 action: {
-                    label: 'Ver cliente',
-                    url: `/clientes?rnc=${topInactive.rnc}`,
-                    type: 'view_client'
+                    label: 'Contactar por WhatsApp',
+                    url: 'https://wa.me/', // Frontend will handle prefill logic
+                    type: 'whatsapp_prefill_reactivation',
+                    data: {
+                        clientName: topInactive.name,
+                        daysSince,
+                        phone: topInactive.phone || '',
+                        messageTemplate: `Hola ${topInactive.name}, ¿cómo estás? Te escribo de vuelta. Ha pasado un tiempo desde nuestro último trabajo juntos y quería saber si tienes algún requerimiento próximo en el que pueda apoyarte.`
+                    }
                 },
                 metadata: {
                     clientName: topInactive.name,
@@ -760,6 +775,95 @@ class BillingBrain {
         }
 
         return Object.values(buckets);
+    }
+
+    /**
+     * 🟠 IMPORTANTE: Alertas Fiscales y Prevención de Multas DGII
+     */
+    _analyzeFiscalWarnings() {
+        if (!this.expenses || this.expenses.length === 0) return;
+        const currentDay = this.now.getDate();
+        if (currentDay < 10) return; // Wait until close to the DGII deadline
+
+        const currentMonth = this.now.getMonth();
+        const currentYear = this.now.getFullYear();
+
+        const recentExpenses = this.expenses.filter(exp => {
+            if (!exp.date) return false;
+            const expDate = new Date(exp.date);
+            return (expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear);
+        });
+
+        if (recentExpenses.length < 3 && currentDay >= 10 && currentDay <= 18) {
+            this.insights.push({
+                id: 'fiscal_warning_606',
+                priority: INSIGHT_PRIORITY.IMPORTANT,
+                type: 'fiscal_warning',
+                title: 'Alerta Preventiva (DGII)',
+                message: `Solo tienes ${recentExpenses.length} gastos reportados este mes.`,
+                humanMessage: `Se acerca el límite del reporte 606/607 (día 15). Solo tienes ${recentExpenses.length} gastos registrados este mes. ¿Aseguraste incluir facturas clave (ej. internet, alquiler, teléfono)? Evita multas.`,
+                action: {
+                    label: 'Ir a Gastos',
+                    url: '/gastos',
+                    type: 'navigate_to_expenses'
+                },
+                metadata: {
+                    expensesCount: recentExpenses.length,
+                    dayOfMonth: currentDay
+                }
+            });
+        }
+    }
+
+    /**
+     * 🔵 OPORTUNIDAD: Gamificación - Récord de Facturación
+     */
+    _analyzeMilestones() {
+        const currentMonth = this.now.getMonth();
+        const currentYear = this.now.getFullYear();
+
+        const currentMonthRevenue = this.invoices
+            .filter(inv => {
+                const invDate = new Date(inv.date);
+                return invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear;
+            })
+            .reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+
+        if (currentMonthRevenue === 0) return;
+
+        const sixMonthsAgo = new Date(this.now);
+        sixMonthsAgo.setMonth(this.now.getMonth() - 6);
+
+        const pastMonthsRevenue = new Map();
+        
+        this.invoices.forEach(inv => {
+            const invDate = new Date(inv.date);
+            if (invDate < sixMonthsAgo) return;
+            if (invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear) return;
+
+            const key = `${invDate.getFullYear()}-${invDate.getMonth()}`;
+            pastMonthsRevenue.set(key, (pastMonthsRevenue.get(key) || 0) + (Number(inv.total) || 0));
+        });
+
+        if (pastMonthsRevenue.size === 0) return;
+
+        const maxPastRevenue = Math.max(...Array.from(pastMonthsRevenue.values()));
+
+        if (currentMonthRevenue > maxPastRevenue && maxPastRevenue > 0) {
+            this.insights.push({
+                id: 'milestone_record_revenue',
+                priority: INSIGHT_PRIORITY.OPPORTUNITY,
+                type: 'milestone',
+                title: '¡Nuevo Récord de Facturación!',
+                message: `Has roto tu propio récord este mes con RD$${this._formatCurrency(currentMonthRevenue)}.`,
+                humanMessage: `🎉 ¡Felicidades! Este mes has superado tu ingreso máximo de los últimos 6 meses. Sigue con ese excelente rendimiento.`,
+                action: null,
+                metadata: {
+                    currentRevenue: currentMonthRevenue,
+                    previousRecord: maxPastRevenue
+                }
+            });
+        }
     }
 }
 

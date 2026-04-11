@@ -171,6 +171,11 @@ export default function LandingPage() {
           }}
           className="container mx-auto px-4 sm:px-6 text-center max-w-6xl"
         >
+          <motion.div variants={fadeInUp} className="flex justify-center mb-6">
+            <div className="flex items-center gap-2 bg-[#1e3a8a]/30 border border-[#3B82F6]/30 px-5 py-2 rounded-full text-xs font-bold text-[#3B82F6] tracking-wide uppercase shadow-lg shadow-[#1e3a8a]/20">
+               <ShieldCheck className="w-5 h-5" /> Desarrollado según normas de la DGII
+            </div>
+          </motion.div>
           <motion.h1 variants={fadeInUp} className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 md:mb-8 max-w-4xl mx-auto tracking-tight text-trinalyze-text-light">
             El sistema de gestión creado para el profesional independiente dominicano.
           </motion.h1>
@@ -658,7 +663,10 @@ export default function LandingPage() {
                       <p className="text-trinalyze-brand-blue text-xs sm:text-sm font-semibold mt-2 text-center">🎁 Paga 10 meses y usa 12</p>
                     </div>
                   </div>
-                  <p className="text-sm md:text-base text-trinalyze-text-light italic break-words w-full">Si no simplifica tu vida, no pagas nada.</p>
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mt-2 w-full shadow-sm">
+                    <p className="text-sm md:text-[15px] leading-relaxed text-emerald-400 font-medium text-center w-full">Por menos de lo que cuesta una cena al mes, te ahorras pagar la multa mínima de RD$1,500 de la DGII por un reporte atrasado.</p>
+                  </div>
+                  <p className="text-sm md:text-base text-slate-400 italic break-words w-full mt-2">Si no simplifica tu vida fiscal, no pagas nada.</p>
                 </div>
               </CardHeader>
               <CardContent className="pt-8 sm:pt-10 space-y-8 overflow-visible">
