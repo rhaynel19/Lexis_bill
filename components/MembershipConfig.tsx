@@ -49,6 +49,15 @@ function ProgressStatus({ subscription }: { subscription: any }) {
     );
 }
 
+const DEFAULT_PAYMENT_INFO = {
+    bankName: "Banco Popular Dominicano",
+    bankAccount: "789042660",
+    bankHolder: "Fraimel Trinidad",
+    bankHolderDoc: "22301650929",
+    paypalEmail: "pagos@trinalyze.do",
+    paypalMeUrl: "https://paypal.me/frameltrinidad"
+};
+
 export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: () => void } = {}) {
     const [plans, setPlans] = useState<any[]>([]);
     const [paymentInfo, setPaymentInfo] = useState<{ bankName: string; bankAccount: string; bankHolder?: string; bankHolderDoc?: string; paypalEmail: string; paypalMeUrl?: string } | null>(null);
@@ -75,7 +84,7 @@ export function MembershipConfig({ onPaymentReported }: { onPaymentReported?: ()
                     api.getMe().catch(() => null),
                 ]);
                 if (plansRes?.plans) setPlans(plansRes.plans);
-                setPaymentInfo(infoRes || null);
+                setPaymentInfo(infoRes || DEFAULT_PAYMENT_INFO);
                 setSubscription(statusRes || null);
                 setUserEmail(meRes?.email || "");
             } catch {

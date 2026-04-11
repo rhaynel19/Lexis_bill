@@ -271,10 +271,10 @@ function SidebarLinks({ isMobile = false, isAdmin = false, isPartner = false, on
                     <Download className="w-5 h-5 text-sidebar-foreground/60" />
                     <span className="text-sm">Reportes Fiscales</span>
                 </Link>
-                <div className="pt-4 pb-2 px-4 text-[10px] text-sidebar-foreground/50 uppercase tracking-widest font-bold border-t border-sidebar-border/30 mt-2">Suscripción</div>
-                <Link href="/pagos" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 hover:bg-primary/20 transition-all text-primary border-l-2 border-primary shadow-sm")}>
-                    <CreditCard className="w-5 h-5 text-primary" />
-                    <span className="text-sm font-bold">Mi Plan / Pagar</span>
+                <div className="pt-4 pb-2 px-4 text-[10px] text-white/50 uppercase tracking-widest font-bold border-t border-sidebar-border/30 mt-2">Suscripción</div>
+                <Link href="/pagos" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg bg-primary hover:bg-primary/90 transition-all text-white border-l-4 border-white/30 shadow-lg shadow-primary/20")}>
+                    <CreditCard className="w-5 h-5 text-white" />
+                    <span className="text-sm font-black">Mi Plan / Pagar</span>
                 </Link>
                 <Link href="/documentos" {...linkProps("flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-accent transition-colors mt-2")}>
                     <FolderLock className="w-5 h-5 text-sidebar-foreground/60" />
