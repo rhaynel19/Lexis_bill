@@ -67,11 +67,6 @@ export default function AdminLayout({
                                     <CreditCard className="w-4 h-4 shrink-0" /> Gestión de Pagos
                                 </Button>
                             </Link>
-                            <Link href="/pagos" className="shrink-0">
-                                <Button variant="default" size="sm" className="gap-2 whitespace-nowrap bg-primary/10 text-primary hover:bg-primary/20 border-primary/30">
-                                    <CreditCard className="w-4 h-4 shrink-0" /> Mi Plan / Pagar
-                                </Button>
-                            </Link>
                             <Link href="/admin/historial-pagos" className="shrink-0">
                                 <Button variant="outline" size="sm" className="gap-2 whitespace-nowrap">
                                     <Receipt className="w-4 h-4 shrink-0" /> Historial de pagos

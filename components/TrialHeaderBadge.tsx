@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Sparkles, Trophy } from "lucide-react";
+import { Sparkles, Trophy, Clock } from "lucide-react";
 import { api } from "@/lib/api-service";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export function TrialHeaderBadge() {
     const [status, setStatus] = useState<any>(null);
@@ -52,7 +53,29 @@ export function TrialHeaderBadge() {
         );
     }
 
-    // Plan activo (cliente ya pagó): "Activa" para que no vea "gratis"
+    // Plan activo (cliente ya pagó)
+    if (status.daysRemaining != null && status.daysRemaining < 15) {
+        const isUrgent = status.daysRemaining <= 3;
+        const isWarning = status.daysRemaining <= 7;
+        
+        return (
+            <Link href="/pagos">
+                <div className={cn(
+                    "flex items-center gap-2 text-[10px] md:text-xs font-black px-3 py-1.5 rounded-full border transition-all hover:scale-105 active:scale-95 shadow-sm",
+                    isUrgent 
+                        ? "bg-red-600 text-white border-red-500 animate-pulse" 
+                        : isWarning 
+                            ? "bg-amber-500 text-white border-amber-400 shadow-amber-500/20" 
+                            : "bg-emerald-500 text-white border-emerald-400 shadow-emerald-500/20"
+                )}>
+                    <Clock className="w-3 h-3" />
+                    <span>VENCE EN {status.daysRemaining} DÍAS</span>
+                    <span className="hidden md:inline-block ml-1 border-l border-white/30 pl-2 uppercase">Renovar</span>
+                </div>
+            </Link>
+        );
+    }
+
     return (
         <Link href="/pagos" title="Tu cuenta está completamente habilitada. Ya puedes operar sin interrupciones.">
             <div className="flex items-center gap-2 text-xs font-black text-emerald-800 bg-emerald-50 dark:text-emerald-200 dark:bg-emerald-950/60 px-3 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-800 uppercase tracking-tighter hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-sm">

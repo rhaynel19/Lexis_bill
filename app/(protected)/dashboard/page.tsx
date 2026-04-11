@@ -40,6 +40,7 @@ import { FirstTimeGuide } from "@/components/onboarding/FirstTimeGuide";
 import { EmotionalStatusWidget } from "@/components/dashboard/EmotionalStatusWidget";
 import { TrinalyzeBusinessCopilot } from "@/components/dashboard/TrinalyzeBusinessCopilot";
 import { AlertsBanner } from "@/components/AlertsBanner";
+import { MembershipStatusCard } from "@/components/MembershipStatusCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { NewInvoiceButton } from "@/components/NewInvoiceButton";
@@ -429,6 +430,7 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 py-8">
         <TrialBanner />
         <SubscriptionAlert />
+        <MembershipStatusCard />
         {/* Trinalyze Business Copilot: observa tu negocio, alertas, scoring, predicción */}
         {!isLoading && <TrinalyzeBusinessCopilot />}
 
