@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
+import { motion, AnimatePresence } from "framer-motion";
 
 type PeriodFilter = "current" | "last";
 
@@ -100,17 +102,18 @@ export default function AdminCEODashboard() {
     };
 
     if (isLoading || !stats) {
-        return (
-            <div className="flex justify-center py-16">
-                <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
-            </div>
-        );
+        return <DashboardSkeleton />;
     }
 
     const { users, invoicing, fiscal, business } = stats;
 
     return (
-        <div className="space-y-8">
+        <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="space-y-8"
+        >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">Estadísticas CEO</h1>
@@ -472,22 +475,22 @@ export default function AdminCEODashboard() {
                                 </p>
                             </CardContent>
                         </Card>
-                        <Card className="border-amber-200/50 dark:border-amber-900/30">
+                        <Card className="border-blue-200/30 dark:border-blue-900/30 bg-blue-50/5 dark:bg-blue-950/5">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                                    <TrendingUp className="w-3.5 h-3.5" /> Revenue canal
+                                    <TrendingUp className="w-3.5 h-3.5 text-blue-500" /> Revenue canal
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <span className="text-2xl font-bold">{formatCurrency(partnerStats.revenueFromPartners ?? 0)}</span>
                             </CardContent>
                         </Card>
-                        <Card className="border-amber-200/50 dark:border-amber-900/30">
+                        <Card className="border-blue-200/30 dark:border-blue-900/30">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-xs font-medium text-muted-foreground">Comisiones pagadas</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <span className="text-2xl font-bold text-green-600">{formatCurrency(partnerStats.commissionsPaid ?? 0)}</span>
+                                <span className="text-2xl font-bold text-emerald-600">{formatCurrency(partnerStats.commissionsPaid ?? 0)}</span>
                             </CardContent>
                         </Card>
                         <Card className="border-blue-200/50 dark:border-blue-900/30">
@@ -512,7 +515,7 @@ export default function AdminCEODashboard() {
                                 )}
                             </CardContent>
                         </Card>
-                        <Card className="border-amber-200/50 dark:border-amber-900/30">
+                        <Card className="border-blue-200/10 dark:border-blue-900/20">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-xs font-medium text-muted-foreground">Pendientes aprobar</CardTitle>
                             </CardHeader>
@@ -575,6 +578,43 @@ export default function AdminCEODashboard() {
                             )}
                         </CardContent>
                     </Card>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
+function DashboardSkeleton() {
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center">
+                <div className="space-y-2">
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-4 w-64" />
+                </div>
+                <div className="flex gap-2">
+                    <Skeleton className="h-10 w-32" />
+                    <Skeleton className="h-10 w-32" />
+                </div>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+                {[...Array(6)].map((_, i) => (
+                    <Skeleton key={i} className="h-24 rounded-xl" />
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Skeleton className="h-[350px] rounded-2xl" />
+                <Skeleton className="h-[350px] rounded-2xl" />
+            </div>
+
+            <div className="space-y-4">
+                <Skeleton className="h-6 w-32" />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <Skeleton className="h-28 rounded-xl" />
+                    <Skeleton className="h-28 rounded-xl" />
+                    <Skeleton className="h-28 rounded-xl" />
                 </div>
             </div>
         </div>

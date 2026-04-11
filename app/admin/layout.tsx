@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ShieldAlert, LayoutDashboard, CreditCard, ArrowLeft, Users, UserCircle, ScrollText, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminAlertsBanner } from "@/components/admin/AdminAlertsBanner";
+import { CommandPalette } from "@/components/CommandPalette";
 
 export default function AdminLayout({
     children,
@@ -14,15 +15,15 @@ export default function AdminLayout({
 }) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
-    const [isAdmin, setIsAdmin] = useState(false);
+    const [user, setUser] = useState<any>(null);
 
     useEffect(() => {
         const check = async () => {
             try {
                 const { api } = await import("@/lib/api-service");
                 const me = await api.getMe();
-                if (me?.role === "admin") {
-                    setIsAdmin(true);
+                if (me?.role === "admin" || me?.role === "ceo") {
+                    setUser(me);
                 } else {
                     router.replace("/dashboard");
                 }
@@ -46,10 +47,11 @@ export default function AdminLayout({
         );
     }
 
-    if (!isAdmin) return null;
+    if (!user) return null;
 
     return (
         <div className="min-h-screen bg-background">
+            <CommandPalette userFromApi={user} />
             <header className="border-b border-border/20 bg-card sticky top-0 z-40">
                 <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">

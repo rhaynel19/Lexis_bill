@@ -8,6 +8,8 @@ import { Plus, FileText, Settings, LayoutDashboard, Download, Menu, LogOut, Rece
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TrialHeaderBadge } from "@/components/TrialHeaderBadge";
+import { api } from "@/lib/api-service";
+import { CommandPalette } from "@/components/CommandPalette";
 import { SupportChat } from "@/components/support-chat";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -103,6 +105,7 @@ export default function ProtectedLayout({
 
     return (
         <div className="flex min-h-screen flex-col bg-background text-foreground transition-colors duration-300">
+            <CommandPalette userFromApi={userFromApi} />
             <header className="shrink-0 border-b border-border/20 bg-secondary shadow-lg sticky top-0 z-50 transition-colors duration-300">
                 <div className="container mx-auto px-4 py-4 flex justify-between items-center">
                     <Link href="/dashboard">

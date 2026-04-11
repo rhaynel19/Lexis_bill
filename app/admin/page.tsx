@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AdminPagosPendientes() {
     const [payments, setPayments] = useState<any[]>([]);
@@ -82,21 +84,30 @@ export default function AdminPagosPendientes() {
     }, []);
 
     const handleApprove = async (id: string) => {
+        const previousPayments = [...payments];
+        // Optimistic Update: remove from UI immediately
+        setPayments(prev => prev.filter(p => p.id !== id));
         setProcessingId(id);
+        
         try {
             const { api } = await import("@/lib/api-service");
             await api.approvePayment(id);
-            toast.success("Pago aprobado. Membresía activada.");
+            toast.success("Pago aprobado correctamente.");
+            // Refresh to ensure sync
             fetchPayments();
         } catch (e: any) {
             toast.error(e.message || "Error al aprobar.");
+            setPayments(previousPayments); // Rollback
         } finally {
             setProcessingId(null);
         }
     };
 
     const handleReject = async (id: string) => {
+        const previousPayments = [...payments];
+        setPayments(prev => prev.filter(p => p.id !== id));
         setProcessingId(id);
+        
         try {
             const { api } = await import("@/lib/api-service");
             await api.rejectPayment(id);
@@ -104,6 +115,7 @@ export default function AdminPagosPendientes() {
             fetchPayments();
         } catch (e: any) {
             toast.error(e.message || "Error al rechazar.");
+            setPayments(previousPayments); // Rollback
         } finally {
             setProcessingId(null);
         }
@@ -139,7 +151,11 @@ export default function AdminPagosPendientes() {
     };
 
     return (
-        <div className="space-y-6">
+        <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+        >
             {/* Alertas: trials por vencer, inactivos, pagos pendientes, bloqueados */}
             {alerts.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -213,8 +229,10 @@ export default function AdminPagosPendientes() {
                         </div>
                     )}
                     {isLoading ? (
-                        <div className="py-12 flex justify-center text-muted-foreground">
-                            <Loader2 className="w-8 h-8 animate-spin" />
+                        <div className="space-y-3">
+                            {[...Array(5)].map((_, i) => (
+                                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                            ))}
                         </div>
                     ) : filteredPayments.length === 0 ? (
                         <div className="py-12 text-center text-muted-foreground space-y-2">
@@ -236,83 +254,93 @@ export default function AdminPagosPendientes() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredPayments.map((p) => (
-                                    <TableRow key={p.id}>
-                                        <TableCell>
-                                            {p.reference ? (
-                                                <code className="px-2 py-1 bg-muted rounded text-sm font-mono font-semibold">{p.reference}</code>
-                                            ) : (
-                                                <span className="text-muted-foreground text-sm">—</span>
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            <div>
-                                                <p className="font-medium">{p.userName || "—"}</p>
-                                                <p className="text-sm text-muted-foreground">{p.userEmail}</p>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="font-medium capitalize">{p.plan}</span>
-                                            <p className="text-xs text-muted-foreground capitalize">
-                                                {p.billingCycle === "annual" ? "Anual" : "Mensual"}
-                                            </p>
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="capitalize">{p.paymentMethod}</span>
-                                        </TableCell>
-                                        <TableCell>
-                                            {p.comprobanteImage ? (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="gap-1.5"
-                                                    onClick={() => setComprobanteView(p.comprobanteImage)}
-                                                >
-                                                    <ImageIcon className="w-4 h-4" />
-                                                    Ver comprobante
-                                                </Button>
-                                            ) : (
-                                                <span className="text-muted-foreground text-sm">—</span>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-muted-foreground text-sm">
-                                            {formatDate(p.requestedAt)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Button
-                                                    size="sm"
-                                                    variant="default"
-                                                    className="bg-green-600 hover:bg-green-700"
-                                                    onClick={() => handleApprove(p.id)}
-                                                    disabled={!!processingId}
-                                                >
-                                                    {processingId === p.id ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                    ) : (
-                                                        <>
-                                                            <Check className="w-4 h-4 mr-1" /> Aprobar
-                                                        </>
-                                                    )}
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="destructive"
-                                                    onClick={() => handleReject(p.id)}
-                                                    disabled={!!processingId}
-                                                >
-                                                    {processingId === p.id ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                    ) : (
-                                                        <>
-                                                            <X className="w-4 h-4 mr-1" /> Rechazar
-                                                        </>
-                                                    )}
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                <AnimatePresence mode="popLayout">
+                                    {filteredPayments.map((p) => (
+                                        <motion.tr 
+                                            key={p.id}
+                                            layout
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: 20, backgroundColor: "rgba(239, 68, 68, 0.1)" }}
+                                            transition={{ duration: 0.2 }}
+                                            className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                                        >
+                                            <TableCell>
+                                                {p.reference ? (
+                                                    <code className="px-2 py-1 bg-muted rounded text-sm font-mono font-semibold">{p.reference}</code>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-sm">—</span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div>
+                                                    <p className="font-medium">{p.userName || "—"}</p>
+                                                    <p className="text-sm text-muted-foreground">{p.userEmail}</p>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className="font-medium capitalize">{p.plan}</span>
+                                                <p className="text-xs text-muted-foreground capitalize">
+                                                    {p.billingCycle === "annual" ? "Anual" : "Mensual"}
+                                                </p>
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className="capitalize">{p.paymentMethod}</span>
+                                            </TableCell>
+                                            <TableCell>
+                                                {p.comprobanteImage ? (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="gap-1.5"
+                                                        onClick={() => setComprobanteView(p.comprobanteImage)}
+                                                    >
+                                                        <ImageIcon className="w-4 h-4" />
+                                                        Ver comprobante
+                                                    </Button>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-sm">—</span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground text-sm">
+                                                {formatDate(p.requestedAt)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="default"
+                                                        className="bg-emerald-600 hover:bg-emerald-700"
+                                                        onClick={() => handleApprove(p.id)}
+                                                        disabled={!!processingId}
+                                                    >
+                                                        {processingId === p.id ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                        ) : (
+                                                            <>
+                                                                <Check className="w-4 h-4 mr-1" /> Aprobar
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="destructive"
+                                                        onClick={() => handleReject(p.id)}
+                                                        disabled={!!processingId}
+                                                    >
+                                                        {processingId === p.id ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                        ) : (
+                                                            <>
+                                                                <X className="w-4 h-4 mr-1" /> Rechazar
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </motion.tr>
+                                    ))}
+                                </AnimatePresence>
                             </TableBody>
                         </Table>
                     )}
@@ -351,6 +379,6 @@ export default function AdminPagosPendientes() {
                     )}
                 </DialogContent>
             </Dialog>
-        </div>
+        </motion.div>
     );
 }

@@ -21,6 +21,8 @@ import Link from "next/link";
 import { api } from "@/lib/api-service";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { motion } from "framer-motion";
 import { FiscalDisclaimerModal } from "@/components/FiscalDisclaimerModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -100,6 +102,10 @@ export default function ReportsPage() {
             setIsLoading(false);
         }
     };
+
+    if (isLoading) {
+        return <ReportsSkeleton />;
+    }
 
     const doDownload607 = async () => {
         const blob = await api.downloadReport607(selectedMonth, selectedYear);
@@ -685,6 +691,34 @@ export default function ReportsPage() {
                     )}
                 </DialogContent>
             </Dialog>
+        </div>
+    );
+}
+
+function ReportsSkeleton() {
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500 bg-slate-50 min-h-screen pb-12">
+            <div className="h-48 bg-secondary flex items-center justify-center">
+                <div className="container mx-auto px-4 flex justify-between items-center">
+                    <div className="space-y-3">
+                        <Skeleton className="h-10 w-64 bg-white/20" />
+                        <Skeleton className="h-4 w-96 bg-white/10" />
+                    </div>
+                </div>
+            </div>
+
+            <div className="container mx-auto px-4 -mt-10 space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {[...Array(4)].map((_, i) => (
+                        <Skeleton key={i} className="h-32 rounded-3xl" />
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Skeleton className="h-[400px] rounded-3xl shadow-sm" />
+                    <Skeleton className="h-[400px] rounded-3xl shadow-sm" />
+                </div>
+            </div>
         </div>
     );
 }

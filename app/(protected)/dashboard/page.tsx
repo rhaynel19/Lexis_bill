@@ -40,6 +40,8 @@ import { FirstTimeGuide } from "@/components/onboarding/FirstTimeGuide";
 import { EmotionalStatusWidget } from "@/components/dashboard/EmotionalStatusWidget";
 import { TrinalyzeBusinessCopilot } from "@/components/dashboard/TrinalyzeBusinessCopilot";
 import { AlertsBanner } from "@/components/AlertsBanner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { motion } from "framer-motion";
 import { NewInvoiceButton } from "@/components/NewInvoiceButton";
 
 import { usePreferences } from "@/components/providers/PreferencesContext";
@@ -418,6 +420,10 @@ export default function Dashboard() {
     router.push("/nueva-factura");
   };
 
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-24 md:pb-12">
       <div className="container mx-auto px-4 py-8">
@@ -583,6 +589,28 @@ export default function Dashboard() {
       {/* Botón flotante Nueva Factura (desktop); en móvil usa el FAB del layout */}
       <div className="hidden md:block fixed bottom-6 right-6 z-50">
         <NewInvoiceButton variant="inline" className="h-14 px-6 rounded-2xl shadow-xl shadow-primary/30 hover:scale-105 active:scale-100 transition-all font-semibold text-base" />
+      </div>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="h-32 rounded-2xl" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-[400px] rounded-3xl" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-[400px] rounded-3xl" />
+        </div>
       </div>
     </div>
   );
