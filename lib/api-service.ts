@@ -446,13 +446,34 @@ export const api = {
     },
 
     // Subscription & Payments
+    _subscriptionPromise: null as Promise<any> | null,
+
     async getSubscriptionStatus(forceRefresh = false) {
+        if (!forceRefresh && this._subscriptionPromise) {
+            return this._subscriptionPromise;
+        }
+
         const cacheKey = forceRefresh ? undefined : "subscription_status";
         const headers = forceRefresh ? { 'Cache-Control': 'no-cache' } : undefined;
-        return secureFetch<any>(`${API_URL}/subscription/status`, {
-            cacheKey,
-            headers
-        });
+        
+        const fetchPromise = (async () => {
+            try {
+                return await secureFetch<any>(`${API_URL}/subscription/status`, {
+                    cacheKey,
+                    headers
+                });
+            } finally {
+                // Clear the promise after completion (success or error) 
+                // so subsequent calls at a later time trigger a new fetch if needed
+                this._subscriptionPromise = null;
+            }
+        })();
+
+        if (!forceRefresh) {
+            this._subscriptionPromise = fetchPromise;
+        }
+        
+        return fetchPromise;
     },
 
     // ✅ Función para invalidar cache de suscripción
