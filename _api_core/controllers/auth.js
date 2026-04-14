@@ -18,7 +18,8 @@ const PARTNER_EXPIRY_DAYS = 3650;
  */
 async function register(req, res) {
     try {
-        const { email, password, name, rnc, profession, plan, referralCode, suggestedName, acceptedPolicyVersions, isPartnerRegistration, inviteToken } = req.body;
+        let { email, password, name, rnc, profession, plan, referralCode, suggestedName, acceptedPolicyVersions, isPartnerRegistration, inviteToken } = req.body;
+        email = sanitizeEmail(email);
 
         log.info({ action: 'register', email }, 'Registrando usuario');
 
@@ -154,8 +155,9 @@ async function register(req, res) {
  */
 async function login(req, res) {
     try {
-        const { email, password } = req.body;
-        log.info({ action: 'login' }, 'Intento de login');
+        let { email, password } = req.body;
+        email = sanitizeEmail(email);
+        log.info({ action: 'login', email }, 'Intento de login');
 
         const user = await User.findOne({ email });
         if (!user) {
