@@ -7,7 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // 🔥 MIDDLEWARE INTELIGENTE CON NIVELES DE ACCESO (Anti-Errores)
 // SEGURIDAD: Token solo en cookie HttpOnly (no en URL ni localStorage)
 function verifyToken(req, res, next) {
-    const token = req.cookies?.lexis_auth;
+    const token = req.cookies?.trinalyze_auth;
     if (!token) return res.status(403).json({ message: 'Sesión no válida. Inicie sesión.' });
 
     jwt.verify(token, JWT_SECRET, async (err, decoded) => {

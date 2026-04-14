@@ -29,7 +29,13 @@ export function FiscalNamePrompt({ initialSuggestedName, onConfirmed }: FiscalNa
             await api.confirmFiscalName(name);
             setIsSuccess(true);
             toast.success("Identidad fiscal confirmada");
-            setTimeout(() => onConfirmed(name), 1500);
+            setTimeout(async () => {
+                try {
+                    await onConfirmed(name);
+                } catch (error) {
+                    console.error("Error in onConfirmed callback:", error);
+                }
+            }, 1500);
         } catch (error) {
             toast.error("No pudimos guardar los cambios. Reintenta pronto.");
         } finally {

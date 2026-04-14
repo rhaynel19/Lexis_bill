@@ -198,7 +198,7 @@ async function login(req, res) {
             path: '/'
         };
         if (cookieDomain) cookieOpts.domain = cookieDomain;
-        res.cookie('lexis_auth', token, cookieOpts);
+        res.cookie('trinalyze_auth', token, cookieOpts);
 
         const sub = getUserSubscription(user);
         let partner = null;
@@ -346,7 +346,7 @@ function logout(req, res) {
     const opts = { path: '/', httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax' };
     const cookieDomain = process.env.COOKIE_DOMAIN || (req.get('x-forwarded-host') || '').split(',')[0].trim() || undefined;
     if (cookieDomain) opts.domain = cookieDomain;
-    res.clearCookie('lexis_auth', opts);
+    res.clearCookie('trinalyze_auth', opts);
     res.json({ success: true });
 }
 

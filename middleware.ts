@@ -38,7 +38,7 @@ export function middleware(request: NextRequest) {
     const isProtected = PROTECTED_PATHS.some(p => pathname === p || pathname.startsWith(p + "/"));
     if (!isProtected) return NextResponse.next();
 
-    const token = request.cookies.get("lexis_auth")?.value;
+    const token = request.cookies.get("trinalyze_auth")?.value;
     if (!token) {
         const loginUrl = new URL("/login", request.url);
         loginUrl.searchParams.set("redirect", pathname);

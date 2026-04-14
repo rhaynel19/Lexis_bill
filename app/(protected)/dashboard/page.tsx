@@ -175,7 +175,7 @@ export default function Dashboard() {
       // Intentar stats por agregación (menos carga) y solo 50 facturas para la lista
       const [statsRes, invRes, customersRes] = await Promise.all([
         api.getDashboardStats().catch(() => null),
-        api.getInvoices(1, 50),
+        api.getInvoices(1, 50).catch(() => ({ data: [], total: 0 })),
         api.getCustomers().catch(() => [])
       ]);
       const customersList = (customersRes || []) as { name: string; rnc: string; phone?: string; lastInvoiceDate?: string }[];
@@ -450,13 +450,17 @@ export default function Dashboard() {
               <FiscalNamePrompt
                 initialSuggestedName={fiscalState.suggested}
                 onConfirmed={async (name) => {
-                  setFiscalState(prev => ({ ...prev, confirmed: name }));
-                  const { api } = await import("@/lib/api-service");
-                  await api.confirmFiscalName(name);
-                  await refresh();
-                  const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
-                  config.companyName = name;
-                  localStorage.setItem("appConfig", JSON.stringify(config));
+                  try {
+                    setFiscalState(prev => ({ ...prev, confirmed: name }));
+                    const { api } = await import("@/lib/api-service");
+                    // api.confirmFiscalName already called in child component
+                    await refresh();
+                    const config = JSON.parse(localStorage.getItem("appConfig") || "{}");
+                    config.companyName = name;
+                    localStorage.setItem("appConfig", JSON.stringify(config));
+                  } catch (e) {
+                    console.error("Dashboard onConfirmed error:", e);
+                  }
                 }}
               />
             </div>
