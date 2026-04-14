@@ -16,6 +16,7 @@ export function MembershipStatusCard() {
     useEffect(() => {
         api.getSubscriptionStatus()
             .then(data => setStatus(data))
+            .catch(() => setStatus(null))
             .finally(() => setLoading(false));
     }, []);
 

@@ -6,6 +6,21 @@ interface FetchOptions extends RequestInit {
     cacheKey?: string; // Si se provee, habilita el sistema de caché (Solo para GET)
 }
 
+export class APIError extends Error {
+    status: number;
+    data: any;
+
+    constructor(status: number, message: string, data: any = {}) {
+        super(message);
+        this.name = "APIError";
+        this.status = status;
+        this.data = data;
+        
+        // Ensure the prototype is set correctly for instanceof checks
+        Object.setPrototypeOf(this, APIError.prototype);
+    }
+}
+
 /**
  * secureFetch: Una capa robusta sobre fetch con:
  * 1. Exponential Backoff (Reintentos automáticos)
@@ -24,7 +39,7 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
 
     // 1. Interceptor de Conexión (Offline)
     if (typeof window !== 'undefined' && !navigator.onLine) {
-        toast.warning("Modo sin conexión.\\nMostrando datos guardados.", { 
+        toast.warning("Modo sin conexión.\nMostrando datos guardados.", { 
             duration: 8000,
             icon: "🔌"
         });
@@ -58,50 +73,46 @@ export async function secureFetch<T>(url: string, options: FetchOptions = {}): P
                 signal: controller.signal
             }).catch(e => {
                 if (e.message === 'Failed to fetch') {
-                    throw new Error("Problema de conexión.\\nVerifica tu internet o intenta nuevamente.");
+                    throw new Error("Problema de conexión.\nVerifica tu internet o intenta nuevamente.");
                 }
                 throw e;
             });
 
             clearTimeout(id);
 
-            // Manejo de Errores HTTP (objeto con status, message y data para que el caller pueda mostrar el error real)
+            // Manejo de Errores HTTP
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                let errorMessage = errorData.message ?? errorData.error ?? `Error temporal del servidor.\\nEstamos trabajando para solucionarlo. Intenta nuevamente en unos minutos.`;
+                let errorMessage = errorData.message ?? errorData.error ?? `Error temporal del servidor.\nEstamos trabajando para solucionarlo. Intenta nuevamente en unos minutos.`;
+                
                 if (typeof errorMessage !== "string") {
                     errorMessage = response.status >= 500
-                        ? "Error temporal del servidor.\\nEstamos trabajando para solucionarlo. Intenta nuevamente en unos minutos."
+                        ? "Error temporal del servidor.\nEstamos trabajando para solucionarlo. Intenta nuevamente en unos minutos."
                         : `Server Error: ${response.status}`;
                 }
-                if (response.status >= 500) {
-                    // Solo sobrescribir si el backend no envió un mensaje específico
-                    if (!errorData.message && !errorData.error) {
-                        errorMessage = "Error temporal del servidor.\\nEstamos trabajando para solucionarlo. Intenta nuevamente en unos minutos.";
-                    }
-                }
-                const errPayload = { status: response.status, message: errorMessage, data: errorData };
 
-                // Sesión expirada o no autorizado: redirigir a login solo si estamos en una ruta protegida (evitar redirigir desde landing tras logout)
+                // API Error instance instead of plain object
+                const apiError = new APIError(response.status, errorMessage, errorData);
+
+                // Sesión expirada o no autorizado
                 if (response.status === 401 && typeof window !== 'undefined') {
                     const path = window.location.pathname || '';
                     const isPublic = ['/', '/login', '/registro', '/landing', '/recuperar-contrasena', '/restablecer-contrasena', '/unirse-como-partner', '/programa-partners'].some(p => path === p || path.startsWith(p + '?'));
                     if (!isPublic) {
-                        toast.error("Tu sesión ha expirado.\\nPor favor inicia sesión nuevamente.");
+                        toast.error("Tu sesión ha expirado.\nPor favor inicia sesión nuevamente.");
                         window.location.href = `/login?redirect=${encodeURIComponent(path)}`;
                     }
-                    throw errPayload;
+                    throw apiError;
                 }
 
-                // Suscripción bloqueada (días de gracia pasados): redirigir a pagos
+                // Suscripción bloqueada
                 if (response.status === 403 && errorData.code === 'SUBSCRIPTION_LOCKED' && typeof window !== 'undefined') {
                     toast.error("Tu cuenta está bloqueada por falta de pago. Regulariza para seguir usando la plataforma.");
                     window.location.href = "/pagos?locked=1";
-                    throw errPayload;
+                    throw apiError;
                 }
 
-                // 4xx y 5xx: lanzar objeto con status, message y data para diagnóstico
-                throw errPayload;
+                throw apiError;
             }
 
             const data = response.status === 204 ? null : await response.json();

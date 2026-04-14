@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { PreferencesProvider } from "@/components/providers/PreferencesContext";
 import { AuthProvider } from "@/components/providers/AuthContext";
+import { GlobalErrorHandler } from "@/components/GlobalErrorHandler";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -46,6 +47,7 @@ export default function RootLayout({
           <PreferencesProvider>
             <AuthProvider>
               {children}
+              <GlobalErrorHandler />
               <Toaster />
               <Analytics />
             </AuthProvider>
