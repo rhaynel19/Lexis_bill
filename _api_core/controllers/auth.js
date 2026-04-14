@@ -33,7 +33,7 @@ async function register(req, res) {
         }
 
         // Un correo = una sola cuenta. No se puede ser partner y user (facturación) con el mismo correo.
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ email: new RegExp('^' + email + '$', 'i') });
         if (existingUser) {
             if (existingUser.role === 'partner') {
                 return res.status(400).json({
@@ -159,7 +159,7 @@ async function login(req, res) {
         email = sanitizeEmail(email);
         log.info({ action: 'login', email }, 'Intento de login');
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: new RegExp('^' + email + '$', 'i') });
         if (!user) {
             log.warn('Login fallido: usuario no encontrado');
             return res.status(401).json({ message: 'Credenciales inválidas' });
