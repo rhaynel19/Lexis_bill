@@ -11,17 +11,24 @@ export function GlobalErrorHandler() {
     useEffect(() => {
         const handleRejection = (event: PromiseRejectionEvent) => {
             const reason = event.reason;
+
+            // 1. Detect standard APIError (the new way)
+            const isAPIError = reason && (reason instanceof Error || reason.name === "APIError");
             
-            // Si el error tiene la estructura de nuestra API (status, message, data)
-            if (reason && typeof reason === 'object' && 'status' in reason && 'message' in reason) {
-                console.error("[Global Promise Rejection]", reason);
-                
-                // Evitar que el error se propague al log de la consola como "Unhandled"
+            // 2. Detect legacy plain object rejections (the old way)
+            const isLegacyAPIObject = reason && 
+                typeof reason === 'object' && 
+                'status' in reason && 
+                'message' in reason &&
+                'data' in reason;
+
+            if (isAPIError || isLegacyAPIObject) {
+                // Silenciamos estos errores porque ya son conocidos y manejados 
+                // o son fallos esperados de la API (404s, 401s, etc.)
                 event.preventDefault();
-                
-                // Si es un error crítico (500), podemos mostrar un aviso
-                if (reason.status >= 500) {
-                    toast.error("Error del sistema. Reintentando automáticamente...");
+
+                if (process.env.NODE_ENV === 'development') {
+                    console.warn("[GlobalErrorHandler] Silenced predictable API rejection:", reason);
                 }
             }
         };
