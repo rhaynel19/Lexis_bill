@@ -107,68 +107,75 @@ export function ComprobantesConfig({ locked = false }: { locked?: boolean }) {
                 </CardHeader>
                 <CardContent className="p-6 space-y-6">
                     {/* Formulario para Nuevo Lote */}
-                    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 ${locked ? "opacity-70 pointer-events-none" : ""}`}>
-                        <div className="space-y-2">
-                            <Label>Modo de Facturación</Label>
-                            <Select
-                                value={newBatch.sequenceType}
-                                onValueChange={(v) => {
-                                    const defaultType = v === "electronic" ? "31" : "01";
-                                    setNewBatch({ ...newBatch, sequenceType: v, type: defaultType });
-                                }}
-                                disabled={locked}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="electronic">Factura Electrónica (E)</SelectItem>
-                                    <SelectItem value="traditional">Tradicional (B)</SelectItem>
-                                </SelectContent>
-                            </Select>
+                    <div className={`p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-4 ${locked ? "opacity-70 pointer-events-none" : ""}`}>
+                        {/* Fila 1: Modo y Tipo de Comprobante */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2 min-w-0">
+                                <Label>Modo de Facturación</Label>
+                                <Select
+                                    value={newBatch.sequenceType}
+                                    onValueChange={(v) => {
+                                        const defaultType = v === "electronic" ? "31" : "01";
+                                        setNewBatch({ ...newBatch, sequenceType: v, type: defaultType });
+                                    }}
+                                    disabled={locked}
+                                >
+                                    <SelectTrigger className="w-full truncate">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="electronic">Factura Electrónica (E)</SelectItem>
+                                        <SelectItem value="traditional">Tradicional (B)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2 min-w-0">
+                                <Label>Tipo de Comprobante</Label>
+                                <Select value={newBatch.type} onValueChange={(v) => setNewBatch({ ...newBatch, type: v })} disabled={locked}>
+                                    <SelectTrigger className="w-full truncate">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {newBatch.sequenceType === "electronic" ? (
+                                            <>
+                                                <SelectItem value="31">E31 - Crédito Fiscal</SelectItem>
+                                                <SelectItem value="32">E32 - Consumo</SelectItem>
+                                                <SelectItem value="34">E34 - Nota de Crédito</SelectItem>
+                                                <SelectItem value="44">E44 - Regímenes Especiales</SelectItem>
+                                                <SelectItem value="45">E45 - Gubernamentales</SelectItem>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <SelectItem value="01">B01 - Crédito Fiscal</SelectItem>
+                                                <SelectItem value="02">B02 - Consumo</SelectItem>
+                                                <SelectItem value="04">B04 - Nota de Crédito</SelectItem>
+                                                <SelectItem value="14">B14 - Regímenes Especiales</SelectItem>
+                                                <SelectItem value="15">B15 - Gubernamentales</SelectItem>
+                                            </>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Tipo de Comprobante</Label>
-                            <Select value={newBatch.type} onValueChange={(v) => setNewBatch({ ...newBatch, type: v })} disabled={locked}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {newBatch.sequenceType === "electronic" ? (
-                                        <>
-                                            <SelectItem value="31">E31 - Crédito Fiscal</SelectItem>
-                                            <SelectItem value="32">E32 - Consumo</SelectItem>
-                                            <SelectItem value="34">E34 - Nota de Crédito</SelectItem>
-                                            <SelectItem value="44">E44 - Regímenes Especiales</SelectItem>
-                                            <SelectItem value="45">E45 - Gubernamentales</SelectItem>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <SelectItem value="01">B01 - Crédito Fiscal</SelectItem>
-                                            <SelectItem value="02">B02 - Consumo</SelectItem>
-                                            <SelectItem value="04">B04 - Nota de Crédito</SelectItem>
-                                            <SelectItem value="14">B14 - Regímenes Especiales</SelectItem>
-                                            <SelectItem value="15">B15 - Gubernamentales</SelectItem>
-                                        </>
-                                    )}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Desde</Label>
-                            <Input type="number" value={newBatch.initialNumber} onChange={(e) => setNewBatch({ ...newBatch, initialNumber: parseInt(e.target.value) })} disabled={locked} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Hasta</Label>
-                            <Input type="number" value={newBatch.finalNumber} onChange={(e) => setNewBatch({ ...newBatch, finalNumber: parseInt(e.target.value) })} disabled={locked} />
-                        </div>
-                        <div className="flex items-end">
-                            <Button className="w-full gap-2" onClick={handleAddBatch} disabled={isSaving || locked}>
-                                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                                Agregar Lote
-                            </Button>
+                        {/* Fila 2: Desde, Hasta, Botón */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 items-end">
+                            <div className="space-y-2">
+                                <Label>Desde</Label>
+                                <Input type="number" value={newBatch.initialNumber} onChange={(e) => setNewBatch({ ...newBatch, initialNumber: parseInt(e.target.value) })} disabled={locked} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Hasta</Label>
+                                <Input type="number" value={newBatch.finalNumber} onChange={(e) => setNewBatch({ ...newBatch, finalNumber: parseInt(e.target.value) })} disabled={locked} />
+                            </div>
+                            <div className="col-span-2 sm:col-span-1">
+                                <Button className="w-full gap-2" onClick={handleAddBatch} disabled={isSaving || locked}>
+                                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                    Agregar Lote
+                                </Button>
+                            </div>
                         </div>
                     </div>
+
 
                     {/* Listado de Lotes */}
                     <div className="rounded-xl border border-slate-100 overflow-hidden">
