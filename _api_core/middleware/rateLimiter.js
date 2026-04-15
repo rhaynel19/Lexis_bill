@@ -1,10 +1,19 @@
 const rateLimit = require('express-rate-limit');
 
-// Rate limiting - Zero Risk Deploy (IP desde X-Forwarded-For con trust proxy)
+// Limiter para LOGIN únicamente — intentos fallidos de registro NO lo afectan
 const authLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
-    max: 5,
-    message: { message: 'Demasiados intentos. Intenta en 10 minutos.' },
+    max: 10,
+    message: { message: 'Demasiados intentos de inicio de sesión. Intenta en 10 minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+// Limiter SEPARADO para REGISTRO — no comparte cupo con login
+const registerLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { message: 'Demasiados intentos de registro. Intenta en 15 minutos.' },
     standardHeaders: true,
     legacyHeaders: false
 });
@@ -51,6 +60,7 @@ const rncLimiter = rateLimit({
 
 module.exports = {
     authLimiter,
+    registerLimiter,
     resetPasswordLimiter,
     invoiceLimiter,
     reportLimiter,

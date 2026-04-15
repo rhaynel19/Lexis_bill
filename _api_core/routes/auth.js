@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth');
 const { verifyToken } = require('../middleware/auth');
-const { authLimiter, resetPasswordLimiter } = require('../middleware/rateLimiter');
+const { authLimiter, registerLimiter, resetPasswordLimiter } = require('../middleware/rateLimiter');
 
 const validate = require('../middleware/validate');
 const { 
@@ -14,12 +14,12 @@ const {
 } = require('../schemas/auth.schema');
 
 // Public routes
-router.post('/register', authLimiter, validate(registrationSchema), authController.register);
+router.post('/register', registerLimiter, validate(registrationSchema), authController.register);
 router.post('/login', authLimiter, validate(loginSchema), authController.login);
 router.post('/forgot-password', resetPasswordLimiter, validate(forgotPasswordSchema), authController.forgotPassword);
 router.post('/reset-password', resetPasswordLimiter, validate(resetPasswordSchema), authController.resetPassword);
 router.post('/verify-email', authController.verifyEmail);
-router.post('/resend-verify-email', authLimiter, authController.resendVerifyEmail);
+router.post('/resend-verify-email', registerLimiter, authController.resendVerifyEmail);
 
 // Policy routes (Public reading)
 router.get('/policies/current', authController.getCurrentPoliciesHandler);
