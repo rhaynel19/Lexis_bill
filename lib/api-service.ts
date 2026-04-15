@@ -79,7 +79,7 @@ export const api = {
     },
 
     async completeOnboarding(data: { name?: string; rnc?: string; address?: string; phone?: string; confirmedFiscalName?: string; logo?: string }) {
-        const res = await secureFetch<any>(`${API_URL}/onboarding/complete`, {
+        const res = await secureFetch<any>(`${API_URL}/auth/onboarding/complete`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
