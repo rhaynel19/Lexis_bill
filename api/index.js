@@ -42,6 +42,11 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Rutas públicas SIN DB: deben registrarse ANTES del middleware de conexión
+const systemController = require('../_api_core/controllers/system');
+app.post('/api/validate-rnc', systemController.validateRnc);
+app.get('/api/rnc/:number', systemController.validateRnc);
+
 // DB Connection Middleware (Vercel standard)
 app.use(async (req, res, next) => {
     try {
