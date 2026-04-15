@@ -15,7 +15,6 @@ const connectDB = async () => {
         log.info('Conectando a MongoDB...');
         const conn = await mongoose.connect(MONGODB_URI, {
             serverSelectionTimeoutMS: 15000,
-            dbName: 'lexis_bill',
             maxPoolSize: 25
         });
 

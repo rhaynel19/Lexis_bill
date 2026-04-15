@@ -6,6 +6,10 @@ const { verifyToken, verifyClient } = require('../middleware/auth');
 router.get('/health', systemController.getHealth);
 router.get('/status', systemController.getStatus);
 
+// Validación pública de RNC/Cédula (sin auth requerida)
+router.post('/validate-rnc', systemController.validateRnc);
+router.get('/rnc/:number', systemController.validateRnc);
+
 router.get('/dashboard/stats', verifyToken, verifyClient, systemController.getDashboardStats);
 router.get('/autofill/suggestions', verifyToken, verifyClient, systemController.getAutofillSuggestions);
 

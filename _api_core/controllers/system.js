@@ -7,6 +7,7 @@ const { log } = require('../models');
 const { safeErrorMessage } = require('../utils/helpers');
 const { sanitizeString } = require('../utils/sanitizers');
 const { isValidObjectId } = require('../utils/validators');
+const { fetchRncFromExternalApi } = require('../services/dgii');
 
 exports.getHealth = async (req, res) => {
     const checks = {
@@ -229,5 +230,45 @@ exports.uploadDocument = async (req, res) => {
         res.status(201).json(doc);
     } catch (e) {
         res.status(500).json({ message: safeErrorMessage(e) });
+    }
+};
+
+/** POST /api/validate-rnc  y  GET /api/rnc/:number — Público. Valida un RNC/Cédula contra API DGII. */
+exports.validateRnc = async (req, res) => {
+    try {
+        // Soporta GET /rnc/:number  y  POST /validate-rnc { rnc }
+        const raw = req.params?.number || req.body?.rnc;
+        if (!raw || typeof raw !== 'string') {
+            return res.status(400).json({ valid: false, error: 'RNC requerido.' });
+        }
+
+        const cleanRnc = raw.replace(/\D/g, '');
+        if (cleanRnc.length !== 9 && cleanRnc.length !== 11) {
+            return res.status(400).json({ valid: false, error: 'El RNC debe tener 9 dígitos o la Cédula 11 dígitos.' });
+        }
+
+        // Si no hay URL externa configurada, responder con bypass informativo
+        if (!process.env.DGII_RNC_API_URL) {
+            const type = cleanRnc.length === 9 ? 'JURIDICA' : 'FISICA';
+            log.warn({ rnc: cleanRnc }, 'DGII_RNC_API_URL not set — RNC validation bypassed');
+            return res.json({
+                valid: true,
+                rnc: cleanRnc,
+                name: type === 'FISICA' ? 'Persona Física' : 'Empresa Registrada',
+                type,
+                bypassed: true
+            });
+        }
+
+        const result = await fetchRncFromExternalApi(cleanRnc);
+
+        if (!result) {
+            return res.json({ valid: false, rnc: cleanRnc, error: 'RNC no encontrado en el registro fiscal.' });
+        }
+
+        return res.json(result);
+    } catch (e) {
+        log.error({ err: e.message }, 'Error validating RNC');
+        res.status(500).json({ valid: false, error: 'Error interno al validar el RNC.' });
     }
 };
