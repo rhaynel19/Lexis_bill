@@ -151,12 +151,12 @@ function RegisterForm() {
             ? { terms: policyVersions.terms, privacy: policyVersions.privacy }
             : undefined;
         try {
-            // No enviamos confirmPassword a la API
-            const { confirmPassword, ...apiForm } = form;
+            // No enviamos confirmPassword ni hasRnc a la API
+            const { confirmPassword, hasRnc, ...apiForm } = form;
 
             const registerRes = await api.register({
                 ...apiForm,
-                plan,
+                plan: plan ?? undefined,  // searchParams retorna null si no existe; convertir a undefined
                 suggestedName: rncStatus.name,
                 referralCode: ref || undefined,
                 acceptedPolicyVersions,
@@ -180,8 +180,11 @@ function RegisterForm() {
             else if (tipoPartner) router.push("/unirse-como-partner");
             else router.push("/dashboard");
         } catch (err: any) {
-            // Manejo de errores amigable
-            if (err.message === "Failed to fetch") {
+            // Si es un error de validación Zod (400) con errores de campos
+            if (err?.data?.errors && Array.isArray(err.data.errors)) {
+                const msgs = err.data.errors.map((e: any) => e.message).join(" • ");
+                setError(msgs || err.message || "Error de validación en los datos.");
+            } else if (err.message === "Failed to fetch") {
                 setError("Tenemos un pequeño inconveniente técnico de conexión. Por favor, reintenta en un momento.");
             } else {
                 setError(err.message || "No pudimos completar el registro. Verifica tus datos.");
