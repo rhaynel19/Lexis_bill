@@ -1731,31 +1731,14 @@ export default function NewInvoice() {
                                                                             }
                                                                         }}
                                                                     >
-                                                                        <SelectTrigger className="h-8 text-xs font-semibold w-[90px]">
+                                                                        <SelectTrigger className="h-8 text-xs font-semibold w-[95px] bg-muted/20 border-border/40">
                                                                             <SelectValue />
                                                                         </SelectTrigger>
                                                                         <SelectContent>
                                                                             <SelectItem value="0.18">18% ITBIS</SelectItem>
                                                                             <SelectItem value="0">Exento</SelectItem>
-                                                                        </SelectContent>
+                                                                         </SelectContent>
                                                                     </Select>
-                                                                    <div className="flex items-center gap-1">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            id={`exempt-${item.id}`}
-                                                                            checked={item.isExempt || false}
-                                                                            onChange={(e) => {
-                                                                                const isChecked = e.target.checked;
-                                                                                updateItem(item.id, "isExempt", isChecked);
-                                                                                updateItem(item.id, "taxCategory", isChecked ? 'exempt' : 'taxable');
-                                                                                updateItem(item.id, "taxRate", isChecked ? 0 : 0.18);
-                                                                            }}
-                                                                            className="h-3 w-3 rounded border-gray-300 text-primary focus:ring-primary"
-                                                                        />
-                                                                        <label htmlFor={`exempt-${item.id}`} className="text-[10px] text-muted-foreground cursor-pointer uppercase font-bold">
-                                                                            Exento
-                                                                        </label>
-                                                                    </div>
                                                                 </div>
                                                             </TableCell>
 
@@ -1871,21 +1854,29 @@ export default function NewInvoice() {
                                                 <div className="flex items-center justify-between pt-2 border-t">
                                                     <div className="flex flex-col gap-1">
                                                         <span className="font-semibold text-foreground">{formatCurrency(Number(item.quantity) * Number(item.price))}</span>
-                                                        <div className="flex items-center gap-2">
-                                                            <input 
-                                                                type="checkbox" 
-                                                                id={`exempt-mob-${item.id}`}
-                                                                checked={item.isExempt || false} 
-                                                                onChange={(e) => {
-                                                                    const isChecked = e.target.checked;
-                                                                    updateItem(item.id, "isExempt", isChecked);
-                                                                    updateItem(item.id, "taxCategory", isChecked ? 'exempt' : 'taxable');
-                                                                    updateItem(item.id, "taxRate", isChecked ? 0 : 0.18);
-                                                                }} 
-                                                                className="h-4 w-4 rounded border-gray-300 text-primary" 
-                                                            />
-                                                            <label htmlFor={`exempt-mob-${item.id}`} className="text-xs text-muted-foreground font-bold">EXENTO DE ITBIS</label>
-                                                        </div>
+                                                        <Select 
+                                                            value={item.taxCategory === 'exempt' || item.isExempt ? "0" : (item.taxRate || 0.18).toString()} 
+                                                            onValueChange={(val) => {
+                                                                const rate = parseFloat(val);
+                                                                if (rate === 0) {
+                                                                    updateItem(item.id, "isExempt", true);
+                                                                    updateItem(item.id, "taxCategory", 'exempt');
+                                                                    updateItem(item.id, "taxRate", 0);
+                                                                } else {
+                                                                    updateItem(item.id, "isExempt", false);
+                                                                    updateItem(item.id, "taxCategory", 'taxable');
+                                                                    updateItem(item.id, "taxRate", rate);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <SelectTrigger className="h-7 text-[10px] font-bold w-[80px] px-2 bg-muted/30 border-none shadow-none">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="0.18">18% T</SelectItem>
+                                                                <SelectItem value="0">Exento</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
                                                     </div>
                                                     <div className="flex gap-1">
                                                         <Button type="button" variant="ghost" size="sm" onClick={() => duplicateItem(item.id)} title="Duplicar"><Copy className="w-4 h-4" /></Button>
