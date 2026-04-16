@@ -122,29 +122,29 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
 
                     <div className="flex justify-between items-start relative z-10">
                         <div>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Factura para</p>
+                            <p className="text-[10px] text-secondary-foreground/70 uppercase tracking-widest mb-0.5">Factura para</p>
                             <h2 className="text-2xl font-serif font-bold tracking-tight mb-1">
-                                {data.clientName || <span className="text-muted-foreground/50 italic">Nombre del cliente</span>}
+                                {data.clientName || <span className="text-secondary-foreground/40 italic">Nombre del cliente</span>}
                             </h2>
-                            <p className="text-xs text-muted-foreground">Emitido por <span className="text-accent font-semibold">{issuerName}</span></p>
+                            <p className="text-xs text-secondary-foreground/80">Emitido por <span className="text-accent font-semibold">{issuerName}</span></p>
                         </div>
                         <div className="text-right">
-                            <Badge variant="outline" className="text-accent border-accent/30 bg-accent/10 mb-2">
+                            <Badge variant="outline" className="text-accent border-accent/40 bg-accent/10 mb-2">
                                 {getNcfLabel(data.invoiceType)}
                             </Badge>
-                            <p className="font-mono text-sm opacity-80">
+                            <p className="font-mono text-sm opacity-90">
                                 {data.ncf || "BXXXXXXXXXX (Borrador)"}
                             </p>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-xs text-secondary-foreground/70 mt-1">
                                 {data.date.toLocaleDateString("es-DO", { year: 'numeric', month: 'long', day: 'numeric' })}
                             </p>
                             {data.modifiedNcf && (
-                                <p className="text-[10px] text-red-500 font-bold mt-1 bg-red-50 p-1 rounded border border-red-100">
+                                <p className="text-[10px] text-red-400 font-bold mt-1 bg-red-950/20 p-1 rounded border border-red-900/30">
                                     AFECTA A NCF: {data.modifiedNcf}
                                 </p>
                             )}
                             {data.paymentMethod && (
-                                <p className="text-[10px] text-muted-foreground mt-1">
+                                <p className="text-[10px] text-secondary-foreground/70 mt-1 font-bold uppercase">
                                     PAGO: {TIPO_PAGO_LABELS[data.paymentMethod] || data.paymentMethod.toUpperCase()}
                                 </p>
                             )}

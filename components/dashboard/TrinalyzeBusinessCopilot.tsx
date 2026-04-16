@@ -482,7 +482,7 @@ export function TrinalyzeBusinessCopilot() {
                             variant="outline"
                             size="sm"
                             onClick={() => setShowDetailedAnalysis(true)}
-                            className="hidden sm:flex shrink-0 gap-2 font-medium italic border-blue-200 dark:border-blue-800"
+                            className="flex shrink-0 gap-1 sm:gap-2 font-medium italic border-blue-200 dark:border-blue-800 text-[10px] sm:text-xs px-2 sm:px-3"
                         >
                             <Target className="w-4 h-4 text-blue-600" />
                             Análisis Global

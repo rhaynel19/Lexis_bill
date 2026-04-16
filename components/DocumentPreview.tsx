@@ -49,7 +49,7 @@ export function DocumentPreview({
                     </div>
                     <div>
                         <h3 className="font-bold text-lg">Vista Previa</h3>
-                        <p className="text-xs text-muted-foreground">Revisa los datos antes de finalizar.</p>
+                        <p className="text-xs text-secondary-foreground/80">Revisa los datos antes de finalizar.</p>
                     </div>
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">

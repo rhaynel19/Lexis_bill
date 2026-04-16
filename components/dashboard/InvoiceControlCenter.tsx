@@ -264,13 +264,26 @@ export function InvoiceControlCenter({
         }
 
         if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
-            list = list.filter(
-                (i) =>
-                    (i.clientName || "").toLowerCase().includes(q) ||
-                    (i.ncfSequence || i.id || "").toLowerCase().includes(q) ||
-                    (i.rnc || i.clientRnc || "").replace(/\D/g, "").includes(q.replace(/\D/g, ""))
-            );
+            const normalize = (s: string) => 
+                (s || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+            
+            const terms = normalize(searchQuery).split(/\s+/).filter(Boolean);
+            list = list.filter(inv => {
+                const searchableFields = [
+                    inv.clientName,
+                    inv.ncf,
+                    inv.ncfSequence,
+                    inv.rnc,
+                    inv.clientRnc,
+                    inv.id,
+                    inv._id
+                ].map(val => normalize(val?.toString()));
+
+                // Cada término buscado debe estar en alguno de los campos
+                return terms.every(term => 
+                    searchableFields.some(field => field.includes(term))
+                );
+            });
         }
         if (dateFrom) {
             const from = new Date(dateFrom).getTime();

@@ -941,6 +941,8 @@ export default function NewInvoice() {
 
     const handleConfirmSave = async (skipRiskCheck = false) => {
         if (isGenerating) return;
+        setIsGenerating(true);
+
         if (tipoPago === "credito" && !skipRiskCheck && rnc.replace(/[^0-9]/g, "").length >= 9) {
             try {
                 const { api } = await import("@/lib/api-service");
@@ -949,13 +951,12 @@ export default function NewInvoice() {
                     setCreditRiskData({ message: risk.message, riskScore: risk.riskScore });
                     setShowCreditRiskConfirm(true);
                     setPendingConfirmSave(true);
+                    setIsGenerating(false);
                     return;
                 }
             } catch { /* continue */ }
         }
         setPendingConfirmSave(false);
-        if (isGenerating) return;
-        setIsGenerating(true);
 
         try {
             const cleanClientName = clientName.trim();
@@ -1724,7 +1725,6 @@ export default function NewInvoice() {
                                                                         </SelectTrigger>
                                                                         <SelectContent>
                                                                             <SelectItem value="0.18">18% ITBIS</SelectItem>
-                                                                            <SelectItem value="0.16">16% ITBIS</SelectItem>
                                                                             <SelectItem value="0">Exento</SelectItem>
                                                                         </SelectContent>
                                                                     </Select>
