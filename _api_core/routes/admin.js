@@ -30,9 +30,9 @@ router.post('/reject-payment/:id', billingController.rejectPayment);
 router.get('/payments-history', billingController.getPaymentsHistory);
 
 // Analytics y Métricas (Admin)
-router.get('/stats', billingController.getStats);
-router.get('/metrics', billingController.getMetrics);
-router.get('/chart-data', billingController.getChartData);
+router.get('/stats', adminController.getAdminStats);
+router.get('/metrics', adminController.getAdminMetrics);
+router.get('/chart-data', adminController.getAdminChartData);
 
 // Alertas y Auditoría
 router.get('/alerts', adminController.getAdminAlerts);

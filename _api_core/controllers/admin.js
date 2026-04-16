@@ -365,9 +365,9 @@ exports.getAdminMetrics = async (req, res) => {
             totalUsers
         ] = await Promise.all([
             User.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
-            Invoice.countDocuments({ createdAt: { $gte: thirtyDaysAgo }, status: { $ne: 'cancelled' } }),
+            Invoice.countDocuments({ date: { $gte: thirtyDaysAgo }, status: { $ne: 'cancelled' } }),
             Invoice.aggregate([
-                { $match: { createdAt: { $gte: thirtyDaysAgo }, status: { $ne: 'cancelled' } } },
+                { $match: { date: { $gte: thirtyDaysAgo }, status: { $ne: 'cancelled' } } },
                 { $group: { _id: null, total: { $sum: '$total' } } }
             ]),
             User.countDocuments({ 
@@ -416,12 +416,12 @@ exports.getAdminChartData = async (req, res) => {
         startDate.setMonth(startDate.getMonth() - months);
 
         const monthlyData = await Invoice.aggregate([
-            { $match: { createdAt: { $gte: startDate }, status: { $ne: 'cancelled' } } },
+            { $match: { date: { $gte: startDate }, status: { $ne: 'cancelled' } } },
             {
                 $group: {
                     _id: {
-                        year: { $year: "$createdAt" },
-                        month: { $month: "$createdAt" }
+                        year: { $year: "$date" },
+                        month: { $month: "$date" }
                     },
                     revenue: { $sum: "$total" },
                     invoices: { $sum: 1 }
