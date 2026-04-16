@@ -171,7 +171,7 @@ export function DocumentViewer({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl h-[95vh] md:h-[90vh] p-0 flex flex-col overflow-hidden bg-background border-border/20 shadow-2xl">
+            <DialogContent className="max-w-4xl h-[95vh] md:h-[90vh] p-0 flex flex-col overflow-hidden bg-background border-border/20 shadow-2xl z-[100]">
                 {type === "quote" ? (
                     <>
                         {/* Header con botón cerrar (sin barra azul) */}
@@ -331,12 +331,12 @@ export function DocumentViewer({
                                         </div>
                                     )}
                                 </div>
-                                <div className="space-y-4 bg-secondary p-6 rounded-2xl border border-border/50 min-w-0 overflow-hidden">
+                                <div className="space-y-4 bg-secondary p-5 sm:p-6 rounded-2xl border border-border/50 min-w-0 overflow-hidden shadow-inner">
                                     <div className="min-w-0">
-                                        <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Cliente</h4>
-                                        <h3 className="text-lg font-bold text-foreground truncate" title={clientName}>{clientName}</h3>
-                                        <p className="text-sm text-foreground/80 mt-1 flex items-center gap-2 min-w-0">
-                                            <span className="font-semibold text-muted-foreground/60 shrink-0">RNC/Cédula:</span>
+                                        <h4 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1 opacity-70">Cliente</h4>
+                                        <h3 className="text-lg font-bold text-secondary-foreground truncate" title={clientName}>{clientName}</h3>
+                                        <p className="text-sm text-secondary-foreground mt-1 flex items-center gap-2 min-w-0">
+                                            <span className="font-semibold text-secondary-foreground/60 shrink-0">RNC/Cédula:</span>
                                             <span className="font-mono truncate min-w-0" title={clientRnc}>{clientRnc}</span>
                                         </p>
                                     </div>
@@ -399,9 +399,9 @@ export function DocumentViewer({
                                 <span className="font-medium lowercase">ITBIS (18%)</span>
                                 <span className="font-bold text-foreground">{formatCurrency(itbis)}</span>
                             </div>
-                            <div className="flex justify-between items-center w-full md:w-80 pt-2 mt-2 border-t border-border/20">
-                                <span className="text-foreground font-black uppercase tracking-tighter">Total General</span>
-                                <span className="text-3xl md:text-4xl font-black text-accent tracking-tight drop-shadow-sm">
+                            <div className="flex justify-between items-center w-full md:w-80 pt-2 mt-2 border-t border-border/20 gap-4">
+                                <span className="text-foreground font-black uppercase tracking-tighter text-xs sm:text-sm">Total General</span>
+                                <span className="text-2xl sm:text-3xl md:text-4xl font-black text-accent tracking-tighter sm:tracking-tight drop-shadow-sm">
                                     {formatCurrency(total)}
                                 </span>
                             </div>
@@ -410,7 +410,10 @@ export function DocumentViewer({
                     )}
 
                     {/* Botones de Acción */}
-                    <div className={`p-4 md:p-6 flex grid grid-cols-4 sm:flex gap-2 sm:gap-3 justify-end items-center ${type === "quote" ? "bg-white" : "bg-secondary"}`}>
+                    <div className={cn(
+                        "p-4 md:p-6 flex flex-row gap-2 sm:gap-3 justify-center sm:justify-end items-center",
+                        type === "quote" ? "bg-white" : "bg-secondary"
+                    )}>
                         <Button
                             variant="outline"
                             onClick={onClose}

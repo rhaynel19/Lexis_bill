@@ -818,7 +818,7 @@ export function InvoiceControlCenter({
                                         return (
                                             <div
                                                 key={invId}
-                                                className="p-4 space-y-3 active:bg-muted/50"
+                                                className="p-3 sm:p-4 space-y-2 sm:space-y-3 active:bg-muted/50 cursor-pointer"
                                                 onClick={() => handleView(inv)}
                                             >
                                                 <div className="flex justify-between items-start">
@@ -828,8 +828,8 @@ export function InvoiceControlCenter({
                                                         <StatusDot status={status} />
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="font-bold text-lg">{formatCurrency(inv.total)}</p>
-                                                        {bal > 0 && <p className="text-xs text-amber-600">Pendiente: {formatCurrency(bal)}</p>}
+                                                        <p className="font-black text-base sm:text-lg">{formatCurrency(inv.total)}</p>
+                                                        {bal > 0 && <p className="text-[10px] sm:text-xs text-amber-600 font-medium">Pendiente: {formatCurrency(bal)}</p>}
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-wrap gap-2">
@@ -842,9 +842,17 @@ export function InvoiceControlCenter({
                                                     
                                                     {/* Botón de Acciones para Móvil */}
                                                     <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                            <Button size="sm" variant="secondary" className="h-8 gap-1 shadow-sm">
-                                                                <Plus className="w-3.5 h-3.5" /> Acciones
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="secondary" 
+                                                                className="h-8 gap-1 shadow-sm"
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                }}
+                                                            >
+                                                                <Plus className="w-3.5 h-3.5" /> <span className="text-[11px] font-bold uppercase tracking-tight">Acciones</span>
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end" className="w-56">
