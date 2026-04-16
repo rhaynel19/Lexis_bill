@@ -277,7 +277,7 @@ export function InvoiceControlCenter({
                     inv.clientRnc,
                     inv.id,
                     inv._id
-                ].map(val => normalize(val?.toString()));
+                ].map(val => normalize(val?.toString() || ""));
 
                 // Cada término buscado debe estar en alguno de los campos
                 return terms.every(term => 
