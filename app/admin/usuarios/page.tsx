@@ -39,6 +39,8 @@ export default function AdminUsuariosPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [actioningId, setActioningId] = useState<string | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+    const [detailUser, setDetailUser] = useState<AdminUser | null>(null);
+    const [detailData, setDetailData] = useState<any>(null);
     const [notesEdit, setNotesEdit] = useState("");
     const [globalStats, setGlobalStats] = useState<any>(null);
 
@@ -237,6 +239,12 @@ export default function AdminUsuariosPage() {
         user: "Usuario",
         admin: "Admin",
         partner: "Partner"
+    };
+
+    const handleCopyRNC = (rnc: string) => {
+        if (!rnc) return;
+        navigator.clipboard.writeText(rnc);
+        toast.success("RNC copiado al portapapeles");
     };
 
     const handleExportCsv = () => {

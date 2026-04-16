@@ -12,6 +12,7 @@ import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger }
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type PeriodFilter = "current" | "last";
 
