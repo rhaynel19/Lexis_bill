@@ -13,6 +13,7 @@ interface DocumentPreviewProps {
     onEdit: () => void;
     onConfirm: () => void;
     isProcessing?: boolean;
+    isSuccess?: boolean;
     isOpen?: boolean;
     onClose?: () => void;
     /** Descargar PDF (proforma/borrador) antes de confirmar. Solo factura. */
@@ -29,6 +30,7 @@ export function DocumentPreview({
     onEdit,
     onConfirm,
     isProcessing,
+    isSuccess,
     isOpen = false,
     onClose,
     onDownloadPDF,
@@ -56,8 +58,25 @@ export function DocumentPreview({
                     <Button variant="outline" className="bg-background text-foreground border-border/20 hover:bg-muted flex-1 md:flex-initial" onClick={onEdit} title="Volver a editar" aria-label="Editar">
                         <Edit2 className="w-4 h-4 mr-2" /> Editar
                     </Button>
-                    <Button className="bg-success hover:bg-success/90 text-success-foreground font-bold flex-1 md:flex-initial shadow-lg shadow-success/20" onClick={onConfirm} disabled={isProcessing} title={type === "quote" ? "Guardar cotización" : "Confirmar y emitir factura"} aria-busy={isProcessing}>
-                        {isProcessing ? "Procesando…" : (type === "invoice" ? "Confirmar y Emitir" : "Guardar Cotización")}
+                    <Button 
+                        className={cn(
+                            "font-bold flex-1 md:flex-initial shadow-lg transition-all duration-300",
+                            isSuccess 
+                                ? "bg-green-600 hover:bg-green-700 text-white shadow-green-500/30 scale-105" 
+                                : "bg-success hover:bg-success/90 text-success-foreground shadow-success/20"
+                        )} 
+                        onClick={onConfirm} 
+                        disabled={isProcessing || isSuccess} 
+                        title={type === "quote" ? "Guardar cotización" : "Confirmar y emitir factura"} 
+                        aria-busy={isProcessing}
+                    >
+                        {isProcessing ? (
+                            <><FileText className="w-4 h-4 mr-2 animate-pulse" /> Procesando…</>
+                        ) : isSuccess ? (
+                            <><CheckCircle className="w-4 h-4 mr-2 animate-bounce" /> ¡Facturado!</>
+                        ) : (
+                            type === "invoice" ? "Confirmar y Emitir" : "Guardar Cotización"
+                        )}
                     </Button>
                 </div>
             </div>

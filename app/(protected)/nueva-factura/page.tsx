@@ -69,6 +69,7 @@ export default function NewInvoice() {
 
     // Smart RNC States
     const [isClientLocked, setIsClientLocked] = useState(false);
+    const [isSuccessState, setIsSuccessState] = useState(false);
 
     const { profession, setProfession } = usePreferences();
     const { user: authUser } = useAuth();
@@ -1051,7 +1052,16 @@ export default function NewInvoice() {
             }
 
             setLastInvoiceNCF(ncf);
-            setShowSuccessModal(true);
+            setIsSuccessState(true);
+            
+            // Espera para mostrar el estado de éxito en el botón de la vista previa
+            setTimeout(() => {
+                setShowPreview(false);
+                setIsSuccessState(false);
+                setShowSuccessModal(true);
+                setIsGenerating(false);
+            }, 1500);
+
             const elapsedSec = (Date.now() - invoiceCreateStartRef.current) / 1000;
             if (elapsedSec < 15) {
                 toast.success("Factura creada en tiempo récord.", { description: `Menos de ${Math.round(elapsedSec)} segundos. ¡Increíble!` });
@@ -1142,6 +1152,7 @@ export default function NewInvoice() {
                     onEdit={() => setShowPreview(false)}
                     onConfirm={handleConfirmSave}
                     isProcessing={isGenerating}
+                    isSuccess={isSuccessState}
                     onDownloadPDF={handleDownloadProformaPDF}
                     onSendWhatsApp={handleSendProformaWhatsApp}
                     isProforma
@@ -2299,42 +2310,52 @@ export default function NewInvoice() {
 
                         <div className="space-y-3 pt-2 border-t border-border/50">
                             <p className="text-xs text-center text-muted-foreground uppercase font-bold">Otras Acciones</p>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="flex flex-col gap-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Button 
+                                        variant="secondary" 
+                                        onClick={() => {
+                                            const validItems = items.filter(i => i.description && Number(i.quantity) > 0 && Number(i.price) > 0);
+                                            const pdfData: InvoiceData = {
+                                                id: "re-download", // We'd need the real ID here ideally, but for re-download we can mock it or fetch it
+                                                sequenceNumber: lastInvoiceNCF,
+                                                type: invoiceType,
+                                                clientName,
+                                                rnc,
+                                                date: getDominicanDate(),
+                                                items: validItems.map((item) => ({
+                                                    description: item.description,
+                                                    quantity: Number(item.quantity),
+                                                    price: Number(item.price),
+                                                    isExempt: item.isExempt,
+                                                })),
+                                                subtotal,
+                                                itbis,
+                                                isrRetention,
+                                                itbisRetention,
+                                                total: total,
+                                                modifiedNcf: (invoiceType === "04" || invoiceType === "34") ? modifiedNcf : undefined,
+                                                paymentMethod: tipoPago === "otro" ? tipoPagoOtro : tipoPago,
+                                            };
+                                            const companyOverride = authUser ? { companyName: authUser.fiscalStatus?.confirmed, rnc: authUser.rnc } : undefined;
+                                            downloadInvoicePDF(pdfData, companyOverride);
+                                            toast.success("Descargando PDF nuevamente...");
+                                        }} 
+                                        className="gap-2 h-11"
+                                    >
+                                        <Download className="w-4 h-4" /> Re-descargar
+                                    </Button>
+                                    <Button 
+                                        variant="outline"
+                                        onClick={() => router.push('/dashboard')} 
+                                        className="gap-2 h-11"
+                                    >
+                                        Ir al Dashboard
+                                    </Button>
+                                </div>
+                                
                                 <Button 
-                                    variant="secondary" 
-                                    onClick={() => {
-                                        const validItems = items.filter(i => i.description && Number(i.quantity) > 0 && Number(i.price) > 0);
-                                        const pdfData: InvoiceData = {
-                                            id: "re-download", // We'd need the real ID here ideally, but for re-download we can mock it or fetch it
-                                            sequenceNumber: lastInvoiceNCF,
-                                            type: invoiceType,
-                                            clientName,
-                                            rnc,
-                                            date: getDominicanDate(),
-                                            items: validItems.map((item) => ({
-                                                description: item.description,
-                                                quantity: Number(item.quantity),
-                                                price: Number(item.price),
-                                                isExempt: item.isExempt,
-                                            })),
-                                            subtotal,
-                                            itbis,
-                                            isrRetention,
-                                            itbisRetention,
-                                            total: total,
-                                            modifiedNcf: (invoiceType === "04" || invoiceType === "34") ? modifiedNcf : undefined,
-                                            paymentMethod: tipoPago === "otro" ? tipoPagoOtro : tipoPago,
-                                        };
-                                        const companyOverride = authUser ? { companyName: authUser.fiscalStatus?.confirmed, rnc: authUser.rnc } : undefined;
-                                        downloadInvoicePDF(pdfData, companyOverride);
-                                        toast.success("Descargando PDF nuevamente...");
-                                    }} 
-                                    className="gap-2 h-11"
-                                >
-                                    <Download className="w-4 h-4" /> Re-descargar
-                                </Button>
-                                <Button 
-                                    variant="outline" 
+                                    className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-black h-14 text-lg gap-2 shadow-xl shadow-accent/20 animate-in zoom-in-95 duration-500 delay-1000 fill-mode-both"
                                     onClick={() => {
                                         setShowSuccessModal(false);
                                         setItems([{ id: "1", description: "", quantity: 1, price: 0, isExempt: false }]);
@@ -2343,10 +2364,11 @@ export default function NewInvoice() {
                                         setClientPhone("");
                                         setLastInvoiceNCF("");
                                         setFocusItemId("1");
+                                        setIsGenerating(false);
+                                        setIsSuccessState(false);
                                     }} 
-                                    className="gap-2 h-11"
                                 >
-                                    <Plus className="w-4 h-4" /> Nueva Factura
+                                    <Plus className="w-6 h-6" /> FACTURAR DE NUEVO
                                 </Button>
                             </div>
                             <Button 
