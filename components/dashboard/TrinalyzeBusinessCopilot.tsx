@@ -73,7 +73,7 @@ export interface BusinessCopilotData {
     };
     fiscalAlerts: Array<{ type: string; severity: string; message: string }>;
     prediction: { currentRevenue: number; projectedMonth: number; dailyRate: number; daysRemaining: number; projectedCash15Days?: number };
-    businessHealth: { score: number; label: string; concentrationRisk?: string };
+    businessHealth: { score: number; label: string; concentrationRisk?: string; reasons?: string[] };
     paymentInsights?: { creditPct: number; transferPct: number; totalBalancePendiente: number };
     morosityRadar?: {
         totalPendiente: number;
@@ -498,21 +498,32 @@ export function TrinalyzeBusinessCopilot() {
                     </div>
                 </div>
     
-                <div className="flex items-center gap-4 mt-4 pl-0 sm:pl-16">
-                    <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
-                        <Target className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                        <div>
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Salud de tu negocio</span>
-                            <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                                {data?.businessHealth?.score ?? 0} — {data?.businessHealth?.label ?? "Estable"}
-                            </p>
+                <div className="flex flex-col gap-2 mt-4 pl-0 sm:pl-16">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+                            <Target className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            <div>
+                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Salud de tu negocio</span>
+                                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                                    {data?.businessHealth?.score ?? 0} — {data?.businessHealth?.label ?? "Estable"}
+                                </p>
+                            </div>
                         </div>
+                        {data?.businessHealth?.concentrationRisk && (
+                            <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                                <AlertTriangle className="w-4 h-4 shrink-0" />
+                                {data.businessHealth.concentrationRisk}
+                            </p>
+                        )}
                     </div>
-                    {data?.businessHealth?.concentrationRisk && (
-                        <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                            <AlertTriangle className="w-4 h-4 shrink-0" />
-                            {data.businessHealth.concentrationRisk}
-                        </p>
+                    {data?.businessHealth?.reasons && data.businessHealth.reasons.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-1">
+                            {data.businessHealth.reasons.map((reason, idx) => (
+                                <span key={idx} className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">
+                                    {reason}
+                                </span>
+                            ))}
+                        </div>
                     )}
                 </div>
             </CardHeader>

@@ -87,8 +87,124 @@ class BillingBrain {
         return {
             cashFlowProjection: this._calculateProjectedCashFlow(),
             vipClients: this._getVIPClients().slice(0, 3),
-            agingBuckets: this._calculateAgingBuckets()
+            agingBuckets: this._calculateAgingBuckets(),
+            businessHealth: this.calculateHealthScore()
         };
+    }
+
+    /**
+     * Calcula un puntaje de salud del negocio de 0 a 100
+     */
+    calculateHealthScore() {
+        let score = 100;
+        let reasons = [];
+
+        // 1. Penalización por facturas vencidas (>30 días)
+        const overdue = this.invoices.filter(inv => {
+            const bal = (inv.balancePendiente != null && inv.balancePendiente > 0)
+                ? inv.balancePendiente
+                : (inv.estadoPago === 'pendiente' || inv.status === 'pending')
+                    ? (inv.total || 0) : 0;
+            if (bal === 0) return false;
+            const invoiceDate = new Date(inv.date);
+            const daysSince = Math.floor((this.now - invoiceDate) / (1000 * 60 * 60 * 24));
+            return daysSince > 30;
+        });
+
+        if (overdue.length > 0) {
+            const penalty = Math.min(50, overdue.length * 10);
+            score -= penalty;
+            reasons.push(`${overdue.length} facturas vencidas`);
+        }
+
+        // 2. Penalización por facturas pendientes (no necesariamente vencidas)
+        const pending = this.invoices.filter(inv => {
+            const bal = (inv.balancePendiente != null && inv.balancePendiente > 0) ? inv.balancePendiente : 0;
+            return bal > 0 && inv.status !== 'cancelled';
+        });
+
+        if (pending.length > 0) {
+            const penalty = Math.min(20, pending.length * 2);
+            score -= penalty;
+        }
+
+        // 3. Caída de ingresos (20%+)
+        const dropPct = this._calculateRevenueDropPct();
+        if (dropPct >= 20) {
+            const penalty = Math.min(20, Math.round((dropPct - 20) / 2));
+            score -= penalty;
+            reasons.push(`Caída de ingresos del ${dropPct}%`);
+        }
+
+        // 4. Concentración de riesgo
+        const concentration = this._calculateMaxConcentration();
+        if (concentration > 70) {
+            score -= 15;
+            reasons.push('Alta dependencia de un cliente');
+        }
+
+        // Bloqueo de seguridad
+        score = Math.max(20, score);
+
+        let label = "Excelente";
+        if (score < 50) label = "Crítico";
+        else if (score < 75) label = "En Observación";
+        else if (score < 90) label = "Estable";
+
+        return {
+            score,
+            label,
+            reasons,
+            updatedAt: this.now
+        };
+    }
+
+    /**
+     * Helper: Calcula el porcentaje de caída de ingresos respecto al mes pasado
+     */
+    _calculateRevenueDropPct() {
+        const currentMonth = this.now.getMonth();
+        const currentYear = this.now.getFullYear();
+        const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+        const currentMonthRevenue = this.invoices
+            .filter(inv => {
+                const invDate = new Date(inv.date);
+                return invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear;
+            })
+            .reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+
+        const lastMonthRevenue = this.invoices
+            .filter(inv => {
+                const invDate = new Date(inv.date);
+                return invDate.getMonth() === lastMonth && invDate.getFullYear() === lastMonthYear;
+            })
+            .reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+
+        if (lastMonthRevenue <= 0) return 0;
+        if (currentMonthRevenue >= lastMonthRevenue) return 0;
+        
+        return Math.round(((lastMonthRevenue - currentMonthRevenue) / lastMonthRevenue) * 100);
+    }
+
+    /**
+     * Helper: Calcula el porcentaje máximo de ingresos de un solo cliente
+     */
+    _calculateMaxConcentration() {
+        if (this.invoices.length === 0) return 0;
+        const clientRevenue = {};
+        let total = 0;
+        this.invoices.forEach(inv => {
+            if (inv.status === 'cancelled') return;
+            const rev = Number(inv.total) || 0;
+            total += rev;
+            const key = inv.clientRnc || inv.clientName || 'unknown';
+            clientRevenue[key] = (clientRevenue[key] || 0) + rev;
+        });
+        if (total === 0) return 0;
+        const maxRev = Math.max(...Object.values(clientRevenue));
+        return (maxRev / total) * 100;
     }
 
     /**

@@ -497,7 +497,7 @@ exports.getBusinessCopilot = async (req, res) => {
                 daysRemaining: 30 - now.getDate(),
                 projectedCash15Days: totalPending * 0.4
             },
-            businessHealth: {
+            businessHealth: biSummary.businessHealth || {
                 score: 85,
                 label: "Estable",
                 concentrationRisk: null

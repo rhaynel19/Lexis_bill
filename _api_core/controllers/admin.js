@@ -116,7 +116,7 @@ exports.getUser = async (req, res) => {
 exports.activateUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const { plan, days } = req.body;
+        const { plan, days } = req.body || {};
         const user = await User.findById(id);
         if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
 

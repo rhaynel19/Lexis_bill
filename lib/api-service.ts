@@ -622,11 +622,17 @@ export const api = {
     },
 
     async activateUser(userId: string) {
-        return secureFetch<{ message: string }>(`${API_URL}/admin/users/${userId}/activate`, { method: "POST" });
+        return secureFetch<{ message: string }>(`${API_URL}/admin/users/${userId}/activate`, { 
+            method: "POST",
+            body: JSON.stringify({}) 
+        });
     },
 
     async deactivateUser(userId: string) {
-        return secureFetch<{ message: string }>(`${API_URL}/admin/users/${userId}/deactivate`, { method: "POST" });
+        return secureFetch<{ message: string }>(`${API_URL}/admin/users/${userId}/deactivate`, { 
+            method: "POST",
+            body: JSON.stringify({})
+        });
     },
 
     async deleteUser(userId: string) {
