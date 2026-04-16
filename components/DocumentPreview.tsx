@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { cn } from "@/lib/utils";
 
 interface DocumentPreviewProps {
     data: any; // Invoice or Quote Data
