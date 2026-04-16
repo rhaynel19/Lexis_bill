@@ -11,6 +11,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
+import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 type PeriodFilter = "current" | "last";
 
@@ -66,6 +67,20 @@ export default function AdminCEODashboard() {
 
     const formatCurrency = (n: number) =>
         new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 0 }).format(n || 0);
+
+    const TrendIndicator = ({ value, label }: { value: number; label: string }) => {
+        const isPositive = value >= 0;
+        return (
+            <div className={cn(
+                "flex items-center gap-1 text-[10px] font-bold mt-1",
+                isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+            )}>
+                {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                <span>{Math.abs(value)}%</span>
+                <span className="text-muted-foreground font-normal ml-0.5">{label}</span>
+            </div>
+        );
+    };
 
     const handleExportCSV = () => {
         const rows: string[][] = [
@@ -170,92 +185,98 @@ export default function AdminCEODashboard() {
                         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
                             <UITooltip>
                                 <TooltipTrigger asChild>
-                                    <Card className="cursor-help">
+                                    <Card className="cursor-help shadow-sm hover:shadow-md transition-shadow border-emerald-100/50 dark:border-emerald-900/20">
                                         <CardHeader className="pb-2">
-                                            <CardTitle className="text-xs font-medium text-muted-foreground">MRR</CardTitle>
+                                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">MRR</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <span className="text-xl font-bold">{formatCurrency(metrics.mrr ?? 0)}</span>
+                                            <span className="text-xl font-black text-emerald-700 dark:text-emerald-400">{formatCurrency(metrics.mrr ?? 0)}</span>
+                                            <TrendIndicator value={metrics.growthRate ?? 0} label="vs mes ant." />
                                         </CardContent>
                                     </Card>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom" className="max-w-xs">
-                                    <p>Ingresos recurrentes mensuales (suscripciones activas). Si es 0, no hay usuarios de pago generando MRR aún.</p>
+                                    <p>Ingresos recurrentes mensuales. Basado en suscripciones Pro/Premium activas.</p>
                                 </TooltipContent>
                             </UITooltip>
                             <UITooltip>
                                 <TooltipTrigger asChild>
-                                    <Card className="cursor-help">
+                                    <Card className="cursor-help shadow-sm hover:shadow-md transition-shadow">
                                         <CardHeader className="pb-2">
-                                            <CardTitle className="text-xs font-medium text-muted-foreground">Revenue Total</CardTitle>
+                                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Revenue Total</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <span className="text-xl font-bold">{formatCurrency(metrics.revenueTotal ?? 0)}</span>
+                                            <span className="text-xl font-black">{formatCurrency(metrics.revenueTotal ?? 0)}</span>
+                                            <TrendIndicator value={metrics.growthRate ?? 0} label="periodo" />
                                         </CardContent>
                                     </Card>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom" className="max-w-xs">
-                                    <p>Suma de ingresos por pagos/suscripciones en el periodo seleccionado (este mes o mes pasado).</p>
+                                    <p>Suma de ingresos por pagos/suscripciones en el periodo seleccionado.</p>
                                 </TooltipContent>
                             </UITooltip>
                             <UITooltip>
                                 <TooltipTrigger asChild>
-                                    <Card className="cursor-help">
+                                    <Card className="cursor-help shadow-sm hover:shadow-md transition-shadow">
                                         <CardHeader className="pb-2">
-                                            <CardTitle className="text-xs font-medium text-muted-foreground">ARPU</CardTitle>
+                                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">ARPU</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <span className="text-xl font-bold">{formatCurrency(metrics.arpu ?? 0)}</span>
+                                            <span className="text-xl font-black">{formatCurrency(metrics.arpu ?? 0)}</span>
+                                            <p className="text-[10px] text-muted-foreground mt-1">Ticket promedio</p>
                                         </CardContent>
                                     </Card>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom" className="max-w-xs">
-                                    <p>Ingreso promedio por usuario de pago (Pro/Premium). Si no hay activos de pago, ARPU es 0.</p>
+                                    <p>Ingreso promedio por usuario de pago activo.</p>
                                 </TooltipContent>
                             </UITooltip>
                             <UITooltip>
                                 <TooltipTrigger asChild>
-                                    <Card className="cursor-help">
+                                    <Card className="cursor-help shadow-sm hover:shadow-md transition-shadow border-rose-100/50 dark:border-rose-900/20">
                                         <CardHeader className="pb-2">
-                                            <CardTitle className="text-xs font-medium text-muted-foreground">Churn %</CardTitle>
+                                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Churn %</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <span className="text-xl font-bold">{(metrics.churn ?? 0)}%</span>
+                                            <span className="text-xl font-black text-rose-600 dark:text-rose-400">{(metrics.churn ?? 0)}%</span>
+                                            <p className="text-[10px] text-muted-foreground mt-1">Tasa de cancelación</p>
                                         </CardContent>
                                     </Card>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom" className="max-w-xs">
-                                    <p>Porcentaje de usuarios que dejaron de pagar o cancelaron en el periodo.</p>
+                                    <p>Porcentaje de usuarios que cancelaron su suscripción en el periodo.</p>
                                 </TooltipContent>
                             </UITooltip>
                             <UITooltip>
                                 <TooltipTrigger asChild>
-                                    <Card className="cursor-help">
+                                    <Card className="cursor-help shadow-sm hover:shadow-md transition-shadow border-blue-100/50 dark:border-blue-900/20">
                                         <CardHeader className="pb-2">
-                                            <CardTitle className="text-xs font-medium text-muted-foreground">Growth %</CardTitle>
+                                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Growth %</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <span className="text-xl font-bold">{(metrics.growthRate ?? 0)}%</span>
+                                            <span className="text-xl font-black text-blue-600 dark:text-blue-400">{(metrics.growthRate ?? 0)}%</span>
+                                            <TrendIndicator value={metrics.growthRate ?? 0} label="nuevos" />
                                         </CardContent>
                                     </Card>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom" className="max-w-xs">
-                                    <p>Crecimiento de ingresos o usuarios respecto al periodo anterior.</p>
+                                    <p>Crecimiento de usuarios nuevos en los últimos 30 días.</p>
                                 </TooltipContent>
                             </UITooltip>
                             <UITooltip>
                                 <TooltipTrigger asChild>
-                                    <Card className="cursor-help">
+                                    <Card className="cursor-help shadow-sm hover:shadow-md transition-shadow">
                                         <CardHeader className="pb-2">
-                                            <CardTitle className="text-xs font-medium text-muted-foreground">Activos Pro</CardTitle>
+                                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Activos Pro</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <span className="text-xl font-bold">{metrics.activeUsers ?? 0}</span>
+                                            <span className="text-xl font-black">{metrics.activeUsers ?? 0}</span>
+                                            <p className="text-[10px] text-muted-foreground mt-1">Suscripciones vigentes</p>
                                         </CardContent>
                                     </Card>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom" className="max-w-xs">
-                                    <p>Usuarios con plan Pro (o superior) y suscripción activa en el periodo.</p>
+                                    <p>Usuarios con plan Pro o superior activo.</p>
                                 </TooltipContent>
                             </UITooltip>
                         </div>

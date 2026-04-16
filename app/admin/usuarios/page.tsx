@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserCircle, Search, Download, Filter, Check, Loader2, Trash2, ArrowUp, ArrowDown, Eye, Lock, Unlock, Users, Clock, Ban, Handshake } from "lucide-react";
+import { UserCircle, Search, Download, Filter, Check, Loader2, Trash2, ArrowUp, ArrowDown, Eye, Lock, Unlock, Users, Clock, Ban, Handshake, Copy } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -39,9 +39,18 @@ export default function AdminUsuariosPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [actioningId, setActioningId] = useState<string | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
-    const [detailUser, setDetailUser] = useState<AdminUser | null>(null);
-    const [detailData, setDetailData] = useState<any>(null);
     const [notesEdit, setNotesEdit] = useState("");
+    const [globalStats, setGlobalStats] = useState<any>(null);
+
+    const fetchGlobalStats = async () => {
+        try {
+            const { api } = await import("@/lib/api-service");
+            const res = await api.getAdminStats();
+            setGlobalStats(res);
+        } catch (e) {
+            console.error("Error fetching admin stats", e);
+        }
+    };
 
     const fetchUsers = useCallback(async () => {
         setIsLoading(true);
@@ -71,6 +80,7 @@ export default function AdminUsuariosPage() {
 
     useEffect(() => {
         fetchUsers();
+        fetchGlobalStats();
     }, [fetchUsers]);
 
     const handleSearch = (e: React.FormEvent) => {
@@ -264,8 +274,12 @@ export default function AdminUsuariosPage() {
         if (u.blocked) return "Bloqueado";
         const status = (u.subscriptionStatus || "").toLowerCase();
         if (status === "bloqueado" || status === "expired") return "Vencido";
+        
         const days = getDaysUntilBlock(u);
         if (days === null) return "—";
+        if (days > 365) return "♾️ Vigente";
+        if (days >= 300) return "♾️ Activa";
+        
         return `${days} ${days === 1 ? "día" : "días"}`;
     };
 
@@ -283,7 +297,13 @@ export default function AdminUsuariosPage() {
         : list;
 
     /** KPIs de la página actual (resumen visual) */
-    const pageStats = {
+    const displayStats = globalStats ? {
+        activos: globalStats.activeUsers ?? 0,
+        trial: globalStats.trialUsers ?? 0,
+        porVencer: globalStats.expiringSoon ?? 0,
+        bloqueados: globalStats.blockedUsers ?? 0,
+        partners: globalStats.partnerUsers ?? 0,
+    } : {
         activos: list.filter((u) => !u.blocked && (u.subscriptionStatus === "Activo" || u.subscriptionStatus === "active")).length,
         trial: list.filter((u) => !u.blocked && (u.subscriptionStatus || "").toLowerCase() === "trial").length,
         porVencer: list.filter((u) => {
@@ -320,40 +340,40 @@ export default function AdminUsuariosPage() {
             {/* KPIs resumen (página actual) */}
             {list.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                    <Card className="p-3">
+                    <Card className="p-3 border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/20 dark:bg-emerald-900/10">
                         <div className="flex items-center gap-2">
-                            <Users className="w-4 h-4 text-green-600" />
-                            <span className="text-xs font-medium text-muted-foreground">Activos (pág.)</span>
+                            <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-500">Activos</span>
                         </div>
-                        <p className="text-xl font-bold mt-1">{pageStats.activos}</p>
+                        <p className="text-xl font-black mt-1 text-emerald-900 dark:text-emerald-100">{displayStats.activos}</p>
                     </Card>
-                    <Card className="p-3">
+                    <Card className="p-3 border-amber-100 dark:border-amber-900/30 bg-amber-50/20 dark:bg-amber-900/10">
                         <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-amber-600" />
-                            <span className="text-xs font-medium text-muted-foreground">Trial (pág.)</span>
+                            <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                            <span className="text-xs font-semibold text-amber-700 dark:text-amber-500">Prueba (Trial)</span>
                         </div>
-                        <p className="text-xl font-bold mt-1">{pageStats.trial}</p>
+                        <p className="text-xl font-black mt-1 text-amber-900 dark:text-amber-100">{displayStats.trial}</p>
                     </Card>
-                    <Card className="p-3">
+                    <Card className="p-3 border-orange-100 dark:border-orange-900/30 bg-orange-50/20 dark:bg-orange-900/10">
                         <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-orange-600" />
-                            <span className="text-xs font-medium text-muted-foreground">Por vencer ≤7 días</span>
+                            <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                            <span className="text-xs font-semibold text-orange-700 dark:text-orange-500">Por vencer (7d)</span>
                         </div>
-                        <p className="text-xl font-bold mt-1">{pageStats.porVencer}</p>
+                        <p className="text-xl font-black mt-1 text-orange-900 dark:text-orange-100">{displayStats.porVencer}</p>
                     </Card>
-                    <Card className="p-3">
+                    <Card className="p-3 border-red-100 dark:border-red-900/30 bg-red-50/20 dark:bg-red-900/10">
                         <div className="flex items-center gap-2">
-                            <Ban className="w-4 h-4 text-red-600" />
-                            <span className="text-xs font-medium text-muted-foreground">Bloqueados (pág.)</span>
+                            <Ban className="w-4 h-4 text-red-600 dark:text-red-400" />
+                            <span className="text-xs font-semibold text-red-700 dark:text-red-500">Bloqueados</span>
                         </div>
-                        <p className="text-xl font-bold mt-1">{pageStats.bloqueados}</p>
+                        <p className="text-xl font-black mt-1 text-red-900 dark:text-red-100">{displayStats.bloqueados}</p>
                     </Card>
-                    <Card className="p-3">
+                    <Card className="p-3 border-blue-100 dark:border-blue-900/30 bg-blue-50/20 dark:bg-blue-900/10">
                         <div className="flex items-center gap-2">
-                            <Handshake className="w-4 h-4 text-blue-600" />
-                            <span className="text-xs font-medium text-muted-foreground">Partners (pág.)</span>
+                            <Handshake className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            <span className="text-xs font-semibold text-blue-700 dark:text-blue-500">Partners</span>
                         </div>
-                        <p className="text-xl font-bold mt-1">{pageStats.partners}</p>
+                        <p className="text-xl font-black mt-1 text-blue-900 dark:text-blue-100">{displayStats.partners}</p>
                     </Card>
                 </div>
             )}
@@ -517,7 +537,21 @@ export default function AdminUsuariosPage() {
                                             >
                                                 <TableCell className="font-medium">{displayName(u)}</TableCell>
                                                 <TableCell className="text-muted-foreground">{u.email || "—"}</TableCell>
-                                                <TableCell className="font-mono text-xs">{u.rnc || "—"}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-1.5 group">
+                                                        <span className="font-mono text-xs">{u.rnc || "—"}</span>
+                                                        {u.rnc && (
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                onClick={(e) => { e.stopPropagation(); handleCopyRNC(u.rnc!); }}
+                                                            >
+                                                                <Copy className="w-3 h-3" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
                                                 <TableCell>
                                                     <span className={`text-xs px-2 py-1 rounded-full ${
                                                         u.role === "admin" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400" :
@@ -529,7 +563,13 @@ export default function AdminUsuariosPage() {
                                                 </TableCell>
                                                 <TableCell>{planLabel[u.plan] ?? u.plan}</TableCell>
                                                 <TableCell className="text-xs">
-                                                    <span className={u.blocked ? "text-red-600 dark:text-red-400 font-medium" : u.subscriptionStatus === "active" || u.subscriptionStatus === "Activo" ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>
+                                                    <span className={cn(
+                                                        "px-2 py-0.5 rounded-full font-medium transition-colors",
+                                                        u.blocked ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" :
+                                                        (u.subscriptionStatus === "active" || u.subscriptionStatus === "Activo") ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" :
+                                                        (u.subscriptionStatus || "").toLowerCase() === "trial" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" :
+                                                        "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                                                    )}>
                                                         {u.blocked ? "Bloqueado" : u.subscriptionStatus === "active" || u.subscriptionStatus === "Activo" ? "Activo" : u.subscriptionStatus || "—"}
                                                     </span>
                                                 </TableCell>
@@ -547,7 +587,16 @@ export default function AdminUsuariosPage() {
                                                         );
                                                     })()}
                                                 </TableCell>
-                                                <TableCell>{u.onboardingCompleted ? "Sí" : "No"}</TableCell>
+                                                <TableCell>
+                                                    <span className={cn(
+                                                        "inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-tight",
+                                                        u.onboardingCompleted 
+                                                            ? "bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/30" 
+                                                            : "bg-red-50 text-red-700 border border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/30"
+                                                    )}>
+                                                        {u.onboardingCompleted ? "Completado" : "Pendiente"}
+                                                    </span>
+                                                </TableCell>
                                                 <TableCell>
                                                     {u.partner ? (
                                                         <div className="flex items-center gap-1.5 flex-wrap">
