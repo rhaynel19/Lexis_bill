@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { generateQuoteWhatsAppMessage, generateInvoiceWhatsAppMessage } from "@/lib/whatsapp-utils";
 import { useAuth } from "@/components/providers/AuthContext";
 import { APP_CONFIG } from "@/lib/config";
+import { cn } from "@/lib/utils";
 
 // Interfaz para cotizaciones
 export interface Quote {
