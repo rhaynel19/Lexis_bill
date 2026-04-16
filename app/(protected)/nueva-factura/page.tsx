@@ -457,31 +457,70 @@ export default function NewInvoice() {
     // CRM Handlers
     const handleRNCSearch = async () => {
         if (!rnc) return;
+        const cleanRnc = rnc.replace(/[^0-9]/g, "");
+        if (!cleanRnc) return;
+
+        // 1. Validación Matemática (Checksum) - Evita errores de dedo
+        const validation = validateRNCOrCedula(cleanRnc);
+        if (!validation.isValid) {
+            setRncError(validation.error || "RNC/Cédula inválido");
+            return;
+        }
+
         setIsSearchingRNC(true);
         setRncError("");
+
         try {
+            // 2. Prioridad 1: Búsqueda Local (Clientes del usuario)
+            const localClient = savedClients.find(c => c.rnc.replace(/[^0-9]/g, "") === cleanRnc);
+            if (localClient) {
+                setClientName(localClient.name);
+                if (localClient.phone) setClientPhone(localClient.phone);
+                setIsClientLocked(true);
+                suggestNCF(localClient.rnc, localClient.name);
+                toast.success("Cliente recuperado de tu lista personal.");
+                setIsSearchingRNC(false);
+                return;
+            }
+
+            // 3. Prioridad 2: Motor de Inteligencia Interna (Global/Historial de la plataforma)
             const { api } = await import("@/lib/api-service");
-            const result: any = await api.validateRnc(rnc);
+            const res = await api.getAutofillSuggestions({ rnc: cleanRnc });
+            
+            // Si hay sugerencias de clientes globales para este RNC
+            if (res.clients && res.clients.length > 0) {
+                const globalMatch = res.clients[0]; // Tomamos la mejor coincidencia
+                setClientName(globalMatch.name);
+                if (globalMatch.phone) setClientPhone(globalMatch.phone);
+                setIsClientLocked(true);
+                suggestNCF(cleanRnc, globalMatch.name);
+                
+                // Si existe última factura, cargarla como contexto
+                if (res.lastInvoice) {
+                    setLastInvoiceFromAutofill(res.lastInvoice);
+                }
+                
+                toast.success("Cliente identificado vía base de datos fiscal interna.");
+                setIsSearchingRNC(false);
+                return;
+            }
 
-            if (result.valid) {
-                // Rellenar nombre solo si la API trae un nombre real (nunca usar placeholder "CONTRIBUYENTE REGISTRADO")
-                const nameFromApi = (result.name || "").trim();
-                const isRealName = nameFromApi && nameFromApi.toUpperCase() !== "CONTRIBUYENTE REGISTRADO";
-                setClientName((prev) => {
-                    if (isRealName) return nameFromApi;
-                    return prev;
-                });
-                // Auto-set type based on RNC type
+            // 4. Última opción: Fallback de Motor RNC (Mock/DGII simulado si queda algo)
+            const result: any = await api.validateRnc(cleanRnc);
+            if (result && result.valid && result.name && result.name.toUpperCase() !== "CONTRIBUYENTE REGISTRADO") {
+                setClientName(result.name);
                 if (result.type === "JURIDICA") setApplyRetentions(true);
-
-                // Smart NCF Suggestion
-                suggestNCF(rnc, result.name || "");
+                suggestNCF(cleanRnc, result.name);
+                toast.success("Datos obtenidos del motor fiscal.");
             } else {
-                setRncError("Contribuyente no encontrado o RNC inválido");
+                setRncError("No encontrado en historial. Completa el nombre manualmente.");
+                toast.info("RNC no registrado aún", { 
+                    description: "El formato es válido. Por favor, ingresa el nombre para que el sistema lo aprenda." 
+                });
             }
         } catch (e: any) {
-            console.error(e);
-            setRncError(e.message || "Error al conectar con DGII");
+            console.error("Internal Search Error:", e);
+            setRncError("Servicio de búsqueda no disponible. Ingreso manual habilitado.");
         } finally {
             setIsSearchingRNC(false);
         }
@@ -721,46 +760,47 @@ export default function NewInvoice() {
         String(item.description).trim() !== "" && Number(item.quantity) > 0 && Number(item.price) >= 0;
 
     // CÁLCULOS AUTOMÁTICOS
+    const roundValue = (val: number) => Math.round((val + Number.EPSILON) * 100) / 100;
 
     // Calcular el subtotal (suma de todos los ítems)
-    const subtotal = items.reduce((sum, item) => {
+    const subtotal = roundValue(items.reduce((sum, item) => {
         const qty = typeof item.quantity === 'string' ? (parseFloat(item.quantity) || 0) : item.quantity;
         const price = typeof item.price === 'string' ? (parseFloat(item.price) || 0) : item.price;
         return sum + (qty * price);
-    }, 0);
+    }, 0));
 
     // Calcular Base Imponible (ítems no exentos)
-    const taxableSubtotal = items.reduce((sum, item) => {
+    const taxableSubtotal = roundValue(items.reduce((sum, item) => {
         const qty = typeof item.quantity === 'string' ? (parseFloat(item.quantity) || 0) : item.quantity;
         const price = typeof item.price === 'string' ? (parseFloat(item.price) || 0) : item.price;
         const isExempt = item.taxCategory === 'exempt' || item.isExempt;
         return isExempt ? sum : sum + (qty * price);
-    }, 0);
+    }, 0));
 
     // Calcular ITBIS (Basado en la tasa individual de cada ítem)
-    const itbis = items.reduce((sum, item) => {
+    const itbis = roundValue(items.reduce((sum, item) => {
         const qty = typeof item.quantity === 'string' ? (parseFloat(item.quantity) || 0) : item.quantity;
         const price = typeof item.price === 'string' ? (parseFloat(item.price) || 0) : item.price;
         const isExempt = item.taxCategory === 'exempt' || item.isExempt;
         if (isExempt) return sum;
         const rate = item.taxRate != null ? item.taxRate : 0.18;
         return sum + (qty * price * rate);
-    }, 0);
+    }, 0));
 
     // Calcular Retenciones (solo si se activan)
     // ISR: 10% de la base imponible (Servicios Profesionales)
-    const isrRetention = applyRetentions ? taxableSubtotal * isrRetentionRate : 0;
+    const isrRetention = applyRetentions ? roundValue(taxableSubtotal * isrRetentionRate) : 0;
 
     // Retención ITBIS: 30% del ITBIS (Norma 02-05 para servicios)
-    const itbisRetention = applyRetentions ? itbis * itbisRetentionRate : 0;
+    const itbisRetention = applyRetentions ? roundValue(itbis * itbisRetentionRate) : 0;
 
     // Total Factura (lo que paga el cliente antes de retenciones)
-    const invoiceTotal = subtotal + itbis;
+    const invoiceTotal = roundValue(subtotal + itbis);
 
     // Total a Recibir (Neto)
-    const totalNeto = invoiceTotal - isrRetention - itbisRetention;
+    const totalNeto = roundValue(invoiceTotal - isrRetention - itbisRetention);
 
-    // Usaremos invoiceTotal para el documento, pero mostraremos el des desglose
+    // Usaremos invoiceTotal para el documento, pero mostraremos el desglose
     const total = invoiceTotal;
 
     // Función para formatear números como moneda dominicana

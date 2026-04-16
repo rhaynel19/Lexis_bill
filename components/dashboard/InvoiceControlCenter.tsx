@@ -42,6 +42,14 @@ import Link from "next/link";
 import { api } from "@/lib/api-service";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export interface Invoice {
     id: string;
@@ -812,32 +820,67 @@ export function InvoiceControlCenter({
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-wrap gap-2">
-                                                    <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleView(inv); }}>
+                                                    <Button size="sm" variant="outline" className="h-8 border-primary/20 text-primary hover:bg-primary/5" onClick={(e) => { e.stopPropagation(); handleView(inv); }}>
                                                         <Eye className="w-3.5 h-3.5 mr-1" /> Ver
                                                     </Button>
                                                     <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleDownloadPDF(inv); }}>
                                                         <Download className="w-3.5 h-3.5 mr-1" /> PDF
                                                     </Button>
-                                                    <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleWhatsApp(inv); }}>
-                                                        <MessageCircle className="w-3.5 h-3.5 mr-1" /> WhatsApp
-                                                    </Button>
-                                                    {status !== "pagada" && (
-                                                        <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleRegisterPayment(inv); }}>
-                                                            <DollarSign className="w-3.5 h-3.5 mr-1" /> Registrar pago
-                                                        </Button>
-                                                    )}
-                                                    {inv.status !== "cancelled" && 
-                                                     inv.status !== "fully_credited" && 
-                                                     !inv.annulledBy && 
-                                                     inv.ncfType !== '04' && 
-                                                     inv.ncfType !== '34' && (
-                                                        <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleCreditNote(inv); }}>
-                                                            <FileText className="w-3.5 h-3.5 mr-1" /> NC
-                                                        </Button>
-                                                    )}
-                                                    <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); handleDuplicate(inv); }} disabled={!!duplicatingId}>
-                                                        <Repeat className="w-3.5 h-3.5 mr-1" /> Facturar de nuevo
-                                                    </Button>
+                                                    
+                                                    {/* Botón de Acciones para Móvil */}
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                            <Button size="sm" variant="secondary" className="h-8 gap-1 shadow-sm">
+                                                                <Plus className="w-3.5 h-3.5" /> Acciones
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-56">
+                                                            <DropdownMenuLabel>Gestión de Factura</DropdownMenuLabel>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleWhatsApp(inv); }}>
+                                                                <MessageCircle className="w-4 h-4 mr-2 text-emerald-500" /> Enviar por WhatsApp
+                                                            </DropdownMenuItem>
+                                                            
+                                                            {status !== "pagada" && (
+                                                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRegisterPayment(inv); }}>
+                                                                    <DollarSign className="w-4 h-4 mr-2 text-blue-500" /> Registrar pago
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            
+                                                            {inv.status !== "cancelled" && 
+                                                             inv.status !== "fully_credited" && 
+                                                             !inv.annulledBy && 
+                                                             inv.ncfType !== '04' && 
+                                                             inv.ncfType !== '34' && (
+                                                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCreditNote(inv); }}>
+                                                                    <FileText className="w-4 h-4 mr-2 text-indigo-500" /> Emitir Nota de Crédito
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            
+                                                            <DropdownMenuItem 
+                                                                onClick={(e) => { 
+                                                                    if (!!duplicatingId) return;
+                                                                    e.stopPropagation(); 
+                                                                    handleDuplicate(inv); 
+                                                                }} 
+                                                                className={cn(!!duplicatingId && "opacity-50 pointer-events-none")}
+                                                            >
+                                                                <Repeat className="w-4 h-4 mr-2 text-amber-500" /> Facturar de nuevo
+                                                            </DropdownMenuItem>
+                                                            
+                                                            {inv.status !== "cancelled" && !inv.annulledBy && (
+                                                                <>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem 
+                                                                        className="text-rose-600 focus:text-rose-600 focus:bg-rose-50" 
+                                                                        onClick={(e) => { e.stopPropagation(); handleAnnulClick(inv); }}
+                                                                    >
+                                                                        <Ban className="w-4 h-4 mr-2" /> Anulación 608 (Error)
+                                                                    </DropdownMenuItem>
+                                                                </>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </div>
                                             </div>
                                         );

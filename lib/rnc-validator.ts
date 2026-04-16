@@ -28,6 +28,7 @@ function mapApiToTaxpayer(data: { valid: boolean; rnc?: string; name?: string; t
 export async function validateRNC(rnc: string): Promise<Taxpayer | null> {
     const cleanCurrent = rnc.replace(/[^\d]/g, "");
 
+    // 1. Intento de consulta al backend (Motor Fiscal Interno)
     if (typeof window !== "undefined") {
         try {
             const url = `/api/rnc/${encodeURIComponent(cleanCurrent)}`;
@@ -38,16 +39,15 @@ export async function validateRNC(rnc: string): Promise<Taxpayer | null> {
                 if (taxpayer) return taxpayer;
             }
         } catch {
-            // Fallback a mock/local
+            // Silencing errors to allow other lookup methods
         }
     }
 
+    // 2. Búsqueda en Mini-DB Histórica Hardcoded (Solo para ejemplos conocidos/críticos)
     if (MOCK_DB[cleanCurrent]) return MOCK_DB[cleanCurrent];
-    if (cleanCurrent.length === 9) {
-        return { rnc: cleanCurrent, name: "SOCIEDAD COMERCIAL GENERICA S.R.L.", type: "Jurídica", status: "Active" };
-    }
-    if (cleanCurrent.length === 11) {
-        return { rnc: cleanCurrent, name: "CONTRIBUYENTE PERSONA FÍSICA", type: "Física", status: "Active" };
-    }
+
+    // NOTA: Hemos eliminado los nombres genéricos como "CONTRIBUYENTE PERSONA FÍSICA" 
+    // para incentivar el uso del motor de aprendizaje interno y la entrada manual precisa.
+    
     return null;
 }
