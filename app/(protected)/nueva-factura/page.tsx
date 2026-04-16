@@ -748,13 +748,18 @@ export default function NewInvoice() {
         toast.success(`${newItems.length} ítem(s) agregado(s). Revisa y ajusta si hace falta.`);
     };
 
-    // Función para actualizar un ítem específico
-    const updateItem = (id: string, field: keyof InvoiceItem, value: string | number | boolean) => {
-        setItems(
-            items.map((item) =>
-                item.id === id ? { ...item, [field]: value } : item
-            )
-        );
+    // Función para actualizar un ítem específico de forma segura (funcional)
+    const updateItem = (id: string, field: keyof InvoiceItem, value: any) => {
+        setItems(prev => prev.map(item => 
+            item.id === id ? { ...item, [field]: value } : item
+        ));
+    };
+
+    // Función para actualizar múltiples campos de un ítem a la vez
+    const updateItemMultiple = (id: string, updates: Partial<InvoiceItem>) => {
+        setItems(prev => prev.map(item => 
+            item.id === id ? { ...item, ...updates } : item
+        ));
     };
 
     const isItemComplete = (item: InvoiceItem) =>
@@ -1721,13 +1726,9 @@ export default function NewInvoice() {
                                                                         onValueChange={(val) => {
                                                                             const rate = parseFloat(val);
                                                                             if (rate === 0) {
-                                                                                updateItem(item.id, "isExempt", true);
-                                                                                updateItem(item.id, "taxCategory", 'exempt');
-                                                                                updateItem(item.id, "taxRate", 0);
-                                                                            } else {
-                                                                                updateItem(item.id, "isExempt", false);
-                                                                                updateItem(item.id, "taxCategory", 'taxable');
-                                                                                updateItem(item.id, "taxRate", rate);
+                                                                                updateItemMultiple(item.id, { isExempt: true, taxCategory: 'exempt', taxRate: 0 });
+                                                                                } else {
+                                                                                    updateItemMultiple(item.id, { isExempt: false, taxCategory: 'taxable', taxRate: rate });
                                                                             }
                                                                         }}
                                                                     >
@@ -1859,13 +1860,17 @@ export default function NewInvoice() {
                                                             onValueChange={(val) => {
                                                                 const rate = parseFloat(val);
                                                                 if (rate === 0) {
-                                                                    updateItem(item.id, "isExempt", true);
-                                                                    updateItem(item.id, "taxCategory", 'exempt');
-                                                                    updateItem(item.id, "taxRate", 0);
+                                                                    updateItemMultiple(item.id, {
+                                                                        isExempt: true,
+                                                                        taxCategory: 'exempt',
+                                                                        taxRate: 0
+                                                                    });
                                                                 } else {
-                                                                    updateItem(item.id, "isExempt", false);
-                                                                    updateItem(item.id, "taxCategory", 'taxable');
-                                                                    updateItem(item.id, "taxRate", rate);
+                                                                    updateItemMultiple(item.id, {
+                                                                        isExempt: false,
+                                                                        taxCategory: 'taxable',
+                                                                        taxRate: rate
+                                                                    });
                                                                 }
                                                             }}
                                                         >
