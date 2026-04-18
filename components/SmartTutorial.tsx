@@ -89,7 +89,7 @@ export function SmartTutorial() {
             title: "Envíala en segundos",
             description: "Comparte tu factura por WhatsApp, Email o descarga el PDF.",
             action: "Ver Facturas",
-            actionUrl: "/documentos",
+            actionUrl: "/dashboard",
             keyMessage: "Mientras más rápido facturas, más rápido cobras.",
             microReinforcement: "👉 Perfecto, ahora tienes control total.",
         },

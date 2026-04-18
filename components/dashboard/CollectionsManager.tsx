@@ -68,7 +68,7 @@ export function CollectionsManager({ isOpen, onClose }: DebtorsListProps) {
     }
     // Prefix with 1 if it's DR and not present
     const cleanPhone = phone.length === 10 ? `1${phone}` : phone;
-    const msg = encodeURIComponent(`Hola ${debtor.clientName}, de parte de Trinalyze le recordamos que tiene un balance pendiente de ${formatCurrency(debtor.totalBalance)}. Puede realizar su pago vía transferencia.`);
+    const msg = encodeURIComponent(`Estimado/a cliente ${debtor.clientName}, saludos cordiales.\n\nLe contactamos amablemente para notificarle que presenta un balance pendiente de pago por la suma de *${formatCurrency(debtor.totalBalance)}*.\n\nLe invitamos a ponerse al día a la brevedad posible. En caso de requerir detalles de las facturas o haber realizado el pago, favor de hacer caso omiso o remitirnos su comprobante.\n\nAtentamente,\nDepartamento de Cobros.`);
     window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");
   };
 
@@ -77,7 +77,7 @@ export function CollectionsManager({ isOpen, onClose }: DebtorsListProps) {
       toast.error("El cliente no tiene un correo registrado.");
       return;
     }
-    window.location.href = `mailto:${debtor.email}?subject=Recordatorio de Pago&body=Hola ${debtor.clientName}, le recordamos su balance pendiente de ${formatCurrency(debtor.totalBalance)}.`;
+    window.location.href = `mailto:${debtor.email}?subject=Estado de Cuenta - Recordatorio de Pago&body=Estimado/a cliente ${debtor.clientName}, saludos cordiales.%0D%0A%0D%0ALe contactamos amablemente para notificarle que presenta un balance pendiente de pago por la suma de ${formatCurrency(debtor.totalBalance)}.%0D%0A%0D%0ALe invitamos a ponerse al día a la brevedad posible. Si ya ha realizado el pago, le agradecemos remitirnos el comprobante y omitir este mensaje.%0D%0A%0D%0AAtentamente,%0D%0ADepartamento de Cobros.`;
   };
 
   const handleStatement = async (rnc: string) => {

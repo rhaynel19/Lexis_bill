@@ -41,7 +41,7 @@ export function generateQuoteWhatsAppMessage(quote: {
     const fromText = companyName ? ` de parte de *${companyName}*` : "";
 
     const quoteRef = quote.id?.length > 8 ? `COT-${quote.id.slice(-8)}` : quote.id;
-    return `Hola *${quote.clientName}*! 🇩🇴${fromText}\n\nEs un placer saludarle. Le envío formalmente su *cotización* con el número *${quoteRef}* por valor de *${formatCurrency(quote.total)}*.\n\n📎 Te envío adjunto el PDF de la cotización.\n\nQuedo a su disposición para cualquier consulta. ¡Feliz resto del día!`;
+    return `Estimado/a cliente *${quote.clientName}*, saludos cordiales${fromText}.\n\nPara nosotros es un placer saludarle. De acuerdo a nuestra comunicación, procedemos a remitirle formalmente la *cotización #${quoteRef}* por un monto total de *${formatCurrency(quote.total)}*.\n\n📎 A continuación, le adjuntamos el documento en formato PDF con el desglose detallado.\n\nQuedamos a su entera disposición para cualquier consulta o ajuste requerido.\n\nAtentamente.`;
 }
 
 /**
@@ -63,7 +63,7 @@ export function generateInvoiceWhatsAppMessage(invoice: {
     const fromText = companyName ? ` de parte de *${companyName}*` : "";
     const documentNumber = (invoice.ncfSequence || invoice.id).slice(-11);
 
-    return `Hola *${invoice.clientName}*! 🇩🇴${fromText}\n\nLe envío su *recibo/comprobante fiscal* con numeración *${documentNumber}* por el monto de *${formatCurrency(invoice.total)}*.\n\n📎 Te envío adjunto el PDF del comprobante.\n\nMuchas gracias por su confianza. Quedo atento ante cualquier duda. ¡Saludos!`;
+    return `Estimado/a cliente *${invoice.clientName}*, saludos cordiales${fromText}.\n\nPor esta vía le remitimos formalmente su *comprobante fiscal (Factura #${documentNumber})* por el monto total de *${formatCurrency(invoice.total)}*.\n\n📎 A continuación, le adjuntamos el documento en formato PDF debidamente detallado.\n\nAgradecemos de antemano su confianza en nuestros servicios. En caso de requerir asistencia adicional, quedamos a su entera disposición.\n\nAtentamente.`;
 }
 
 /**

@@ -419,7 +419,7 @@ class BillingBrain {
                         clientName: topInactive.name,
                         daysSince,
                         phone: topInactive.phone || '',
-                        messageTemplate: `Hola ${topInactive.name}, ¿cómo estás? Te escribo de vuelta. Ha pasado un tiempo desde nuestro último trabajo juntos y quería saber si tienes algún requerimiento próximo en el que pueda apoyarte.`
+                        messageTemplate: `Estimado/a cliente ${topInactive.name}, saludos cordiales.\n\nLe contactamos para agradecerle por la confianza depositada en nuestros servicios en el pasado. Ha transcurrido un tiempo desde nuestro último proyecto en conjunto y queríamos ponernos a su entera disposición en caso de que tenga algún nuevo requerimiento o consulta corporativa en la que podamos apoyarle actualmente.\n\nQuedamos atentos a cualquier solicitud.`
                     }
                 },
                 metadata: {
@@ -525,9 +525,8 @@ class BillingBrain {
                 message: `Tienes ${creditUnpaid.length} facturas a crédito sin cobrar (RD$${this._formatCurrency(totalCreditUnpaid)}).`,
                 humanMessage: `Tienes ${creditUnpaid.length} facturas a crédito sin cobrar. Considera revisar tu política de crédito.`,
                 action: {
-                    label: 'Ver facturas',
-                    url: '/documentos?filter=credit',
-                    type: 'view_credit'
+                    label: 'Gestionar Cobros',
+                    type: 'open_collections_manager'
                 },
                 metadata: {
                     count: creditUnpaid.length,

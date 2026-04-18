@@ -1127,7 +1127,7 @@ export default function NewInvoice() {
     }, [rnc, invoiceType, items]);
 
     const handleWhatsAppShare = () => {
-        const text = `Hola *${clientName}*! 🇩🇴\n\nLe envío su comprobante fiscal *${lastInvoiceNCF}* por valor de *${formatCurrency(total)}*.\n\n📎 Te envío adjunto el PDF del comprobante.\n\nGracias por preferirnos.`;
+        const text = `Estimado/a cliente *${clientName}*, saludos cordiales.\n\nPor esta vía le remitimos formalmente su comprobante fiscal *${lastInvoiceNCF}* por el monto total de *${formatCurrency(total)}*.\n\n📎 A continuación, le adjuntamos el documento en formato PDF.\n\nAgradecemos de antemano su confianza en nuestros servicios. ¡Excelente resto del día!`;
         const phoneDigits = (clientPhone || "").replace(/\D/g, '');
         const finalPhone = phoneDigits.length === 10 ? `1${phoneDigits}` : phoneDigits;
         if (!finalPhone) {
@@ -1142,7 +1142,7 @@ export default function NewInvoice() {
         const clientEmail = savedClients.find((c: any) => (c.rnc || "").replace(/[^0-9]/g, "") === cleanRnc)?.email;
         const to = (clientEmail && clientEmail.trim()) ? clientEmail.trim() : "";
         const subject = `Comprobante fiscal ${lastInvoiceNCF} - ${new Date().toLocaleDateString("es-DO")}`;
-        const body = `Estimado/a ${clientName},\n\nAdjunto encontrará su comprobante fiscal ${lastInvoiceNCF} por valor de ${formatCurrency(total)}.\n\nGracias por su preferencia.`;
+        const body = `Estimado/a cliente ${clientName},\n\nSaludos cordiales.\n\nAdjunto a este correo encontrará su comprobante fiscal ${lastInvoiceNCF} por un monto de ${formatCurrency(total)}.\n\nAgradecemos profundamente su preferencia. Quedamos a su entera disposición ante cualquier consulta.\n\nAtentamente,\nDepartamento de Facturación.`;
         if (to) {
             window.open(`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
         } else {

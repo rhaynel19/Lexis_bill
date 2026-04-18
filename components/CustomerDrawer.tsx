@@ -58,10 +58,12 @@ export function CustomerDrawer({ isOpen, onClose, customer }: CustomerDrawerProp
         
         if (pendingInvoices.length > 0) {
             pendingAmnt = pendingInvoices.reduce((acc, i) => acc + (i.balancePendiente || i.total), 0);
-            pendingInfo = ` Tienes un balance pendiente de RD$ ${pendingAmnt.toLocaleString("es-DO", { minimumFractionDigits: 2 })}.`;
+            pendingInfo = `Le contactamos amablemente para notificarle que, según nuestros registros, presenta un balance pendiente por el monto de *RD$ ${pendingAmnt.toLocaleString("es-DO", { minimumFractionDigits: 2 })}* a la fecha.`;
+        } else {
+            pendingInfo = `Le contactamos para saludarle de manera proactiva y brindarle seguimiento a su estado de cuenta, el cual no presenta balances vencidos a la fecha.`;
         }
         
-        const message = `Hola ${customer.name}, le contactamos desde su estado de cuenta. ${pendingInfo} Por favor, contáctenos para más detalles.`;
+        const message = `Estimado/a cliente ${customer.name},\n\nSaludos cordiales.\n\n${pendingInfo}\n\nEn caso de tener alguna consulta o requerir detalles adicionales, no dude en escribirnos. Quedamos a su entera disposición.\n\nAtentamente,\nDepartamento de Facturación.`;
         const encoded = encodeURIComponent(message);
         window.open(`https://wa.me/${finalPhone}?text=${encoded}`, '_blank');
     };

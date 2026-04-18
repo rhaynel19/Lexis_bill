@@ -353,7 +353,7 @@ export function TrinalyzeBusinessCopilot() {
             case 'whatsapp_prefill':
                 const wpData = data || insightOrAction.action.data;
                 const phone = (wpData.phone || "").replace(/[^0-9]/g, "");
-                const msg = encodeURIComponent(`Hola ${wpData.clientName}, de parte de Trinalyze le recordamos que la factura ${wpData.ncf} por RD$${formatCurrency(wpData.amount)} vence pronto. Puede realizar su pago vía transferencia.`);
+                const msg = encodeURIComponent(`Estimado/a cliente ${wpData.clientName}, un saludo cordial.\n\nLe contactamos amablemente para recordarle que la *Factura ${wpData.ncf}* por el monto de *RD$${formatCurrency(wpData.amount)}* se encuentra próxima a su fecha de vencimiento.\n\nAgradecemos de antemano su gestión de pago. En caso de ya haberlo realizado, le pedimos disculpas y le agradecemos remitirnos el comprobante.\n\nAtentamente,\nDepartamento de Cobros.`);
                 window.open(`https://wa.me/${phone.length === 10 ? `1${phone}` : phone}?text=${msg}`, "_blank");
                 break;
             case 'open_collections_manager':

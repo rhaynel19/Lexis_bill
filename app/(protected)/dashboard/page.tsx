@@ -403,7 +403,7 @@ export default function Dashboard() {
   };
 
   const handleWhatsApp = (inv: Invoice & { clientPhone?: string }) => {
-    const message = `Hola ${inv.clientName}, le envío su factura NCF ${inv.id.slice(-6)} por valor de RD$${inv.total.toLocaleString('es-DO')}. Fecha: ${new Date(inv.date).toLocaleDateString("es-DO")}.`;
+    const message = `Estimado/a cliente ${inv.clientName}, saludos cordiales.\n\nPor esta vía le remitimos formalmente su *comprobante fiscal NCF ${inv.id.slice(-6)}* por el monto total de *RD$${inv.total.toLocaleString('es-DO')}*, correspondiente a la fecha ${new Date(inv.date).toLocaleDateString("es-DO")}.\n\n📎 A continuación, le adjuntamos el documento en formato PDF.\n\nAgradecemos de antemano su confianza en nosotros. En caso de requerir asistencia adicional, quedamos a su disposición.\n\nAtentamente.`;
     const phone = inv.clientPhone ? inv.clientPhone.replace(/\D/g, '') : '';
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
     toast.info(phone ? `📲 Enviando mensaje a ${inv.clientPhone}...` : "📲 Abriendo WhatsApp (Selecciona contacto)...");
@@ -411,7 +411,7 @@ export default function Dashboard() {
 
   const handleEmail = (inv: Invoice) => {
     const subject = `Factura NCF ${inv.id.slice(-6)} - ${new Date(inv.date).toLocaleDateString("es-DO")}`;
-    const body = `Estimado ${inv.clientName},\n\nAdjunto encontrará los detalles de su factura por RD$${inv.total.toLocaleString('es-DO')}.\n\nSaludos,\nTRINALYZE BILLING`;
+    const body = `Estimado/a cliente ${inv.clientName},\n\nSaludos cordiales.\n\nAdjunto a este correo encontrará los detalles correspondientes a su factura por el monto de RD$${inv.total.toLocaleString('es-DO')}.\n\nQuedamos a su entera disposición en caso de tener alguna consulta.\n\nAtentamente,\nDepartamento de Facturación`;
     window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
     toast.info("📧 Abriendo cliente de correo...");
   };
