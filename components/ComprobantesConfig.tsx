@@ -22,7 +22,7 @@ export function ComprobantesConfig({ locked = false }: { locked?: boolean }) {
         sequenceType: "electronic",
         initialNumber: 1,
         finalNumber: 100,
-        expiryDate: "2026-12-31"
+        expiryDate: ""
     });
     const [editBatch, setEditBatch] = useState<{ _id: string; initialNumber: number; finalNumber: number; expiryDate: string } | null>(null);
     const [editForm, setEditForm] = useState({ initialNumber: 1, finalNumber: 100, expiryDate: "" });
@@ -44,6 +44,29 @@ export function ComprobantesConfig({ locked = false }: { locked?: boolean }) {
     };
 
     const handleAddBatch = async () => {
+        if (!newBatch.initialNumber || newBatch.initialNumber <= 0) {
+            toast.error("El número inicial (Desde) debe ser mayor a 0.");
+            return;
+        }
+        if (!newBatch.finalNumber || newBatch.finalNumber < newBatch.initialNumber) {
+            toast.error("El número final (Hasta) no puede ser menor al inicial.");
+            return;
+        }
+        if (!newBatch.expiryDate) {
+            toast.error("Por seguridad, debes especificar la fecha de vencimiento autorizada por la DGII.");
+            return;
+        }
+        
+        const existingActive = batches.find(b => b.type === newBatch.type && b.sequenceType === newBatch.sequenceType && b.isActive);
+        if (existingActive) {
+            const available = existingActive.finalNumber - existingActive.currentValue;
+            if (available > 0) {
+                if (!confirm(`⚠️ ¡ATENCIÓN! Tu lote actual aún tiene ${available} número(s) disponible(s). Al agregar este nuevo lote, el anterior quedará inactivo. ¿Estás seguro de proceder?`)) {
+                    return;
+                }
+            }
+        }
+
         setIsSaving(true);
         try {
             await api.saveNcfSetting(newBatch);
@@ -86,7 +109,11 @@ export function ComprobantesConfig({ locked = false }: { locked?: boolean }) {
             toast.error("No se puede borrar un lote que ya tiene comprobantes en uso.");
             return;
         }
-        if (!confirm("¿Borrar este lote? Esta acción no se puede deshacer.")) return;
+        const confirmText = prompt(`Para confirmar, escribe "BORRAR" en mayúsculas.\nEsto eliminará permanentemente el lote de NCF de ${batch.initialNumber} al ${batch.finalNumber}.`);
+        if (confirmText !== "BORRAR") {
+             if (confirmText !== null) toast.info("Operación cancelada. Debes escribir BORRAR exactamente.");
+             return;
+        }
         try {
             await api.deleteNcfSetting(batch._id);
             toast.success("Lote eliminado.");
@@ -157,20 +184,24 @@ export function ComprobantesConfig({ locked = false }: { locked?: boolean }) {
                                 </Select>
                             </div>
                         </div>
-                        {/* Fila 2: Desde, Hasta, Botón */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 items-end">
+                        {/* Fila 2: Desde, Hasta, Vencimiento, Botón */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label>Desde</Label>
-                                <Input type="number" value={newBatch.initialNumber} onChange={(e) => setNewBatch({ ...newBatch, initialNumber: parseInt(e.target.value) })} disabled={locked} />
+                                <Input type="number" min="1" value={newBatch.initialNumber || ""} onChange={(e) => setNewBatch({ ...newBatch, initialNumber: parseInt(e.target.value) || 0 })} disabled={locked} />
                             </div>
                             <div className="space-y-2">
                                 <Label>Hasta</Label>
-                                <Input type="number" value={newBatch.finalNumber} onChange={(e) => setNewBatch({ ...newBatch, finalNumber: parseInt(e.target.value) })} disabled={locked} />
+                                <Input type="number" min="1" value={newBatch.finalNumber || ""} onChange={(e) => setNewBatch({ ...newBatch, finalNumber: parseInt(e.target.value) || 0 })} disabled={locked} />
+                            </div>
+                            <div className="space-y-2 col-span-2 sm:col-span-1">
+                                <Label className="flex items-center gap-1 text-red-600 dark:text-red-400 font-semibold" title="Requerido por la DGII">Vence (DGII) <span className="text-[10px]">*</span></Label>
+                                <Input type="date" value={newBatch.expiryDate} onChange={(e) => setNewBatch({ ...newBatch, expiryDate: e.target.value })} disabled={locked} />
                             </div>
                             <div className="col-span-2 sm:col-span-1">
-                                <Button className="w-full gap-2" onClick={handleAddBatch} disabled={isSaving || locked}>
+                                <Button className="w-full gap-2 shadow-sm font-semibold" onClick={handleAddBatch} disabled={isSaving || locked}>
                                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                                    Agregar Lote
+                                    Añadir Lote
                                 </Button>
                             </div>
                         </div>
