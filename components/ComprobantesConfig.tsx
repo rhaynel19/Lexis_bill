@@ -24,7 +24,7 @@ export function ComprobantesConfig({ locked = false }: { locked?: boolean }) {
         finalNumber: 100,
         expiryDate: ""
     });
-    const [editBatch, setEditBatch] = useState<{ _id: string; initialNumber: number; finalNumber: number; expiryDate: string } | null>(null);
+    const [editBatch, setEditBatch] = useState<{ _id: string; initialNumber: number; finalNumber: number; expiryDate: string; isUsed?: boolean } | null>(null);
     const [editForm, setEditForm] = useState({ initialNumber: 1, finalNumber: 100, expiryDate: "" });
     const [isUpdating, setIsUpdating] = useState(false);
 
