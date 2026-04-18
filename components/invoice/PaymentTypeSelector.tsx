@@ -47,6 +47,8 @@ interface PaymentTypeSelectorProps {
     disabled?: boolean;
     /** Si el cliente suele pagar con este método, mostrar: "Habitualmente paga por X" */
     habitualTipoPago?: string;
+    plazoPago?: number;
+    onPlazoPagoChange?: (v: number) => void;
 }
 
 const formatCurrency = (n: number) =>
@@ -62,6 +64,8 @@ export function PaymentTypeSelector({
     total,
     disabled,
     habitualTipoPago,
+    plazoPago,
+    onPlazoPagoChange,
 }: PaymentTypeSelectorProps) {
     const sumMixto = pagoMixto.reduce((s, p) => s + (p.monto || 0), 0);
     const diffMixto = total - sumMixto;
@@ -133,6 +137,35 @@ export function PaymentTypeSelector({
                         className="max-w-xs"
                         disabled={disabled}
                     />
+                </div>
+            )}
+ 
+            {tipoPago === "credito" && (
+                <div className="space-y-2 p-4 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-900/10 animate-in fade-in slide-in-from-top-2">
+                    <Label className="text-sm font-semibold flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                        <Receipt className="w-4 h-4" /> Plazo de Pago (Días)
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                        {[15, 30, 45, 60].map((dias) => (
+                            <Button
+                                key={dias}
+                                type="button"
+                                variant={plazoPago === dias ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => onPlazoPagoChange?.(dias)}
+                                className={cn(
+                                    "h-9 px-4",
+                                    plazoPago === dias && "bg-blue-600 hover:bg-blue-700 text-white"
+                                )}
+                                disabled={disabled}
+                            >
+                                {dias} días
+                            </Button>
+                        ))}
+                    </div>
+                    <p className="text-[10px] text-blue-600/70 dark:text-blue-400/70 mt-1">
+                        La fecha de vencimiento se calculará automáticamente.
+                    </p>
                 </div>
             )}
 

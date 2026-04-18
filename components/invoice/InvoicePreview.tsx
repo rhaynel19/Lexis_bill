@@ -31,6 +31,7 @@ interface InvoicePreviewProps {
         paymentMethod?: string;
         paymentDetails?: Array<{ method: string; amount: number }>;
         balancePendiente?: number;
+        dueDate?: string | Date;
     };
     clientType?: string; // B2B or B2C
 }
@@ -138,6 +139,11 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
                             <p className="text-xs text-secondary-foreground/70 mt-1">
                                 {data.date.toLocaleDateString("es-DO", { year: 'numeric', month: 'long', day: 'numeric' })}
                             </p>
+                            {data.dueDate && (
+                                <p className="text-xs text-accent font-bold mt-1">
+                                    VENCE: {new Date(data.dueDate).toLocaleDateString("es-DO", { year: 'numeric', month: 'long', day: 'numeric' })}
+                                </p>
+                            )}
                             {data.modifiedNcf && (
                                 <p className="text-[10px] text-red-400 font-bold mt-1 bg-red-950/20 p-1 rounded border border-red-900/30">
                                     AFECTA A NCF: {data.modifiedNcf}
@@ -254,6 +260,13 @@ export function InvoicePreview({ data }: InvoicePreviewProps) {
                                 <div className="mt-2 p-3 rounded-lg bg-red-50 border border-red-100 flex justify-between items-center text-red-700">
                                     <span className="text-xs font-bold uppercase">Balance Pendiente</span>
                                     <span className="text-lg font-black">{formatCurrency(data.balancePendiente)}</span>
+                                </div>
+                            )}
+
+                            {data.dueDate && (
+                                <div className="mt-2 p-3 rounded-lg bg-blue-50 border border-blue-100 flex justify-between items-center text-blue-700">
+                                    <span className="text-xs font-bold uppercase">Fecha de Vencimiento</span>
+                                    <span className="text-sm font-bold">{new Date(data.dueDate).toLocaleDateString("es-DO", { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                                 </div>
                             )}
                         </div>

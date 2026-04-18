@@ -188,6 +188,8 @@ export default function NewInvoice() {
     const [tipoPago, setTipoPago] = useState("efectivo");
     const [tipoPagoOtro, setTipoPagoOtro] = useState("");
     const [pagoMixto, setPagoMixto] = useState<PagoMixtoItem[]>([{ tipo: "efectivo", monto: 0 }]);
+    const [plazoPago, setPlazoPago] = useState<number | undefined>(undefined);
+    const [dueDate, setDueDate] = useState<string | undefined>(undefined);
 
     // Autofill inteligente
     const [lastInvoiceFromAutofill, setLastInvoiceFromAutofill] = useState<AutofillLastInvoice | null>(null);
@@ -308,6 +310,8 @@ export default function NewInvoice() {
                         if (d.tipoPago) setTipoPago(d.tipoPago);
                         if (d.tipoPagoOtro) setTipoPagoOtro(d.tipoPagoOtro);
                         if (Array.isArray(d.pagoMixto) && d.pagoMixto.length > 0) setPagoMixto(d.pagoMixto.map((p: any) => ({ tipo: p.tipo || "efectivo", monto: Number(p.monto) || 0 })));
+                        if (d.plazoPago) setPlazoPago(d.plazoPago);
+                        if (d.dueDate) setDueDate(d.dueDate);
                         toast.info("📂 Borrador restaurado automáticamente.");
                         return;
                     }
@@ -354,7 +358,7 @@ export default function NewInvoice() {
     // Save Draft on Change (API + localStorage backup)
     useEffect(() => {
         if (!isGenerating && !showSuccessModal) {
-            const draft = { items, clientName, rnc, invoiceType, tipoPago, tipoPagoOtro, pagoMixto };
+            const draft = { items, clientName, rnc, invoiceType, tipoPago, tipoPagoOtro, pagoMixto, plazoPago, dueDate };
             localStorage.setItem("invoiceDraft", JSON.stringify(draft));
             const timer = setTimeout(() => {
                 import("@/lib/api-service").then(({ api }) =>
@@ -363,7 +367,20 @@ export default function NewInvoice() {
             }, 500);
             return () => clearTimeout(timer);
         }
-    }, [items, clientName, rnc, invoiceType, tipoPago, tipoPagoOtro, pagoMixto, isGenerating, showSuccessModal]);
+    }, [items, clientName, rnc, invoiceType, tipoPago, tipoPagoOtro, pagoMixto, plazoPago, dueDate, isGenerating, showSuccessModal]);
+
+    // Calcular dueDate automáticamente cuando cambia el plazo de pago
+    useEffect(() => {
+        if (tipoPago === "credito" && plazoPago) {
+            const today = new Date();
+            const futureDate = new Date(today);
+            futureDate.setDate(today.getDate() + plazoPago);
+            setDueDate(futureDate.toISOString());
+        } else if (tipoPago !== "credito") {
+            setPlazoPago(undefined);
+            setDueDate(undefined);
+        }
+    }, [tipoPago, plazoPago]);
 
     // Auto-llenar nombre cuando el RNC tiene 9 u 11 dígitos (consulta DGII / API después de dejar de escribir)
     useEffect(() => {
@@ -1009,6 +1026,8 @@ export default function NewInvoice() {
                 isrRetention,
                 tipoPago,
                 clientPhone,
+                plazoPago,
+                dueDate,
                 modifiedNcf: (invoiceType === "04" || invoiceType === "34") ? modifiedNcf : undefined,
                 quoteId: searchParams.get("fromQuote") || undefined,
             };
@@ -1043,6 +1062,8 @@ export default function NewInvoice() {
                 isrRetention,
                 itbisRetention,
                 total: invoiceTotal,
+                plazoPago,
+                dueDate,
                 modifiedNcf: (invoiceType === "04" || invoiceType === "34") ? modifiedNcf : undefined,
                 paymentMethod: tipoPago === "otro" ? tipoPagoOtro : tipoPago,
             };
@@ -2012,9 +2033,9 @@ export default function NewInvoice() {
                                                             <SelectValue placeholder="Seleccione ISR" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-+                                                            <SelectItem value="0.00">0% (Sin Retención)</SelectItem>
-                                                             <SelectItem value="0.10">10% (Profesional/Alquiler)</SelectItem>
-                                                             <SelectItem value="0.02">2% (Técnico/Contratista)</SelectItem>
+                                                            <SelectItem value="0.00">0% (Sin Retención)</SelectItem>
+                                                            <SelectItem value="0.10">10% (Profesional/Alquiler)</SelectItem>
+                                                            <SelectItem value="0.02">2% (Técnico/Contratista)</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                     <p className="text-[10px] text-muted-foreground mt-1">Se retiene del subtotal gravable.</p>
@@ -2029,11 +2050,11 @@ export default function NewInvoice() {
                                                             <SelectValue placeholder="Seleccione ITBIS" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-+                                                            <SelectItem value="0.00">0% (Sin Retención)</SelectItem>
-                                                             <SelectItem value="0.10">10% (Casos Específicos)</SelectItem>
-                                                             <SelectItem value="0.30">30% (Profesionales)</SelectItem>
-                                                             <SelectItem value="0.75">75% (Construcción/Seguridad)</SelectItem>
-                                                             <SelectItem value="1.00">100% (Honorarios y Estado)</SelectItem>
+                                                            <SelectItem value="0.00">0% (Sin Retención)</SelectItem>
+                                                            <SelectItem value="0.10">10% (Casos Específicos)</SelectItem>
+                                                            <SelectItem value="0.30">30% (Profesionales)</SelectItem>
+                                                            <SelectItem value="0.75">75% (Construcción/Seguridad)</SelectItem>
+                                                            <SelectItem value="1.00">100% (Honorarios y Estado)</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                     <p className="text-[10px] text-muted-foreground mt-1">Se retiene del ITBIS facturado.</p>
@@ -2146,6 +2167,9 @@ export default function NewInvoice() {
                                         pagoMixto={pagoMixto}
                                         onPagoMixtoChange={setPagoMixto}
                                         total={total}
+                                        plazoPago={plazoPago}
+                                        onPlazoPagoChange={setPlazoPago}
+                                        disabled={isGenerating}
                                         habitualTipoPago={habitualTipoPago}
                                     />
                                 </CardContent>

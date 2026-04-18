@@ -26,7 +26,9 @@ const createInvoiceSchema = z.object({
   requestId: z.string().optional(), // Idempotency
   isrRetention: z.number().min(0).optional(),
   itbisRetention: z.number().min(0).optional(),
-  modifiedNcf: z.string().max(13).optional()
+  modifiedNcf: z.string().max(13).optional(),
+  plazoPago: z.number().optional(),
+  dueDate: z.string().optional()
 });
 
 const paymentSchema = z.object({
@@ -52,7 +54,9 @@ const draftSchema = z.object({
   invoiceType: z.string().optional(),
   tipoPago: z.string().optional(),
   tipoPagoOtro: z.string().optional(),
-  pagoMixto: z.array(z.any()).optional()
+  pagoMixto: z.array(z.any()).optional(),
+  plazoPago: z.number().optional(),
+  dueDate: z.string().optional()
 });
 
 module.exports = {

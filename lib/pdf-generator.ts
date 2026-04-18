@@ -33,6 +33,8 @@ export interface InvoiceData {
     paymentMethod?: string;
     paymentDetails?: Array<{ method: string; amount: number }>;
     balancePendiente?: number;
+    plazoPago?: number;
+    dueDate?: string | Date;
 }
 
 /**
@@ -230,6 +232,16 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
         topY += 6;
         const methodLabel = TIPO_PAGO_LABELS[invoiceData.paymentMethod] || invoiceData.paymentMethod.toUpperCase();
         doc.text(`Tipo de Pago: ${methodLabel}`, titleX, topY, { align: "right" });
+    }
+ 
+    if (invoiceData.dueDate) {
+        topY += 6;
+        const dueStr = formatDateDominican(new Date(invoiceData.dueDate));
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(180, 0, 0); // Red for emphasis on due date
+        doc.text(`Vencimiento: ${dueStr}`, titleX, topY, { align: "right" });
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(100, 100, 100);
     }
 
     if ((invoiceData as any).validUntil) { // For quotes

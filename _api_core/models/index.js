@@ -127,6 +127,8 @@ const invoiceSchema = new mongoose.Schema({
     cancellationReason: { type: String }, // DGII 608: 01-05
     cancelledAt: { type: Date },
     modifiedNcf: { type: String },
+    plazoPago: { type: Number },
+    dueDate: { type: Date },
     createdByIp: { type: String },
     annulledByIp: { type: String },
 });
@@ -183,6 +185,8 @@ const invoiceDraftSchema = new mongoose.Schema({
     tipoPago: { type: String, default: 'efectivo' },
     tipoPagoOtro: String,
     pagoMixto: [{ tipo: String, monto: Number }],
+    plazoPago: Number,
+    dueDate: Date,
     updatedAt: { type: Date, default: Date.now }
 });
 invoiceDraftSchema.index({ userId: 1 }, { unique: true });
