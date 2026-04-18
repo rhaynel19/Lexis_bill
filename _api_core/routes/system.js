@@ -15,6 +15,7 @@ router.get('/autofill/suggestions', verifyToken, verifyClient, systemController.
 
 router.get('/ncf-settings', verifyToken, verifyClient, systemController.getNcfSettings);
 router.post('/ncf-settings', verifyToken, verifyClient, systemController.saveNcfSettings);
+router.put('/ncf-settings/:id', verifyToken, verifyClient, systemController.updateNcfSettings);
 router.delete('/ncf-settings/:id', verifyToken, verifyClient, systemController.deleteNcfSettings);
 
 router.get('/services', verifyToken, verifyClient, systemController.getServices);

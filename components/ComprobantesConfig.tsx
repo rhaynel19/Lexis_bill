@@ -81,7 +81,8 @@ export function ComprobantesConfig({ locked = false }: { locked?: boolean }) {
 
     const openEdit = (batch: any) => {
         const expiry = batch.expiryDate ? new Date(batch.expiryDate).toISOString().slice(0, 10) : "";
-        setEditBatch({ _id: batch._id, initialNumber: batch.initialNumber, finalNumber: batch.finalNumber, expiryDate: batch.expiryDate });
+        const isUsed = batch.currentValue !== batch.initialNumber;
+        setEditBatch({ _id: batch._id, initialNumber: batch.initialNumber, finalNumber: batch.finalNumber, expiryDate: batch.expiryDate, isUsed });
         setEditForm({ initialNumber: batch.initialNumber, finalNumber: batch.finalNumber, expiryDate: expiry });
     };
 
@@ -253,17 +254,15 @@ export function ComprobantesConfig({ locked = false }: { locked?: boolean }) {
                                             <TableCell className="text-right">
                                                 {locked ? (
                                                     <span className="text-xs text-slate-400">Bloqueado</span>
-                                                ) : canEditOrDelete ? (
+                                                ) : (
                                                     <div className="flex justify-end gap-2">
                                                         <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => openEdit(batch)} title="Modificar lote">
                                                             <Pencil className="w-3.5 h-3.5" /> Modificar
                                                         </Button>
-                                                        <Button type="button" variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 gap-1" onClick={() => handleDeleteBatch(batch)} title="Borrar lote">
+                                                        <Button type="button" variant="outline" size="sm" className={`gap-1 ${canEditOrDelete ? "text-red-600 border-red-200 hover:bg-red-50" : "text-slate-400 border-slate-200"}`} onClick={() => handleDeleteBatch(batch)} title={canEditOrDelete ? "Borrar lote" : "En uso: No se puede borrar"} disabled={!canEditOrDelete}>
                                                             <Trash2 className="w-3.5 h-3.5" /> Borrar
                                                         </Button>
                                                     </div>
-                                                ) : (
-                                                    <span className="text-xs text-slate-400">En uso</span>
                                                 )}
                                             </TableCell>
                                         </TableRow>
@@ -280,11 +279,16 @@ export function ComprobantesConfig({ locked = false }: { locked?: boolean }) {
                     <DialogHeader>
                         <DialogTitle>Modificar lote</DialogTitle>
                     </DialogHeader>
-                    <p className="text-sm text-slate-500 mb-4">Solo puedes modificar lotes que aún no han sido usados (contador en el primer número).</p>
+                    {/* @ts-ignore - isUsed is added dynamically above */}
+                    <p className={`text-sm mb-4 ${editBatch?.isUsed ? 'text-amber-600 font-medium' : 'text-slate-500'}`}>
+                        {/* @ts-ignore */}
+                        {editBatch?.isUsed ? "⚠️ Este lote está en uso. Solo puedes extender el número límite final o actualizar la fecha de vencimiento." : "Puedes modificar los parámetros de este lote porque aún no se ha usado ningún comprobante."}
+                    </p>
                     <div className="grid gap-4">
                         <div className="space-y-2">
                             <Label>Desde</Label>
-                            <Input type="number" min={1} value={editForm.initialNumber} onChange={(e) => setEditForm({ ...editForm, initialNumber: parseInt(e.target.value) || 1 })} />
+                            {/* @ts-ignore */}
+                            <Input type="number" min={1} value={editForm.initialNumber} onChange={(e) => setEditForm({ ...editForm, initialNumber: parseInt(e.target.value) || 1 })} disabled={editBatch?.isUsed} />
                         </div>
                         <div className="space-y-2">
                             <Label>Hasta</Label>

@@ -181,6 +181,45 @@ exports.saveNcfSettings = async (req, res) => {
     }
 };
 
+exports.updateNcfSettings = async (req, res) => {
+    try {
+        const { initialNumber, finalNumber, expiryDate } = req.body;
+        const setting = await NCFSettings.findOne({ _id: req.params.id, userId: req.userId });
+        if (!setting) {
+            return res.status(404).json({ error: 'Lote no encontrado.' });
+        }
+        
+        let updates = {};
+        
+        // Sólo permite cambiar el inicial si no se ha emitido ningún comprobante aún
+        if (setting.currentValue === setting.initialNumber) {
+            if (initialNumber !== undefined && initialNumber > 0) {
+                updates.initialNumber = initialNumber;
+                updates.currentValue = initialNumber;
+            }
+        }
+        
+        if (finalNumber !== undefined) {
+            if (finalNumber < setting.currentValue) {
+                return res.status(400).json({ message: 'El límite numérico final no puede ser menor a la secuencia actual.' });
+            }
+            updates.finalNumber = finalNumber;
+        }
+        
+        if (expiryDate) {
+            updates.expiryDate = new Date(expiryDate);
+        }
+        
+        if (Object.keys(updates).length > 0) {
+            await NCFSettings.updateOne({ _id: req.params.id, userId: req.userId }, { $set: updates });
+        }
+        
+        res.status(200).json({ success: true, message: 'Lote actualizado.' });
+    } catch (error) {
+        res.status(500).json({ message: safeErrorMessage(error) });
+    }
+};
+
 exports.deleteNcfSettings = async (req, res) => {
     try {
         const setting = await NCFSettings.findOne({ _id: req.params.id, userId: req.userId });
