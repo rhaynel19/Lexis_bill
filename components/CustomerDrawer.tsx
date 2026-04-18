@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Mail, Phone, Calendar, Hash, FileText, ChevronRight, UserCircle2, Receipt } from "lucide-react";
 import { api } from "@/lib/api-service";
+import { toast } from "sonner";
 
 interface CustomerDrawerProps {
     isOpen: boolean;
@@ -43,7 +44,33 @@ export function CustomerDrawer({ isOpen, onClose, customer }: CustomerDrawerProp
         window.open(`https://wa.me/${finalPhone}`, '_blank');
     };
 
+    const handleSendReminder = () => {
+        if (!customer.phone) {
+             toast.error("El cliente no tiene un teléfono registrado.");
+             return;
+        }
+        const phoneDigits = customer.phone.replace(/\D/g, '');
+        const finalPhone = phoneDigits.length === 10 ? `1${phoneDigits}` : phoneDigits;
+        
+        let pendingAmnt = 0;
+        let pendingInfo = "";
+        const pendingInvoices = history.filter(i => (i.balancePendiente !== undefined ? i.balancePendiente > 0 : (i.estadoPago === 'vencida' || i.estadoPago === 'pendiente')));
+        
+        if (pendingInvoices.length > 0) {
+            pendingAmnt = pendingInvoices.reduce((acc, i) => acc + (i.balancePendiente || i.total), 0);
+            pendingInfo = ` Tienes un balance pendiente de RD$ ${pendingAmnt.toLocaleString("es-DO", { minimumFractionDigits: 2 })}.`;
+        }
+        
+        const message = `Hola ${customer.name}, le contactamos desde su estado de cuenta. ${pendingInfo} Por favor, contáctenos para más detalles.`;
+        const encoded = encodeURIComponent(message);
+        window.open(`https://wa.me/${finalPhone}?text=${encoded}`, '_blank');
+    };
+
     if (!customer) return null;
+
+    const lifetimeValue = history.reduce((sum, inv) => sum + (inv.total || 0), 0);
+    const invoiceCount = history.length;
+    const pendingCount = history.filter(i => (i.balancePendiente !== undefined ? i.balancePendiente > 0 : (i.estadoPago === 'vencida' || i.estadoPago === 'pendiente'))).length;
 
     return (
         <Sheet open={isOpen} onOpenChange={onClose}>
@@ -72,7 +99,7 @@ export function CustomerDrawer({ isOpen, onClose, customer }: CustomerDrawerProp
                     </div>
 
                     {/* Quick Actions */}
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-4 gap-2">
                         <Button variant="outline" className="flex flex-col h-16 gap-1" onClick={handleWhatsApp} disabled={!customer.phone}>
                             <MessageCircle className="w-5 h-5 text-green-600" />
                             <span className="text-[10px] font-bold">WhatsApp</span>
@@ -85,6 +112,27 @@ export function CustomerDrawer({ isOpen, onClose, customer }: CustomerDrawerProp
                             <Phone className="w-5 h-5 text-slate-600" />
                             <span className="text-[10px] font-bold">Llamar</span>
                         </Button>
+                        <Button variant="outline" className="flex flex-col h-16 gap-1 border-amber-200 bg-amber-50" onClick={handleSendReminder} disabled={!customer.phone}>
+                            <Hash className="w-5 h-5 text-amber-600" />
+                            <span className="text-[10px] font-bold text-amber-700 leading-tight">Estado de Cta.</span>
+                        </Button>
+                    </div>
+
+                    {/* CRM 360 Metrics */}
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                        <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
+                            <p className="text-[10px] font-bold uppercase text-primary/70 tracking-widest">Lifetime Value</p>
+                            <h4 className="text-xl font-black text-primary">RD$ {lifetimeValue.toLocaleString('es-DO')}</h4>
+                        </div>
+                        <div className="bg-rose-50 rounded-xl p-3 border border-rose-100 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase text-rose-500 tracking-widest">Pendientes</p>
+                                <h4 className="text-xl font-black text-rose-600">{pendingCount} Facturas</h4>
+                            </div>
+                            <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center">
+                                <Receipt className="w-4 h-4 text-rose-500" />
+                            </div>
+                        </div>
                     </div>
 
                     {/* Details List */}
@@ -139,7 +187,12 @@ export function CustomerDrawer({ isOpen, onClose, customer }: CustomerDrawerProp
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <span className="text-xs font-bold text-primary">RD$ {inv.total.toLocaleString()}</span>
+                                            <div className="text-right">
+                                                <span className="text-xs font-bold text-primary block">RD$ {inv.total.toLocaleString()}</span>
+                                                {inv.balancePendiente !== undefined && inv.balancePendiente > 0 && (
+                                                    <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded">Pendiente</span>
+                                                )}
+                                            </div>
                                             <ChevronRight className="w-4 h-4 text-slate-300 group-hover:translate-x-1 transition-transform" />
                                         </div>
                                     </div>

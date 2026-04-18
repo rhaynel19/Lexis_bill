@@ -240,6 +240,41 @@ export function InvoiceControlCenter({
         return s;
     }, [invoices, currentMonth, currentYear, externalStats]);
 
+    // --- GAMIFICATION & TOP CLIENTS LOGIC ---
+    const topClients = useMemo(() => {
+        const clients: Record<string, {name: string, total: number}> = {};
+        invoices.forEach(inv => {
+            const rnc = inv.rnc || inv.clientRnc || inv.clientName || 'default';
+            if (!clients[rnc]) {
+                 clients[rnc] = { name: inv.clientName, total: 0 };
+            }
+            clients[rnc].total += inv.total || 0;
+        });
+        return Object.values(clients).sort((a,b) => b.total - a.total).slice(0,3);
+    }, [invoices]);
+
+    const [monthlyGoalStr, setMonthlyGoalStr] = useState<string>("500000");
+    const [isEditingGoal, setIsEditingGoal] = useState(false);
+
+    // Initial load for goal from local storage
+    useMemo(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem("dashboard_monthlyGoal");
+            if (saved) setMonthlyGoalStr(saved);
+        }
+    }, []);
+
+    const monthlyGoal = Number(monthlyGoalStr) || 1; // Prevent division by zero
+    const revTotal = externalStats?.totalRevenue || stats.facturadoMes;
+    const progressPct = Math.min(100, Math.max(0, (revTotal / monthlyGoal) * 100));
+
+    const handleSaveGoal = () => {
+        localStorage.setItem("dashboard_monthlyGoal", monthlyGoalStr);
+        setIsEditingGoal(false);
+        toast.success("Meta mensual actualizada 🎉");
+    };
+    // ----------------------------------------
+
     const filteredInvoices = useMemo(() => {
         let list = invoices;
         if (quickFilter === "hoy") {
@@ -465,6 +500,93 @@ export function InvoiceControlCenter({
     return (
         <>
             <div className="relative mt-6 space-y-6">
+                
+                {/* GAMIFICATION & TOP 3 SECTION */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                    {/* Meta Mensual */}
+                    <Card className="col-span-1 lg:col-span-2 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-background border-indigo-100 dark:border-indigo-900/50 shadow-sm relative overflow-hidden">
+                        <div className="absolute right-0 top-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
+                        <CardContent className="p-6">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                                <div>
+                                    <h3 className="font-bold text-lg text-indigo-900 dark:text-indigo-300">Meta del Mes</h3>
+                                    <p className="text-sm text-indigo-700/70 dark:text-indigo-400/70">Progreso de facturación vs tu objetivo</p>
+                                </div>
+                                <div className="text-right flex items-center gap-2">
+                                    {isEditingGoal ? (
+                                        <div className="flex gap-2 items-center">
+                                            <Input 
+                                                type="number" 
+                                                value={monthlyGoalStr}
+                                                onChange={(e) => setMonthlyGoalStr(e.target.value)}
+                                                className="w-32 h-8 text-sm"
+                                            />
+                                            <Button size="sm" onClick={handleSaveGoal} className="h-8">Guardar</Button>
+                                        </div>
+                                    ) : (
+                                        <div 
+                                            className="font-mono text-xl font-bold cursor-pointer hover:text-indigo-600 transition-colors"
+                                            onClick={() => setIsEditingGoal(true)}
+                                            title="Clic para editar meta"
+                                        >
+                                            {formatCurrency(revTotal)} <span className="text-muted-foreground font-normal text-sm">/ {formatCurrency(monthlyGoal)}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Progress Bar */}
+                            <div className="relative h-4 bg-indigo-100 dark:bg-indigo-950/50 rounded-full overflow-hidden">
+                                <div 
+                                    className={cn(
+                                        "absolute top-0 left-0 h-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-1000 ease-out",
+                                        progressPct >= 100 && "from-emerald-400 to-emerald-600"
+                                    )}
+                                    style={{ width: `${progressPct}%` }}
+                                />
+                            </div>
+                            <div className="flex justify-between items-center mt-2">
+                                <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                                    {progressPct >= 100 ? "¡Meta alcanzada! 🎉" : "Sigue así"}
+                                </span>
+                                <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
+                                    {progressPct.toFixed(1)}%
+                                </span>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Top 3 Clientes */}
+                    <Card className="col-span-1 shadow-sm border-border/50">
+                        <CardHeader className="py-4 px-5 border-b border-border/10">
+                            <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                🌟 Top 3 Clientes Estrella
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            {topClients.length > 0 ? (
+                                <div className="divide-y divide-border/10">
+                                    {topClients.map((client, idx) => (
+                                        <div key={idx} className="flex justify-between items-center px-5 py-3 hover:bg-muted/30 transition-colors">
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+                                                    {idx + 1}
+                                                </div>
+                                                <span className="text-sm font-medium truncate">{client.name}</span>
+                                            </div>
+                                            <span className="text-sm font-semibold shrink-0 ml-2">{formatCurrency(client.total)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="p-5 text-center text-sm text-muted-foreground">
+                                    No hay datos suficientes aún.
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+
                 {externalStats && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <Card 

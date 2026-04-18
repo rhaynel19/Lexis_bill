@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { FiscalDisclaimerModal } from "@/components/FiscalDisclaimerModal";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DocumentViewer, Invoice as ViewerInvoice } from "@/components/DocumentViewer";
@@ -250,6 +250,47 @@ export default function ReportsPage() {
                     </select>
                 </div>
             </div>
+
+            {/* AUDITOR PREVENTIVO */}
+            {!isLoading && summary?.documents?.invoices && (
+                (() => {
+                    const invoicesWithoutRnc = summary.documents.invoices.filter((inv: any) => 
+                        (inv.ncfType === '01' || inv.ncfType === '14' || inv.ncfType === '31' || inv.type === '01' || (inv.ncf || '').startsWith('B01')) && 
+                        !inv.rnc && !inv.clientRnc
+                    );
+                    const duplicateExpenses = (() => {
+                        const ncfs = new Set();
+                        let dupes = 0;
+                        (summary.documents.expenses || []).forEach((e: any) => {
+                            if (e.ncf && ncfs.has(e.ncf)) dupes++;
+                            if (e.ncf) ncfs.add(e.ncf);
+                        });
+                        return dupes;
+                    })();
+
+                    if (invoicesWithoutRnc.length > 0 || duplicateExpenses > 0) {
+                        return (
+                            <div className="mb-8 p-4 rounded-xl border border-amber-200 bg-amber-50/50 flex flex-col sm:flex-row items-start gap-4 shadow-sm animate-in fade-in">
+                                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                                    <Ban className="w-5 h-5 text-amber-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-amber-900">Auditor Preventivo (Pre-Validación)</h3>
+                                    <ul className="text-sm text-amber-800 mt-1 list-disc list-inside">
+                                        {invoicesWithoutRnc.length > 0 && (
+                                            <li>Se detectaron <strong>{invoicesWithoutRnc.length} facturas con NCF B01 (Crédito Fiscal)</strong> sin RNC del cliente registrado. Esto generará rechazo en el 607.</li>
+                                        )}
+                                        {duplicateExpenses > 0 && (
+                                            <li>Se detectó <strong>{duplicateExpenses} gasto(s) con NCF duplicado</strong>. Esto causará error DGII-03 en el 606.</li>
+                                        )}
+                                    </ul>
+                                </div>
+                            </div>
+                        );
+                    }
+                    return null;
+                })()
+            )}
 
             {loadError && (
                 <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -594,23 +635,36 @@ export default function ReportsPage() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Calculator className="w-5 h-5 text-accent" />
-                            Resumen ITBIS — {months[selectedMonth - 1]} {selectedYear}
+                            Simulador IT-1 — {months[selectedMonth - 1]} {selectedYear}
                         </DialogTitle>
+                        <DialogDescription>
+                            Estimación de tu pago a la DGII basado en tus reportes actuales.
+                        </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-2">
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                            <span className="text-sm font-medium text-muted-foreground">ITBIS cobrado</span>
-                            <span className="font-bold">RD$ {(summary?.itbis ?? 0).toLocaleString("es-DO")}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                            <span className="text-sm font-medium text-muted-foreground">Subtotal neto</span>
-                            <span className="font-bold">RD$ {(summary?.subtotal ?? 0).toLocaleString("es-DO")}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                            <span className="text-sm font-medium text-muted-foreground">Comprobantes</span>
-                            <span className="font-bold">{summary?.count ?? 0}</span>
-                        </div>
-                    </div>
+                    {(() => {
+                        const itbisCobrado = summary?.itbis ?? 0;
+                        const itbisPagado = (summary?.documents?.expenses || []).reduce((acc: number, e: any) => acc + (e.itbis || e.itbisAmount || 0), 0);
+                        const itbisAPagar = Math.max(0, itbisCobrado - itbisPagado);
+                        return (
+                            <div className="grid gap-3 py-2">
+                                <div className="flex justify-between items-center p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+                                    <span className="text-sm font-medium text-emerald-800">ITBIS Facturado en Ventas (607)</span>
+                                    <span className="font-bold text-emerald-700">RD$ {itbisCobrado.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                                <div className="flex justify-between items-center p-3 rounded-lg bg-rose-50 border border-rose-100">
+                                    <span className="text-sm font-medium text-rose-800">ITBIS Adelantado en Compras (606)</span>
+                                    <span className="font-bold text-rose-700">- RD$ {itbisPagado.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                                <div className="flex justify-between items-center p-4 rounded-xl bg-slate-900 border border-slate-800 mt-2">
+                                    <span className="text-sm font-bold text-white tracking-wider uppercase">Pago Estimado DGII</span>
+                                    <span className="text-xl font-black text-white">RD$ {itbisAPagar.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                                <p className="text-[10px] text-center text-muted-foreground mt-2 italic">
+                                    *Cálculo visual estimado. El saldo a favor de meses anteriores o retenciones podrían variar el monto final del formulario IT-1 oficial.
+                                </p>
+                            </div>
+                        );
+                    })()}
                 </DialogContent>
             </Dialog>
 

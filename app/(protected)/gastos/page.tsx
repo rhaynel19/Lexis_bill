@@ -157,15 +157,40 @@ export default function GastosPage() {
         if ((rnc.length === 9 || rnc.length === 11) && !formData.supplierName) {
             setIsValidatingRnc(true);
             try {
+                // 1. Try to fetch from external API
                 const data = await api.validateRnc(rnc);
+                
+                // 2. Look for past expenses with this RNC to auto-categorize
+                const pastExpense = expenses.find(e => (e.supplierRnc || "").replace(/[^0-9]/g, "") === rnc);
+
                 if (data && data.nombre) {
-                    setFormData(prev => ({ ...prev, supplierName: data.nombre, supplierRnc: rnc }));
-                    toast.success(`Suplidor detectado: ${data.nombre}`);
+                    setFormData(prev => ({ 
+                        ...prev, 
+                        supplierName: data.nombre, 
+                        supplierRnc: rnc,
+                        category: pastExpense ? pastExpense.category : prev.category,
+                        paymentMethod: pastExpense ? pastExpense.paymentMethod : prev.paymentMethod
+                    }));
+                    if (pastExpense) {
+                        toast.success(`Suplidor detectado: ${data.nombre} (Auto-categorizado)`);
+                    } else {
+                        toast.success(`Suplidor detectado: ${data.nombre}`);
+                    }
                 }
             } catch (err) {
                 console.warn("No se pudo validar el RNC automáticamente");
             } finally {
                 setIsValidatingRnc(false);
+            }
+        } else if ((rnc.length === 9 || rnc.length === 11) && formData.supplierName) {
+            // Already has name, but let's check past expenses for category
+            const pastExpense = expenses.find(e => (e.supplierRnc || "").replace(/[^0-9]/g, "") === rnc);
+            if (pastExpense && formData.category === "02") { // Only overwrite if it's the default
+                setFormData(prev => ({ 
+                    ...prev, 
+                    category: pastExpense.category,
+                    paymentMethod: pastExpense.paymentMethod
+                }));
             }
         }
     };
@@ -435,6 +460,7 @@ export default function GastosPage() {
     });
 
     const totalGastos = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const totalITBISAdelantado = filteredExpenses.reduce((sum, exp) => sum + (parseFloat(exp.itbis) || 0), 0);
 
     const categoryData = EXPENSE_CATEGORIES.map(cat => {
         const total = expenses.filter(e => e.category === cat.id).reduce((sum, e) => sum + e.amount, 0);
@@ -760,18 +786,20 @@ export default function GastosPage() {
                         <p className="text-[10px] text-muted-foreground mt-2">Listos para el envío mensual</p>
                     </CardContent>
                 </Card>
-                <Card className="bg-card/30 border-border/5">
+                <Card className="bg-gradient-to-br from-emerald-50 to-transparent dark:from-emerald-950/20 border-emerald-200/50 dark:border-emerald-900/50 relative overflow-hidden group">
+                    <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none" />
                     <CardContent className="p-6">
                         <div className="flex justify-between items-center mb-1">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Salud Fiscal</p>
-                            <ShieldCheck className="w-4 h-4 text-green-500" />
+                            <p className="text-[10px] font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-widest">ITBIS A Favor (Adelantado)</p>
+                            <ShieldCheck className="w-4 h-4 text-emerald-500" />
                         </div>
-                        <h3 className="text-lg font-black">
-                            {expenses.length
-                                ? `${Math.round((expenses.filter(e => e.supplierName && e.supplierRnc && e.ncf && e.amount != null).length / expenses.length) * 100)}%`
-                                : "100%"}
+                        <h3 className="text-2xl font-black text-emerald-900 dark:text-emerald-300 transition-transform group-hover:scale-105 origin-left">
+                            RD$ {totalITBISAdelantado.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                         </h3>
-                        <p className="text-[10px] text-muted-foreground mt-1">Gastos con datos completos</p>
+                        <div className="w-full bg-emerald-200/50 dark:bg-emerald-900/50 h-1.5 mt-3 rounded-full overflow-hidden">
+                            <div className="bg-emerald-500 h-full w-full" />
+                        </div>
+                        <p className="text-[10px] text-emerald-700/70 dark:text-emerald-400/80 mt-2 font-bold">Impuesto descontable pagado a suplidores</p>
                     </CardContent>
                 </Card>
                 <Card className="bg-card/30 border-border/5">
