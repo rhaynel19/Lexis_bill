@@ -437,11 +437,13 @@ export function InvoiceControlCenter({
         try {
             const dataToClone = {
                  clientName: quickCloneInvoice.clientName,
-                 rnc: quickCloneInvoice.rnc || quickCloneInvoice.clientRnc,
+                 clientRnc: quickCloneInvoice.rnc || quickCloneInvoice.clientRnc,
                  originalNcfType: quickCloneInvoice.ncfType || quickCloneInvoice.type,
-                 invoiceType: quickCloneInvoice.ncfType || quickCloneInvoice.type || "32",
+                 ncfType: quickCloneInvoice.ncfType || quickCloneInvoice.type || "32",
                  items: quickCloneInvoice.items || [],
                  tipoPago: quickCloneInvoice.tipoPago || "efectivo",
+                 isrRetention: quickCloneInvoice.isrRetention || 0,
+                 itbisRetention: quickCloneInvoice.itbisRetention || 0,
             };
 
             const res = await api.createInvoice(dataToClone);
