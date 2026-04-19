@@ -76,9 +76,9 @@ export function CustomerDrawer({ isOpen, onClose, customer }: CustomerDrawerProp
 
     return (
         <Sheet open={isOpen} onOpenChange={onClose}>
-            <SheetContent className="sm:max-w-md border-none shadow-2xl bg-white p-0">
+            <SheetContent className="sm:max-w-md border-none shadow-2xl bg-white p-0 flex flex-col h-[100dvh]">
                 {/* Header Decoration */}
-                <div className="h-32 bg-primary relative">
+                <div className="h-32 bg-primary relative shrink-0">
                     <div className="absolute -bottom-12 left-6">
                         <div className="w-24 h-24 bg-white rounded-3xl shadow-xl flex items-center justify-center border-4 border-white overflow-hidden">
                             <span className="text-4xl font-black text-primary/20">
@@ -88,7 +88,7 @@ export function CustomerDrawer({ isOpen, onClose, customer }: CustomerDrawerProp
                     </div>
                 </div>
 
-                <div className="pt-16 px-6 space-y-8">
+                <div className="pt-16 px-6 space-y-8 flex-1 overflow-y-auto pb-4">
                     {/* Basic Info */}
                     <div>
                         <h2 className="text-2xl font-bold text-slate-900">{customer.name}</h2>
@@ -204,7 +204,7 @@ export function CustomerDrawer({ isOpen, onClose, customer }: CustomerDrawerProp
                     </div>
                 </div>
 
-                <SheetFooter className="p-6 bg-slate-50 border-t flex flex-col gap-2">
+                <SheetFooter className="p-6 bg-slate-50 border-t flex flex-col gap-2 shrink-0">
                     <Link
                         href={`/nueva-factura?${new URLSearchParams({
                             rnc: customer.rnc || "",
