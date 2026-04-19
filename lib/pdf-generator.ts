@@ -37,6 +37,28 @@ export interface InvoiceData {
     dueDate?: string | Date;
 }
 
+export interface StatementData {
+    customer: {
+        name: string;
+        rnc: string;
+        email?: string;
+        phone?: string;
+    };
+    invoices: Array<{
+        id: string;
+        date: string;
+        ncf: string;
+        total: number;
+        balance: number;
+        type?: string;
+        status?: string;
+    }>;
+    totalPending: number;
+    generatedAt: string;
+    startDate?: string;
+    endDate?: string;
+}
+
 /**
  * Genera un código QR con la información de la factura
  * En producción, esto debe incluir el código de validación de DGII
@@ -509,6 +531,175 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyOverri
         doc.text(disclaimerText, pageWidth / 2, footerY + 5, { align: "center" });
     }
     return doc;
+}
+
+/**
+ * Genera un PDF profesional del Estado de Cuenta / Relación de Facturas
+ */
+export async function generateAccountStatementPDF(data: StatementData, companyOverride?: CompanyOverride): Promise<jsPDF> {
+    const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "letter",
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = APP_CONFIG.pdf.margins;
+    const blueColor: [number, number, number] = [16, 24, 39];
+    const goldColor: [number, number, number] = [212, 175, 55];
+
+    let yPosition = margin.top;
+
+    // Cargar configuración de empresa
+    const storedConfig = typeof localStorage !== "undefined" ? localStorage.getItem("appConfig") : null;
+    const storedUser = typeof localStorage !== "undefined" ? localStorage.getItem("user") : null;
+    const appConfig = storedConfig ? JSON.parse(storedConfig) : { ...APP_CONFIG.company };
+    const user = storedUser ? JSON.parse(storedUser) : null;
+
+    const companyName = companyOverride?.companyName || user?.fiscalStatus?.confirmed || appConfig.companyName || appConfig.name || APP_CONFIG.company.name;
+    const companyRnc = companyOverride?.rnc ?? user?.rnc ?? appConfig.rnc ?? APP_CONFIG.company.rnc;
+
+    // Logo
+    const logo = appConfig.logo || null;
+    if (logo) {
+        try {
+            doc.addImage(logo, "PNG", margin.left, margin.top, 45, 18);
+            yPosition += 22;
+        } catch (e) {
+            doc.setFontSize(22);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(...blueColor);
+            doc.text(companyName, margin.left, yPosition + 5);
+            yPosition += 12;
+        }
+    } else {
+        doc.setFontSize(22);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...blueColor);
+        doc.text(companyName, margin.left, yPosition + 5);
+        yPosition += 12;
+    }
+
+    // Info Empresa
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+    doc.text(`RNC: ${companyRnc}`, margin.left, yPosition);
+    yPosition += 5;
+    doc.text(appConfig.address || APP_CONFIG.company.address, margin.left, yPosition);
+    yPosition += 5;
+    doc.text(`Tel: ${appConfig.phone || APP_CONFIG.company.phone} | ${appConfig.email || APP_CONFIG.company.email}`, margin.left, yPosition);
+    yPosition += 8;
+
+    // Línea Dorada
+    doc.setDrawColor(...goldColor);
+    doc.setLineWidth(1.5);
+    doc.line(margin.left, yPosition, pageWidth - margin.right, yPosition);
+    yPosition += 12;
+
+    // Título Reporte
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...blueColor);
+    doc.text("ESTADO DE CUENTA", pageWidth - margin.right, margin.top + 8, { align: "right" });
+
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generado: ${formatDateDominican(new Date(data.generatedAt))}`, pageWidth - margin.right, margin.top + 16, { align: "right" });
+    
+    if (data.startDate && data.endDate) {
+        doc.text(`Periodo: ${formatDateDominican(new Date(data.startDate))} al ${formatDateDominican(new Date(data.endDate))}`, pageWidth - margin.right, margin.top + 22, { align: "right" });
+    }
+
+    // Datos Cliente
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...blueColor);
+    doc.text("CLIENTE:", margin.left, yPosition);
+    yPosition += 6;
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(60, 60, 60);
+    doc.text(data.customer.name, margin.left, yPosition);
+    yPosition += 5;
+    doc.text(`RNC/Cédula: ${data.customer.rnc}`, margin.left, yPosition);
+    yPosition += 15;
+
+    // Tabla de Facturas
+    const tableData = data.invoices.map(inv => [
+        formatDateDominican(new Date(inv.date)),
+        inv.ncf || "N/A",
+        formatCurrency(inv.total),
+        formatCurrency(inv.total - inv.balance),
+        formatCurrency(inv.balance)
+    ]);
+
+    autoTable(doc, {
+        startY: yPosition,
+        head: [["Fecha", "NCF", "Monto Original", "Monto Pagado", "Balance Pendiente"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: {
+            fillColor: blueColor,
+            textColor: [255, 255, 255],
+            fontStyle: "bold",
+        },
+        columnStyles: {
+            2: { halign: "right" },
+            3: { halign: "right" },
+            4: { halign: "right" },
+        }
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+
+    // Resumen Final
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...blueColor);
+    const summaryX = pageWidth - margin.right - 60;
+    
+    doc.text("Resumen Consolidado:", summaryX, finalY);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    
+    doc.text("Total Facturado:", summaryX, finalY + 8);
+    const totalBilled = data.invoices.reduce((acc, inv) => acc + inv.total, 0);
+    doc.text(formatCurrency(totalBilled), pageWidth - margin.right, finalY + 8, { align: "right" });
+
+    doc.text("Total Cobrado:", summaryX, finalY + 14);
+    const totalCollected = totalBilled - data.totalPending;
+    doc.text(formatCurrency(totalCollected), pageWidth - margin.right, finalY + 14, { align: "right" });
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(180, 0, 0);
+    doc.text("BALANCE PENDIENTE:", summaryX, finalY + 22);
+    doc.text(formatCurrency(data.totalPending), pageWidth - margin.right, finalY + 22, { align: "right" });
+
+    // Pie de página
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(
+            `Este documento es una relación administrativa de facturación generada por ${APP_CONFIG.company.name}.`,
+            pageWidth / 2,
+            doc.internal.pageSize.getHeight() - 10,
+            { align: "center" }
+        );
+    }
+
+    return doc;
+}
+
+/**
+ * Descarga el PDF del estado de cuenta
+ */
+export async function downloadAccountStatementPDF(data: StatementData, companyOverride?: CompanyOverride): Promise<void> {
+    const doc = await generateAccountStatementPDF(data, companyOverride);
+    const fileName = `Estado_Cuenta_${data.customer.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;
+    doc.save(fileName);
 }
 
 /**

@@ -18,10 +18,12 @@ import {
     Receipt,
     FileText,
     Trash2,
-    Pencil
+    Pencil,
+    Loader2
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api-service";
+import { downloadAccountStatementPDF } from "@/lib/pdf-generator";
 import { CustomerMigration } from "@/components/CustomerMigration";
 import { CustomerDrawer } from "@/components/CustomerDrawer";
 import { Badge } from "@/components/ui/badge";
@@ -207,10 +209,11 @@ export default function CustomersPage() {
         }
     };
 
-    const handleDownloadHistory = async () => {
+    const handleDownloadHistory = async (format: 'pdf' | 'csv' = 'csv') => {
         if (!historyCustomer) return;
         setIsDownloadingHistory(true);
         try {
+            // Reusar getClientInvoiceHistory que ya está filtrado por fecha
             const res = await api.getClientInvoiceHistory(historyCustomer.rnc, historyStartDate, historyEndDate);
             if (!res.data || res.data.length === 0) {
                 toast.warning("No se encontraron facturas en este rango de fechas.");
@@ -218,35 +221,65 @@ export default function CustomersPage() {
                 return;
             }
 
-            const header = ["Fecha", "NCF", "Tipo", "Estatus", "Total Billed", "Pagado", "Balance"];
-            const rows = res.data.map((inv: any) => {
-                const date = new Date(inv.date).toLocaleDateString('es-DO');
-                return [
-                    date,
-                    inv.ncf || inv.ncfSequence,
-                    inv.ncfType,
-                    inv.estadoPago,
-                    inv.total,
-                    inv.montoPagado || 0,
-                    inv.balancePendiente || 0
-                ].join(",");
-            });
+            if (format === 'pdf') {
+                // Preparar datos para el generador de PDF
+                const totalPending = res.data.reduce((acc: number, inv: any) => acc + (inv.balancePendiente || 0), 0);
+                const statementData = {
+                    customer: {
+                        name: historyCustomer.name,
+                        rnc: historyCustomer.rnc,
+                        email: historyCustomer.email,
+                        phone: historyCustomer.phone
+                    },
+                    invoices: res.data.map((inv: any) => ({
+                        id: inv._id || inv.id,
+                        date: inv.date,
+                        ncf: inv.ncf || inv.ncfSequence || "N/A",
+                        total: inv.total,
+                        balance: inv.balancePendiente ?? 0,
+                        status: inv.status
+                    })),
+                    totalPending,
+                    generatedAt: new Date().toISOString(),
+                    startDate: historyStartDate,
+                    endDate: historyEndDate
+                };
+
+                await downloadAccountStatementPDF(statementData);
+                toast.success("Estado de cuenta generado correctamente.");
+            } else {
+                // Mantener el CSV original para compatibilidad
+                const header = ["Fecha", "NCF", "Tipo", "Estatus", "Total Billed", "Pagado", "Balance"];
+                const rows = res.data.map((inv: any) => {
+                    const date = new Date(inv.date).toLocaleDateString('es-DO');
+                    return [
+                        date,
+                        inv.ncf || inv.ncfSequence,
+                        inv.ncfType,
+                        inv.estadoPago,
+                        inv.total,
+                        inv.montoPagado || 0,
+                        inv.balancePendiente || 0
+                    ].join(",");
+                });
+                
+                const csvContent = [header.join(","), ...rows].join("\n");
+                const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `Historial_Facturas_${historyCustomer.name.replace(/\s+/g, '_')}_${historyStartDate}_a_${historyEndDate}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                toast.success("Historial CSV descargado correctamente.");
+            }
             
-            const csvContent = [header.join(","), ...rows].join("\n");
-            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `Historial_Facturas_${historyCustomer.name.replace(/\s+/g, '_')}_${historyStartDate}_a_${historyEndDate}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            toast.success("Historial descargado correctamente.");
             setHistoryCustomer(null);
         } catch (error) {
-            toast.error("Error al generar el historial.");
+            console.error("Error al generar reporte:", error);
+            toast.error("Error al generar el reporte.");
         } finally {
             setIsDownloadingHistory(false);
         }
@@ -716,12 +749,25 @@ export default function CustomersPage() {
                             />
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setHistoryCustomer(null)} disabled={isDownloadingHistory}>
+                    <DialogFooter className="flex-col sm:flex-row gap-2">
+                        <Button variant="outline" onClick={() => setHistoryCustomer(null)} disabled={isDownloadingHistory} className="w-full sm:w-auto">
                             Cancelar
                         </Button>
-                        <Button onClick={handleDownloadHistory} disabled={isDownloadingHistory} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
-                            {isDownloadingHistory ? "Generando..." : "Descargar CSV"}
+                        <Button 
+                            variant="secondary" 
+                            onClick={() => handleDownloadHistory('csv')} 
+                            disabled={isDownloadingHistory} 
+                            className="w-full sm:w-auto gap-2"
+                        >
+                            Excel (CSV)
+                        </Button>
+                        <Button 
+                            onClick={() => handleDownloadHistory('pdf')} 
+                            disabled={isDownloadingHistory} 
+                            className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-lg shadow-indigo-200"
+                        >
+                            {isDownloadingHistory ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                            {isDownloadingHistory ? "Generando..." : "Descargar PDF Profesional"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
