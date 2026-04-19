@@ -654,7 +654,7 @@ function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData, ha
                                     >
                                         <p className="text-[10px] font-black text-slate-400 group-hover:text-amber-600 uppercase tracking-tight transition-colors">{bucket.label}</p>
                                         <p className={cn(
-                                            "text-xl sm:text-2xl font-black mt-1 tabular-nums transition-transform group-hover:scale-105",
+                                            "text-lg xs:text-xl sm:text-2xl font-black mt-1 tabular-nums transition-transform group-hover:scale-105",
                                             idx === 0 ? "text-slate-900 dark:text-slate-100" : "text-amber-600 dark:text-amber-500"
                                         )}>
                                             {formatCurrency(bucket.amount)}
@@ -687,8 +687,8 @@ function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData, ha
                                                 {idx + 1}
                                             </div>
                                             <div>
-                                                <p className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors truncate max-w-[140px] sm:max-w-none">{client.name}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 mt-0.5 flex items-center gap-1.5 uppercase tracking-tighter">
+                                                <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors truncate max-w-[120px] xs:max-w-[180px] sm:max-w-none">{client.name}</p>
+                                                <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 mt-0.5 flex items-center gap-1.5 uppercase tracking-tighter">
                                                     <Activity className="w-3 h-3 text-emerald-500" />
                                                     {client.invoiceCount} Transacciones
                                                 </p>
@@ -750,16 +750,16 @@ function DetailedAnalysisDrawer({ isOpen, onClose, insightData, businessData, ha
                             Proyecciones a Cierre de Mes
                         </h3>
                         
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="p-4 rounded-xl border bg-white dark:bg-slate-950">
                                 <p className="text-xs text-slate-500 mb-1">Monto Proyectado</p>
-                                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                                <p className="text-lg xs:text-xl font-bold text-slate-900 dark:text-slate-100">
                                     {formatCurrency(businessData?.prediction?.projectedMonth)}
                                 </p>
                             </div>
                             <div className="p-4 rounded-xl border bg-white dark:bg-slate-950">
                                 <p className="text-xs text-slate-500 mb-1">Ritmo Diario</p>
-                                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                                <p className="text-lg xs:text-xl font-bold text-slate-900 dark:text-slate-100">
                                     {formatCurrency(businessData?.prediction?.dailyRate)}
                                 </p>
                             </div>

@@ -39,6 +39,7 @@ router.post('/templates', invoiceController.createTemplate);
 // Reports & Collections
 router.get('/statement/:rnc', invoiceController.getStatement);
 router.get('/debtors', invoiceController.getDebtors);
+router.post('/debtors/:rnc/settle', invoiceController.settleDebtorBalance);
 
 module.exports = router;
 

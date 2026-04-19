@@ -171,7 +171,7 @@ export default function ProtectedLayout({
                 </aside>
 
                 {/* Contenido principal - flex-1 min-h-0 para scroll correcto sin forzar altura */}
-                <main className="flex-1 min-w-0 min-h-0 overflow-y-auto bg-background">
+                <main className="flex-1 min-w-0 min-h-0 overflow-y-auto bg-background pb-32 md:pb-0">
                     {userFromApi?.partner?.status === "suspended" && (
                         <div className="sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-destructive/10 border-b border-destructive/20 text-destructive">
                             <Ban className="w-5 h-5 shrink-0" aria-hidden />

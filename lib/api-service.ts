@@ -919,5 +919,13 @@ export const api = {
 
     async getAccountStatement(rnc: string) {
         return secureFetch<{ customer: { rnc: string; name: string; email?: string; phone?: string }; invoices: Array<{ id: string; ncf: string; date: string; total: number; balance: number; type: string }>; totalPending: number; generatedAt: string }>(`${API_URL}/reports/statement/${rnc}`);
+    },
+
+    async settleDebtorBalance(rnc: string, paymentMethod: string = 'efectivo', invoiceIds?: string[]) {
+        return secureFetch<any>(`${API_URL}/invoices/debtors/${rnc}/settle`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paymentMethod, invoiceIds }),
+        });
     }
 };

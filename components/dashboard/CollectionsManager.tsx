@@ -18,8 +18,9 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-service";
-import { Phone, Mail, MessageCircle, FileText, Loader2, AlertCircle } from "lucide-react";
+import { Phone, Mail, MessageCircle, FileText, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 interface DebtorsListProps {
   isOpen: boolean;
@@ -30,6 +31,12 @@ export function CollectionsManager({ isOpen, onClose }: DebtorsListProps) {
   const [loading, setLoading] = useState(true);
   const [debtors, setDebtors] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [settlingRnc, setSettlingRnc] = useState<string | null>(null);
+  const [isSettling, setIsSettling] = useState(false);
+  const [selectedClientName, setSelectedClientName] = useState("");
+  const [clientInvoices, setClientInvoices] = useState<any[]>([]);
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set());
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -113,6 +120,53 @@ export function CollectionsManager({ isOpen, onClose }: DebtorsListProps) {
     }
   };
 
+  const handleOpenSettle = async (debtor: any) => {
+    setSettlingRnc(debtor._id);
+    setSelectedClientName(debtor.clientName);
+    setIsLoadingInvoices(true);
+    setClientInvoices([]);
+    setSelectedInvoiceIds(new Set());
+    
+    try {
+      const res = await api.getAccountStatement(debtor._id);
+      setClientInvoices(res.invoices);
+      setSelectedInvoiceIds(new Set(res.invoices.map((i: any) => i.id)));
+    } catch (err) {
+      toast.error("Error al cargar las facturas del cliente.");
+    } finally {
+      setIsLoadingInvoices(false);
+    }
+  };
+
+  const handleSettle = async () => {
+    if (!settlingRnc) return;
+    if (selectedInvoiceIds.size === 0) {
+      toast.error("Selecciona al menos una factura para saldar.");
+      return;
+    }
+    try {
+      setIsSettling(true);
+      await api.settleDebtorBalance(settlingRnc, 'efectivo', Array.from(selectedInvoiceIds));
+      toast.success("Balance actualizado correctamente.");
+      setSettlingRnc(null);
+      loadDebtors();
+    } catch (err: any) {
+      toast.error(err?.message || "Error al saldar balance.");
+    } finally {
+      setIsSettling(false);
+    }
+  };
+
+  const toggleInvoiceSelection = (id: string) => {
+    const next = new Set(selectedInvoiceIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedInvoiceIds(next);
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="right" className="sm:max-w-[700px] w-full overflow-y-auto">
@@ -142,16 +196,16 @@ export function CollectionsManager({ isOpen, onClose }: DebtorsListProps) {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-100 dark:border-amber-900/40">
                 <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold uppercase tracking-wider">Total por Cobrar</p>
-                <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
+                <p className="text-lg xs:text-xl sm:text-2xl font-bold text-amber-700 dark:text-amber-300 break-words">
                   {formatCurrency(debtors.reduce((s, d) => s + d.totalBalance, 0))}
                 </p>
               </div>
               <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
                 <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Clientes Deudores</p>
-                <p className="text-2xl font-bold">{debtors.length}</p>
+                <p className="text-lg sm:text-2xl font-bold">{debtors.length}</p>
               </div>
             </div>
 
@@ -211,6 +265,15 @@ export function CollectionsManager({ isOpen, onClose }: DebtorsListProps) {
                           <FileText className="h-3.5 w-3.5" />
                           Estado
                         </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          title="Saldar balance" 
+                          onClick={() => handleOpenSettle(debtor)}
+                          className="hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -219,6 +282,72 @@ export function CollectionsManager({ isOpen, onClose }: DebtorsListProps) {
             </Table>
           </div>
         )}
+
+        <Dialog open={!!settlingRnc} onOpenChange={(o) => !o && setSettlingRnc(null)}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CheckCircle2 className="text-emerald-500" /> Saldar Balance
+              </DialogTitle>
+              <DialogDescription>
+                Selecciona las facturas de <strong>{selectedClientName}</strong> que deseas marcar como pagadas.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-4">
+              {isLoadingInvoices ? (
+                <div className="flex justify-center items-center py-8">
+                  <Loader2 className="animate-spin h-6 w-6 text-primary" />
+                </div>
+              ) : clientInvoices.length === 0 ? (
+                <p className="text-sm text-center text-muted-foreground">No hay facturas pendientes.</p>
+              ) : (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                  {clientInvoices.map(inv => (
+                    <label key={inv.id} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors">
+                      <input 
+                        type="checkbox" 
+                        className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600"
+                        checked={selectedInvoiceIds.has(inv.id)}
+                        onChange={() => toggleInvoiceSelection(inv.id)}
+                      />
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-sm">{inv.ncf}</span>
+                          <span className="font-bold text-emerald-600">{formatCurrency(inv.balance)}</span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">Fecha: {new Date(inv.date).toLocaleDateString('es-DO')}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="mt-2 flex flex-col sm:flex-row gap-2 justify-between items-center">
+              <div className="text-sm font-semibold mb-2 sm:mb-0 w-full sm:w-auto">
+                Total: <span className="text-emerald-600">{formatCurrency(
+                  clientInvoices.filter(i => selectedInvoiceIds.has(i.id)).reduce((acc, i) => acc + i.balance, 0)
+                )}</span>
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button variant="outline" onClick={() => setSettlingRnc(null)} disabled={isSettling} className="flex-1 sm:flex-none">
+                  Cancelar
+                </Button>
+                <Button onClick={handleSettle} disabled={isSettling || isLoadingInvoices || clientInvoices.length === 0} className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 sm:flex-none">
+                  {isSettling ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saldando...
+                    </>
+                  ) : (
+                    "Saldar Selección"
+                  )}
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </SheetContent>
     </Sheet>
   );

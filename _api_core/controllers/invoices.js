@@ -555,6 +555,63 @@ const getDebtors = async (req, res) => {
     }
 };
 
+const settleDebtorBalance = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const clientRnc = String(req.params.rnc).replace(/[^0-9]/g, '');
+        const { paymentMethod, invoiceIds } = req.body;
+
+        const query = {
+            userId: req.userId,
+            clientRnc: clientRnc,
+            status: { $nin: ['cancelled', 'void'] },
+            balancePendiente: { $gt: 0 }
+        };
+
+        if (Array.isArray(invoiceIds) && invoiceIds.length > 0) {
+            query._id = { $in: invoiceIds };
+        }
+
+        const pendingInvoices = await Invoice.find(query).session(session);
+
+        if (!pendingInvoices || pendingInvoices.length === 0) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: 'No se encontraron facturas pendientes para este cliente.' });
+        }
+
+        const now = new Date();
+        for (const invoice of pendingInvoices) {
+            const amountToPay = invoice.balancePendiente;
+            invoice.montoPagado = (invoice.montoPagado || 0) + amountToPay;
+            invoice.balancePendiente = 0;
+            invoice.estadoPago = 'pagado';
+            invoice.fechaPago = now;
+            
+            if (!invoice.paymentDetails) invoice.paymentDetails = [];
+            invoice.paymentDetails.push({
+                method: paymentMethod || 'efectivo',
+                amount: amountToPay
+            });
+
+            await invoice.save({ session });
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.json({
+            success: true,
+            message: `Se han saldado ${pendingInvoices.length} facturas correctamente.`
+        });
+    } catch (error) {
+        if (session.inTransaction()) await session.abortTransaction();
+        session.endSession();
+        res.status(500).json({ message: safeErrorMessage(error) });
+    }
+};
+
 module.exports = {
     getInvoices,
     createInvoice,
@@ -568,6 +625,7 @@ module.exports = {
     getTemplates,
     createTemplate,
     getStatement,
-    getDebtors
+    getDebtors,
+    settleDebtorBalance
 };
 
