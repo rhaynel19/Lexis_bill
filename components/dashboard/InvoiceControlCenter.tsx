@@ -424,19 +424,55 @@ export function InvoiceControlCenter({
         toast.info("📲 Abriendo WhatsApp. Adjunta el PDF antes de enviar.", { duration: 4000 });
     };
 
-    const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+    const [quickCloneInvoice, setQuickCloneInvoice] = useState<Invoice | null>(null);
+    const [isQuickCloning, setIsQuickCloning] = useState(false);
 
-    const handleDuplicate = async (inv: Invoice) => {
-        const id = inv._id || inv.id;
-        if (!id || duplicatingId) return;
-        setDuplicatingId(id);
+    const handleDuplicate = (inv: Invoice) => {
+        setQuickCloneInvoice(inv);
+    };
+
+    const confirmQuickClone = async () => {
+        if (!quickCloneInvoice || isQuickCloning) return;
+        setIsQuickCloning(true);
         try {
-            const res = await api.duplicateInvoice(id);
-            router.push(`/nueva-factura?from=${encodeURIComponent(res.fromInvoiceId)}&fromNcf=${encodeURIComponent(res.fromInvoiceNcf || "")}`);
-        } catch (e: any) {
-            toast.error(e?.message || "No se pudo crear el borrador.");
+            const dataToClone = {
+                 clientName: quickCloneInvoice.clientName,
+                 rnc: quickCloneInvoice.rnc || quickCloneInvoice.clientRnc,
+                 originalNcfType: quickCloneInvoice.ncfType || quickCloneInvoice.type,
+                 invoiceType: quickCloneInvoice.ncfType || quickCloneInvoice.type || "32",
+                 items: quickCloneInvoice.items || [],
+                 tipoPago: quickCloneInvoice.tipoPago || "efectivo",
+            };
+
+            const res = await api.createInvoice(dataToClone);
+            toast.success("Factura emitida exitosamente", { description: "NCF asignado: " + res.ncf });
+            setQuickCloneInvoice(null);
+            onRefresh();
+            
+            // Auto download PDF
+            const data: InvoiceData = {
+                id: res.invoice._id || res.invoice.id,
+                sequenceNumber: res.ncf || res.invoice.ncf || res.invoice.ncfSequence || res.invoice._id || res.invoice.id,
+                type: res.invoice.ncfType || res.invoice.type || "32",
+                clientName: res.invoice.clientName,
+                rnc: res.invoice.rnc || res.invoice.clientRnc || "",
+                date: res.invoice.date,
+                items: res.invoice.items || [],
+                subtotal: res.invoice.subtotal ?? (res.invoice.total - (res.invoice.itbis || 0)),
+                itbis: res.invoice.itbis || 0,
+                isrRetention: res.invoice.isrRetention || 0,
+                itbisRetention: res.invoice.itbisRetention || 0,
+                total: res.invoice.total,
+                paymentMethod: res.invoice.tipoPago,
+                paymentDetails: res.invoice.paymentDetails,
+                balancePendiente: res.invoice.balancePendiente,
+                modifiedNcf: res.invoice.modifiedNcf,
+            };
+            await downloadInvoicePDF(data);
+        } catch (error: any) {
+             toast.error("Error al emitir factura rápida: " + error.message);
         } finally {
-            setDuplicatingId(null);
+            setIsQuickCloning(false);
         }
     };
 
@@ -916,7 +952,7 @@ export function InvoiceControlCenter({
                                                                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50" onClick={() => handleAnnulClick(inv)} title="Anular por Error (Reporte 608)">
                                                                              <Ban className="w-4 h-4" />
                                                                          </Button>
-                                                                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleDuplicate(inv)} title="Facturar de nuevo" disabled={!!duplicatingId}>
+                                                                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleDuplicate(inv)} title="Facturar de nuevo" disabled={isQuickCloning}>
                                                                              <Repeat className="w-4 h-4" />
                                                                          </Button>
                                                                      </>
@@ -1002,11 +1038,11 @@ export function InvoiceControlCenter({
                                                             
                                                             <DropdownMenuItem 
                                                                 onClick={(e) => { 
-                                                                    if (!!duplicatingId) return;
+                                                                    if (isQuickCloning) return;
                                                                     e.stopPropagation(); 
                                                                     handleDuplicate(inv); 
                                                                 }} 
-                                                                className={cn(!!duplicatingId && "opacity-50 pointer-events-none")}
+                                                                className={cn(isQuickCloning && "opacity-50 pointer-events-none")}
                                                             >
                                                                 <Repeat className="w-4 h-4 mr-2 text-amber-500" /> Facturar de nuevo
                                                             </DropdownMenuItem>
@@ -1180,6 +1216,49 @@ export function InvoiceControlCenter({
                         <Button variant="outline" onClick={() => setShowAnnulDialog(false)}>Cancelar</Button>
                         <Button variant="destructive" onClick={submitAnnul} disabled={isAnnulling}>
                             {isAnnulling ? "Anulando..." : "Confirmar Anulación"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={!!quickCloneInvoice} onOpenChange={(open) => !open && setQuickCloneInvoice(null)}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-indigo-600">
+                            <Repeat className="w-5 h-5" /> Emisión Rápida (1-Click)
+                        </DialogTitle>
+                        <DialogDescription>
+                            ¿Estás seguro de que deseas emitir una nueva factura <strong>idéntica</strong> para este cliente? Al confirmar, se consumirá un NCF nuevo inmediatamente.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {quickCloneInvoice && (
+                        <div className="py-4 space-y-3 bg-indigo-50/50 dark:bg-indigo-950/20 px-4 rounded-lg border border-indigo-100 dark:border-indigo-900/50">
+                            <div>
+                                <span className="block text-xs font-semibold text-slate-500 uppercase">Cliente</span>
+                                <span className="text-sm font-medium text-slate-800">{quickCloneInvoice.clientName}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <div>
+                                     <span className="block text-xs font-semibold text-slate-500 uppercase">RNC/Cédula</span>
+                                     <span className="text-sm text-slate-600">{quickCloneInvoice.rnc || quickCloneInvoice.clientRnc || "N/A"}</span>
+                                </div>
+                                <div>
+                                     <span className="block text-xs font-semibold text-slate-500 uppercase">Monto Copia</span>
+                                     <span className="text-sm font-bold text-slate-800">RD${(quickCloneInvoice.total || 0).toLocaleString('es-DO')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setQuickCloneInvoice(null)}>Cancelar</Button>
+                        <Button 
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition-all"
+                            onClick={confirmQuickClone} 
+                            disabled={isQuickCloning}
+                        >
+                            {isQuickCloning ? "Emitiendo..." : "Emitir Copia Ahora"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
