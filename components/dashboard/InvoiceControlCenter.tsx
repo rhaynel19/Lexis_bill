@@ -954,9 +954,11 @@ export function InvoiceControlCenter({
                                                                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50" onClick={() => handleAnnulClick(inv)} title="Anular por Error (Reporte 608)">
                                                                              <Ban className="w-4 h-4" />
                                                                          </Button>
-                                                                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleDuplicate(inv)} title="Facturar de nuevo" disabled={isQuickCloning}>
-                                                                             <Repeat className="w-4 h-4" />
-                                                                         </Button>
+                                                                         {inv.ncfType !== '04' && inv.ncfType !== '34' && (
+                                                                             <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleDuplicate(inv)} title="Facturar de nuevo" disabled={isQuickCloning}>
+                                                                                 <Repeat className="w-4 h-4" />
+                                                                             </Button>
+                                                                         )}
                                                                      </>
                                                                  )}
                                                             </div>
@@ -1038,16 +1040,18 @@ export function InvoiceControlCenter({
                                                                 </DropdownMenuItem>
                                                             )}
                                                             
-                                                            <DropdownMenuItem 
-                                                                onClick={(e) => { 
-                                                                    if (isQuickCloning) return;
-                                                                    e.stopPropagation(); 
-                                                                    handleDuplicate(inv); 
-                                                                }} 
-                                                                className={cn(isQuickCloning && "opacity-50 pointer-events-none")}
-                                                            >
-                                                                <Repeat className="w-4 h-4 mr-2 text-amber-500" /> Facturar de nuevo
-                                                            </DropdownMenuItem>
+                                                            {inv.ncfType !== '04' && inv.ncfType !== '34' && (
+                                                                <DropdownMenuItem 
+                                                                    onClick={(e) => { 
+                                                                        if (isQuickCloning) return;
+                                                                        e.stopPropagation(); 
+                                                                        handleDuplicate(inv); 
+                                                                    }} 
+                                                                    className={cn(isQuickCloning && "opacity-50 pointer-events-none")}
+                                                                >
+                                                                    <Repeat className="w-4 h-4 mr-2 text-amber-500" /> Facturar de nuevo
+                                                                </DropdownMenuItem>
+                                                            )}
                                                             
                                                             {inv.status !== "cancelled" && !inv.annulledBy && (
                                                                 <>
