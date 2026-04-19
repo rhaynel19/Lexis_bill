@@ -110,9 +110,10 @@ export default function Quotes() {
         setLoadError(null);
         try {
             const data = await api.getQuotes();
-            const normalized = (data || []).map((q: { _id?: { toString: () => string }; id?: string;[key: string]: unknown }) => ({
+            const normalized = (data || []).map((q: { _id?: { toString: () => string }; id?: string; rnc?: string; clientRnc?: string; [key: string]: unknown }) => ({
                 ...q,
-                id: q.id || (q._id as { toString?: () => string })?.toString?.() || String(q._id)
+                id: q.id || (q._id as { toString?: () => string })?.toString?.() || String(q._id),
+                rnc: q.rnc || q.clientRnc || ""
             })) as Quote[];
             setQuotes(normalized);
         } catch {
