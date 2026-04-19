@@ -275,19 +275,31 @@ export default function NewInvoice() {
             const inv = JSON.parse(invoiceToClone);
             setClientName(inv.clientName);
             setRnc(inv.rnc);
-            // Default to 31/32 if not valid, or try to match
+            // Clone invoice type properly
             const typeMap: any = { "e-CF 31 - Crédito Fiscal": "31", "e-CF 32 - Consumo": "32" };
-            setInvoiceType(typeMap[inv.type] || "32");
+            // If inv.type is already a code (01, 02, etc), use it. Otherwise map it.
+            let resolvedType = inv.type || "02";
+            if (typeMap[inv.type]) resolvedType = typeMap[inv.type];
+            else if (inv.ncfType) resolvedType = inv.ncfType;
+            
+            setInvoiceType(resolvedType);
 
             // Clone items with new IDs
             if (inv.items) {
-                setItems(inv.items.map((i: any) => ({
-                    id: Date.now().toString() + Math.random().toString().slice(2),
+                setItems(inv.items.map((i: any, index: number) => ({
+                    id: Date.now().toString() + index + Math.random().toString().slice(2),
                     description: i.description,
                     quantity: i.quantity,
                     price: i.price,
-                    isExempt: i.isExempt
+                    taxRate: i.taxRate ?? ((i.taxCategory === 'exempt' || i.isExempt) ? 0 : 0.18),
+                    isExempt: i.isExempt || (i.taxCategory === 'exempt'),
+                    taxCategory: i.taxCategory || (i.isExempt ? 'exempt' : 'taxable')
                 })));
+            }
+            
+            if (inv.tipoPago) setTipoPago(inv.tipoPago);
+            if (inv.isrRetention && parseInt(inv.isrRetention) > 0) {
+                setApplyRetentions(true);
             }
             localStorage.removeItem("invoiceToClone");
         } else if (!searchParams.get("rnc") && !searchParams.get("name")) {
