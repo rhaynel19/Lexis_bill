@@ -48,6 +48,12 @@ export default function CustomersPage() {
     const [editClientForm, setEditClientForm] = useState({ name: "", rnc: "", phone: "", email: "", address: "" });
     const [isSavingEdit, setIsSavingEdit] = useState(false);
 
+    // Historial Estado de Cuenta
+    const [historyCustomer, setHistoryCustomer] = useState<any>(null);
+    const [historyStartDate, setHistoryStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
+    const [historyEndDate, setHistoryEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [isDownloadingHistory, setIsDownloadingHistory] = useState(false);
+
     useEffect(() => {
         loadCustomers();
     }, []);
@@ -198,6 +204,51 @@ export default function CustomersPage() {
             toast.error(err?.message || "No se pudo actualizar el cliente.");
         } finally {
             setIsSavingEdit(false);
+        }
+    };
+
+    const handleDownloadHistory = async () => {
+        if (!historyCustomer) return;
+        setIsDownloadingHistory(true);
+        try {
+            const res = await api.getClientInvoiceHistory(historyCustomer.rnc, historyStartDate, historyEndDate);
+            if (!res.data || res.data.length === 0) {
+                toast.warning("No se encontraron facturas en este rango de fechas.");
+                setIsDownloadingHistory(false);
+                return;
+            }
+
+            const header = ["Fecha", "NCF", "Tipo", "Estatus", "Total Billed", "Pagado", "Balance"];
+            const rows = res.data.map((inv: any) => {
+                const date = new Date(inv.date).toLocaleDateString('es-DO');
+                return [
+                    date,
+                    inv.ncf || inv.ncfSequence,
+                    inv.ncfType,
+                    inv.estadoPago,
+                    inv.total,
+                    inv.montoPagado || 0,
+                    inv.balancePendiente || 0
+                ].join(",");
+            });
+            
+            const csvContent = [header.join(","), ...rows].join("\n");
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Historial_Facturas_${historyCustomer.name.replace(/\s+/g, '_')}_${historyStartDate}_a_${historyEndDate}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            toast.success("Historial descargado correctamente.");
+            setHistoryCustomer(null);
+        } catch (error) {
+            toast.error("Error al generar el historial.");
+        } finally {
+            setIsDownloadingHistory(false);
         }
     };
 
@@ -387,6 +438,20 @@ export default function CustomersPage() {
                                                         </Button>
                                                     </TooltipTrigger>
                                                     <TooltipContent>Editar cliente</TooltipContent>
+                                                </Tooltip>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-9 w-9 p-0 hover:bg-indigo-50 hover:text-indigo-600 rounded-full"
+                                                            onClick={(e) => { e.stopPropagation(); setHistoryCustomer(customer); }}
+                                                            aria-label="Generar Reporte Historial"
+                                                        >
+                                                            <FileDown className="h-5 w-5" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>Reporte de Historial</TooltipContent>
                                                 </Tooltip>
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
@@ -621,6 +686,47 @@ export default function CustomersPage() {
                     </form>
                 </DialogContent>
             </Dialog>
+
+            <Dialog open={!!historyCustomer} onOpenChange={(open) => !open && setHistoryCustomer(null)}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FileDown className="w-5 h-5 text-indigo-500" />
+                            Reporte de Facturación
+                        </DialogTitle>
+                        <DialogDescription>
+                            Descarga una relación de todas las facturas emitidas a <strong>{historyCustomer?.name}</strong>. El archivo se generará en formato Excel (.csv).
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex gap-4 py-4">
+                        <div className="flex-1 space-y-1">
+                            <label className="text-sm font-medium">Desde</label>
+                            <Input 
+                                type="date" 
+                                value={historyStartDate}
+                                onChange={(e) => setHistoryStartDate(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                            <label className="text-sm font-medium">Hasta</label>
+                            <Input 
+                                type="date" 
+                                value={historyEndDate}
+                                onChange={(e) => setHistoryEndDate(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setHistoryCustomer(null)} disabled={isDownloadingHistory}>
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleDownloadHistory} disabled={isDownloadingHistory} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
+                            {isDownloadingHistory ? "Generando..." : "Descargar CSV"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
         </div>
         </TooltipProvider>
     );

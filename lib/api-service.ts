@@ -131,12 +131,27 @@ export const api = {
         });
     },
 
-    async getInvoices(page = 1, limit = 50) {
-        const res = await secureFetch<{ data: any[]; total: number; page: number; limit: number; pages: number }>(
-            `${API_URL}/invoices?page=${page}&limit=${limit}`,
-            { cacheKey: `invoices_list_${page}_${limit}` }
+    async getInvoices(page = 1, limit = 50, filters = {}) {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString(),
+            ...filters,
+        });
+        const res = await secureFetch<{ data: any[]; total: number; pages: number }>(
+            `${API_URL}/invoices?${params}`,
+            { cacheKey: `invoices_list_${page}_${limit}_${JSON.stringify(filters)}` }
         );
         return res;
+    },
+
+    async getClientInvoiceHistory(rnc: string, startDate: string, endDate: string) {
+        const params = new URLSearchParams({
+            clientRnc: rnc,
+            startDate,
+            endDate,
+            limit: 'all'
+        });
+        return secureFetch<{ data: any[]; total: number }>(`${API_URL}/invoices?${params}`);
     },
 
     /** Stats del dashboard por agregación (sin cargar todas las facturas) */

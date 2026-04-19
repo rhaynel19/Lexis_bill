@@ -13,14 +13,31 @@ const { getUserSubscription } = require('../utils/helpers');
 
 
 const getInvoices = async (req, res) => {
-
     try {
+        const query = { userId: req.userId };
+        
+        if (req.query.clientRnc) {
+            query.clientRnc = String(req.query.clientRnc).replace(/[^0-9]/g, '');
+        }
+
+        if (req.query.startDate && req.query.endDate) {
+            query.date = { 
+                $gte: new Date(req.query.startDate), 
+                $lte: new Date(req.query.endDate) 
+            };
+        }
+
+        if (req.query.limit === 'all') {
+            const invoices = await Invoice.find(query).sort({ date: -1 }).lean();
+            return res.json({ data: invoices, total: invoices.length, page: 1, limit: 'all', pages: 1 });
+        }
+
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
         const limit = Math.min(500, Math.max(10, parseInt(req.query.limit, 10) || 50));
         const skip = (page - 1) * limit;
         const [invoices, total] = await Promise.all([
-            Invoice.find({ userId: req.userId }).sort({ date: -1 }).skip(skip).limit(limit).lean(),
-            Invoice.countDocuments({ userId: req.userId })
+            Invoice.find(query).sort({ date: -1 }).skip(skip).limit(limit).lean(),
+            Invoice.countDocuments(query)
         ]);
         res.json({ data: invoices, total, page, limit, pages: Math.ceil(total / limit) });
     } catch (error) {
