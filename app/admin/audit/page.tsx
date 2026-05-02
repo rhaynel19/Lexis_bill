@@ -75,27 +75,47 @@ export default function AdminAuditPage() {
     }, [list, actionFilter, targetTypeFilter]);
 
     const handleExportCsv = () => {
-        const headers = ["Fecha", "Admin", "Acción", "Tipo objetivo", "ID objetivo", "Detalles"];
+        const headers = ["Fecha", "Admin", "Acción", "Tipo objetivo", "Detalles"];
+        
         const rows = displayList.map((log) => {
-            const details = log.metadata ? (log.metadata.email ? `email: ${log.metadata.email}` : log.metadata.referralCode ? `ref: ${log.metadata.referralCode}` : JSON.stringify(log.metadata)) : "";
+            // Limpiar detalles para que sean legibles
+            let details = "";
+            if (log.metadata) {
+                const parts = [];
+                if (log.metadata.email) parts.push(`Email: ${log.metadata.email}`);
+                if (log.metadata.name) parts.push(`Nombre: ${log.metadata.name}`);
+                if (log.metadata.plan) parts.push(`Plan: ${log.metadata.plan.toUpperCase()}`);
+                if (log.metadata.referralCode) parts.push(`Código: ${log.metadata.referralCode}`);
+                if (log.metadata.paymentsRepaired) parts.push(`Pagos reparados: ${log.metadata.paymentsRepaired}`);
+                if (log.metadata.subscriptionsRepaired) parts.push(`Suscripciones: ${log.metadata.subscriptionsRepaired}`);
+                if (log.metadata.reason) parts.push(`Motivo: ${log.metadata.reason}`);
+                
+                // Si no hay campos conocidos, usar JSON pero más limpio
+                if (parts.length === 0) {
+                    details = JSON.stringify(log.metadata).replace(/["{}]/g, '');
+                } else {
+                    details = parts.join(" | ");
+                }
+            }
+
             return [
                 formatDate(log.createdAt),
-                log.adminEmail || log.adminId || "",
+                log.adminEmail || log.adminId || "Sistema",
                 ACTION_LABELS[log.action] ?? log.action,
-                log.targetType || "",
-                log.targetId || "",
+                log.targetType?.toUpperCase() || "N/A",
                 details
             ];
         });
+
         const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
         const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `audit-log-trinalyze-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = `auditoria_trinalyze_${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
         URL.revokeObjectURL(url);
-        toast.success("CSV descargado");
+        toast.success("CSV de auditoría descargado");
     };
 
     const formatDetails = (log: any) => {
