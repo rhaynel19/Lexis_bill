@@ -107,22 +107,26 @@ export default function ReportsPage() {
         return <ReportsSkeleton />;
     }
 
-    const doDownload607 = async () => {
-        const blob = await api.downloadReport607(selectedMonth, selectedYear);
+    const doDownload607 = async (format: "txt" | "csv" = "txt") => {
+        const blob = format === "txt" 
+            ? await api.downloadReport607(selectedMonth, selectedYear)
+            : await api.downloadReport607CSV(selectedMonth, selectedYear);
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `0607_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.txt`;
+        a.download = `0607_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.${format}`;
         a.click();
         URL.revokeObjectURL(url);
     };
 
-    const doDownload606 = async () => {
-        const blob = await api.downloadReport606(selectedMonth, selectedYear);
+    const doDownload606 = async (format: "txt" | "csv" = "txt") => {
+        const blob = format === "txt"
+            ? await api.downloadReport606(selectedMonth, selectedYear)
+            : await api.downloadReport606CSV(selectedMonth, selectedYear);
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `606_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.txt`;
+        a.download = `606_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.${format}`;
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -154,8 +158,11 @@ export default function ReportsPage() {
                 return;
             }
 
-            if (reportToDownload === "607") await doDownload607();
-            else if (reportToDownload === "606") await doDownload606();
+            if (reportToDownload === "607") {
+                await doDownload607("txt");
+                // Ofrecer CSV opcionalmente o descargar ambos? Por ahora solo el solicitado.
+            }
+            else if (reportToDownload === "606") await doDownload606("txt");
             else await doDownload608();
             toast.success(`Reporte ${reportToDownload} descargado correctamente`);
             setDisclaimerOpen(false);
@@ -404,22 +411,42 @@ export default function ReportsPage() {
                             <CardContent className="space-y-3 pt-0">
                                 {active && (
                                     <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                                        <Button
-                                            variant="secondary"
-                                            className="w-full justify-between font-bold h-10 group bg-accent/10 hover:bg-accent/20 text-accent border-accent/20"
-                                            onClick={(e) => { e.stopPropagation(); openDisclaimer("607"); }}
-                                        >
-                                            607 - Ventas <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            className="w-full justify-between font-bold h-10 border-border/20 text-muted-foreground hover:text-foreground hover:bg-muted"
-                                            onClick={(e) => { e.stopPropagation(); openDisclaimer("606"); }}
-                                        >
-                                            606 - Compras <Download className="w-4 h-4" />
-                                        </Button>
-                                        <Link href="/gastos" className="text-xs text-accent hover:underline px-2 py-1 block">
-                                            ¿Faltan gastos? Ir a Gastos 606
+                                        <div className="flex gap-1">
+                                            <Button
+                                                variant="secondary"
+                                                className="flex-1 justify-between font-bold h-10 group bg-accent/10 hover:bg-accent/20 text-accent border-accent/20"
+                                                onClick={(e) => { e.stopPropagation(); openDisclaimer("607"); }}
+                                            >
+                                                607 TXT <Download className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                title="Descargar en formato Excel (CSV)"
+                                                className="px-2 h-10 border-accent/20 text-accent hover:bg-accent/5"
+                                                onClick={(e) => { e.stopPropagation(); doDownload607("csv"); }}
+                                            >
+                                                CSV
+                                            </Button>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <Button
+                                                variant="outline"
+                                                className="flex-1 justify-between font-bold h-10 border-border/20 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                                onClick={(e) => { e.stopPropagation(); openDisclaimer("606"); }}
+                                            >
+                                                606 TXT <Download className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                title="Descargar en formato Excel (CSV)"
+                                                className="px-2 h-10 border-border/20 text-muted-foreground hover:bg-muted"
+                                                onClick={(e) => { e.stopPropagation(); doDownload606("csv"); }}
+                                            >
+                                                CSV
+                                            </Button>
+                                        </div>
+                                        <Link href="/gastos" className="text-[10px] text-accent hover:underline px-2 block font-medium">
+                                            ¿Faltan gastos? Ir a Gastos 606 →
                                         </Link>
                                         <Button
                                             variant="ghost"
