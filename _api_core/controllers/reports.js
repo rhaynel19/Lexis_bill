@@ -112,11 +112,20 @@ const get606Report = async (req, res) => {
         const { content, rncEmisor } = await generate606Content(req.userId, period);
         
         if (format === 'csv') {
-            // Transform pipe to semicolon for Excel
-            const csvContent = content.replace(/\|/g, ';');
+            const headers = [
+                'RNC Suplidor', 'Tipo ID', 'Tipo Bienes/Servicios', 'NCF', 'NCF Modificado',
+                'Fecha Comprobante', 'Fecha Pago', 'Monto Servicios', 'Monto Bienes',
+                'Total Facturado', 'ITBIS Facturado', 'ITBIS Retenido', 'ITBIS Proporcionalidad',
+                'ITBIS Costo', 'ITBIS por Adelantar', 'ITBIS Percibido', 'Tipo Retención ISR',
+                'Monto Retención ISR', 'ISR Percibido', 'ISC', 'Otros Impuestos', 'Propina Legal'
+            ];
+            // Remove DGII header line and transform rows
+            const rows = content.split('\n').slice(1).filter(r => r.trim());
+            const csvContent = [headers.join(','), ...rows.map(r => r.replace(/\|/g, ','))].join('\n');
+            
             res.setHeader('Content-Type', 'text/csv; charset=utf-8');
             res.setHeader('Content-Disposition', `attachment; filename=606_${rncEmisor}_${period}.csv`);
-            return res.send('\uFEFF' + csvContent); // BOM for Excel UTF-8
+            return res.send('\uFEFF' + csvContent);
         }
 
         res.setHeader('Content-Type', 'text/plain; charset=iso-8859-1');
@@ -137,10 +146,19 @@ const get607Report = async (req, res) => {
         const { content, rncEmisor } = await generate607Content(req.userId, period);
 
         if (format === 'csv') {
-            const csvContent = content.replace(/\|/g, ';');
+            const headers = [
+                'RNC Cliente', 'Tipo ID', 'NCF', 'NCF Modificado', 'Tipo Ingreso',
+                'Fecha Comprobante', 'Fecha Retención', 'ITBIS Facturado', 'ITBIS Retenido',
+                'ITBIS Percibido', 'Retención ISR', 'ISR Percibido', 'ISC', 'Otros Impuestos',
+                'Propina Legal', 'Efectivo', 'Transferencia', 'Tarjeta', 'Crédito',
+                'Bonos', 'Permuta', 'Otras Formas', 'Otras Ventas'
+            ];
+            const rows = content.split('\n').slice(1).filter(r => r.trim());
+            const csvContent = [headers.join(','), ...rows.map(r => r.replace(/\|/g, ','))].join('\n');
+
             res.setHeader('Content-Type', 'text/csv; charset=utf-8');
             res.setHeader('Content-Disposition', `attachment; filename=607_${rncEmisor}_${period}.csv`);
-            return res.send('\uFEFF' + csvContent); // BOM for Excel UTF-8
+            return res.send('\uFEFF' + csvContent);
         }
 
         res.setHeader('Content-Type', 'text/plain; charset=iso-8859-1');
@@ -183,7 +201,10 @@ const get608Report = async (req, res) => {
         });
 
         if (format === 'csv') {
-            const csvContent = report.replace(/\|/g, ';');
+            const headers = ['RNC Cliente', 'NCF', 'Fecha', 'Tipo Anulación'];
+            const rows = report.split('\n').slice(1).filter(r => r.trim());
+            const csvContent = [headers.join(','), ...rows.map(r => r.replace(/\|/g, ','))].join('\n');
+            
             res.setHeader('Content-Type', 'text/csv; charset=utf-8');
             res.setHeader('Content-Disposition', `attachment; filename=608_${rncEmisor}_${period}.csv`);
             return res.send('\uFEFF' + csvContent);
