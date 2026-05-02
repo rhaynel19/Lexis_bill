@@ -125,13 +125,13 @@ export default function AdminCEODashboard() {
 
     // Fallback mapping if API returns a flat structure or different object
     const displayUsers = users || {
-        total: stats.totalUsers ?? stats.activeUsers ?? ((metrics?.activeUsers || 0) + (chartData?.usersByPlan?.free || 0)) || 0,
+        total: (stats.totalUsers ?? stats.activeUsers ?? ((metrics?.activeUsers || 0) + (chartData?.usersByPlan?.free || 0))) || 0,
         newThisMonth: stats.newThisMonth ?? stats.newUsers ?? 0
     };
     const displayInvoicing = invoicing || {
-        totalInvoices: stats.totalInvoices ?? (chartData?.monthly?.reduce((acc: number, curr: any) => acc + (curr.invoices || 0), 0) || 0),
+        totalInvoices: (stats.totalInvoices ?? (chartData?.monthly?.reduce((acc: number, curr: any) => acc + (curr.invoices || 0), 0) || 0)) || 0,
         monthlyTotal: stats.monthlyTotal ?? stats.monthlyRevenue ?? metrics?.revenueTotal ?? 0,
-        monthlyInvoices: stats.monthlyInvoices ?? (chartData?.monthly?.[chartData.monthly.length - 1]?.invoices || 0),
+        monthlyInvoices: (stats.monthlyInvoices ?? (chartData?.monthly?.[chartData.monthly.length - 1]?.invoices || 0)) || 0,
         totalItbis: stats.totalItbis ?? 0
     };
     const displayFiscal = fiscal || {
