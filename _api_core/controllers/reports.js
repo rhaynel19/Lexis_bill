@@ -155,6 +155,7 @@ const get607Report = async (req, res) => {
 const get608Report = async (req, res) => {
     try {
         const period = req.query.period;
+        const format = req.query.format || 'txt';
         if (!period || !/^\d{6}$/.test(period)) return res.status(400).json({ message: 'Periodo YYYYMM requerido' });
 
         const userId = req.userId;
@@ -180,6 +181,13 @@ const get608Report = async (req, res) => {
             const tipoAnulacion = inv.cancellationReason || '01'; // 01: Error de digitación (default)
             report += `${rncCliente}|${ncf}|${fecha}|${tipoAnulacion}\n`;
         });
+
+        if (format === 'csv') {
+            const csvContent = report.replace(/\|/g, ';');
+            res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+            res.setHeader('Content-Disposition', `attachment; filename=608_${rncEmisor}_${period}.csv`);
+            return res.send('\uFEFF' + csvContent);
+        }
 
         res.setHeader('Content-Type', 'text/plain; charset=iso-8859-1');
         res.setHeader('Content-Disposition', `attachment; filename=608_${rncEmisor}_${period}.txt`);

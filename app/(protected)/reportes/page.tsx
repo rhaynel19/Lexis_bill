@@ -131,12 +131,14 @@ export default function ReportsPage() {
         URL.revokeObjectURL(url);
     };
 
-    const doDownload608 = async () => {
-        const blob = await api.downloadReport608(selectedMonth, selectedYear);
+    const doDownload608 = async (format: "txt" | "csv" = "txt") => {
+        const blob = format === "txt"
+            ? await api.downloadReport608(selectedMonth, selectedYear)
+            : await api.downloadReport608CSV(selectedMonth, selectedYear);
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `0608_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.txt`;
+        a.download = `0608_${selectedYear}${selectedMonth.toString().padStart(2, "0")}.${format}`;
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -163,7 +165,7 @@ export default function ReportsPage() {
                 // Ofrecer CSV opcionalmente o descargar ambos? Por ahora solo el solicitado.
             }
             else if (reportToDownload === "606") await doDownload606("txt");
-            else await doDownload608();
+            else await doDownload608("txt");
             toast.success(`Reporte ${reportToDownload} descargado correctamente`);
             setDisclaimerOpen(false);
             setReportToDownload(null);
@@ -448,13 +450,23 @@ export default function ReportsPage() {
                                         <Link href="/gastos" className="text-[10px] text-accent hover:underline px-2 block font-medium">
                                             ¿Faltan gastos? Ir a Gastos 606 →
                                         </Link>
-                                        <Button
-                                            variant="ghost"
-                                            className="w-full justify-between font-bold h-10 text-rose-600 hover:bg-rose-50 hover:text-rose-700 border-0"
-                                            onClick={(e) => { e.stopPropagation(); openDisclaimer("608"); }}
-                                        >
-                                            608 - Anulaciones <Ban className="w-4 h-4" />
-                                        </Button>
+                                        <div className="flex gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                className="flex-1 justify-between font-bold h-10 text-rose-600 hover:bg-rose-50 hover:text-rose-700 border-0"
+                                                onClick={(e) => { e.stopPropagation(); openDisclaimer("608"); }}
+                                            >
+                                                608 TXT <Ban className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                title="Descargar en formato Excel (CSV)"
+                                                className="px-2 h-10 border-rose-200 text-rose-600 hover:bg-rose-50"
+                                                onClick={(e) => { e.stopPropagation(); doDownload608("csv"); }}
+                                            >
+                                                CSV
+                                            </Button>
+                                        </div>
                                         <Button
                                             variant="ghost"
                                             className="w-full justify-between font-bold h-10 text-muted-foreground hover:bg-muted/80 hover:text-accent border-0"

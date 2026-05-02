@@ -401,6 +401,19 @@ export const api = {
         return res.blob();
     },
 
+    async downloadReport608CSV(month: number, year: number): Promise<Blob> {
+        const period = `${year}${String(month).padStart(2, "0")}`;
+        const res = await fetch(`${API_URL}/reports/608?period=${period}&format=csv`, {
+            credentials: "include",
+            headers: { "Accept": "text/csv" }
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err?.message || `Error ${res.status}: No se pudo descargar el reporte 608 en CSV.`);
+        }
+        return res.blob();
+    },
+
     /** Envía recordatorio 606/607 por email (máx. 1 por periodo). Llamar al entrar a Reportes. */
     async sendReportReminder(): Promise<{ sent: boolean; period?: string; reason?: string }> {
         const res = await fetch(`${API_URL}/reports/reminder`, { method: "POST", credentials: "include" });
