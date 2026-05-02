@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Fingerprint, Lock, Mail, MessageCircle, AlertCircle, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
+import { CheckCircle2, Fingerprint, Lock, Mail, MessageCircle, AlertCircle, ArrowRight, ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { TrinalyzeWord } from "@/components/TrinalyzeWord";
 import { useAuth } from "@/components/providers/AuthContext";
@@ -295,6 +295,13 @@ function LoginForm() {
                                 <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
                                 Conexión Encriptada • Grado Bancario
                             </p>
+                        </div>
+
+                        <div className="pt-4 mt-2 text-center border-t border-white/5">
+                            <Link href="/" className="text-xs text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-1">
+                                <ArrowLeft className="w-3.5 h-3.5" />
+                                Volver al inicio
+                            </Link>
                         </div>
                     </form>
                 </CardContent>
