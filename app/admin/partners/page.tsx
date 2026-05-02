@@ -1,6 +1,14 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { motion } from "framer-motion";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, DollarSign, Loader2, CheckCircle, Ban, Handshake, TrendingUp, Link2, Copy, Wallet, Download, ShieldCheck, MessageCircle } from "lucide-react";
@@ -28,6 +36,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { openWhatsApp } from "@/lib/whatsapp-utils";
+import { MoreVertical } from "lucide-react";
+
+const SimpleAvatar = ({ name }: { name: string }) => {
+    return (
+        <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-xs text-slate-600 dark:text-slate-300 shadow-sm shrink-0">
+            {name?.substring(0, 2).toUpperCase() || "??"}
+        </div>
+    );
+};
 
 export default function AdminPartnersPage() {
     const [partners, setPartners] = useState<any[]>([]);
@@ -356,7 +373,11 @@ export default function AdminPartnersPage() {
     }
 
     return (
-        <div className="space-y-8">
+        <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-8"
+        >
             <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2">
                     <Handshake className="w-7 h-7 text-amber-500" />
@@ -369,64 +390,72 @@ export default function AdminPartnersPage() {
             <div className="space-y-2">
                 <h2 className="text-sm font-semibold text-muted-foreground">Panel de crecimiento</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <Card>
-                    <CardHeader className="pb-2">
+                <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative border-amber-200/50 dark:border-amber-900/30">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                    <CardHeader className="pb-2 relative z-10">
                         <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                            <Users className="w-4 h-4" /> Partners activos
+                            <Users className="w-4 h-4 text-amber-600" /> Partners activos
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="relative z-10">
                         <span className="text-2xl font-bold">{stats?.totalPartners ?? 0}</span>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground">Pendientes de aprobar</CardTitle>
+                <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                    <CardHeader className="pb-2 relative z-10">
+                        <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 text-amber-500" /> Pendientes de aprobar
+                        </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="relative z-10">
                         <span className="text-2xl font-bold text-amber-600">{stats?.pendingApprovals ?? 0}</span>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader className="pb-2">
+                <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                    <CardHeader className="pb-2 relative z-10">
                         <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4" /> Referidos activos
+                            <TrendingUp className="w-4 h-4 text-emerald-600" /> Referidos activos
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="relative z-10">
                         <span className="text-2xl font-bold">{stats?.activeReferrals ?? 0}</span>
                         <p className="text-xs text-muted-foreground mt-1">de {stats?.totalReferrals ?? 0} total</p>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader className="pb-2">
+                <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                    <CardHeader className="pb-2 relative z-10">
                         <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                            <Wallet className="w-4 h-4" /> Revenue canal
+                            <Wallet className="w-4 h-4 text-blue-600" /> Revenue canal
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="relative z-10">
                         <span className="text-2xl font-bold">{formatCurrency((stats?.activeReferrals ?? 0) * 950)}</span>
                         <p className="text-xs text-muted-foreground mt-1">Cartera activa × RD$950</p>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader className="pb-2">
+                <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative border-amber-200/50 dark:border-amber-900/30">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                    <CardHeader className="pb-2 relative z-10">
                         <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                            <DollarSign className="w-4 h-4" /> Comisiones este mes
+                            <DollarSign className="w-4 h-4 text-amber-600" /> Comisiones este mes
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="relative z-10">
                         <span className="text-2xl font-bold text-amber-600">{formatCurrency(stats?.commissionsThisMonth ?? 0)}</span>
                         <p className="text-xs text-muted-foreground mt-1">Generadas en el mes actual</p>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader className="pb-2">
+                <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                    <CardHeader className="pb-2 relative z-10">
                         <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                            <Wallet className="w-4 h-4" /> Comisiones pendientes
+                            <Wallet className="w-4 h-4 text-indigo-500" /> Comisiones pendientes
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="relative z-10">
                         <span className="text-2xl font-bold">{formatCurrency(stats?.commissionsPending ?? 0)}</span>
                         <p className="text-xs text-muted-foreground mt-1">Pagadas: {formatCurrency(stats?.commissionsPaid ?? 0)}</p>
                     </CardContent>
@@ -450,7 +479,8 @@ export default function AdminPartnersPage() {
 
             {/* Top Partners (ranking) */}
             {partners.filter(p => p.status === "active" && (p.activeClients ?? 0) > 0).length > 0 && (
-                <Card className="border-amber-200/50 dark:border-amber-900/30 bg-gradient-to-br from-amber-50/20 to-transparent dark:from-amber-950/10">
+                <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative border-amber-200/50 dark:border-amber-900/30 bg-gradient-to-br from-amber-50/20 to-transparent dark:from-amber-950/10">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl -mr-20 -mt-20" />
                     <CardHeader>
                         <CardTitle className="text-lg font-bold flex items-center gap-2">
                             <TrendingUp className="w-5 h-5 text-amber-600" />
@@ -484,7 +514,8 @@ export default function AdminPartnersPage() {
             )}
 
             {/* Resumen de ganancia por partner — Próximo pago */}
-            <Card className="border-emerald-200/50 dark:border-emerald-900/30 bg-gradient-to-br from-emerald-50/20 to-transparent dark:from-emerald-950/10">
+            <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative border-emerald-200/50 dark:border-emerald-900/30 bg-gradient-to-br from-emerald-50/20 to-transparent dark:from-emerald-950/10">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -mr-20 -mt-20" />
                 <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
                     <div>
                         <CardTitle className="text-lg font-bold flex items-center gap-2">
@@ -539,9 +570,12 @@ export default function AdminPartnersPage() {
                                                 onClick={() => openPartnerDetail(p._id)}
                                             >
                                                 <TableCell>
-                                                    <div>
-                                                        <p className="font-semibold">{p.name}</p>
-                                                        <p className="text-xs text-muted-foreground font-mono">{p.referralCode}</p>
+                                                    <div className="flex items-center gap-3">
+                                                        <SimpleAvatar name={p.name} />
+                                                        <div>
+                                                            <p className="font-semibold">{p.name}</p>
+                                                            <p className="text-xs text-muted-foreground font-mono">{p.referralCode}</p>
+                                                        </div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>{getStatusBadge(p.status)}</TableCell>
@@ -572,13 +606,17 @@ export default function AdminPartnersPage() {
             </Card>
 
             {/* Calcular comisiones mensuales */}
-            <Card className="border-slate-200 dark:border-slate-700 mb-6">
-                <CardHeader>
-                    <CardTitle className="text-sm font-bold text-muted-foreground">Comisiones mensuales</CardTitle>
+            <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative border-slate-200 dark:border-slate-700">
+                <div className="absolute top-0 left-0 w-32 h-32 bg-slate-500/5 rounded-full blur-3xl -ml-10 -mt-10" />
+                <CardHeader className="relative z-10">
+                    <CardTitle className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-slate-500" />
+                        Comisiones mensuales
+                    </CardTitle>
                     <CardDescription>Ejecuta el cálculo para el mes anterior (o cron el día 1). Crea/actualiza PartnerCommission por partner activo.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <Button variant="outline" size="sm" onClick={handleCalculateCommissions} disabled={calculatingCommissions}>
+                <CardContent className="relative z-10">
+                    <Button variant="outline" size="sm" onClick={handleCalculateCommissions} disabled={calculatingCommissions} className="border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/50">
                         {calculatingCommissions ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <DollarSign className="w-4 h-4 mr-2" />}
                         Calcular comisiones (mes anterior)
                     </Button>
@@ -586,7 +624,8 @@ export default function AdminPartnersPage() {
             </Card>
 
             {/* Invitaciones (modelo híbrido) */}
-            <Card className="border-amber-200/50 dark:border-amber-900/30 bg-gradient-to-br from-amber-50/30 to-transparent dark:from-amber-950/20">
+            <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative border-amber-200/50 dark:border-amber-900/30 bg-gradient-to-br from-amber-50/30 to-transparent dark:from-amber-950/20">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl -mr-20 -mt-20" />
                 <CardHeader>
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                         <Link2 className="w-5 h-5 text-amber-600" />
@@ -626,7 +665,7 @@ export default function AdminPartnersPage() {
             </Card>
 
             {/* Lista de Partners */}
-            <Card>
+            <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 flex-wrap gap-4">
                     <div>
                         <CardTitle className="text-lg font-bold">Lista de Partners</CardTitle>
@@ -684,9 +723,12 @@ export default function AdminPartnersPage() {
                                         onClick={() => openPartnerDetail(p._id)}
                                     >
                                         <TableCell>
-                                            <div>
-                                                <p className="font-semibold">{p.name}</p>
-                                                <p className="text-xs text-muted-foreground">{p.email}</p>
+                                            <div className="flex items-center gap-3">
+                                                <SimpleAvatar name={p.name} />
+                                                <div>
+                                                    <p className="font-semibold">{p.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{p.email}</p>
+                                                </div>
                                             </div>
                                         </TableCell>
                                         <TableCell className="max-w-[180px]">
@@ -731,79 +773,50 @@ export default function AdminPartnersPage() {
                                         <TableCell className="text-xs text-muted-foreground">
                                             {p.suspendedAt ? new Date(p.suspendedAt).toLocaleDateString("es-DO") : "—"}
                                         </TableCell>
-                                        <TableCell className="text-right flex gap-1 justify-end">
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleVerCartera(p._id); }} aria-label="Ver cartera">
-                                                        <Wallet className="w-4 h-4" />
+                                        <TableCell className="text-right flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                        <span className="sr-only">Abrir menú</span>
+                                                        {actioning === p._id ? <Loader2 className="w-4 h-4 animate-spin text-amber-500" /> : <MoreVertical className="h-4 w-4" />}
                                                     </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>Ver cartera de referidos</TooltipContent>
-                                            </Tooltip>
-                                            {p.status === "pending" && (
-                                                <>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                className="text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-900/30"
-                                                                onClick={(e) => { e.stopPropagation(); handleApprove(p._id); }}
-                                                                disabled={actioning === p._id}
-                                                            >
-                                                                {actioning === p._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>Aprobar partner</TooltipContent>
-                                                    </Tooltip>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                className="text-slate-600 border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900/30"
-                                                                onClick={(e) => { e.stopPropagation(); setConfirmAction({ action: "reject", id: p._id, name: p.name }); }}
-                                                                disabled={actioning === p._id}
-                                                            >
-                                                                <Ban className="w-4 h-4" />
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>Rechazar partner</TooltipContent>
-                                                    </Tooltip>
-                                                </>
-                                            )}
-                                            {p.status === "active" && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            className="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/30"
-                                                            onClick={(e) => { e.stopPropagation(); setConfirmAction({ action: "suspend", id: p._id, name: p.name }); }}
-                                                            disabled={actioning === p._id}
-                                                        >
-                                                            {actioning === p._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>Suspender partner</TooltipContent>
-                                                </Tooltip>
-                                            )}
-                                            {p.status === "suspended" && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            className="text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-900/30"
-                                                            onClick={(e) => { e.stopPropagation(); setConfirmAction({ action: "activate", id: p._id, name: p.name }); }}
-                                                            disabled={actioning === p._id}
-                                                        >
-                                                            {actioning === p._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>Activar partner</TooltipContent>
-                                                </Tooltip>
-                                            )}
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-[180px]">
+                                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleVerCartera(p._id); }}>
+                                                        <Wallet className="w-4 h-4 mr-2" />
+                                                        Ver cartera
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    
+                                                    {p.status === "pending" && (
+                                                        <>
+                                                            <DropdownMenuItem className="text-emerald-600 focus:text-emerald-600" onClick={(e) => { e.stopPropagation(); handleApprove(p._id); }}>
+                                                                <CheckCircle className="w-4 h-4 mr-2" />
+                                                                Aprobar partner
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem className="text-slate-600 focus:text-slate-600" onClick={(e) => { e.stopPropagation(); setConfirmAction({ action: "reject", id: p._id, name: p.name }); }}>
+                                                                <Ban className="w-4 h-4 mr-2" />
+                                                                Rechazar partner
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
+                                                    
+                                                    {p.status === "active" && (
+                                                        <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={(e) => { e.stopPropagation(); setConfirmAction({ action: "suspend", id: p._id, name: p.name }); }}>
+                                                            <Ban className="w-4 h-4 mr-2" />
+                                                            Suspender
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    
+                                                    {p.status === "suspended" && (
+                                                        <DropdownMenuItem className="text-emerald-600 focus:text-emerald-600" onClick={(e) => { e.stopPropagation(); setConfirmAction({ action: "activate", id: p._id, name: p.name }); }}>
+                                                            <ShieldCheck className="w-4 h-4 mr-2" />
+                                                            Reactivar
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -889,21 +902,21 @@ export default function AdminPartnersPage() {
                                 </p>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
-                                <Card className="p-3">
+                                <Card className="p-3 bg-muted/50 border-none shadow-none">
                                     <p className="text-xs text-muted-foreground">Activos / Prueba / Churned</p>
-                                    <p className="font-semibold">{detailData.partner.activeClients ?? 0} / {detailData.partner.trialClients ?? 0} / {detailData.partner.churnedClients ?? 0}</p>
+                                    <p className="font-semibold text-sm">{detailData.partner.activeClients ?? 0} / {detailData.partner.trialClients ?? 0} / {detailData.partner.churnedClients ?? 0}</p>
                                 </Card>
-                                <Card className="p-3">
+                                <Card className="p-3 bg-muted/50 border-none shadow-none">
                                     <p className="text-xs text-muted-foreground">Facturación generada</p>
-                                    <p className="font-semibold">{formatCurrency(detailData.partner.facturacionGenerada ?? 0)}</p>
+                                    <p className="font-semibold text-sm">{formatCurrency(detailData.partner.facturacionGenerada ?? 0)}</p>
                                 </Card>
-                                <Card className="p-3">
+                                <Card className="p-3 bg-muted/50 border-none shadow-none">
                                     <p className="text-xs text-muted-foreground">Comisión acumulada</p>
-                                    <p className="font-semibold">{formatCurrency(detailData.partner.totalEarned ?? 0)}</p>
+                                    <p className="font-semibold text-sm">{formatCurrency(detailData.partner.totalEarned ?? 0)}</p>
                                 </Card>
-                                <Card className="p-3">
-                                    <p className="text-xs text-muted-foreground">Pendiente de pago</p>
-                                    <p className="font-semibold text-amber-600">{formatCurrency(detailData.partner.pendingPayout ?? 0)}</p>
+                                <Card className="p-3 bg-amber-50 dark:bg-amber-950/20 border-none shadow-none">
+                                    <p className="text-xs text-amber-600 dark:text-amber-400">Pendiente de pago</p>
+                                    <p className="font-bold text-sm text-amber-600 dark:text-amber-400">{formatCurrency(detailData.partner.pendingPayout ?? 0)}</p>
                                 </Card>
                             </div>
                             <div>
@@ -1075,8 +1088,13 @@ export default function AdminPartnersPage() {
                                         {carteraPartner.cartera.map((c: any, i: number) => (
                                             <TableRow key={i}>
                                                 <TableCell>
-                                                    <p className="font-medium">{c.name || "—"}</p>
-                                                    <p className="text-xs text-muted-foreground">{c.email}</p>
+                                                    <div className="flex items-center gap-3">
+                                                        <SimpleAvatar name={c.name || c.email} />
+                                                        <div>
+                                                            <p className="font-medium">{c.name || "—"}</p>
+                                                            <p className="text-xs text-muted-foreground">{c.email}</p>
+                                                        </div>
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="font-mono text-sm">{c.rnc || "—"}</TableCell>
                                                 <TableCell>
@@ -1102,6 +1120,6 @@ export default function AdminPartnersPage() {
                     )}
                 </DialogContent>
             </Dialog>
-        </div>
+        </motion.div>
     );
 }

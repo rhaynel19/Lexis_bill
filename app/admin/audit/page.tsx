@@ -8,6 +8,16 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { motion, AnimatePresence } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
+
+const SimpleAvatar = ({ name }: { name: string }) => {
+    return (
+        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-[10px] text-slate-600 dark:text-slate-300 shadow-sm shrink-0 uppercase">
+            {name?.substring(0, 2) || "??"}
+        </div>
+    );
+};
 
 const ACTION_LABELS: Record<string, string> = {
     user_block: "Bloquear cuenta",
@@ -118,7 +128,11 @@ export default function AdminAuditPage() {
     const uniqueTargetTypes = useMemo(() => Array.from(new Set(list.map((l) => l.targetType).filter(Boolean))).sort(), [list]);
 
     return (
-        <div className="space-y-6">
+        <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+        >
             <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2">
                     <ScrollText className="w-7 h-7 text-amber-500" />
@@ -129,7 +143,8 @@ export default function AdminAuditPage() {
                 </p>
             </div>
 
-            <Card>
+            <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
                 <CardHeader className="flex flex-col gap-4">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
@@ -192,41 +207,74 @@ export default function AdminAuditPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
+                                        <AnimatePresence mode="popLayout">
                                         {displayList.length === 0 ? (
                                             <TableRow>
                                                 <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                                                     No hay registros que coincidan con los filtros.
                                                 </TableCell>
                                             </TableRow>
-                                        ) : displayList.map((log) => (
-                                            <TableRow key={log._id}>
-                                                <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                                                    {formatDate(log.createdAt)}
-                                                </TableCell>
-                                                <TableCell className="text-sm">{log.adminEmail || log.adminId}</TableCell>
-                                                <TableCell>
-                                                    <span className="text-sm font-medium">
-                                                        {ACTION_LABELS[log.action] ?? log.action}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell className="text-xs text-muted-foreground">
-                                                    {log.targetType === "partner" ? (
-                                                        <Link href="/admin/partners" className="text-amber-600 hover:underline font-medium">
-                                                            partner #{String(log.targetId || "").slice(-6)}
-                                                        </Link>
-                                                    ) : log.targetType === "user" ? (
-                                                        <Link href="/admin/usuarios" className="text-primary hover:underline">
-                                                            user #{String(log.targetId || "").slice(-6)}
-                                                        </Link>
-                                                    ) : (
-                                                        <span>{log.targetType} {log.targetId ? `#${String(log.targetId).slice(-6)}` : ""}</span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-xs text-muted-foreground max-w-[220px] truncate" title={formatDetails(log)}>
-                                                    {formatDetails(log)}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
+                                        ) : displayList.map((log, idx) => {
+                                            const actionLabel = ACTION_LABELS[log.action] ?? log.action;
+                                            const isNegative = log.action.includes("block") || log.action.includes("reject") || log.action.includes("suspend") || log.action.includes("delete");
+                                            const isPositive = log.action.includes("approve") || log.action.includes("activate") || log.action.includes("unblock");
+                                            const isSystem = log.action.includes("reconcile") || log.action.includes("repair");
+
+                                            return (
+                                                <motion.tr 
+                                                    key={log._id}
+                                                    initial={{ opacity: 0, x: -5 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ delay: idx * 0.02 }}
+                                                    className="group border-b last:border-0 hover:bg-muted/30 transition-colors"
+                                                >
+                                                    <TableCell className="text-muted-foreground text-[11px] font-mono whitespace-nowrap">
+                                                        {formatDate(log.createdAt)}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2">
+                                                            <SimpleAvatar name={log.adminEmail || "AD"} />
+                                                            <div className="min-w-0">
+                                                                <p className="text-xs font-medium truncate max-w-[120px]">{log.adminEmail || "Admin"}</p>
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant="outline" className={cn(
+                                                            "text-[10px] uppercase font-bold border-none py-0.5",
+                                                            isNegative ? "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" :
+                                                            isPositive ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                                                            isSystem ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" :
+                                                            "bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                                                        )}>
+                                                            {actionLabel}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-xs text-muted-foreground">
+                                                        {log.targetType === "partner" ? (
+                                                            <Link href="/admin/partners" className="text-amber-600 hover:underline font-semibold flex items-center gap-1">
+                                                                <span className="opacity-50">partner</span> 
+                                                                <span>#{String(log.targetId || "").slice(-6)}</span>
+                                                            </Link>
+                                                        ) : log.targetType === "user" ? (
+                                                            <Link href="/admin/usuarios" className="text-blue-600 hover:underline font-semibold flex items-center gap-1">
+                                                                <span className="opacity-50">user</span>
+                                                                <span>#{String(log.targetId || "").slice(-6)}</span>
+                                                            </Link>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="opacity-50 lowercase">{log.targetType}</span>
+                                                                {log.targetId && <span>#{String(log.targetId).slice(-6)}</span>}
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-[11px] text-muted-foreground/80 max-w-[220px] truncate group-hover:text-foreground transition-colors" title={formatDetails(log)}>
+                                                        {formatDetails(log)}
+                                                    </TableCell>
+                                                </motion.tr>
+                                            );
+                                        })}
+                                        </AnimatePresence>
                                     </TableBody>
                                 </Table>
                             </div>
@@ -249,6 +297,6 @@ export default function AdminAuditPage() {
                     )}
                 </CardContent>
             </Card>
-        </div>
+        </motion.div>
     );
 }

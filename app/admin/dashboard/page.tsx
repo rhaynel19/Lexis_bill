@@ -123,6 +123,29 @@ export default function AdminCEODashboard() {
 
     const { users, invoicing, fiscal, business } = stats;
 
+    // Fallback mapping if API returns a flat structure
+    const displayUsers = users || {
+        total: stats.totalUsers ?? stats.activeUsers ?? 0,
+        newThisMonth: stats.newThisMonth ?? stats.newUsers ?? 0
+    };
+    const displayInvoicing = invoicing || {
+        totalInvoices: stats.totalInvoices ?? 0,
+        monthlyTotal: stats.monthlyTotal ?? stats.monthlyRevenue ?? 0,
+        monthlyInvoices: stats.monthlyInvoices ?? 0,
+        totalItbis: stats.totalItbis ?? 0
+    };
+    const displayFiscal = fiscal || {
+        report606: stats.report606 ?? stats.reports606 ?? 0,
+        report607: stats.report607 ?? stats.reports607 ?? 0,
+        invoicesByNcfType: stats.invoicesByNcfType ?? {}
+    };
+    const displayBusiness = business || {
+        activeMemberships: stats.activeMemberships ?? stats.activeUsers ?? 0,
+        freeUsers: stats.freeUsers ?? 0,
+        proUsers: stats.proUsers ?? 0,
+        pendingPayments: stats.pendingPayments ?? 0
+    };
+
     return (
         <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -180,15 +203,15 @@ export default function AdminCEODashboard() {
             {metrics && (
                 <div>
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5" /> Métricas SaaS
+                        <BarChart3 className="w-5 h-5 text-indigo-500" /> Métricas SaaS
                     </h2>
                     <TooltipProvider>
                         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
                             <UITooltip>
                                 <TooltipTrigger asChild>
-                                    <Card className="cursor-help shadow-sm hover:shadow-md transition-shadow border-emerald-100/50 dark:border-emerald-900/20">
+                                    <Card className="cursor-help backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl hover:shadow-2xl transition-all border-emerald-100/50 dark:border-emerald-900/20 group">
                                         <CardHeader className="pb-2">
-                                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">MRR</CardTitle>
+                                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-emerald-600 transition-colors">MRR</CardTitle>
                                         </CardHeader>
                                         <CardContent>
                                             <span className="text-xl font-black text-emerald-700 dark:text-emerald-400">{formatCurrency(metrics.mrr ?? 0)}</span>
@@ -202,9 +225,9 @@ export default function AdminCEODashboard() {
                             </UITooltip>
                             <UITooltip>
                                 <TooltipTrigger asChild>
-                                    <Card className="cursor-help shadow-sm hover:shadow-md transition-shadow">
+                                    <Card className="cursor-help backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl hover:shadow-2xl transition-all group">
                                         <CardHeader className="pb-2">
-                                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Revenue Total</CardTitle>
+                                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">Revenue Total</CardTitle>
                                         </CardHeader>
                                         <CardContent>
                                             <span className="text-xl font-black">{formatCurrency(metrics.revenueTotal ?? 0)}</span>
@@ -218,7 +241,7 @@ export default function AdminCEODashboard() {
                             </UITooltip>
                             <UITooltip>
                                 <TooltipTrigger asChild>
-                                    <Card className="cursor-help shadow-sm hover:shadow-md transition-shadow">
+                                    <Card className="cursor-help backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl hover:shadow-2xl transition-all">
                                         <CardHeader className="pb-2">
                                             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">ARPU</CardTitle>
                                         </CardHeader>
@@ -234,9 +257,9 @@ export default function AdminCEODashboard() {
                             </UITooltip>
                             <UITooltip>
                                 <TooltipTrigger asChild>
-                                    <Card className="cursor-help shadow-sm hover:shadow-md transition-shadow border-rose-100/50 dark:border-rose-900/20">
+                                    <Card className="cursor-help backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl hover:shadow-2xl transition-all border-rose-100/50 dark:border-rose-900/20 group">
                                         <CardHeader className="pb-2">
-                                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Churn %</CardTitle>
+                                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-rose-600 transition-colors">Churn %</CardTitle>
                                         </CardHeader>
                                         <CardContent>
                                             <span className="text-xl font-black text-rose-600 dark:text-rose-400">{(metrics.churn ?? 0)}%</span>
@@ -250,9 +273,9 @@ export default function AdminCEODashboard() {
                             </UITooltip>
                             <UITooltip>
                                 <TooltipTrigger asChild>
-                                    <Card className="cursor-help shadow-sm hover:shadow-md transition-shadow border-blue-100/50 dark:border-blue-900/20">
+                                    <Card className="cursor-help backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl hover:shadow-2xl transition-all border-blue-100/50 dark:border-blue-900/20 group">
                                         <CardHeader className="pb-2">
-                                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Growth %</CardTitle>
+                                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-blue-600 transition-colors">Growth %</CardTitle>
                                         </CardHeader>
                                         <CardContent>
                                             <span className="text-xl font-black text-blue-600 dark:text-blue-400">{(metrics.growthRate ?? 0)}%</span>
@@ -266,7 +289,7 @@ export default function AdminCEODashboard() {
                             </UITooltip>
                             <UITooltip>
                                 <TooltipTrigger asChild>
-                                    <Card className="cursor-help shadow-sm hover:shadow-md transition-shadow">
+                                    <Card className="cursor-help backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl hover:shadow-2xl transition-all">
                                         <CardHeader className="pb-2">
                                             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Activos Pro</CardTitle>
                                         </CardHeader>
@@ -357,113 +380,122 @@ export default function AdminCEODashboard() {
             )}
 
             {/* Usuarios */}
-            <div>
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <Users className="w-5 h-5" /> Usuarios
+            <div className="space-y-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Users className="w-5 h-5 text-blue-500" /> Usuarios
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Card>
+                    <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative group">
+                        <div className="absolute top-0 left-0 w-2 h-full bg-blue-500 opacity-20 group-hover:opacity-100 transition-opacity" />
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Total usuarios</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <span className="text-3xl font-bold">{users?.total ?? 0}</span>
+                            <span className="text-3xl font-bold">{displayUsers.total}</span>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative group">
+                        <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500 opacity-20 group-hover:opacity-100 transition-opacity" />
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Usuarios activos</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <span className="text-3xl font-bold">{business?.activeMemberships ?? 0}</span>
+                            <span className="text-3xl font-bold">{displayBusiness.activeMemberships}</span>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative group">
+                        <div className="absolute top-0 left-0 w-2 h-full bg-emerald-500 opacity-20 group-hover:opacity-100 transition-opacity" />
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Nuevos este mes</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <span className="text-3xl font-bold">{users?.newThisMonth ?? 0}</span>
+                            <span className="text-3xl font-bold">{displayUsers.newThisMonth}</span>
                         </CardContent>
                     </Card>
                 </div>
             </div>
 
             {/* Facturación */}
-            <div>
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <DollarSign className="w-5 h-5" /> Facturación
+            <div className="space-y-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-emerald-500" /> Facturación
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Card>
+                    <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative group">
+                        <div className="absolute top-0 left-0 w-2 h-full bg-slate-500 opacity-20 group-hover:opacity-100 transition-opacity" />
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Total facturas emitidas</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <span className="text-3xl font-bold">{invoicing?.totalInvoices ?? 0}</span>
+                            <span className="text-3xl font-bold">{displayInvoicing.totalInvoices}</span>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative group">
+                        <div className="absolute top-0 left-0 w-2 h-full bg-emerald-600 opacity-20 group-hover:opacity-100 transition-opacity" />
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Facturación mensual</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <span className="text-3xl font-bold">{formatCurrency(invoicing?.monthlyTotal ?? 0)}</span>
+                            <span className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{formatCurrency(displayInvoicing.monthlyTotal)}</span>
                             <p className="text-xs text-muted-foreground mt-1">
-                                {invoicing?.monthlyInvoices ?? 0} facturas este mes
+                                {displayInvoicing.monthlyInvoices} facturas este mes
                             </p>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative group">
+                        <div className="absolute top-0 left-0 w-2 h-full bg-blue-600 opacity-20 group-hover:opacity-100 transition-opacity" />
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">ITBIS total generado</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <span className="text-3xl font-bold">{formatCurrency(invoicing?.totalItbis ?? 0)}</span>
+                            <span className="text-3xl font-bold">{formatCurrency(displayInvoicing.totalItbis)}</span>
                         </CardContent>
                     </Card>
                 </div>
             </div>
 
             {/* Fiscal */}
-            <div>
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5" /> Fiscal
+            <div className="space-y-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-amber-500" /> Fiscal
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Card>
+                    <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative group">
+                        <div className="absolute top-0 left-0 w-2 h-full bg-slate-400 opacity-20 group-hover:opacity-100 transition-opacity" />
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Reportes 606 generados</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <span className="text-3xl font-bold">{fiscal?.report606 ?? 0}</span>
+                            <span className="text-3xl font-bold">{displayFiscal.report606}</span>
                             <p className="text-xs text-muted-foreground mt-1">Compras / Gastos</p>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative group">
+                        <div className="absolute top-0 left-0 w-2 h-full bg-slate-600 opacity-20 group-hover:opacity-100 transition-opacity" />
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Reportes 607 generados</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <span className="text-3xl font-bold">{fiscal?.report607 ?? 0}</span>
+                            <span className="text-3xl font-bold">{displayFiscal.report607}</span>
                             <p className="text-xs text-muted-foreground mt-1">Ventas</p>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border-white/20 shadow-xl overflow-hidden relative group">
+                        <div className="absolute top-0 left-0 w-2 h-full bg-amber-500 opacity-20 group-hover:opacity-100 transition-opacity" />
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Facturas por tipo NCF</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-2 text-sm">
-                                {fiscal?.invoicesByNcfType && Object.keys(fiscal.invoicesByNcfType).length > 0 ? (
-                                    Object.entries(fiscal.invoicesByNcfType).map(([k, v]: [string, any]) => (
-                                        <div key={k} className="flex justify-between">
-                                            <span>B{k}/E{k}</span>
-                                            <span className="font-medium">{v}</span>
+                                {displayFiscal.invoicesByNcfType && Object.keys(displayFiscal.invoicesByNcfType).length > 0 ? (
+                                    Object.entries(displayFiscal.invoicesByNcfType).map(([k, v]: [string, any]) => (
+                                        <div key={k} className="flex justify-between items-center bg-amber-500/5 p-1 px-2 rounded">
+                                            <span className="font-mono text-xs">B{k}/E{k}</span>
+                                            <span className="font-bold text-amber-600 dark:text-amber-400">{v}</span>
                                         </div>
                                     ))
                                 ) : (
-                                    <p className="text-muted-foreground">Sin datos</p>
+                                    <p className="text-muted-foreground text-xs py-2">Sin datos de NCF en el periodo</p>
                                 )}
                             </div>
                         </CardContent>
