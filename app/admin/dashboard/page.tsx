@@ -123,15 +123,15 @@ export default function AdminCEODashboard() {
 
     const { users, invoicing, fiscal, business } = stats;
 
-    // Fallback mapping if API returns a flat structure
+    // Fallback mapping if API returns a flat structure or different object
     const displayUsers = users || {
-        total: stats.totalUsers ?? stats.activeUsers ?? 0,
+        total: stats.totalUsers ?? stats.activeUsers ?? (metrics?.activeUsers + (chartData?.usersByPlan?.free || 0)) ?? 0,
         newThisMonth: stats.newThisMonth ?? stats.newUsers ?? 0
     };
     const displayInvoicing = invoicing || {
-        totalInvoices: stats.totalInvoices ?? 0,
-        monthlyTotal: stats.monthlyTotal ?? stats.monthlyRevenue ?? 0,
-        monthlyInvoices: stats.monthlyInvoices ?? 0,
+        totalInvoices: stats.totalInvoices ?? (chartData?.monthly?.reduce((acc: number, curr: any) => acc + (curr.invoices || 0), 0)) ?? 0,
+        monthlyTotal: stats.monthlyTotal ?? stats.monthlyRevenue ?? metrics?.revenueTotal ?? 0,
+        monthlyInvoices: stats.monthlyInvoices ?? (chartData?.monthly?.[chartData.monthly.length - 1]?.invoices) ?? 0,
         totalItbis: stats.totalItbis ?? 0
     };
     const displayFiscal = fiscal || {
@@ -140,9 +140,9 @@ export default function AdminCEODashboard() {
         invoicesByNcfType: stats.invoicesByNcfType ?? {}
     };
     const displayBusiness = business || {
-        activeMemberships: stats.activeMemberships ?? stats.activeUsers ?? 0,
-        freeUsers: stats.freeUsers ?? 0,
-        proUsers: stats.proUsers ?? 0,
+        activeMemberships: stats.activeMemberships ?? stats.activeUsers ?? metrics?.activeUsers ?? 0,
+        freeUsers: stats.freeUsers ?? chartData?.usersByPlan?.free ?? 0,
+        proUsers: stats.proUsers ?? chartData?.usersByPlan?.pro ?? 0,
         pendingPayments: stats.pendingPayments ?? 0
     };
 
