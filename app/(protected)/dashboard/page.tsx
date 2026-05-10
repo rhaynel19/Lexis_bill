@@ -489,14 +489,17 @@ export default function Dashboard() {
         ) : null}
 
         {/* Premium Feature: Bolsillo Fiscal (Advanced) / Emotional State (Simple) */}
-        <div className="mb-8">
-          <EmotionalStatusWidget
-            ncfHealthy={isFiscalHealthy}
-            blockers={!fiscalState.confirmed ? ["Perfil Fiscal incompleto"] : []}
-          />
-          <div className="mt-4">
-            <TaxHealthWidget />
+        {(!isFiscalHealthy || !fiscalState.confirmed) && (
+          <div className="mb-8">
+            <EmotionalStatusWidget
+              ncfHealthy={isFiscalHealthy}
+              blockers={!fiscalState.confirmed ? ["Perfil Fiscal incompleto"] : []}
+            />
           </div>
+        )}
+
+        <div className="mb-8">
+          <TaxHealthWidget />
         </div>
 
 

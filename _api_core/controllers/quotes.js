@@ -1,6 +1,6 @@
 
 const mongoose = require('mongoose');
-const { Quote, Invoice, Customer, NCFSettings } = require('../models');
+const { Quote, Invoice, Customer, NCFSettings, User } = require('../models');
 const { safeErrorMessage } = require('../utils/helpers');
 const { computeAmountsFromItems } = require('../utils/helpers');
 const { getNextNcf } = require('../services/dgii');
@@ -24,6 +24,13 @@ const createQuote = async (req, res) => {
         const taxSettings = req.user?.taxSettings || {};
         const { subtotal, itbis, total } = computeAmountsFromItems(data.items || [], taxSettings);
 
+        // Obtener siguiente número de secuencia
+        const user = await User.findOneAndUpdate(
+            { _id: req.userId },
+            { $inc: { quoteSequence: 1 } },
+            { new: true }
+        );
+
         const newQuote = new Quote({
             userId: req.userId,
             clientName: data.clientName,
@@ -33,6 +40,7 @@ const createQuote = async (req, res) => {
             subtotal,
             itbis,
             total,
+            sequenceNumber: user.quoteSequence,
             status: 'draft',
             validUntil: data.validUntil || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         });

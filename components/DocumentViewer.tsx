@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 // Interfaz para cotizaciones
 export interface Quote {
     id: string;
+    sequenceNumber?: number;
     clientName: string;
     rnc: string;
     clientPhone?: string;
@@ -138,7 +139,9 @@ export function DocumentViewer({
     const companyPhone = appConfig.phone ?? APP_CONFIG.company.phone ?? "";
     const companyEmail = appConfig.email ?? APP_CONFIG.company.email ?? "";
     const documentNumber = type === "quote"
-        ? `COT-${(document as Quote).id.slice(-8)}`
+        ? ((document as Quote).sequenceNumber 
+            ? `COT-${String((document as Quote).sequenceNumber).padStart(4, '0')}` 
+            : `COT-${(document as Quote).id.slice(-8)}`)
         : (document as Invoice).ncfSequence || (document as Invoice).id;
 
     const documentDate = document.date;

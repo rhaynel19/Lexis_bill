@@ -54,7 +54,8 @@ const userSchema = new mongoose.Schema({
     blocked: { type: Boolean, default: false },
     blockedAt: { type: Date },
     blockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    adminNotes: { type: String }
+    adminNotes: { type: String },
+    quoteSequence: { type: Number, default: 0 }
 });
 
 const paymentRequestSchema = new mongoose.Schema({
@@ -247,6 +248,7 @@ const quoteSchema = new mongoose.Schema({
     subtotal: { type: Number, required: true },
     itbis: { type: Number, required: true },
     total: { type: Number, required: true },
+    sequenceNumber: { type: Number },
     status: { type: String, enum: ['draft', 'sent', 'accepted', 'rejected', 'converted'], default: 'draft' },
     converted: { type: Boolean, default: false },
     validUntil: { type: Date, required: true },

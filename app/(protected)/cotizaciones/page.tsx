@@ -252,7 +252,11 @@ export default function Quotes() {
                                 ) : (
                                     quotes.map((q) => (
                                         <TableRow key={q.id} className="hover:bg-slate-50/50 border-b border-slate-50 last:border-0 transition-colors">
-                                            <TableCell className="font-mono text-xs text-slate-500 dark:text-slate-400 font-bold">{q.id?.length > 8 ? `COT-${q.id.slice(-8)}` : q.id}</TableCell>
+                                            <TableCell className="font-mono text-xs text-slate-500 dark:text-slate-400 font-bold">
+                                                {q.sequenceNumber 
+                                                    ? `COT-${String(q.sequenceNumber).padStart(4, '0')}` 
+                                                    : (q.id?.length > 8 ? `COT-${q.id.slice(-8)}` : q.id)}
+                                            </TableCell>
                                             <TableCell>
                                                 <div>
                                                     <p className="font-bold text-slate-800 dark:text-slate-200">{q.clientName}</p>
